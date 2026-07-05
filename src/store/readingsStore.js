@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
+import { BOOK_CATALOG } from '../utils/book-catalog';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -18,6 +19,25 @@ export const useReadingsStore = create(
       library: [], // master catalog: [{ id, title, author, genre, pages, words, description, year, popularity, linkedSkills, addedAt }]
       progress: [], // reading state: [{ id, bookId, pagesRead, customPages, customWords, status, startedAt, completedAt, updatedAt }]
       readLog: [], // [{ date: 'YYYY-MM-DD' }] one entry per day any page was read — powers the streak
+      catalogSeeded: false, // one-shot: BOOK_CATALOG merged once, then user deletions stick
+
+      // Merge the built-in catalog into the library (skips titles already present).
+      // Runs once — the persisted flag means books the user later deletes stay deleted.
+      seedCatalog: () => {
+        if (get().catalogSeeded) return;
+        const have = new Set(get().library.map((b) => `${b.title}|${b.author}`.toLowerCase()));
+        const now = Date.now();
+        const added = BOOK_CATALOG.filter((c) => !have.has(`${c.title}|${c.author}`.toLowerCase())).map((c) => ({
+          ...c,
+          id: uid(),
+          words: Math.round(c.pages * 250),
+          linkedSkills: [],
+          addedAt: now,
+          updatedAt: now,
+        }));
+        set({ library: [...get().library, ...added], catalogSeeded: true });
+        if (added.length) toast(`Library seeded: ${added.length} books across all genres`, 'success');
+      },
 
       // ─────────── Library (catalog) ───────────
       addBookToLibrary: (data) => {
@@ -165,7 +185,7 @@ export const useReadingsStore = create(
         return streak;
       },
 
-      resetAll: () => set({ library: [], progress: [], readLog: [] }),
+      resetAll: () => set({ library: [], progress: [], readLog: [], catalogSeeded: false }),
     }),
     { name: 'audax-readings' }
   )

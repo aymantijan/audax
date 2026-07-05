@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, BookMarked, Pencil, Trash2 } from 'lucide-react';
 import { useReadingsStore } from '../store/readingsStore';
@@ -13,7 +13,11 @@ const blank = () => ({
 });
 
 export default function Library() {
-  const { library, progress, addBookToLibrary, editBook, deleteBook, addToReading, isReading } = useReadingsStore();
+  const { library, progress, addBookToLibrary, editBook, deleteBook, addToReading, isReading, seedCatalog } = useReadingsStore();
+  // One-shot import of the built-in catalog (5 books per genre, every genre).
+  useEffect(() => {
+    seedCatalog();
+  }, [seedCatalog]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(blank());
   const [editing, setEditing] = useState(null);
