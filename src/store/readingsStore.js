@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { BOOK_CATALOG } from '../utils/book-catalog';
 import { BOOK_CATALOG_V2 } from '../utils/book-catalog-2';
+import { GENRE_TO_READER_SKILL } from '../utils/life-skills';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -142,9 +143,16 @@ export const useReadingsStore = create(
         const award = useSkillStore.getState().awardXP;
         if (pagesRead % 10 === 0) {
           for (const sid of skillIds) award(sid, XP_PER_10_PAGES, `reading: ${book?.title || 'book'}`);
+          // Reading Habit skill grows with every 10 pages, whatever the book
+          award('reading-habit-lv1', XP_PER_10_PAGES, `reading: ${book?.title || 'book'}`);
         }
         if (justCompleted) {
           for (const sid of skillIds) award(sid, XP_ON_COMPLETE, `completed: ${book?.title || 'book'}`);
+          // Finisher + genre scholar skills — the library feeds the skill tree
+          award('book-finisher-lv1', 10, `completed: ${book?.title || 'book'}`);
+          if (total >= 500) award('book-finisher-lv2', 10, `long read: ${book?.title || 'book'}`);
+          const readerSkill = GENRE_TO_READER_SKILL[book?.genre];
+          if (readerSkill) award(readerSkill, 8, `genre: ${book?.genre} — ${book?.title || 'book'}`);
           toast(`📖 Finished "${book?.title}"! +${XP_ON_COMPLETE} XP`, 'success');
         }
       },

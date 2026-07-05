@@ -8,6 +8,7 @@ import {
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT } from '../utils/chart-of-accounts';
 import { useFinanceStore } from './financeStore';
+import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
 // Comptabilité générale personnelle en partie double.
@@ -38,6 +39,11 @@ export const useAccountingStore = create(
           updatedAt: Date.now(),
         };
         set({ journal: [...get().journal, clean] });
+        // Bookkeeping feeds the skill tree: every balanced entry trains double-entry
+        const award = useSkillStore.getState().awardXP;
+        award('double-entry-lv1', 2, `journal: ${clean.label}`);
+        award('journal-keeper-lv1', 1, `journal: ${clean.label}`);
+        if (clean.lines.length > 2) award('double-entry-lv2', 2, `multi-line entry: ${clean.label}`);
         toast(`Écriture enregistrée : ${clean.label}`, 'success');
         return { ok: true, id: clean.id };
       },
@@ -62,6 +68,7 @@ export const useAccountingStore = create(
           set({ budgets: get().budgets.map((b) => (b.account === account ? stamp({ ...b, amount: Number(amount) }) : b)) });
         } else {
           set({ budgets: [...get().budgets, { id: uid(), account, amount: Number(amount), createdAt: Date.now(), updatedAt: Date.now() }] });
+          useSkillStore.getState().awardXP('budget-control-lv1', 3, `budget set: ${account}`);
         }
       },
       deleteBudget: (id) => set({ budgets: get().budgets.filter((b) => b.id !== id) }),

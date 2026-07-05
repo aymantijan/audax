@@ -22,9 +22,9 @@ export default function Skills() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Skill Tree Map</h1>
+        <h1 className="text-2xl font-bold">Skill Constellation</h1>
         <p className="text-mute text-sm mt-1">
-          211 skills across Trading, Finance, Knowledge, Soft Skills, and Discipline. Every trade, course, and habit feeds the tree — unlock prerequisites to advance.
+          {SKILL_TREE.length} skills across Trading, Finance, Knowledge, Soft Skills, and Discipline. Every trade, course, habit, page read, and journal entry feeds the map — unlock prerequisites to advance.
         </p>
       </div>
 

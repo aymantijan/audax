@@ -6,6 +6,7 @@
 // the original spec because its prerequisites referenced skills it never defined.
 
 import { PROFESSIONAL_SKILLS, inferBaseTrack } from './professional-skills.js';
+import { LIFE_SKILLS } from './life-skills.js';
 
 const mk = (category) => (id, name, subcategory, prereqs, description) => ({ id, name, category, subcategory, prereqs, description });
 const t = mk('Trading');
@@ -277,6 +278,7 @@ const BASE_SKILLS = [
 export const SKILL_TREE = [
   ...BASE_SKILLS.map((sk) => ({ ...sk, track: inferBaseTrack(sk) })),
   ...PROFESSIONAL_SKILLS,
+  ...LIFE_SKILLS.map((sk) => ({ ...sk, track: 'General' })),
 ];
 
 export const SKILL_MAP = Object.fromEntries(SKILL_TREE.map((sk) => [sk.id, sk]));

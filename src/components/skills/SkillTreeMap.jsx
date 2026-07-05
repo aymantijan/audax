@@ -5,18 +5,31 @@ import { useSkillStore } from '../../store/skillStore';
 import { SKILL_TREE, XP_TO_NEXT } from '../../utils/constants';
 
 const CATEGORIES = [...new Set(SKILL_TREE.map((s) => s.category))];
+const TRACKS = ['all', 'PE', 'GE', 'VC', 'RBF', 'Trading', 'General'];
 
-// Status → node fill. Theme-independent hex so it matches the legend in both themes.
-const COLOR = { locked: '#556070', available: '#3b82f6', active: '#00d97f' };
+// Palette "anime" : néons sur fond nuit. Mastered (Lv5) = or.
+const COLOR = { locked: '#3d4757', available: '#00d9ff', active: '#00d97f', mastered: '#ffd23f' };
+const CAT_COLOR = '#b366ff';
 
 function skillStatus(state) {
   if (!state || state.locked) return 'locked';
-  if (state.level > 1 || state.xp > 0) return 'active'; // unlocked & practiced
-  return 'available'; // unlocked, untouched
+  if (state.level >= 5) return 'mastered';
+  if (state.level > 1 || state.xp > 0) return 'active';
+  return 'available';
 }
 
-// Build root → category → subcategory → skill hierarchy.
-// Filters by category and career track, then prunes empty branches.
+// Étoiles de fond déterministes (seed fixe → stable entre rendus)
+function mulberry32(a) {
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const RNG = mulberry32(42);
+const STARS = Array.from({ length: 140 }, () => ({ x: RNG() * 2 - 1, y: RNG() * 2 - 1, r: RNG() * 1.4 + 0.3, o: RNG() * 0.5 + 0.15, tw: RNG() * 4 + 2 }));
+
 function buildData(skills, categoryFilter, trackFilter) {
   const root = { id: 'root', name: 'AUDAX', kind: 'root', children: [] };
   const catMap = {};
@@ -35,11 +48,8 @@ function buildData(skills, categoryFilter, trackFilter) {
     }
     const state = skills[def.id];
     subMap[subId].children.push({
-      id: def.id,
-      name: def.name,
-      kind: 'skill',
-      description: def.description,
-      track: def.track,
+      id: def.id, name: def.name, kind: 'skill',
+      description: def.description, track: def.track,
       status: skillStatus(state),
       level: state?.level ?? 0,
       xp: state?.xp ?? 0,
@@ -50,36 +60,31 @@ function buildData(skills, categoryFilter, trackFilter) {
   return root;
 }
 
-const TRACKS = ['all', 'PE', 'GE', 'VC', 'RBF', 'Trading', 'General'];
-
 export default function SkillTreeMap({ onSelect }) {
   const skills = useSkillStore((s) => s.skills);
   const svgRef = useRef(null);
   const wrapRef = useRef(null);
-  const zoomRef = useRef(null);
-  const transformRef = useRef(null); // preserved pan/zoom across redraws
-  const expandedRef = useRef(new Set(CATEGORIES.map((c) => `cat:${c}`))); // categories open by default
+  const transformRef = useRef(null);
+  const expandedRef = useRef(new Set(CATEGORIES.map((c) => `cat:${c}`)));
   const refitRef = useRef(true);
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [trackFilter, setTrackFilter] = useState('all');
-  const [tick, setTick] = useState(0); // bump to redraw after expand/collapse
-  const [size, setSize] = useState({ w: 1000, h: 640 });
+  const [tick, setTick] = useState(0);
+  const [size, setSize] = useState({ w: 1000, h: 720 });
 
   const data = useMemo(() => buildData(skills, categoryFilter, trackFilter), [skills, categoryFilter, trackFilter]);
 
-  // Track container width
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: 640 }));
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: 720 }));
     ro.observe(el);
-    setSize({ w: el.clientWidth, h: 640 });
+    setSize({ w: el.clientWidth, h: 720 });
     return () => ro.disconnect();
   }, []);
 
-  // Refit whenever a filter changes (structure changes materially)
   useEffect(() => {
     refitRef.current = true;
   }, [categoryFilter, trackFilter]);
@@ -101,42 +106,92 @@ export default function SkillTreeMap({ onSelect }) {
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
+
+    // ── Defs : dégradés + filtres de lueur ──
+    const defs = svg.append('defs');
+    const coreGrad = defs.append('radialGradient').attr('id', 'coreGrad');
+    coreGrad.append('stop').attr('offset', '0%').attr('stop-color', '#e0f7ff');
+    coreGrad.append('stop').attr('offset', '45%').attr('stop-color', '#00d9ff');
+    coreGrad.append('stop').attr('offset', '100%').attr('stop-color', '#b366ff');
+    const bgGrad = defs.append('radialGradient').attr('id', 'bgGrad');
+    bgGrad.append('stop').attr('offset', '0%').attr('stop-color', '#101726');
+    bgGrad.append('stop').attr('offset', '70%').attr('stop-color', '#0a0f1a');
+    bgGrad.append('stop').attr('offset', '100%').attr('stop-color', '#060a12');
+    for (const [name, color] of [['glowCyan', '#00d9ff'], ['glowGreen', '#00d97f'], ['glowGold', '#ffd23f'], ['glowPurple', '#b366ff']]) {
+      const f = defs.append('filter').attr('id', name).attr('x', '-80%').attr('y', '-80%').attr('width', '260%').attr('height', '260%');
+      f.append('feDropShadow').attr('dx', 0).attr('dy', 0).attr('stdDeviation', 3.2).attr('flood-color', color).attr('flood-opacity', 0.9);
+    }
+
+    // ── Fond : nuit + étoiles ──
+    svg.append('rect').attr('width', size.w).attr('height', size.h).attr('fill', 'url(#bgGrad)');
+    const starG = svg.append('g');
+    const starScale = Math.max(size.w, size.h) / 2;
+    for (const s of STARS) {
+      starG.append('circle')
+        .attr('cx', size.w / 2 + s.x * starScale)
+        .attr('cy', size.h / 2 + s.y * starScale)
+        .attr('r', s.r)
+        .attr('fill', '#9fd8ff')
+        .attr('class', 'astar')
+        .style('animation-duration', `${s.tw}s`)
+        .attr('opacity', s.o);
+    }
+
     const g = svg.append('g');
 
-    // Apply collapse state: hide children of internal nodes not in expandedRef
+    // ── Hiérarchie avec état plié/déplié ──
     const rootH = d3.hierarchy(data, (d) => {
       if (d.kind === 'skill') return null;
-      if (d.kind === 'root') return d.children; // root always open
+      if (d.kind === 'root') return d.children;
       return expandedRef.current.has(d.id) ? d.children : null;
     });
 
-    const dx = 24; // vertical gap between sibling nodes
-    const dy = size.w < 700 ? 170 : 230; // horizontal gap per depth
-    d3.tree().nodeSize([dx, dy])(rootH);
+    const leaves = rootH.leaves().length;
+    const radius = Math.max(300, (leaves * 13) / (2 * Math.PI));
+    d3.tree()
+      .size([2 * Math.PI, radius])
+      .separation((a, b) => ((a.parent === b.parent ? 1 : 1.6) / Math.max(1, a.depth)))(rootH);
 
-    // Links
+    // ── Anneaux de guidage (cercle magique) ──
+    const rings = g.append('g');
+    for (const rr of [radius * 0.33, radius * 0.66, radius]) {
+      rings.append('circle').attr('r', rr).attr('fill', 'none').attr('stroke', '#1d2a44').attr('stroke-width', 1);
+    }
+    rings.append('circle').attr('r', radius + 26).attr('fill', 'none').attr('stroke', '#274069')
+      .attr('stroke-width', 1.2).attr('stroke-dasharray', '3 14').attr('class', 'ring-spin');
+    rings.append('circle').attr('r', radius + 40).attr('fill', 'none').attr('stroke', '#1b2c4c')
+      .attr('stroke-width', 0.8).attr('stroke-dasharray', '40 22 6 22').attr('class', 'ring-spin-rev');
+
+    // ── Liens radiaux ──
+    const isDim = (d) => q && d.data.kind === 'skill' && !matches.has(d.data.id);
     g.append('g')
       .attr('fill', 'none')
       .selectAll('path')
       .data(rootH.links())
       .join('path')
-      .attr('d', d3.linkHorizontal().x((d) => d.y).y((d) => d.x))
-      .style('stroke', 'var(--border)')
-      .style('stroke-width', 1.5)
-      .style('opacity', q ? 0.3 : 0.6);
+      .attr('d', d3.linkRadial().angle((d) => d.x).radius((d) => d.y))
+      .attr('class', (d) => (d.target.data.kind === 'skill' && (d.target.data.status === 'active' || d.target.data.status === 'mastered') ? 'link-flow' : ''))
+      .style('stroke', (d) => {
+        if (d.target.data.kind === 'skill') {
+          const c = COLOR[d.target.data.status];
+          return d.target.data.status === 'locked' ? '#25314a' : c;
+        }
+        return d.target.data.kind === 'category' ? CAT_COLOR : '#31548a';
+      })
+      .style('stroke-opacity', (d) => (isDim(d.target) ? 0.08 : d.target.data.kind === 'skill' && d.target.data.status === 'locked' ? 0.35 : 0.5))
+      .style('stroke-width', (d) => (d.target.data.kind === 'category' ? 2 : 1.3));
 
-    const node = g
-      .append('g')
+    // ── Nœuds ──
+    const node = g.append('g')
       .selectAll('g')
       .data(rootH.descendants())
       .join('g')
-      .attr('transform', (d) => `translate(${d.y},${d.x})`)
+      .attr('transform', (d) => (d.depth === 0 ? 'translate(0,0)' : `rotate(${(d.x * 180) / Math.PI - 90}) translate(${d.y},0)`))
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
         event.stopPropagation();
-        if (d.data.kind === 'skill') {
-          onSelect?.(d.data.id);
-        } else if (d.data.kind !== 'root') {
+        if (d.data.kind === 'skill') onSelect?.(d.data.id);
+        else if (d.data.kind !== 'root') {
           const set = expandedRef.current;
           if (set.has(d.data.id)) set.delete(d.data.id);
           else set.add(d.data.id);
@@ -145,87 +200,128 @@ export default function SkillTreeMap({ onSelect }) {
         }
       });
 
-    const radius = (d) => (d.data.kind === 'root' ? 7 : d.data.kind === 'category' ? 8 : d.data.kind === 'subcategory' ? 6 : 5);
-    const isDim = (d) => q && d.data.kind === 'skill' && !matches.has(d.data.id);
+    // Cœur central pulsant
+    const core = node.filter((d) => d.depth === 0);
+    core.append('circle').attr('r', 44).attr('fill', 'none').attr('stroke', '#00d9ff').attr('stroke-opacity', 0.35).attr('class', 'core-pulse');
+    core.append('circle').attr('r', 30).attr('fill', 'url(#coreGrad)').attr('filter', 'url(#glowCyan)');
+    core.append('text').attr('dy', '0.35em').attr('text-anchor', 'middle')
+      .style('font-size', '11px').style('font-weight', 800).style('letter-spacing', '2px')
+      .style('fill', '#04121f').style('pointer-events', 'none').text('AUDAX');
 
-    node
-      .append('circle')
-      .attr('r', radius)
-      .style('fill', (d) => {
-        if (d.data.kind === 'skill') return COLOR[d.data.status];
-        // collapsed internal node = solid accent, expanded = surface (hollow)
-        const collapsed = d._children || (d.data.children?.length && !d.children);
-        if (d.data.kind === 'root') return 'var(--accent-secondary)';
-        return collapsed ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
-      })
-      .style('stroke', (d) => {
-        if (q && d.data.kind === 'skill' && matches.has(d.data.id)) return '#ffd23f';
-        if (d.data.kind === 'skill') return COLOR[d.data.status];
-        return 'var(--accent-primary)';
-      })
-      .style('stroke-width', (d) => (q && matches.has(d.data.id) ? 3 : 1.8))
-      .style('opacity', (d) => (isDim(d) ? 0.25 : 1));
+    // Catégories : losanges violets lumineux
+    const cats = node.filter((d) => d.data.kind === 'category');
+    cats.append('rect')
+      .attr('x', -9).attr('y', -9).attr('width', 18).attr('height', 18)
+      .attr('transform', 'rotate(45)')
+      .attr('rx', 3.5)
+      .attr('fill', (d) => (expandedRef.current.has(d.data.id) ? '#171230' : CAT_COLOR))
+      .attr('stroke', CAT_COLOR).attr('stroke-width', 2)
+      .attr('filter', 'url(#glowPurple)')
+      .attr('class', 'node-core');
 
-    node
+    // Sous-catégories : anneaux cyan (pleins quand repliées, avec compteur)
+    const subs = node.filter((d) => d.data.kind === 'subcategory');
+    subs.append('circle')
+      .attr('r', 8)
+      .attr('fill', (d) => (expandedRef.current.has(d.data.id) ? '#0b1526' : '#0a3947'))
+      .attr('stroke', '#00d9ff').attr('stroke-width', 1.8)
+      .attr('class', 'node-core')
+      .attr('filter', (d) => (expandedRef.current.has(d.data.id) ? null : 'url(#glowCyan)'));
+    subs.filter((d) => !expandedRef.current.has(d.data.id))
+      .append('text')
+      .attr('dy', '0.32em').attr('text-anchor', 'middle')
+      .attr('transform', (d) => `rotate(${90 - (d.x * 180) / Math.PI})`)
+      .style('font-size', '7.5px').style('font-weight', 700).style('fill', '#7fe7ff').style('pointer-events', 'none')
+      .text((d) => d.data.children?.length || '');
+
+    // Skills : orbes néon + arc de progression XP + niveau
+    const skillNodes = node.filter((d) => d.data.kind === 'skill');
+    skillNodes.append('circle')
+      .attr('r', 6.5)
+      .attr('fill', (d) => COLOR[d.data.status])
+      .attr('fill-opacity', (d) => (d.data.status === 'locked' ? 0.5 : 1))
+      .attr('stroke', (d) => (q && matches.has(d.data.id) ? '#ffd23f' : COLOR[d.data.status]))
+      .attr('stroke-width', (d) => (q && matches.has(d.data.id) ? 2.5 : 1))
+      .attr('filter', (d) => {
+        if (q && matches.has(d.data.id)) return 'url(#glowGold)';
+        if (d.data.status === 'mastered') return 'url(#glowGold)';
+        if (d.data.status === 'active') return 'url(#glowGreen)';
+        if (d.data.status === 'available') return 'url(#glowCyan)';
+        return null;
+      })
+      .attr('class', (d) => `node-core ${d.data.status === 'available' && !q ? 'avail-pulse' : ''}`)
+      .style('opacity', (d) => (isDim(d) ? 0.15 : 1));
+
+    // Arc XP autour du nœud (progression vers le niveau suivant)
+    const arcGen = d3.arc().innerRadius(8.6).outerRadius(10.4).startAngle(0);
+    skillNodes.filter((d) => !d.data.locked && d.data.level < 5 && d.data.xpNeeded > 0 && d.data.xp > 0)
+      .append('path')
+      .attr('d', (d) => arcGen({ endAngle: 2 * Math.PI * Math.min(1, d.data.xp / d.data.xpNeeded) }))
+      .attr('fill', (d) => COLOR[d.data.status])
+      .attr('fill-opacity', 0.85)
+      .style('opacity', (d) => (isDim(d) ? 0.1 : 1));
+
+    // Niveau (Lv2+) au centre de l'orbe
+    skillNodes.filter((d) => d.data.level >= 2)
+      .append('text')
+      .attr('dy', '0.32em').attr('text-anchor', 'middle')
+      .attr('transform', (d) => `rotate(${90 - (d.x * 180) / Math.PI})`)
+      .style('font-size', '7px').style('font-weight', 800)
+      .style('fill', '#071019').style('pointer-events', 'none')
+      .text((d) => d.data.level);
+
+    // ── Libellés radiaux ──
+    node.filter((d) => d.depth > 0)
       .append('text')
       .attr('dy', '0.32em')
-      .attr('x', (d) => (d.data.kind === 'skill' ? radius(d) + 6 : -(radius(d) + 6)))
-      .attr('text-anchor', (d) => (d.data.kind === 'skill' ? 'start' : 'end'))
-      .style('font-size', (d) => (d.data.kind === 'skill' ? '11px' : d.data.kind === 'category' ? '13px' : '12px'))
-      .style('font-weight', (d) => (d.data.kind === 'skill' ? 400 : 600))
-      .style('fill', (d) => (isDim(d) ? 'var(--text-secondary)' : 'var(--text-primary)'))
-      .style('opacity', (d) => (isDim(d) ? 0.35 : 1))
+      .attr('x', (d) => {
+        const off = d.data.kind === 'category' ? 16 : d.data.kind === 'subcategory' ? 12 : 12;
+        return d.x < Math.PI ? off : -off;
+      })
+      .attr('text-anchor', (d) => (d.x < Math.PI ? 'start' : 'end'))
+      .attr('transform', (d) => (d.x >= Math.PI ? 'rotate(180)' : null))
+      .style('font-size', (d) => (d.data.kind === 'category' ? '13px' : d.data.kind === 'subcategory' ? '10.5px' : '9px'))
+      .style('font-weight', (d) => (d.data.kind === 'skill' ? 400 : 700))
+      .style('fill', (d) => {
+        if (isDim(d)) return '#3a4a66';
+        if (d.data.kind === 'category') return '#d9c6ff';
+        if (d.data.kind === 'subcategory') return '#9fd8ff';
+        return d.data.status === 'locked' ? '#5d6c85' : '#dbe7f7';
+      })
       .style('pointer-events', 'none')
       .style('paint-order', 'stroke')
-      .style('stroke', 'var(--bg-secondary)')
-      .style('stroke-width', '3px')
+      .style('stroke', '#0a0f1a')
+      .style('stroke-width', '2.5px')
       .text((d) => {
-        const count = d.data.children?.length;
-        if (d.data.kind === 'category') return `${d.data.name} (${d.data.children.reduce((a, s) => a + s.children.length, 0)})`;
-        if (d.data.kind === 'subcategory') return `${d.data.name} (${count})`;
+        if (d.data.kind === 'category') return d.data.name;
+        if (d.data.kind === 'subcategory') return d.data.name;
         return d.data.name;
       });
 
-    node
-      .append('title')
-      .text((d) =>
-        d.data.kind === 'skill'
-          ? `${d.data.name}\n${d.data.locked ? 'Locked — prerequisites not met' : `Lv${d.data.level} · ${d.data.xp}/${d.data.xpNeeded} XP`}\n\n${d.data.description}`
-          : d.data.name
-      );
+    node.append('title').text((d) =>
+      d.data.kind === 'skill'
+        ? `${d.data.name}\n${d.data.locked ? '🔒 Locked — prerequisites not met' : `Lv${d.data.level} · ${d.data.xp}/${d.data.xpNeeded} XP`}\n\n${d.data.description}`
+        : d.data.name
+    );
 
-    // Zoom / pan
-    const zoom = d3
-      .zoom()
-      .scaleExtent([0.15, 1.6])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform);
-        transformRef.current = event.transform;
-      });
-    zoomRef.current = zoom;
+    // ── Zoom / pan + ajustement ──
+    const zoom = d3.zoom().scaleExtent([0.12, 2.5]).on('zoom', (event) => {
+      g.attr('transform', event.transform);
+      transformRef.current = event.transform;
+    });
     svg.call(zoom).on('dblclick.zoom', null);
 
-    // Fit-to-view on first render / filter change; otherwise preserve prior transform
     if (refitRef.current || !transformRef.current) {
-      const nodes = rootH.descendants();
-      const xs = nodes.map((d) => d.x);
-      const ys = nodes.map((d) => d.y);
-      const x0 = Math.min(...xs), x1 = Math.max(...xs);
-      const y0 = Math.min(...ys), y1 = Math.max(...ys);
-      const contentH = Math.max(1, x1 - x0);
-      const contentW = Math.max(1, y1 - y0);
-      const pad = 60;
-      const scale = Math.max(0.15, Math.min(1.2, Math.min((size.w - pad) / (contentW + 160), (size.h - pad) / contentH)));
-      const tx = pad / 2 - y0 * scale + 40;
-      const ty = size.h / 2 - ((x0 + x1) / 2) * scale;
-      const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
+      const extent = radius + 120; // rayon + libellés
+      const scale = Math.max(0.12, Math.min(1.4, Math.min(size.w, size.h) / (2 * extent)));
+      const t = d3.zoomIdentity.translate(size.w / 2, size.h / 2).scale(scale);
       svg.call(zoom.transform, t);
       transformRef.current = t;
       refitRef.current = false;
     } else {
       svg.call(zoom.transform, transformRef.current);
     }
-  }, [data, search, size, tick, categoryFilter, onSelect]);
+  }, [data, search, size, tick, categoryFilter, trackFilter, onSelect]);
 
   const setAll = (open) => {
     const set = new Set(CATEGORIES.map((c) => `cat:${c}`));
@@ -242,31 +338,40 @@ export default function SkillTreeMap({ onSelect }) {
 
   return (
     <div className="space-y-3">
+      {/* Animations de la carte (lueur, pulsations, flux d'énergie, rotation des anneaux) */}
+      <style>{`
+        @keyframes ringSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes ringSpinRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        .ring-spin { animation: ringSpin 90s linear infinite; transform-origin: 0 0; }
+        .ring-spin-rev { animation: ringSpinRev 140s linear infinite; transform-origin: 0 0; }
+        @keyframes corePulse { 0%,100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.18); opacity: .12; } }
+        .core-pulse { animation: corePulse 3.2s ease-in-out infinite; transform-origin: 0 0; }
+        @keyframes availPulse { 0%,100% { fill-opacity: 1; } 50% { fill-opacity: .55; } }
+        .avail-pulse { animation: availPulse 2.4s ease-in-out infinite; }
+        @keyframes flow { to { stroke-dashoffset: -20; } }
+        .link-flow { stroke-dasharray: 5 5; animation: flow 1.4s linear infinite; }
+        @keyframes twinkle { 0%,100% { opacity: .55; } 50% { opacity: .1; } }
+        .astar { animation: twinkle 3s ease-in-out infinite; }
+        .node-core { transition: transform .18s ease; transform-box: fill-box; transform-origin: center; }
+        g:hover > .node-core { transform: scale(1.5); }
+      `}</style>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
           <input
             className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent"
-            placeholder="Search 211 skills…"
+            placeholder={`Search ${SKILL_TREE.length} skills…`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink"
-          value={trackFilter}
-          onChange={(e) => setTrackFilter(e.target.value)}
-          title="Career track"
-        >
+        <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={trackFilter} onChange={(e) => setTrackFilter(e.target.value)} title="Career track">
           {TRACKS.map((t) => (
             <option key={t} value={t}>{t === 'all' ? 'All tracks' : t}</option>
           ))}
         </select>
-        <select
-          className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-        >
+        <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
           <option value="all">All categories</option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
@@ -284,13 +389,14 @@ export default function SkillTreeMap({ onSelect }) {
       </div>
 
       <div className="flex items-center gap-4 text-xs text-mute">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.active }} /> Unlocked</span>
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.available }} /> Available</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.mastered, boxShadow: `0 0 6px ${COLOR.mastered}` }} /> Mastered Lv5</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.active, boxShadow: `0 0 6px ${COLOR.active}` }} /> Practiced</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.available, boxShadow: `0 0 6px ${COLOR.available}` }} /> Available</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR.locked }} /> Locked</span>
-        <span className="ml-auto hidden sm:inline">Drag to pan · scroll to zoom · click a branch to expand · click a skill for details</span>
+        <span className="ml-auto hidden sm:inline">Drag · zoom · click a diamond/ring to expand · click an orb for details</span>
       </div>
 
-      <div ref={wrapRef} className="w-full bg-card border border-line rounded-xl overflow-hidden">
+      <div ref={wrapRef} className="w-full rounded-xl overflow-hidden border border-line" style={{ background: '#0a0f1a' }}>
         <svg ref={svgRef} width={size.w} height={size.h} className="cursor-grab active:cursor-grabbing block" />
       </div>
     </div>
