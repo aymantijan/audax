@@ -9,6 +9,7 @@ import { useFinanceStore } from '../store/financeStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
 import { habitCompliance, weightedGPA, habitStreak } from '../utils/calculations';
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const goals = useFinanceStore((s) => s.goals);
   const skills = useSkillStore((s) => s.skills);
   const deals = useDealsStore((s) => s.deals);
+  const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
 
@@ -37,6 +39,13 @@ export default function Dashboard() {
   const peSkillsUnlocked = Object.values(skills).filter((s) => !s.locked && PE_TRACKS.includes(SKILL_MAP[s.id]?.track)).length;
   const peSkillsTotal = Object.values(skills).filter((s) => PE_TRACKS.includes(SKILL_MAP[s.id]?.track)).length;
   const dealSize = deals.reduce((a, d) => a + (d.size || 0), 0);
+
+  const readingRows = useMemo(
+    () => readingsStore.progress.map((p) => ({ ...p, totalPages: readingsStore.totalPagesFor(p) })),
+    [readingsStore.progress, readingsStore.library]
+  );
+  const readingStreak = readingsStore.getStreak();
+  const totalPagesRead = readingRows.reduce((a, r) => a + r.pagesRead, 0);
 
   const today = todayKey();
   const activeAccount = user?.activeAccount || 'demo';
@@ -181,6 +190,13 @@ export default function Dashboard() {
         <Stat label="PE/VC skills" value={`${peSkillsUnlocked}/${peSkillsTotal}`} sub="unlocked" />
         <Stat label="Courses" value={courses.length} sub={`${courses.filter((c) => c.status === 'completed').length} completed`} />
         <Stat label="Skills unlocked" value={Object.values(skills).filter((s) => !s.locked).length} sub={`of ${Object.values(skills).length}`} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Stat label="Reading streak" value={readingStreak} sub={readingStreak > 0 ? 'days' : 'log a page today'} color={readingStreak > 0 ? 'var(--warning)' : undefined} />
+        <Stat label="Books in progress" value={readingRows.filter((r) => r.status !== 'completed').length} />
+        <Stat label="Books completed" value={readingRows.filter((r) => r.status === 'completed').length} />
+        <Stat label="Pages read" value={totalPagesRead.toLocaleString()} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

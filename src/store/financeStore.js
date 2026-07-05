@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import { startOfMonth, differenceInDays } from 'date-fns';
 import { uid } from '../utils/formatters';
 import { calculateGoalXP, badgeForGoal, budgetSeverity } from '../utils/goals';
+import { computeRatios, runwayMonths, forecastCashFlow, buildAlerts } from '../utils/accounting';
+import { DEFAULT_COST_TYPE_BY_CATEGORY, LIQUID_ASSET_KEYS, SHORT_TERM_LIABILITY_KEYS } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -20,6 +22,7 @@ export const useFinanceStore = create(
       snapshots: [], // net worth snapshots
       adjustments: [], // off-book net-worth adjustments
       goals: [], // financial goals
+      recurring: [], // recurring income/expense commitments — feeds the treasury forecast
 
       // ─────────── SELECTORS (computed, single source of truth) ───────────
 
@@ -109,6 +112,96 @@ export const useFinanceStore = create(
         });
       },
 
+      // ---- Cost accounting: fixed / variable / exceptional split of expenses ----
+      getCostType: (tx) => tx.costType || DEFAULT_COST_TYPE_BY_CATEGORY[tx.category] || 'variable',
+      getMonthCostBreakdown: (monthOffset = 0) => {
+        const rows = get().getMonthTransactions(monthOffset).filter((t) => t.type === 'expense');
+        const out = { fixed: 0, variable: 0, exceptional: 0 };
+        for (const t of rows) out[get().getCostType(t)] += t.amount;
+        return out;
+      },
+
+      // ---- Treasury: cash-flow history, liquidity, runway, forward projection ----
+      // Trailing N months of income/expense/net — the "compte de résultat" mensuel.
+      getCashFlowHistory: (months = 6) => {
+        const out = [];
+        for (let i = months - 1; i >= 0; i--) {
+          const income = get().getMonthIncome(-i);
+          const expenses = get().getMonthExpenses(-i);
+          const d = startOfMonth(new Date());
+          d.setMonth(d.getMonth() - i);
+          out.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), income, expenses, net: income - expenses });
+        }
+        return out;
+      },
+      getAvgMonthlyNet: (months = 3) => {
+        const hist = get().getCashFlowHistory(months);
+        if (!hist.length) return 0;
+        return hist.reduce((a, m) => a + m.net, 0) / hist.length;
+      },
+
+      // Liquid assets / short-term liabilities from the latest net worth snapshot.
+      getLiquidAssets: () => {
+        const snaps = get().snapshots;
+        if (!snaps.length) return 0;
+        const assets = snaps[snaps.length - 1].assets || {};
+        return LIQUID_ASSET_KEYS.reduce((a, k) => a + (Number(assets[k]) || 0), 0);
+      },
+      getShortTermLiabilities: () => {
+        const snaps = get().snapshots;
+        if (!snaps.length) return 0;
+        const liab = snaps[snaps.length - 1].liabilities || {};
+        return SHORT_TERM_LIABILITY_KEYS.reduce((a, k) => a + (Number(liab[k]) || 0), 0);
+      },
+      getTotalAssetsRaw: () => {
+        const snaps = get().snapshots;
+        if (!snaps.length) return 0;
+        return Object.values(snaps[snaps.length - 1].assets || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+      },
+      getTotalLiabilitiesRaw: () => {
+        const snaps = get().snapshots;
+        if (!snaps.length) return 0;
+        return Object.values(snaps[snaps.length - 1].liabilities || {}).reduce((a, v) => a + (Number(v) || 0), 0);
+      },
+      // Months of liquid reserve at the recent average burn rate.
+      getRunway: () => {
+        const liquid = get().getLiquidAssets();
+        const avgExpenses = get().getCashFlowHistory(3).reduce((a, m) => a + m.expenses, 0) / 3;
+        return runwayMonths(liquid, avgExpenses);
+      },
+      // Net monthly commitment from active recurring items, normalized to a monthly cadence.
+      getRecurringMonthlyNet: () => {
+        const div = { monthly: 1, quarterly: 3, annual: 12 };
+        return get()
+          .recurring.filter((r) => r.active !== false)
+          .reduce((a, r) => a + (r.type === 'income' ? 1 : -1) * (r.amount / (div[r.frequency] || 1)), 0);
+      },
+      // Forward liquidity projection: prefers known recurring commitments over historical average.
+      getCashFlowForecast: (monthsAhead = 6) => {
+        const recurring = get().recurring.filter((r) => r.active !== false);
+        const monthlyNet = recurring.length ? get().getRecurringMonthlyNet() : get().getAvgMonthlyNet(3);
+        return forecastCashFlow({ startBalance: get().getLiquidAssets(), monthlyNet, months: monthsAhead });
+      },
+
+      // ---- Ratios & alerts — the analytical layer every tab reads from ----
+      getRatios: () => {
+        const income = get().getMonthIncome();
+        const expenses = get().getMonthExpenses();
+        const costs = get().getMonthCostBreakdown();
+        return computeRatios({
+          income,
+          expenses,
+          fixedExpenses: costs.fixed,
+          variableExpenses: costs.variable,
+          exceptionalExpenses: costs.exceptional,
+          liquidAssets: get().getLiquidAssets(),
+          shortTermLiabilities: get().getShortTermLiabilities(),
+          totalAssets: get().getTotalAssetsRaw(),
+          totalLiabilities: get().getTotalLiabilitiesRaw(),
+        });
+      },
+      getAlerts: () => buildAlerts({ budgetWarnings: get().getBudgetWarnings(), ratios: get().getRatios(), runway: get().getRunway() }),
+
       // ─────────── MUTATIONS (all stamp updatedAt) ───────────
 
       addTransaction: (data) => {
@@ -175,7 +268,18 @@ export const useFinanceStore = create(
         set({ adjustments: get().adjustments.map((a) => (a.id === id ? stamp({ ...a, ...updates, amount: Number(updates.amount ?? a.amount) }) : a)) }),
       deleteAdjustment: (id) => set({ adjustments: get().adjustments.filter((a) => a.id !== id) }),
 
-      resetAll: () => set({ transactions: [], budgets: [], snapshots: [], adjustments: [], goals: [] }),
+      // Recurring commitments (rent, salary, subscriptions) — the input to the treasury forecast.
+      addRecurring: (data) => {
+        const r = { ...data, id: uid(), amount: Number(data.amount), active: true, createdAt: Date.now(), updatedAt: Date.now() };
+        set({ recurring: [...get().recurring, r] });
+        toast(`Récurrence ajoutée : ${r.description || r.category}`, 'success');
+      },
+      editRecurring: (id, updates) =>
+        set({ recurring: get().recurring.map((r) => (r.id === id ? stamp({ ...r, ...updates, amount: Number(updates.amount ?? r.amount) }) : r)) }),
+      deleteRecurring: (id) => set({ recurring: get().recurring.filter((r) => r.id !== id) }),
+      toggleRecurring: (id) => set({ recurring: get().recurring.map((r) => (r.id === id ? stamp({ ...r, active: !r.active }) : r)) }),
+
+      resetAll: () => set({ transactions: [], budgets: [], snapshots: [], adjustments: [], goals: [], recurring: [] }),
     }),
     { name: 'audax-finance' }
   )

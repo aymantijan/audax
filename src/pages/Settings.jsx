@@ -7,12 +7,13 @@ import { useFinanceStore } from '../store/financeStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useReadingsStore } from '../store/readingsStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-synergy-history'];
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -65,6 +66,7 @@ export default function SettingsPage() {
     useHabitStore.getState().resetAll();
     useSkillStore.getState().resetAll();
     useDealsStore.getState().resetAll();
+    useReadingsStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
     toast('All data reset', 'warning');
   };

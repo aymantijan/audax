@@ -114,3 +114,32 @@ export const GOAL_TYPES = [
   { value: 'account', label: 'Trading account target' },
   { value: 'custom', label: 'Custom amount' },
 ];
+
+// ---- Finance: cost accounting (comptabilité des coûts) ----
+// Every expense is classified by cost behavior — mirrors fixed/variable/exceptional
+// splits used in cost accounting to separate "committed" spend from discretionary spend.
+export const COST_TYPES = [
+  { value: 'fixed', label: 'Fixe (loyer, abonnements, dettes)' },
+  { value: 'variable', label: 'Variable (courant, discrétionnaire)' },
+  { value: 'exceptional', label: 'Exceptionnel (ponctuel, non récurrent)' },
+];
+
+// Category → default cost behavior. Anything not listed defaults to 'variable'.
+export const DEFAULT_COST_TYPE_BY_CATEGORY = {
+  'Rent / Mortgage': 'fixed', Utilities: 'fixed', 'Home Insurance': 'fixed', 'Property Tax': 'fixed',
+  'Streaming & Subscriptions': 'fixed', 'Data Subscriptions': 'fixed', 'Trading Software': 'fixed',
+  'Gym Membership': 'fixed', 'Health Insurance': 'fixed', 'Auto Insurance': 'fixed', 'Life Insurance': 'fixed',
+  Tuition: 'fixed', 'Income Tax': 'fixed',
+  Flights: 'exceptional', Hotels: 'exceptional', 'Car Rentals': 'exceptional', 'Travel Insurance': 'exceptional',
+  Furniture: 'exceptional', 'Capital Gains Tax': 'exceptional', 'Car Maintenance': 'exceptional', 'Home Maintenance': 'exceptional',
+};
+
+export const RECURRING_FREQUENCIES = [
+  { value: 'monthly', label: 'Mensuel' },
+  { value: 'quarterly', label: 'Trimestriel' },
+  { value: 'annual', label: 'Annuel' },
+];
+
+// Liquidity classification for treasury ratios (comptes rapidement mobilisables vs. non liquides).
+export const LIQUID_ASSET_KEYS = ['cash', 'brokerage', 'crypto', 'demoAccount', 'realMoneyAccount'];
+export const SHORT_TERM_LIABILITY_KEYS = ['creditCards', 'marginDebt'];

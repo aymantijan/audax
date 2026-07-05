@@ -16,6 +16,8 @@ import Habits from './pages/Habits';
 import Skills from './pages/Skills';
 import Deals from './pages/Deals';
 import CoursePage from './pages/CoursePage';
+import Readings from './pages/Readings';
+import Library from './pages/Library';
 import SettingsPage from './pages/Settings';
 
 function AuthGuard({ children }) {
@@ -80,6 +82,8 @@ export default function App() {
         <Route path="/trading" element={<Trading />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/course/:courseId" element={<CoursePage />} />
+        <Route path="/learning/readings" element={<Readings />} />
+        <Route path="/learning/readings/library" element={<Library />} />
         <Route path="/finance" element={<Finance />} />
         <Route path="/habits" element={<Habits />} />
         <Route path="/deals" element={<Deals />} />

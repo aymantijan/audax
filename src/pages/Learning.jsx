@@ -82,9 +82,16 @@ export default function Learning() {
           <h1 className="text-2xl font-bold">Learning</h1>
           <p className="text-mute text-sm mt-1">Courses, readings, and GPA.</p>
         </div>
-        <Button onClick={() => setModal(true)}>
-          <span className="flex items-center gap-2"><Plus size={16} /> Add Course</span>
-        </Button>
+        <div className="flex gap-2">
+          <Link to="/learning/readings">
+            <Button variant="secondary">
+              <span className="flex items-center gap-2"><BookOpen size={15} /> Readings</span>
+            </Button>
+          </Link>
+          <Button onClick={() => setModal(true)}>
+            <span className="flex items-center gap-2"><Plus size={16} /> Add Course</span>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
