@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { BOOK_CATALOG } from '../utils/book-catalog';
+import { BOOK_CATALOG_V2 } from '../utils/book-catalog-2';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -19,24 +20,27 @@ export const useReadingsStore = create(
       library: [], // master catalog: [{ id, title, author, genre, pages, words, description, year, popularity, linkedSkills, addedAt }]
       progress: [], // reading state: [{ id, bookId, pagesRead, customPages, customWords, status, startedAt, completedAt, updatedAt }]
       readLog: [], // [{ date: 'YYYY-MM-DD' }] one entry per day any page was read — powers the streak
-      catalogSeeded: false, // one-shot: BOOK_CATALOG merged once, then user deletions stick
+      catalogSeeded: false, // legacy flag (v1) — kept for migration
+      seededKeys: null, // keys (title|author) already offered by a catalog — user deletions stay deleted
 
-      // Merge the built-in catalog into the library (skips titles already present).
-      // Runs once — the persisted flag means books the user later deletes stay deleted.
+      // Merge the built-in catalogs into the library. Idempotent AND versionable:
+      // a book is added only if it's neither in the library nor in seededKeys,
+      // so user deletions stick while new catalog editions still merge in.
       seedCatalog: () => {
-        if (get().catalogSeeded) return;
-        const have = new Set(get().library.map((b) => `${b.title}|${b.author}`.toLowerCase()));
+        const key = (b) => `${b.title}|${b.author}`.toLowerCase();
+        const catalog = [...BOOK_CATALOG, ...BOOK_CATALOG_V2];
+        // Migration from the v1 boolean flag: books already in the library count as seen.
+        let seen = new Set(get().seededKeys ?? (get().catalogSeeded ? get().library.map(key) : []));
+        const have = new Set(get().library.map(key));
         const now = Date.now();
-        const added = BOOK_CATALOG.filter((c) => !have.has(`${c.title}|${c.author}`.toLowerCase())).map((c) => ({
-          ...c,
-          id: uid(),
-          words: Math.round(c.pages * 250),
-          linkedSkills: [],
-          addedAt: now,
-          updatedAt: now,
-        }));
-        set({ library: [...get().library, ...added], catalogSeeded: true });
-        if (added.length) toast(`Library seeded: ${added.length} books across all genres`, 'success');
+        const added = catalog
+          .filter((c) => !have.has(key(c)) && !seen.has(key(c)))
+          .map((c) => ({ ...c, id: uid(), words: Math.round(c.pages * 250), linkedSkills: [], addedAt: now, updatedAt: now }));
+        for (const c of catalog) seen.add(key(c));
+        if (added.length || get().seededKeys === null) {
+          set({ library: [...get().library, ...added], seededKeys: [...seen], catalogSeeded: true });
+        }
+        if (added.length) toast(`Library: ${added.length} nouveaux livres ajoutés au catalogue`, 'success');
       },
 
       // ─────────── Library (catalog) ───────────
@@ -185,7 +189,7 @@ export const useReadingsStore = create(
         return streak;
       },
 
-      resetAll: () => set({ library: [], progress: [], readLog: [], catalogSeeded: false }),
+      resetAll: () => set({ library: [], progress: [], readLog: [], catalogSeeded: false, seededKeys: null }),
     }),
     { name: 'audax-readings' }
   )

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useSkillStore } from './store/skillStore';
@@ -8,17 +8,20 @@ import { startCloudSync, stopCloudSync } from './services/cloud-sync';
 import { toast } from './store/uiStore';
 import MainLayout from './components/layout/MainLayout';
 import Welcome from './pages/Welcome';
-import Dashboard from './pages/Dashboard';
-import Trading from './pages/Trading';
-import Learning from './pages/Learning';
-import Finance from './pages/Finance';
-import Habits from './pages/Habits';
-import Skills from './pages/Skills';
-import Deals from './pages/Deals';
-import CoursePage from './pages/CoursePage';
-import Readings from './pages/Readings';
-import Library from './pages/Library';
-import SettingsPage from './pages/Settings';
+
+// Route-level code splitting: each page (and its heavy deps — recharts, d3)
+// downloads on first visit instead of bloating the initial bundle.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Trading = lazy(() => import('./pages/Trading'));
+const Learning = lazy(() => import('./pages/Learning'));
+const Finance = lazy(() => import('./pages/Finance'));
+const Habits = lazy(() => import('./pages/Habits'));
+const Skills = lazy(() => import('./pages/Skills'));
+const Deals = lazy(() => import('./pages/Deals'));
+const CoursePage = lazy(() => import('./pages/CoursePage'));
+const Readings = lazy(() => import('./pages/Readings'));
+const Library = lazy(() => import('./pages/Library'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);

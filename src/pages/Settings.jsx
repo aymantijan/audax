@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react';
-import { Download, Upload, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Download, Upload, Trash2, Cloud, CloudOff } from 'lucide-react';
+import { isSupabaseConfigured } from '../services/supabase';
+import { getSession } from '../services/auth-supabase';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
@@ -8,17 +10,24 @@ import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useReadingsStore } from '../store/readingsStore';
+import { useAccountingStore } from '../store/accountingStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-synergy-history'];
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid' });
   const fileRef = useRef(null);
+  // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
+  const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    getSession().then((s) => setCloudStatus(s?.user ? 'active' : 'offline'));
+  }, []);
 
   const exportJSON = () => {
     const data = {
@@ -67,6 +76,7 @@ export default function SettingsPage() {
     useSkillStore.getState().resetAll();
     useDealsStore.getState().resetAll();
     useReadingsStore.getState().resetAll();
+    useAccountingStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
     toast('All data reset', 'warning');
   };
@@ -112,9 +122,40 @@ export default function SettingsPage() {
         </Button>
       </Card>
 
+      <Card title="Cloud Sync">
+        <div className="flex items-start gap-3">
+          {cloudStatus === 'active' ? (
+            <Cloud size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+          ) : (
+            <CloudOff size={20} className="text-mute shrink-0 mt-0.5" />
+          )}
+          <div className="text-sm">
+            {cloudStatus === 'active' && (
+              <>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Sync active</span>
+                <p className="text-mute mt-1">Every change is saved to the cloud in real time and follows you across devices. Local storage remains the instant source of truth.</p>
+              </>
+            )}
+            {cloudStatus === 'offline' && (
+              <>
+                <span className="font-medium" style={{ color: 'var(--warning)' }}>Not signed in to the cloud</span>
+                <p className="text-mute mt-1">Data is stored locally only. Log in with your cloud account on the Welcome screen to enable cross-device sync.</p>
+              </>
+            )}
+            {cloudStatus === 'unconfigured' && (
+              <>
+                <span className="font-medium text-mute">Cloud not configured</span>
+                <p className="text-mute mt-1">This build runs fully local. Add Supabase credentials to enable sync.</p>
+              </>
+            )}
+            {cloudStatus === 'checking' && <span className="text-mute">Checking cloud session…</span>}
+          </div>
+        </div>
+      </Card>
+
       <Card title="Data (local-first)">
         <p className="text-sm text-mute mb-4">
-          All data lives in this browser's localStorage. Export regularly — a JSON backup restores everything, including skill XP and synergy history. Cloud sync (Firebase) is planned as an optional Phase 4 layer.
+          All data lives in this browser's localStorage and syncs to the cloud when you're signed in. Export regularly — a JSON backup restores everything, including skill XP and synergy history.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" onClick={exportJSON}>

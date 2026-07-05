@@ -7,6 +7,7 @@ import { useLearningStore } from '../store/learningStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useReadingsStore } from '../store/readingsStore';
+import { useAccountingStore } from '../store/accountingStore';
 
 const TABLE = 'app_state';
 
@@ -22,6 +23,7 @@ const REGISTRY = [
   { name: 'habits', store: useHabitStore },
   { name: 'skills', store: useSkillStore },
   { name: 'readings', store: useReadingsStore },
+  { name: 'accounting', store: useAccountingStore },
 ];
 
 // Strip actions (functions) off a store's state — same filter zustand/persist

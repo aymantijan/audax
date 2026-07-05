@@ -1,29 +1,37 @@
 import { useState } from 'react';
-import { LayoutDashboard, Receipt, PiggyBank, Landmark, LineChart } from 'lucide-react';
-import Overview from './finance/Overview';
-import Transactions from './finance/Transactions';
-import BudgetCosts from './finance/BudgetCosts';
-import Treasury from './finance/Treasury';
-import RatiosWealth from './finance/RatiosWealth';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark } from 'lucide-react';
+import AccountingOverview from './finance/AccountingOverview';
+import Journal from './finance/Journal';
+import Ledger from './finance/Ledger';
+import Statements from './finance/Statements';
+import Analysis from './finance/Analysis';
+import Budget from './finance/Budget';
+import TreasuryPure from './finance/TreasuryPure';
 
+// Système financier personnel interconnecté, fondé sur la comptabilité générale
+// en partie double (inspiration : plan comptable marocain adapté à une personne
+// physique). Le Journal est la source unique ; Bilan, CPC, ESG, analyse
+// financière, gestion budgétaire et trésorerie en découlent automatiquement.
 const TABS = [
-  { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard, Component: Overview },
-  { key: 'transactions', label: 'Transactions', icon: Receipt, Component: Transactions },
-  { key: 'budget', label: 'Budget & Coûts', icon: PiggyBank, Component: BudgetCosts },
-  { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: Treasury },
-  { key: 'ratios', label: 'Ratios & Patrimoine', icon: LineChart, Component: RatiosWealth },
+  { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard, Component: AccountingOverview },
+  { key: 'journal', label: 'Journal', icon: BookOpen, Component: Journal },
+  { key: 'ledger', label: 'Grand Livre & Balance', icon: Library, Component: Ledger },
+  { key: 'statements', label: 'Bilan · CPC · ESG', icon: FileSpreadsheet, Component: Statements },
+  { key: 'analysis', label: 'Analyse & Ratios', icon: LineChart, Component: Analysis },
+  { key: 'budget', label: 'Budget', icon: PiggyBank, Component: Budget },
+  { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: TreasuryPure },
 ];
 
 export default function Finance() {
   const [tab, setTab] = useState('overview');
-  const Active = TABS.find((t) => t.key === tab)?.Component || Overview;
+  const Active = TABS.find((t) => t.key === tab)?.Component || AccountingOverview;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Finance</h1>
         <p className="text-mute text-sm mt-1">
-          Gestion financière personnelle — comptabilité générale, comptabilité des coûts, gestion budgétaire et de trésorerie. Montants en dirhams (DH).
+          Comptabilité personnelle en partie double — journal, états de synthèse, analyse financière, budget et trésorerie. Montants en dirhams (DH).
         </p>
       </div>
 
@@ -35,7 +43,7 @@ export default function Finance() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
                 active ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'
               }`}
             >

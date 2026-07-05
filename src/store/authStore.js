@@ -94,6 +94,9 @@ export const useAuthStore = create(
     {
       name: 'audax-auth',
       version: 1,
+      // Older exports/devices may carry version 0 — withDefaults (via merge)
+      // already upgrades the shape, so migration is a pass-through.
+      migrate: (persisted) => persisted,
       merge: (persisted, current) => ({ ...current, ...persisted, user: withDefaults(persisted?.user) }),
     }
   )

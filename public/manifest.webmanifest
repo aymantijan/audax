@@ -1,0 +1,17 @@
+{
+  "name": "AUDAX — Life & Trading Companion",
+  "short_name": "AUDAX",
+  "description": "Track trading, learning, finance, habits, and skills — one gamified companion for ambitious people.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0e14",
+  "theme_color": "#0b0e14",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

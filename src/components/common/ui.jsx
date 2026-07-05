@@ -128,6 +128,18 @@ export function EmptyState({ children }) {
   return <div className="text-center text-mute text-sm py-8">{children}</div>;
 }
 
+// Suspense fallback while a lazy-loaded route chunk downloads.
+export function PageLoader() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-line border-t-accent animate-spin" style={{ borderTopColor: 'var(--accent-primary)' }} />
+        <span className="text-xs text-mute">Loading…</span>
+      </div>
+    </div>
+  );
+}
+
 export function ToastContainer() {
   const { toasts, removeToast } = useUiStore();
   const colors = { success: 'var(--success)', error: 'var(--error)', warning: 'var(--warning)', info: 'var(--accent-primary)' };
