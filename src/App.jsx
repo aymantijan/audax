@@ -8,20 +8,23 @@ import { startCloudSync, stopCloudSync } from './services/cloud-sync';
 import { toast } from './store/uiStore';
 import MainLayout from './components/layout/MainLayout';
 import Welcome from './pages/Welcome';
+import { lazyWithRetry } from './utils/lazyRetry';
 
 // Route-level code splitting: each page (and its heavy deps — recharts, d3)
 // downloads on first visit instead of bloating the initial bundle.
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Trading = lazy(() => import('./pages/Trading'));
-const Learning = lazy(() => import('./pages/Learning'));
-const Finance = lazy(() => import('./pages/Finance'));
-const Habits = lazy(() => import('./pages/Habits'));
-const Skills = lazy(() => import('./pages/Skills'));
-const Deals = lazy(() => import('./pages/Deals'));
-const CoursePage = lazy(() => import('./pages/CoursePage'));
-const Readings = lazy(() => import('./pages/Readings'));
-const Library = lazy(() => import('./pages/Library'));
-const SettingsPage = lazy(() => import('./pages/Settings'));
+// lazyWithRetry: if a tab stays open across a new deploy, its old chunk hashes
+// 404 — one automatic reload fetches the current build instead of crashing.
+const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
+const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
+const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
+const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
+const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
+const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
+const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
+const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
+const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
+const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
+const SettingsPage = lazy(lazyWithRetry(() => import('./pages/Settings'), 'Settings'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
