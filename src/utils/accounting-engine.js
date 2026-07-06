@@ -328,6 +328,39 @@ export function budgetVariance(journal, budgets, mk) {
   });
 }
 
+// Solde de trésorerie (classe 5) à une date donnée — brique de base des objectifs de trésorerie.
+export function treasuryBalance(journal, until) {
+  return sumClass(accountBalances(journal, until ? { to: until } : undefined), 5);
+}
+
+// Historique mensuel de l'ANC / ANCC (fin de mois) — sert à tracer la progression
+// du patrimoine ET à calculer un rythme mensuel pour projeter les objectifs.
+export function netWorthHistory(journal, corrections, months = 12) {
+  return monthlySeries(journal, months).map((m) => {
+    const until = `${m.key}-31`;
+    const fa = financialAnalysis(journal, until);
+    const cv = correctedNetWorth(fa.anc, corrections, until);
+    return { key: m.key, label: m.label, anc: fa.anc, ancc: cv.ancc };
+  });
+}
+
+// Rythme moyen entre le premier et le dernier point d'une série (valeur/mois).
+export function paceFromEdges(points, key) {
+  if (!points || points.length < 2) return 0;
+  const first = points[0][key];
+  const last = points[points.length - 1][key];
+  return r2((last - first) / (points.length - 1));
+}
+
+// Projection linéaire d'une valeur à une date cible, à partir d'un rythme mensuel.
+export function projectValue(current, monthlyPace, targetDate) {
+  if (!targetDate) return null;
+  const now = new Date();
+  const target = new Date(targetDate);
+  const monthsLeft = Math.max(0, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
+  return r2(current + monthlyPace * monthsLeft);
+}
+
 // Budget de trésorerie prévisionnel : à partir du solde actuel (classe 5) et
 // du solde budgété mensuel (Σ budgets produits − Σ budgets charges).
 export function treasuryForecast(journal, budgets, monthsAhead = 6) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, Flame, Award, Rocket } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, AlertCircle, CheckCircle2, Info, ArrowRight, Flame, Award, Rocket } from 'lucide-react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
@@ -15,6 +15,8 @@ import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
 import { habitCompliance, weightedGPA, habitStreak } from '../utils/calculations';
 import { checkBurnoutTriggers } from '../utils/burnout';
+import { buildObservations } from '../utils/observations';
+import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADE_POINTS, SKILL_MAP, LEVEL_NAMES } from '../utils/constants';
 import { fmtMoney, fmtSignedMoney, fmtMAD, fmtPct, fmtDate, todayKey } from '../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
@@ -73,6 +75,47 @@ export default function Dashboard() {
     () => checkBurnoutTriggers({ energyLogs, compliance: habitCompliance(activeHabits, logs, 7, today), trades: acctTrades }),
     [energyLogs, activeHabits, logs, acctTrades, today]
   );
+
+  // Cross-domain observations & alerts — every piece of data on the site matters,
+  // this is where signals from Finance, Trading, Habits, Learning, Skills and
+  // Reading all surface together, sorted by severity.
+  const observations = useMemo(() => {
+    const lastTrade = acctTrades.length ? [...acctTrades].sort((a, b) => new Date(b.date) - new Date(a.date))[0] : null;
+    return buildObservations({
+      accounting: hasJournal
+        ? {
+            analysis: accountingStore.getAnalysis(),
+            esg: accountingStore.getESG(accountingStore.currentMonthPeriod()),
+            budgetVariance: accountingStore.getBudgetVariance(),
+            goalRows: accountingStore.getGoalRows(),
+          }
+        : undefined,
+      trading: acctTrades.length
+        ? {
+            maxDrawdownPct: tradingStore.getMaxDrawdown(activeAccount),
+            tradesCount: acctTrades.length,
+            daysSinceLastTrade: lastTrade ? Math.floor((Date.now() - new Date(lastTrade.date).getTime()) / 86400000) : null,
+            winRate: monthTrades.length >= 5 ? monthStats.winRate : null,
+            baselineWinRate: acctTrades.length >= 10 ? tradingStore.getStats(activeAccount).winRate : null,
+          }
+        : undefined,
+      habits: activeHabits.length ? { complianceRate: habitCompliance(activeHabits, logs, 7, today).rate * 100 } : undefined,
+      learning: courses.length
+        ? {
+            gpa,
+            stalledCourses: courses.filter((c) => c.status === 'active' && calculateCourseProgress(c) === 0 && Date.now() - c.createdAt > 14 * 24 * 60 * 60 * 1000).length,
+          }
+        : undefined,
+      skills: {
+        decayedCount: Object.values(skills).filter((s) => s.decayStatus === 'decayed').length,
+        warningCount: Object.values(skills).filter((s) => s.decayStatus === 'warning').length,
+      },
+      readings: { streak: readingStreak, inProgressCount: readingRows.filter((r) => r.status !== 'completed').length },
+    });
+  }, [hasJournal, accountingStore, acctTrades, tradingStore, activeAccount, monthTrades, monthStats, activeHabits, logs, today, courses, gpa, skills, readingStreak, readingRows]);
+
+  const OBS_ICON = { danger: AlertTriangle, warning: AlertCircle, success: CheckCircle2, info: Info };
+  const OBS_COLOR = { danger: 'var(--error)', warning: 'var(--warning)', success: 'var(--success)', info: 'var(--text-secondary)' };
 
   const focusItems = useMemo(() => {
     const items = [];
@@ -152,6 +195,25 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+      )}
+
+      {observations.length > 0 && (
+        <Card title="Observations & Alerts">
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {observations.map((o) => {
+              const Icon = OBS_ICON[o.level];
+              return (
+                <div key={o.id} className="flex items-start gap-2.5 text-sm">
+                  <Icon size={15} className="shrink-0 mt-0.5" style={{ color: OBS_COLOR[o.level] }} />
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide mr-1.5" style={{ color: OBS_COLOR[o.level] }}>{o.domain}</span>
+                    <span className="text-ink">{o.message}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

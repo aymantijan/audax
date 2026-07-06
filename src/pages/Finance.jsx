@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target } from 'lucide-react';
 import AccountingOverview from './finance/AccountingOverview';
 import Journal from './finance/Journal';
 import Ledger from './finance/Ledger';
@@ -7,11 +7,12 @@ import Statements from './finance/Statements';
 import Analysis from './finance/Analysis';
 import Budget from './finance/Budget';
 import TreasuryPure from './finance/TreasuryPure';
+import Goals from './finance/Goals';
 
 // Système financier personnel interconnecté, fondé sur la comptabilité générale
 // en partie double (inspiration : plan comptable marocain adapté à une personne
 // physique). Le Journal est la source unique ; Bilan, CPC, ESG, analyse
-// financière, gestion budgétaire et trésorerie en découlent automatiquement.
+// financière, gestion budgétaire, trésorerie et objectifs en découlent automatiquement.
 const TABS = [
   { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard, Component: AccountingOverview },
   { key: 'journal', label: 'Journal', icon: BookOpen, Component: Journal },
@@ -20,6 +21,7 @@ const TABS = [
   { key: 'analysis', label: 'Analyse & Ratios', icon: LineChart, Component: Analysis },
   { key: 'budget', label: 'Budget', icon: PiggyBank, Component: Budget },
   { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: TreasuryPure },
+  { key: 'goals', label: 'Objectifs', icon: Target, Component: Goals },
 ];
 
 export default function Finance() {
@@ -31,7 +33,7 @@ export default function Finance() {
       <div>
         <h1 className="text-2xl font-bold">Finance</h1>
         <p className="text-mute text-sm mt-1">
-          Comptabilité personnelle en partie double — journal, états de synthèse, analyse financière, budget et trésorerie. Montants en dirhams (DH).
+          Comptabilité personnelle en partie double — journal, états de synthèse, analyse financière, budget, trésorerie et objectifs. Montants en dirhams (DH).
         </p>
       </div>
 

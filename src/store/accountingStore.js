@@ -4,9 +4,10 @@ import { uid } from '../utils/formatters';
 import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
-  budgetVariance, treasuryForecast, monthKey,
+  budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT } from '../utils/chart-of-accounts';
+import { calculateGoalXP, badgeForGoal } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
@@ -24,6 +25,7 @@ export const useAccountingStore = create(
       journal: [], // écritures en partie double
       budgets: [], // [{ id, account, amount }] — budget mensuel par compte (classes 6 & 7)
       corrections: [], // [{ id, type:'plus-value'|'moins-value', label, amount, account, date }] — ANC → ANCC
+      goals: [], // [{ id, type:'treasury'|'networth', name, targetAmount, targetDate, achieved, achievedAt, xpAwarded, badge }]
       legacyImported: false,
 
       // ─────────── Journal (mutations) ───────────
@@ -84,6 +86,54 @@ export const useAccountingStore = create(
         set({ corrections: get().corrections.map((c) => (c.id === id ? stamp({ ...c, ...updates, amount: Number(updates.amount ?? c.amount) }) : c)) }),
       deleteCorrection: (id) => set({ corrections: get().corrections.filter((c) => c.id !== id) }),
 
+      // ─────────── Objectifs (trésorerie & patrimoine) ───────────
+      addGoal: (data) => {
+        const goal = {
+          ...data, id: uid(), targetAmount: Number(data.targetAmount),
+          achieved: false, achievedAt: null, createdAt: Date.now(), updatedAt: Date.now(),
+        };
+        set({ goals: [...get().goals, goal] });
+        toast(`Objectif créé : ${goal.name}`, 'success');
+      },
+      editGoal: (id, updates) =>
+        set({ goals: get().goals.map((g) => (g.id === id ? stamp({ ...g, ...updates, targetAmount: Number(updates.targetAmount ?? g.targetAmount) }) : g)) }),
+      deleteGoal: (id) => set({ goals: get().goals.filter((g) => g.id !== id) }),
+
+      // Lignes enrichies pour l'UI : valeur actuelle, rythme, progression, projection.
+      getGoalRows: () => {
+        const journal = get().journal;
+        const corrections = get().corrections;
+        const nwHist = netWorthHistory(journal, corrections, 6);
+        const nwPace = paceFromEdges(nwHist, 'ancc');
+        const nwCurrent = get().getNetWorth().ancc;
+
+        const treasurySeries = get().getMonthlySeries(6);
+        const treasuryPace = paceFromEdges(treasurySeries, 'solde');
+        const treasuryCurrent = treasurySeries.length ? treasurySeries[treasurySeries.length - 1].solde : treasuryBalance(journal);
+
+        return get().goals.map((g) => {
+          const isTreasury = g.type === 'treasury';
+          const current = isTreasury ? treasuryCurrent : nwCurrent;
+          const pace = isTreasury ? treasuryPace : nwPace;
+          const progress = g.targetAmount > 0 ? Math.max(0, Math.min(100, (current / g.targetAmount) * 100)) : null;
+          const projected = g.targetDate ? projectValue(current, pace, g.targetDate) : null;
+          const onTrack = projected !== null ? projected >= g.targetAmount : null;
+          return { ...g, current, pace, progress, projected, onTrack };
+        });
+      },
+
+      // Idempotent : XP + badge une seule fois, au franchissement du seuil.
+      checkGoalAchievement: (goalId, current) => {
+        const goal = get().goals.find((g) => g.id === goalId);
+        if (!goal || goal.achieved || current < goal.targetAmount) return;
+        const xp = calculateGoalXP(goal.targetAmount);
+        const badge = badgeForGoal(goal.targetAmount);
+        set({ goals: get().goals.map((g) => (g.id === goalId ? stamp({ ...g, achieved: true, achievedAt: Date.now(), xpAwarded: xp, badge }) : g)) });
+        const skillId = goal.type === 'treasury' ? 'treasury-planning-lv1' : 'ratio-analysis-lv1';
+        useSkillStore.getState().awardXP(skillId, xp, `objectif atteint : ${goal.name}`);
+        toast(`🎉 Objectif atteint : ${goal.name} · +${xp} XP · Badge : ${badge}`, 'success');
+      },
+
       // ─────────── Sélecteurs (tout dérive du journal) ───────────
       getBalances: (period) => accountBalances(get().journal, period),
       getLedger: (code, period) => ledgerFor(get().journal, code, period),
@@ -139,7 +189,7 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], legacyImported: false }),
+      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], legacyImported: false }),
     }),
     { name: 'audax-accounting' }
   )

@@ -162,6 +162,12 @@ export const ENTRY_TEMPLATES = [
   },
 ];
 
+// Objectifs financiers : trésorerie (solde classe 5) ou patrimoine (ANCC).
+export const GOAL_TYPES = [
+  { value: 'treasury', label: 'Trésorerie (solde disponible)' },
+  { value: 'networth', label: 'Net Worth (ANC Corrigé)' },
+];
+
 // Corrections de valeur : passage de l'Actif Net Comptable (ANC) à l'ANC Corrigé.
 // Référencer un compte d'actif (classe 2/3/5) est optionnel — sert juste de contexte.
 export const CORRECTION_TYPES = [
