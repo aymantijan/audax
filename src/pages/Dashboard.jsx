@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
 import { useFinanceStore } from '../store/financeStore';
+import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
@@ -58,8 +59,11 @@ export default function Dashboard() {
   const demoStats = tradingStore.getStats('demo');
   const demoAccount = tradingStore.accountValue('demo');
   const gpa = weightedGPA(courses, GRADE_POINTS);
-  // Selector = single source of truth; automatically includes NW adjustments now.
-  const netWorth = financeStore.getNetWorth();
+  // Automatic net worth: Actif Net Comptable Corrigé from the double-entry journal
+  // (ANC = Actif − Dettes, then + plus-values − moins-values). No manual snapshot.
+  const accountingStore = useAccountingStore();
+  const hasJournal = accountingStore.journal.length > 0;
+  const netWorth = hasJournal ? accountingStore.getNetWorth().ancc : null;
   const todayEnergy = energyLogs.find((l) => l.date === today);
 
   const activeHabits = habits.filter((h) => !h.archived);

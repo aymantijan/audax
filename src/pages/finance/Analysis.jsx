@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
-import { financialAnalysis } from '../../utils/accounting-engine';
+import { financialAnalysis, correctedNetWorth } from '../../utils/accounting-engine';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../../components/common/ui';
 
@@ -10,22 +10,27 @@ const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border
 export default function Analysis() {
   const store = useAccountingStore();
   const journal = store.journal;
+  const corrections = store.corrections;
   const a = store.getAnalysis();
+  const netWorth = store.getNetWorth();
   const series = store.getMonthlySeries(12);
 
-  // Progression du patrimoine : analyse bilancielle à la fin de chaque mois.
+  // Progression du patrimoine : ANC (bilanciel) et ANCC (+ corrections actives à date) à la fin de chaque mois.
   const patrimoineSeries = useMemo(() => {
     return series.map((m) => {
-      const fa = financialAnalysis(journal, `${m.key}-31`);
+      const until = `${m.key}-31`;
+      const fa = financialAnalysis(journal, until);
+      const cv = correctedNetWorth(fa.anc, corrections, until);
       return {
         label: m.label,
-        patrimoine: fa.capitauxPropres,
+        ANC: fa.anc,
+        ANCC: cv.ancc,
         FR: fa.fondsRoulement,
         BFR: fa.bfr,
         TN: fa.tresorerieNette,
       };
     });
-  }, [journal, series]);
+  }, [journal, corrections, series]);
 
   if (!journal.length) {
     return (
@@ -50,7 +55,7 @@ export default function Analysis() {
         <Stat label="Fonds de roulement (FR)" value={fmtMAD(a.fondsRoulement)} sub="Financement permanent − Actif immobilisé" color={a.fondsRoulement >= 0 ? 'var(--success)' : 'var(--error)'} />
         <Stat label="Besoin en FR (BFR)" value={fmtMAD(a.bfr)} sub="Créances − Dettes court terme" />
         <Stat label="Trésorerie nette (TN)" value={fmtMAD(a.tresorerieNette)} sub="TN = FR − BFR" color={a.tresorerieNette >= 0 ? 'var(--success)' : 'var(--error)'} />
-        <Stat label="Patrimoine net" value={fmtMAD(a.capitauxPropres)} sub="Capitaux propres + résultat cumulé" color="var(--accent-primary)" />
+        <Stat label="Actif Net Comptable Corrigé" value={fmtMAD(netWorth.ancc)} sub={`ANC ${fmtMAD(netWorth.anc)} + corrections`} color="var(--accent-primary)" />
       </div>
 
       <div className="border rounded-xl p-3 text-sm" style={{ borderColor: diagnostic.color, background: `color-mix(in srgb, ${diagnostic.color} 8%, transparent)` }}>
@@ -70,15 +75,17 @@ export default function Analysis() {
 
       {/* ── Progression historique ── */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title="Progression du patrimoine net — 12 mois">
+        <Card title="ANC vs ANCC — 12 mois">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={patrimoineSeries}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} domain={['auto', 'auto']} />
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="var(--border)" />
-              <Line type="monotone" dataKey="patrimoine" name="Patrimoine net" stroke="#b366ff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="ANC" name="Actif Net Comptable" stroke="#7aa2ff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="ANCC" name="ANC Corrigé" stroke="#b366ff" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>

@@ -15,6 +15,7 @@ export default function AccountingOverview() {
   const c = store.getCPC(period);
   const e = store.getESG(period);
   const a = store.getAnalysis();
+  const netWorth = store.getNetWorth();
   const series = store.getMonthlySeries(6);
   const variance = store.getBudgetVariance();
 
@@ -64,7 +65,7 @@ export default function AccountingOverview() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Stat label="Trésorerie nette" value={fmtMAD(a.tresorerieNette)} color={a.tresorerieNette >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
-        <Stat label="Patrimoine net" value={fmtMAD(a.capitauxPropres)} />
+        <Stat label="Actif Net Comptable Corrigé" value={fmtMAD(netWorth.ancc)} sub={`ANC ${fmtMAD(netWorth.anc)}`} />
         <Stat label="Produits (mois)" value={fmtMAD(c.produitsCourants + c.produitsExcep)} color="var(--success)" />
         <Stat label="Charges (mois)" value={fmtMAD(c.chargesCourantes + c.chargesExcep)} />
         <Stat

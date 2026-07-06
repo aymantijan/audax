@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
+import { CORRECTION_TYPES } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
-import { Card, EmptyState } from '../../components/common/ui';
+import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
+import AccountSelect from '../../components/common/AccountSelect';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -30,15 +33,34 @@ function Row({ label, value, bold, indent, color }) {
   );
 }
 
+const blankCorrection = () => ({ type: 'plus-value', label: '', amount: '', account: '', date: new Date().toISOString().slice(0, 10) });
+
 export default function Statements() {
   const store = useAccountingStore();
+  const { corrections, addCorrection, editCorrection, deleteCorrection } = store;
   const [periodId, setPeriodId] = useState('month');
   const period = periodOf(periodId);
 
   const bs = store.getBalanceSheet();
   const c = store.getCPC(period);
   const e = store.getESG(period);
+  const netWorth = store.getNetWorth();
   const hasData = store.journal.length > 0;
+
+  const [corrModal, setCorrModal] = useState(false);
+  const [corrForm, setCorrForm] = useState(blankCorrection());
+  const [editingCorr, setEditingCorr] = useState(null);
+
+  const submitCorrection = (e2) => {
+    e2.preventDefault();
+    if (!corrForm.label.trim() || !Number(corrForm.amount)) return;
+    const payload = { ...corrForm, account: corrForm.account || undefined };
+    if (editingCorr) editCorrection(editingCorr.id, payload);
+    else addCorrection(payload);
+    setCorrModal(false);
+    setEditingCorr(null);
+    setCorrForm(blankCorrection());
+  };
 
   const bilanChart = [
     { name: 'Actif', Immobilisé: bs.actif.immobilise, Créances: bs.actif.creances, Trésorerie: bs.actif.tresorerie },
@@ -77,6 +99,11 @@ export default function Statements() {
           <p className="text-[11px] mt-2" style={{ color: bs.equilibre ? 'var(--success)' : 'var(--error)' }}>
             {bs.equilibre ? '✓ Actif = Passif : le bilan est équilibré (partie double respectée).' : '⚠ Bilan déséquilibré.'}
           </p>
+          <div className="mt-3 pt-3 border-t border-line">
+            <Row label="Total Actif" value={bs.actif.total} />
+            <Row label="− Total des dettes" value={-store.getAnalysis().dettesTotales} indent />
+            <Row label="= ACTIF NET COMPTABLE (ANC)" value={netWorth.anc} bold color="var(--accent-secondary)" />
+          </div>
         </Card>
 
         <Card title="Structure du bilan" className="lg:col-span-1">
@@ -97,6 +124,51 @@ export default function Statements() {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      {/* ── ANC → ANCC : corrections de valeur ── */}
+      <Card
+        title="Actif Net Comptable Corrigé (ANCC)"
+        action={
+          <Button variant="ghost" onClick={() => { setEditingCorr(null); setCorrForm(blankCorrection()); setCorrModal(true); }}>
+            <Plus size={15} />
+          </Button>
+        }
+      >
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <Row label="Actif Net Comptable (ANC)" value={netWorth.anc} />
+            <Row label="+ Plus-values sur éléments d'actif" value={netWorth.plusValues} indent color="var(--success)" />
+            <Row label="− Moins-values sur éléments d'actif" value={-netWorth.moinsValues} indent color="var(--error)" />
+            <Row label="= ACTIF NET COMPTABLE CORRIGÉ (ANCC)" value={netWorth.ancc} bold color="var(--accent-primary)" />
+            <p className="text-[11px] text-mute mt-2">
+              L'ANC vient automatiquement du journal (Actif − Dettes). Les corrections ci-contre reflètent l'écart entre la valeur comptable (coût historique) et la valeur réelle actuelle de vos biens.
+            </p>
+          </div>
+          <div>
+            {corrections.length ? (
+              <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                {corrections.map((cr) => (
+                  <div key={cr.id} className="flex items-center gap-2 text-sm border border-line rounded-lg px-3 py-2">
+                    <Badge color={cr.type === 'plus-value' ? 'var(--success)' : 'var(--error)'}>{cr.type === 'plus-value' ? 'Plus-value' : 'Moins-value'}</Badge>
+                    <span className="flex-1 truncate">{cr.label}</span>
+                    <span className="font-medium" style={{ color: cr.type === 'plus-value' ? 'var(--success)' : 'var(--error)' }}>
+                      {cr.type === 'plus-value' ? '+' : '−'}{fmtMAD(cr.amount)}
+                    </span>
+                    <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingCorr(cr); setCorrForm({ ...cr, account: cr.account || '' }); setCorrModal(true); }} title="Modifier">
+                      <Pencil size={13} />
+                    </button>
+                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer "${cr.label}" ?`)) deleteCorrection(cr.id); }} title="Supprimer">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState>Aucune correction. Ajoutez une plus/moins-value pour passer de l'ANC à l'ANCC.</EmptyState>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* ── Période pour CPC & ESG ── */}
       <div className="flex gap-2">
@@ -146,6 +218,39 @@ export default function Statements() {
           </div>
         </Card>
       </div>
+
+      <Modal open={corrModal} onClose={() => { setCorrModal(false); setEditingCorr(null); }} title={editingCorr ? 'Modifier la correction' : "Ajouter une plus/moins-value"}>
+        <form onSubmit={submitCorrection} className="space-y-3">
+          <Field label="Type">
+            <Select value={corrForm.type} onChange={(e2) => setCorrForm({ ...corrForm, type: e2.target.value })} options={CORRECTION_TYPES} />
+          </Field>
+          <Field label="Libellé">
+            <Input value={corrForm.label} onChange={(e2) => setCorrForm({ ...corrForm, label: e2.target.value })} placeholder="ex : Réévaluation appartement" autoFocus />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Montant (DH)">
+              <Input type="number" step="any" min="0" value={corrForm.amount} onChange={(e2) => setCorrForm({ ...corrForm, amount: e2.target.value })} />
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={corrForm.date} onChange={(e2) => setCorrForm({ ...corrForm, date: e2.target.value })} />
+            </Field>
+          </div>
+          <Field label="Élément d'actif concerné (optionnel)">
+            <AccountSelect classes={[2, 3, 5]} value={corrForm.account} onChange={(e2) => setCorrForm({ ...corrForm, account: e2.target.value })} />
+          </Field>
+          <div className="flex justify-between gap-3 pt-2 border-t border-line">
+            {editingCorr ? (
+              <Button type="button" variant="danger" onClick={() => { deleteCorrection(editingCorr.id); setCorrModal(false); setEditingCorr(null); }}>
+                <span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span>
+              </Button>
+            ) : <span />}
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" onClick={() => { setCorrModal(false); setEditingCorr(null); }}>Annuler</Button>
+              <Button type="submit">{editingCorr ? 'Enregistrer' : 'Ajouter'}</Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

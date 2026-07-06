@@ -162,6 +162,13 @@ export const ENTRY_TEMPLATES = [
   },
 ];
 
+// Corrections de valeur : passage de l'Actif Net Comptable (ANC) à l'ANC Corrigé.
+// Référencer un compte d'actif (classe 2/3/5) est optionnel — sert juste de contexte.
+export const CORRECTION_TYPES = [
+  { value: 'plus-value', label: 'Plus-value (valeur réelle > valeur comptable)' },
+  { value: 'moins-value', label: 'Moins-value (valeur réelle < valeur comptable)' },
+];
+
 // Passerelle depuis l'ancien système (financeStore) : groupe de catégorie → compte.
 export const LEGACY_CATEGORY_TO_ACCOUNT = {
   'Trading Fees': '673', 'Trading Commission': '673', 'Spread Cost': '673',

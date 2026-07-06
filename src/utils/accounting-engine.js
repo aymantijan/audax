@@ -214,6 +214,13 @@ export function esg(journal, period) {
 //   FR  = Financement permanent (1 + résultat) − Actif immobilisé (2)
 //   BFR = Créances (3) − Dettes CT (4)
 //   TN  = FR − BFR  (doit égaler la trésorerie de classe 5)
+//
+// Actif Net Comptable (ANC) — la valeur patrimoniale automatique demandée :
+//   ANC = Total Actif − Total des dettes (emprunts long terme + dettes court terme)
+// Les comptes 111 (capital personnel) et 118 (report à nouveau) ne sont PAS des
+// dettes envers un tiers, donc exclus de "Total des dettes". Par construction de
+// la partie double, ANC = Capital + Report à nouveau + Résultat cumulé — l'égalité
+// est vérifiée automatiquement à chaque écriture, sans aucune saisie manuelle.
 export function financialAnalysis(journal, until) {
   const bs = balanceSheet(journal, until);
   const financementPermanent = r2(bs.passif.capitaux + bs.passif.resultat);
@@ -222,22 +229,31 @@ export function financialAnalysis(journal, until) {
   const tresorerieNette = r2(fondsRoulement - bfr);
 
   const totalPassif = bs.passif.total || 0;
-  const dettes = r2(bs.passif.dettesCT + Math.max(0, -bs.passif.capitaux)); // capitaux négatifs = surendettement
-  const dettesTotales = r2(
-    bs.passif.dettesCT +
-      bs.passif.detailCapitaux.filter((x) => x.code !== '111' && x.code !== '118').reduce((a, x) => a + x.amount, 0)
-  );
-  const capitauxPropres = r2(bs.passif.capitaux + bs.passif.resultat - (dettesTotales - bs.passif.dettesCT));
+  const empruntsLT = r2(bs.passif.detailCapitaux.filter((x) => x.code !== '111' && x.code !== '118').reduce((a, x) => a + x.amount, 0));
+  const dettesTotales = r2(bs.passif.dettesCT + empruntsLT);
+  const anc = r2(bs.actif.total - dettesTotales);
 
   const ratios = {
-    autonomieFinanciere: totalPassif !== 0 ? r2((capitauxPropres / totalPassif) * 100) : null,
+    autonomieFinanciere: totalPassif !== 0 ? r2((anc / totalPassif) * 100) : null,
     endettement: totalPassif !== 0 ? r2((dettesTotales / totalPassif) * 100) : null,
     liquiditeGenerale: bs.passif.dettesCT > 0 ? r2((bs.actif.creances + bs.actif.tresorerie) / bs.passif.dettesCT) : null,
     liquiditeImmediate: bs.passif.dettesCT > 0 ? r2(bs.actif.tresorerie / bs.passif.dettesCT) : null,
     couvertureImmobilisations: bs.actif.immobilise > 0 ? r2((financementPermanent / bs.actif.immobilise) * 100) : null,
   };
 
-  return { bs, financementPermanent, fondsRoulement, bfr, tresorerieNette, dettesTotales, capitauxPropres, ratios };
+  return { bs, financementPermanent, fondsRoulement, bfr, tresorerieNette, dettesTotales, empruntsLT, anc, ratios };
+}
+
+// Actif Net Comptable Corrigé (ANCC) — méthode patrimoniale :
+//   ANCC = ANC + Plus-values sur éléments d'actif − Moins-values sur éléments d'actif
+// Les plus/moins-values sont saisies manuellement : écart entre la valeur comptable
+// (coût historique) et la valeur réelle actuelle d'un bien (immobilier réévalué,
+// véhicule décoté, participation non cotée, cours du marché d'un actif crypto...).
+export function correctedNetWorth(anc, corrections = [], until) {
+  const active = until ? corrections.filter((c) => !c.date || c.date <= until) : corrections;
+  const plusValues = r2(active.filter((c) => c.type === 'plus-value').reduce((a, c) => a + (Number(c.amount) || 0), 0));
+  const moinsValues = r2(active.filter((c) => c.type === 'moins-value').reduce((a, c) => a + (Number(c.amount) || 0), 0));
+  return { plusValues, moinsValues, ancc: r2(anc + plusValues - moinsValues) };
 }
 
 // ─────────────────────────── Séries historiques ───────────────────────────
