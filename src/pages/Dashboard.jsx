@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, AlertCircle, CheckCircle2, Info, ArrowRight, Flame, Award, Rocket } from 'lucide-react';
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { gradeFor } from '../utils/grades';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
@@ -67,6 +68,20 @@ export default function Dashboard() {
   const hasJournal = accountingStore.journal.length > 0;
   const netWorth = hasJournal ? accountingStore.getNetWorth().ancc : null;
   const todayEnergy = energyLogs.find((l) => l.date === today);
+
+  // Grade (game rank) from lifetime XP + synergy score, and the account equity curve.
+  const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
+  const grade = gradeFor(lifetimeXP, synergy.weighted);
+  const equityCurve = useMemo(
+    () => tradingStore.getEquityCurve(activeAccount).map((p, i) => ({ i, value: p.value })),
+    [acctTrades, activeAccount]
+  );
+  const lifeBalance = [
+    { label: 'Skills', value: Math.round((Object.values(skills).filter((s) => !s.locked).length / Object.values(skills).length) * 100), sub: `${Object.values(skills).filter((s) => !s.locked).length}/${Object.values(skills).length} unlocked`, color: 'var(--accent-primary)' },
+    { label: 'Courses', value: courses.length ? Math.round((courses.filter((c) => c.status === 'completed').length / courses.length) * 100) : 0, sub: `${courses.filter((c) => c.status === 'completed').length}/${courses.length} completed`, color: 'var(--accent-secondary)' },
+    { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
+    { label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' },
+  ];
 
   const activeHabits = habits.filter((h) => !h.archived);
   const doneToday = activeHabits.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed));
@@ -216,21 +231,32 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Grade strip — surfaces the 500-level rank ladder (see Leaderboard) */}
+      <Link to="/leaderboard" className="block">
+        <div className="rounded-xl border border-line bg-card px-5 py-4 flex items-center gap-4 hover:border-accent transition-colors">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' }}>
+            <Award size={22} className="text-black" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] text-mute uppercase tracking-wide">Grade {grade.current.level} · {grade.current.era}</div>
+            <div className="text-lg font-bold truncate">{grade.current.name}</div>
+          </div>
+          <div className="hidden sm:block w-40">
+            <div className="flex justify-between text-[10px] text-mute mb-1"><span>Lv {grade.current.level}</span><span>{Math.round(grade.progress)}%</span></div>
+            <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${grade.progress}%`, background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }} />
+            </div>
+          </div>
+          <ArrowRight size={16} className="text-mute shrink-0" />
+        </div>
+      </Link>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Stat label="Account value" value={fmtMoney(account)} />
-        <Stat
-          label="Month P&L"
-          value={fmtSignedMoney(monthStats.totalPnl)}
-          color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'}
-        />
-        <Stat label="Win rate (month)" value={monthStats.count ? fmtPct(monthStats.winRate) : '—'} sub={`${monthStats.count} trades`} />
-        <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub={`${courses.filter((c) => c.status === 'active').length} active courses`} />
+        <Stat label="Month P&L" value={fmtSignedMoney(monthStats.totalPnl)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} sub={`${monthStats.count} trades · ${monthStats.count ? fmtPct(monthStats.winRate) : '—'} win`} />
         <Stat label="Net worth" value={netWorth !== null ? fmtMAD(netWorth) : '—'} sub="dirhams" />
-        <Stat
-          label="Energy today"
-          value={todayEnergy ? `${todayEnergy.energyStartLevel}/10` : '—'}
-          sub={todayEnergy ? `Stress ${todayEnergy.stressLevel}/10` : 'Not logged yet'}
-        />
+        <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub={`${courses.filter((c) => c.status === 'active').length} active courses`} />
+        <Stat label="Energy today" value={todayEnergy ? `${todayEnergy.energyStartLevel}/10` : '—'} sub={todayEnergy ? `Stress ${todayEnergy.stressLevel}/10` : 'Not logged yet'} />
       </div>
 
       {hasReal && activeAccount === 'real' && (
@@ -251,18 +277,45 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Deals logged" value={deals.length} sub={deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track'} />
-        <Stat label="PE/VC skills" value={`${peSkillsUnlocked}/${peSkillsTotal}`} sub="unlocked" />
-        <Stat label="Courses" value={courses.length} sub={`${courses.filter((c) => c.status === 'completed').length} completed`} />
-        <Stat label="Skills unlocked" value={Object.values(skills).filter((s) => !s.locked).length} sub={`of ${Object.values(skills).length}`} />
-      </div>
+      {/* Visualizations replace the old wall of KPI cards */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card title={`Account equity · ${activeAccount}`}>
+          {equityCurve.length > 1 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={equityCurve} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
+                <defs>
+                  <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="i" hide />
+                <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={(v) => fmtMoney(v)} width={54} />
+                <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtMoney(v)} labelFormatter={() => ''} />
+                <Area type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} fill="url(#eqFill)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState>Log trades to see your equity curve.</EmptyState>
+          )}
+        </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Reading streak" value={readingStreak} sub={readingStreak > 0 ? 'days' : 'log a page today'} color={readingStreak > 0 ? 'var(--warning)' : undefined} />
-        <Stat label="Books in progress" value={readingRows.filter((r) => r.status !== 'completed').length} />
-        <Stat label="Books completed" value={readingRows.filter((r) => r.status === 'completed').length} />
-        <Stat label="Pages read" value={totalPagesRead.toLocaleString()} />
+        <Card title="Life balance">
+          <div className="space-y-4 pt-1">
+            {lifeBalance.map((b) => (
+              <div key={b.label}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-medium">{b.label}</span>
+                  <span className="text-mute">{b.sub}</span>
+                </div>
+                <div className="w-full bg-surface rounded-full h-2.5 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${b.value}%`, background: b.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

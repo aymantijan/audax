@@ -15,7 +15,7 @@ import SkillPicker from '../components/common/SkillPicker';
 export default function CoursePage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { courses, updateCourse, deleteCourse } = useLearningStore();
+  const { courses, updateCourse, deleteCourse, toggleChecklistItem, getCourseScore } = useLearningStore();
   const course = courses.find((c) => c.id === courseId);
   const [openChapters, setOpenChapters] = useState({});
   const [chapterModal, setChapterModal] = useState(null); // null | { data, isAdd }
@@ -78,19 +78,9 @@ export default function CoursePage() {
       ),
     });
   };
-  const toggleItem = (chapterId, itemId) => {
-    updateCourse(courseId, {
-      chapters: chapters.map((ch) => {
-        if (ch.id !== chapterId) return ch;
-        return {
-          ...ch,
-          checklistItems: ch.checklistItems.map((it) =>
-            it.id === itemId ? { ...it, completed: !it.completed, completedDate: !it.completed ? Date.now() : null } : it
-          ),
-        };
-      }),
-    });
-  };
+  // Delegates to the store action (not a local reimplementation) so completing
+  // a task here also feeds the learning-momentum system — see learningStore.
+  const toggleItem = (chapterId, itemId) => toggleChecklistItem(courseId, chapterId, itemId);
 
   const handleDeleteCourse = () => {
     if (!confirm(`Delete course "${course.name}"? This cannot be undone.`)) return;
@@ -124,8 +114,9 @@ export default function CoursePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Stat label="Progress" value={`${progress}%`} sub={`${chapters.length} chapters`} />
+        <Stat label="Score" value={`${getCourseScore(course)}%`} sub="progress × learning momentum" color="var(--accent-primary)" />
         <Stat label="Target grade" value={course.expectedGrade || '—'} />
         <Stat label="Actual grade" value={course.actualGrade || '—'} />
         <Stat label="Status" value={course.status || 'active'} />

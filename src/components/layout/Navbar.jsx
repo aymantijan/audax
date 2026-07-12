@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/habits', label: 'Habits' },
   { to: '/deals', label: 'PE / Deals' },
   { to: '/skills', label: 'Skill Tree' },
+  { to: '/leaderboard', label: 'Leaderboard' },
 ];
 
 export default function Navbar() {

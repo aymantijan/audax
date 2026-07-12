@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, GraduationCap, BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, BookOpen, ChevronDown, ChevronRight, Archive } from 'lucide-react';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useLearningStore } from '../store/learningStore';
+import { useReadingsStore } from '../store/readingsStore';
 import { useSkillStore } from '../store/skillStore';
 import { weightedGPA } from '../utils/calculations';
 import { GRADES, GRADE_POINTS, GRADE_XP, SKILL_MAP } from '../utils/constants';
 import { COURSE_TEMPLATES } from '../utils/course-templates';
 import { calculateCourseProgress, gradeForProgress } from '../utils/course-progress';
+import { preview, LEARNING_MOMENTUM_CONFIG } from '../utils/momentum';
 import { courseSchema, validate } from '../utils/validators';
+import { fmtDate, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, ProgressBar, Badge, EmptyState } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
+
+const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
+const courseProgressOf = (c) => (c.status === 'completed' ? 100 : c.chapters?.length ? calculateCourseProgress(c) : Number(c.progressPercent) || 0);
 
 const READING_TYPES = ['article', 'book', 'paper', 'podcast', 'video'];
 const newChapter = () => ({ title: '', coefficient: 1, checklistItems: [{ title: '', coefficient: 1 }] });
@@ -27,7 +34,9 @@ const blank = () => ({
 
 export default function Learning() {
   const { courses, addCourse, editCourse, completeCourse, dropCourse, deleteCourse, toggleReading, addReading, toggleChecklistItem } = useLearningStore();
+  const readingsStore = useReadingsStore();
   const [openChapters, setOpenChapters] = useState({});
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const skills = useSkillStore((s) => s.skills);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(blank());
@@ -42,6 +51,51 @@ export default function Learning() {
   const active = courses.filter((c) => c.status === 'active');
   const completed = courses.filter((c) => c.status === 'completed');
   const totalCredits = completed.reduce((a, c) => a + Number(c.credits || 0), 0);
+
+  // ── Two independent scores that combine into overall progress ──
+  // Course score is momentum-adjusted: raw checklist progress discounted by
+  // how consistently you've actually been studying, so a course cannot be
+  // crammed to a top score in one sitting.
+  // IMPORTANT: `momentumRaw` selects the persisted state object directly —
+  // it only changes reference when the store actually mutates it. Computing
+  // the live preview from it with useMemo (rather than calling a store method
+  // that returns a fresh object inside the zustand selector itself) avoids an
+  // infinite render loop: useSyncExternalStore requires the selector's return
+  // value be referentially stable when nothing changed.
+  const momentumRaw = useLearningStore((s) => s.momentum);
+  const momentum = useMemo(() => preview(momentumRaw, todayKey(), LEARNING_MOMENTUM_CONFIG), [momentumRaw]);
+  const getCourseScore = (c) => Math.round(courseProgressOf(c) * momentum.momentum);
+  const scored = courses.filter((c) => c.status !== 'dropped');
+  const courseScore = scored.length ? Math.round(scored.reduce((a, c) => a + getCourseScore(c), 0) / scored.length) : 0;
+
+  const readingProgress = readingsStore.progress;
+  const readingScore = useMemo(() => {
+    if (!readingProgress.length) return 0;
+    const pcts = readingProgress.map((p) => {
+      if (p.status === 'completed') return 100;
+      const total = readingsStore.totalPagesFor(p);
+      return total > 0 ? Math.min(100, (p.pagesRead / total) * 100) : 0;
+    });
+    return Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+  }, [readingProgress, readingsStore]);
+
+  // Overall = courses when there are no readings, readings when there are no courses,
+  // otherwise the mean of the two sub-scores. Each has its own visible score.
+  const generalProgress =
+    scored.length && readingProgress.length ? Math.round((courseScore + readingScore) / 2)
+    : scored.length ? courseScore
+    : readingProgress.length ? readingScore : 0;
+
+  // Bar chart: one bar per course (active + completed), y = momentum-adjusted score 0-100.
+  const chartData = useMemo(
+    () => courses.filter((c) => c.status !== 'dropped').map((c) => ({
+      name: c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name,
+      progress: getCourseScore(c),
+      rawProgress: courseProgressOf(c),
+      status: c.status,
+    })),
+    [courses, momentum.momentum]
+  );
 
   const applyTemplate = (value) => {
     setTemplate(value);
@@ -95,11 +149,62 @@ export default function Learning() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub="weighted by credits" />
-        <Stat label="Active courses" value={active.length} />
-        <Stat label="Completed" value={completed.length} />
-        <Stat label="Credits earned" value={totalCredits} />
+        <Stat label="Overall progress" value={`${generalProgress}%`} sub="courses + reading combined" color="var(--accent-primary)" />
+        <Stat label="Course score" value={`${courseScore}%`} sub={`${active.length} active · ${completed.length} done`} />
+        <Stat label="Reading score" value={`${readingScore}%`} sub={`${readingProgress.length} book(s) tracked`} />
+        <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub={`${totalCredits} credits earned`} />
       </div>
+
+      {(scored.length > 0 || readingProgress.length > 0) && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card title="Progress breakdown">
+            <div className="space-y-4">
+              {[
+                { label: 'Courses', value: courseScore, color: 'var(--accent-secondary)' },
+                { label: 'Reading', value: readingScore, color: 'var(--warning)' },
+                { label: 'Overall', value: generalProgress, color: 'var(--accent-primary)' },
+              ].map((r) => (
+                <div key={r.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className={r.label === 'Overall' ? 'font-semibold' : 'text-mute'}>{r.label}</span>
+                    <span className="font-medium">{r.value}%</span>
+                  </div>
+                  <ProgressBar value={r.value} color={r.color} height={r.label === 'Overall' ? 10 : 7} />
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-xs">
+              <span className="text-mute">Learning momentum{momentum.streak > 0 ? ` · ${momentum.streak}d streak` : momentum.missedDays > 0 ? ` · ${momentum.missedDays}d missed` : ''}</span>
+              <span className="font-semibold" style={{ color: momentum.momentum >= 0.9 ? 'var(--success)' : momentum.momentum >= 0.65 ? 'var(--warning)' : 'var(--error)' }}>
+                ×{momentum.momentum.toFixed(2)}
+              </span>
+            </div>
+            <p className="text-[11px] text-mute mt-2">
+              Complete a task today to grow your streak. Course score = checklist progress × momentum — skip a day and you lose part of what each task is worth, so cramming a course in one sitting can't hold a top score.
+            </p>
+          </Card>
+
+          <Card title="Progression par cours" className="lg:col-span-2">
+            {chartData.length ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 40, left: -8 }}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} angle={-30} textAnchor="end" interval={0} height={60} />
+                  <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                  <Tooltip {...tooltipStyle} formatter={(v, key) => [`${v}%`, key === 'progress' ? 'Score (momentum-adjusted)' : 'Raw progress']} />
+                  <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={54}>
+                    {chartData.map((d, i) => (
+                      <Cell key={i} fill={d.status === 'completed' ? 'var(--success)' : 'var(--accent-primary)'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState>Add a course to see per-course progression.</EmptyState>
+            )}
+          </Card>
+        </div>
+      )}
 
       {courses.length === 0 && (
         <Card>
@@ -111,7 +216,7 @@ export default function Learning() {
       )}
 
       <div className="grid md:grid-cols-2 gap-5">
-        {[...courses].sort((a, b) => (a.status === 'active' ? -1 : 1)).map((c) => (
+        {active.map((c) => (
           <Card key={c.id}>
             <div className="flex items-start justify-between mb-2">
               <div>
@@ -253,6 +358,57 @@ export default function Learning() {
           </Card>
         ))}
       </div>
+
+      {/* ── Professional archive of completed courses ── */}
+      {completed.length > 0 && (
+        <Card className="!p-0 overflow-hidden">
+          <button onClick={() => setArchiveOpen((v) => !v)} className="w-full flex items-center gap-2 px-5 py-4 cursor-pointer text-left">
+            {archiveOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <Archive size={16} className="text-mute" />
+            <span className="font-semibold">Archive</span>
+            <Badge color="var(--success)">{completed.length} completed</Badge>
+            <span className="ml-auto text-xs text-mute">{totalCredits} credits · GPA {gpa !== null ? gpa.toFixed(2) : '—'}</span>
+          </button>
+          {archiveOpen && (
+            <div className="overflow-x-auto border-t border-line">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-mute border-b border-line bg-surface/40">
+                    <th className="py-2.5 px-5">Course</th>
+                    <th className="py-2.5 px-3 hidden sm:table-cell">Institution</th>
+                    <th className="py-2.5 px-3 text-center">Grade</th>
+                    <th className="py-2.5 px-3 text-center hidden md:table-cell">Credits</th>
+                    <th className="py-2.5 px-3 hidden lg:table-cell">Completed</th>
+                    <th className="py-2.5 px-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...completed].sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).map((c) => (
+                    <tr key={c.id} className="border-b border-line/40">
+                      <td className="py-2.5 px-5">
+                        <div className="font-medium">{c.name}</div>
+                        {c.professor && <div className="text-[11px] text-mute">{c.professor}</div>}
+                      </td>
+                      <td className="py-2.5 px-3 hidden sm:table-cell text-mute">{c.institution}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <Badge color={GRADE_POINTS[c.actualGrade] >= 3.5 ? 'var(--success)' : GRADE_POINTS[c.actualGrade] >= 2.5 ? 'var(--warning)' : 'var(--error)'}>{c.actualGrade || '—'}</Badge>
+                      </td>
+                      <td className="py-2.5 px-3 text-center hidden md:table-cell text-mute">{c.credits}</td>
+                      <td className="py-2.5 px-3 hidden lg:table-cell text-mute text-xs">{c.completedAt ? fmtDate(c.completedAt) : '—'}</td>
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <Link to={`/learning/course/${c.id}`} className="text-mute hover:text-accent text-xs mr-3">Open</Link>
+                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Delete this course?')) deleteCourse(c.id); }}>
+                          <Trash2 size={13} className="inline" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Modal open={modal} onClose={() => setModal(false)} title="Add Course">
         <form onSubmit={submit} className="space-y-3">

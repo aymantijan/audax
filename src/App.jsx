@@ -20,6 +20,7 @@ const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'
 const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
 const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
 const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
+const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
 const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="/habits" element={<Habits />} />
         <Route path="/deals" element={<Deals />} />
         <Route path="/skills" element={<Skills />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

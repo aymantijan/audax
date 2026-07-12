@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SKILL_TREE, SKILL_MAP, LEGACY_SKILL_MAP, XP_TO_NEXT } from '../utils/constants';
+import { advance, preview, freshMomentumState, CONSISTENCY_CONFIG } from '../utils/momentum';
+import { todayKey } from '../utils/formatters';
 import { toast } from './uiStore';
 
 const freshSkills = () =>
@@ -63,12 +65,24 @@ export const useSkillStore = create(
   persist(
     (set, get) => ({
       skills: freshSkills(),
+      consistency: freshMomentumState(), // global XP consistency multiplier — see utils/momentum.js
 
+      // THE single choke point every domain funnels XP through (trades, courses,
+      // readings, habits, journal entries...). That makes it the one place to
+      // apply a cross-app "consistency multiplier": sustained daily engagement
+      // compounds toward a 1.25x bonus, while a burst after a long gap is
+      // dampened toward 0.7x. This is what actually rewards working like the
+      // disciplined, decades-consistent personalities on the Leaderboard,
+      // instead of just letting raw grinding close the gap.
       awardXP: (skillId, amount, source = 'manual') => {
         const skill = get().skills[skillId];
         if (!skill || skill.locked || amount <= 0) return;
+        const today = todayKey();
+        const multiplier = preview(get().consistency, today, CONSISTENCY_CONFIG).momentum;
+        const effective = Math.max(1, Math.round(amount * multiplier));
+
         let { level, xp } = skill;
-        xp += amount;
+        xp += effective;
         const levelUpDates = [...skill.levelUpDates];
         let leveled = false;
         while (level < 5 && xp >= XP_TO_NEXT[level]) {
@@ -86,11 +100,11 @@ export const useSkillStore = create(
             levelUpDates,
             lastPracticed: Date.now(),
             decayStatus: 'active',
-            xpLog: [...skill.xpLog, { date: Date.now(), amount, source }],
+            xpLog: [...skill.xpLog, { date: Date.now(), amount: effective, source, rawAmount: amount, multiplier }],
           },
         };
         skills = recomputeUnlocks(skills);
-        set({ skills });
+        set({ skills, consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
         if (leveled) toast(`${SKILL_MAP[skillId].name} leveled up to Lv${level}!`, 'success');
       },
 
@@ -151,7 +165,17 @@ export const useSkillStore = create(
         if (changed) set({ skills });
       },
 
-      resetAll: () => set({ skills: freshSkills() }),
+      // Total positive XP ever earned across all skills — powers grades & the leaderboard.
+      getLifetimeXP: () =>
+        Object.values(get().skills)
+          .flatMap((s) => s.xpLog || [])
+          .filter((e) => e.amount > 0)
+          .reduce((a, e) => a + e.amount, 0),
+
+      // Live consistency multiplier (0.7–1.25) + current cross-app streak.
+      getConsistencyState: () => preview(get().consistency, todayKey(), CONSISTENCY_CONFIG),
+
+      resetAll: () => set({ skills: freshSkills(), consistency: freshMomentumState() }),
     }),
     {
       name: 'audax-skills',

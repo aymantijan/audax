@@ -1,6 +1,7 @@
 import { startOfMonth } from 'date-fns';
 import { INITIAL_ACCOUNT_VALUE, GRADE_POINTS } from './constants';
 import { currentAccountValue, habitCompliance, weightedGPA } from './calculations';
+import { calculateCourseProgress } from './course-progress';
 
 const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -48,7 +49,10 @@ function tradingScore(trades, habits, habitLogs, monthStart, today) {
 function learningScore(courses) {
   const live = courses.filter((c) => c.status !== 'dropped');
   if (!live.length) return 0;
-  const progress = live.reduce((a, c) => a + (c.status === 'completed' ? 100 : Number(c.progressPercent) || 0), 0) / live.length;
+  // Chapter/checklist-based courses track completion in their chapters, not the
+  // legacy `progressPercent` field — calculateCourseProgress() reads whichever
+  // is actually populated, so real task progress is never left out here.
+  const progress = live.reduce((a, c) => a + (c.status === 'completed' ? 100 : calculateCourseProgress(c)), 0) / live.length;
 
   const gpa = weightedGPA(courses, GRADE_POINTS);
   const gpaComponent = gpa === null ? progress : (gpa / 4) * 100;
