@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Button, Field, Input, Select, Textarea, Modal } from './ui';
+import { Button, Field, Input, Select, Textarea, Modal, WeekdayPicker } from './ui';
 
 // Generic add/edit modal driven by a fields config. Same modal, same UX for every
 // entity type (spec Q1: consistent modal popups). If `initial.id` is set → edit
 // mode (Save updates + Delete button); otherwise → add mode.
 //
-// fields: [
-//   { name, label, type: 'text'|'number'|'date'|'time'|'select'|'textarea', options?, step?, min?, max?, placeholder?, hint? }
-// ]
+// fields: an array, OR a function (values) => array — pass a function when a
+// field's presence depends on another field's live value in the form (e.g. a
+// weekday picker that should appear the instant "Frequency" is switched to
+// "Custom", without waiting for the modal to be reopened).
+//   [{ name, label, type: 'text'|'number'|'date'|'time'|'select'|'textarea'|'weekday-picker', options?, step?, min?, max?, placeholder?, hint? }]
 export default function EntityFormModal({
   open,
   onClose,
@@ -44,12 +46,13 @@ export default function EntityFormModal({
   };
 
   const isMoney = (f) => f.type === 'number' && /amount|balance|size|target|budget/i.test(f.name);
+  const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   return (
     <Modal open={open} onClose={onClose} title={title || (isEdit ? 'Edit' : 'Add')} wide={wide}>
       <form onSubmit={submit} className="space-y-3">
         <div className={`grid ${wide ? 'md:grid-cols-2' : 'grid-cols-1'} gap-3`}>
-          {fields.map((f) => {
+          {resolvedFields.map((f) => {
             const val = values[f.name] ?? '';
             const common = { value: val, onChange: (e) => set(f.name, e.target.value) };
             let control;
@@ -64,6 +67,8 @@ export default function EntityFormModal({
                   {f.checkboxLabel || f.label}
                 </label>
               );
+            } else if (f.type === 'weekday-picker') {
+              control = <WeekdayPicker value={values[f.name] || []} onChange={(v) => set(f.name, v)} options={f.options} />;
             } else {
               control = <Input type={f.type} {...common} step={f.step} min={f.min} max={f.max} placeholder={f.placeholder || ''} />;
             }

@@ -172,7 +172,7 @@ export default function Dashboard() {
   const topStreaks = useMemo(
     () =>
       activeHabits
-        .map((h) => ({ ...h, streak: habitStreak(h.id, logs, today) }))
+        .map((h) => ({ ...h, streak: habitStreak(h.id, logs, today, h) }))
         .filter((h) => h.streak > 0)
         .sort((a, b) => b.streak - a.streak)
         .slice(0, 5),

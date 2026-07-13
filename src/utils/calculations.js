@@ -94,24 +94,47 @@ export function weightedGPA(courses, gradePoints) {
 }
 
 // ---- Habits ----
-// Consecutive-day streak for one habit, counting back from today (today optional).
-export function habitStreak(habitId, logs, today) {
+
+const isoDay = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Indexed by Date#getDay() (0=Sun..6=Sat).
+const WEEKDAY_CODES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+// Is a habit scheduled to happen on this date? Only 'custom' habits with a
+// `weekdays` list (e.g. ['mon','wed','fri']) are restricted — 'daily'/'weekly'
+// (or a 'custom' habit with no days picked, as a safety fallback) are due every day.
+export function isHabitDueOn(habit, dateKey) {
+  if (!habit || habit.frequency !== 'custom' || !habit.weekdays?.length) return true;
+  return habit.weekdays.includes(WEEKDAY_CODES[new Date(dateKey + 'T00:00:00').getDay()]);
+}
+
+// Consecutive SCHEDULED-day streak for one habit, counting back from today.
+// Days the habit isn't due on are skipped rather than breaking the streak, so a
+// Mon/Wed/Fri habit's streak counts consecutive Mon/Wed/Fri completions, not
+// consecutive calendar days. Passing `habit` is optional for backward compat —
+// omitting it (or a daily/weekly habit) behaves exactly as before.
+export function habitStreak(habitId, logs, today, habit) {
   const done = new Set(logs.filter((l) => l.habitId === habitId && l.completed).map((l) => l.date));
-  let streak = 0;
   const d = new Date(today + 'T00:00:00');
-  if (!done.has(isoDay(d))) d.setDate(d.getDate() - 1); // today not done yet → count up to yesterday
-  while (done.has(isoDay(d))) {
+  if (isHabitDueOn(habit, isoDay(d)) && !done.has(isoDay(d))) d.setDate(d.getDate() - 1); // today not done yet → count from yesterday
+  let streak = 0;
+  for (let guard = 0; guard < 3660; guard++) {
+    const key = isoDay(d);
+    if (!isHabitDueOn(habit, key)) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+    if (!done.has(key)) break;
     streak++;
     d.setDate(d.getDate() - 1);
   }
   return streak;
 }
 
-const isoDay = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 // Compliance rate over the last N days. Weekly habits are excluded — a 1x/week
-// habit would otherwise count as 6 misses per week.
+// habit would otherwise count as 6 misses per week. Custom (specific-weekday)
+// habits only count on the days they're actually scheduled.
 export function habitCompliance(habits, logs, days = 7, today) {
   const active = habits.filter((h) => !h.archived && h.frequency !== 'weekly');
   if (!active.length) return { completed: 0, total: 0, rate: 0 };
@@ -125,6 +148,7 @@ export function habitCompliance(habits, logs, days = 7, today) {
     for (const h of active) {
       const started = !h.startDate || h.startDate <= key;
       if (!started) continue;
+      if (!isHabitDueOn(h, key)) continue;
       total++;
       if (doneKeys.has(`${h.id}|${key}`)) completed++;
     }

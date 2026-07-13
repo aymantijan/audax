@@ -93,6 +93,30 @@ export function ProgressBar({ value, max = 100, color = 'var(--accent-primary)',
   );
 }
 
+// Toggle-able weekday chips — e.g. picking Mon/Wed/Fri for a custom-schedule habit.
+export function WeekdayPicker({ value = [], onChange, options }) {
+  const toggle = (v) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((d) => {
+        const active = value.includes(d.value);
+        return (
+          <button
+            key={d.value}
+            type="button"
+            onClick={() => toggle(d.value)}
+            className={`px-2.5 py-1 rounded-lg text-xs border cursor-pointer transition-colors ${
+              active ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
+            }`}
+          >
+            {d.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Badge({ children, color = 'var(--accent-primary)' }) {
   return (
     <span

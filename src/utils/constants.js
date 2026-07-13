@@ -80,7 +80,18 @@ export const LIABILITY_TYPES = [
 ];
 
 export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery'];
-export const HABIT_FREQUENCIES = ['daily', 'weekly'];
+// 'custom' = repeats only on the specific weekdays chosen in `habit.weekdays`
+// (e.g. Heavy Weight Lifting on Mon/Wed/Fri) — see utils/calculations.js#isHabitDueOn.
+export const HABIT_FREQUENCIES = ['daily', 'weekly', 'custom'];
+export const WEEKDAYS = [
+  { value: 'mon', label: 'Mon' },
+  { value: 'tue', label: 'Tue' },
+  { value: 'wed', label: 'Wed' },
+  { value: 'thu', label: 'Thu' },
+  { value: 'fri', label: 'Fri' },
+  { value: 'sat', label: 'Sat' },
+  { value: 'sun', label: 'Sun' },
+];
 export const MOODS = ['great', 'good', 'okay', 'bad', 'terrible'];
 export const RECOVERY_ACTIVITIES = ['exercise', 'meditation', 'walk', 'social', 'hobby', 'rest'];
 

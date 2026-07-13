@@ -4,15 +4,15 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useSkillStore } from '../store/skillStore';
-import { habitStreak, habitCompliance } from '../utils/calculations';
+import { habitStreak, habitCompliance, isHabitDueOn } from '../utils/calculations';
 import { calculateSleepScore, SLEEP_BAND_COLOR, SLEEP_BAND_LABEL } from '../utils/sleep-quality';
 import { calculateStressLevel, stressLabel } from '../utils/stress-calculator';
 import { checkBurnoutTriggers } from '../utils/burnout';
-import { HABIT_CATEGORIES, HABIT_FREQUENCIES, MOODS, RECOVERY_ACTIVITIES, STRESS_ITEMS, SKILL_MAP } from '../utils/constants';
+import { HABIT_CATEGORIES, HABIT_FREQUENCIES, WEEKDAYS, MOODS, RECOVERY_ACTIVITIES, STRESS_ITEMS, SKILL_MAP } from '../utils/constants';
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { habitSchema, validate } from '../utils/validators';
 import { todayKey } from '../utils/formatters';
-import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
+import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar, WeekdayPicker } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
 
@@ -38,7 +38,7 @@ export default function Habits() {
   const skills = useSkillStore((s) => s.skills);
 
   const today = todayKey();
-  const blankHabit = { name: '', category: 'trading', xpReward: 5, linkedSkill: '', mandatory: false, frequency: 'daily', duration: 15, targetStreak: 30 };
+  const blankHabit = { name: '', category: 'trading', xpReward: 5, linkedSkill: '', mandatory: false, frequency: 'daily', weekdays: [], duration: 15, targetStreak: 30 };
   const [habitModal, setHabitModal] = useState(false);
   const [habitForm, setHabitForm] = useState(blankHabit);
   const [habitError, setHabitError] = useState('');
@@ -76,6 +76,7 @@ export default function Habits() {
   const stressLevel = calculateStressLevel(checkIn.stressChecklist);
 
   const active = habits.filter((h) => !h.archived);
+  const dueToday = active.filter((h) => isHabitDueOn(h, today)); // e.g. hides a Mon/Wed/Fri habit on a Tuesday
   const compliance = habitCompliance(active, logs, 7, today);
   const burnout = useMemo(
     () => checkBurnoutTriggers({ energyLogs, compliance, trades }),
@@ -100,7 +101,13 @@ export default function Habits() {
     e.preventDefault();
     const res = validate(habitSchema, { ...habitForm, linkedSkill: habitForm.linkedSkill || undefined });
     if (!res.ok) return setHabitError(res.error);
-    addHabit({ ...res.data, frequency: habitForm.frequency, duration: Number(habitForm.duration) || 15, targetStreak: Number(habitForm.targetStreak) || 30 });
+    addHabit({
+      ...res.data,
+      frequency: habitForm.frequency,
+      weekdays: habitForm.frequency === 'custom' ? habitForm.weekdays : [],
+      duration: Number(habitForm.duration) || 15,
+      targetStreak: Number(habitForm.targetStreak) || 30,
+    });
     setHabitModal(false);
     setHabitForm(blankHabit);
     setHabitTemplate('');
@@ -171,7 +178,7 @@ export default function Habits() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Habits today" value={`${active.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed)).length}/${active.length}`} />
+        <Stat label="Habits today" value={`${dueToday.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed)).length}/${dueToday.length}`} />
         <Stat label="7-day compliance" value={compliance.total ? `${Math.round(compliance.rate * 100)}%` : '—'} />
         <Stat label="Sleep quality today" value={existing ? `${existing.sleepData.sleepQualityScore}/10` : '—'} />
         <Stat label="Stress today" value={existing ? `${existing.stressLevel}/10` : '—'} sub={existing ? stressLabel(existing.stressLevel) : ''} />
@@ -179,18 +186,20 @@ export default function Habits() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card title="Today's Habits">
-          {active.length ? (
+          {dueToday.length ? (
             <ul className="space-y-2.5">
-              {active.map((h) => {
+              {dueToday.map((h) => {
                 const done = logs.some((l) => l.habitId === h.id && l.date === today && l.completed);
-                const streak = habitStreak(h.id, logs, today);
+                const streak = habitStreak(h.id, logs, today, h);
+                const scheduleLabel =
+                  h.frequency === 'weekly' ? 'weekly' : h.frequency === 'custom' && h.weekdays?.length ? h.weekdays.map((w) => WEEKDAYS.find((d) => d.value === w)?.label).join('/') : null;
                 return (
                   <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-3">
                     <input type="checkbox" checked={done} onChange={() => toggleHabit(h.id)} className="w-4 h-4 cursor-pointer" />
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
                       <div className="text-[11px] text-mute">
-                        {h.category}{h.frequency === 'weekly' ? ' · weekly' : ''}{h.duration ? ` · ${h.duration}m` : ''} · +{h.xpReward} XP
+                        {h.category}{scheduleLabel ? ` · ${scheduleLabel}` : ''}{h.duration ? ` · ${h.duration}m` : ''} · +{h.xpReward} XP
                         {h.linkedSkill ? ` → ${SKILL_MAP[h.linkedSkill]?.name}` : ''}
                         {h.mandatory ? ' · mandatory' : ''}
                       </div>
@@ -363,6 +372,11 @@ export default function Habits() {
             <Field label="Frequency">
               <Select value={habitForm.frequency} onChange={(e) => setHabitForm({ ...habitForm, frequency: e.target.value })} options={HABIT_FREQUENCIES} />
             </Field>
+            {habitForm.frequency === 'custom' && (
+              <Field label="Repeats on" hint="e.g. Mon/Wed/Fri for Heavy Weight Lifting">
+                <WeekdayPicker value={habitForm.weekdays} onChange={(v) => setHabitForm({ ...habitForm, weekdays: v })} options={WEEKDAYS} />
+              </Field>
+            )}
             <Field label="XP per completion">
               <Input type="number" min="0" max="50" value={habitForm.xpReward} onChange={(e) => setHabitForm({ ...habitForm, xpReward: e.target.value })} />
             </Field>
@@ -395,10 +409,13 @@ export default function Habits() {
           open={!!editing}
           onClose={() => setEditing(null)}
           title="Edit habit"
-          fields={[
+          fields={(values) => [
             { name: 'name', label: 'Habit name', type: 'text' },
             { name: 'category', label: 'Category', type: 'select', options: HABIT_CATEGORIES },
             { name: 'frequency', label: 'Frequency', type: 'select', options: HABIT_FREQUENCIES },
+            ...(values.frequency === 'custom'
+              ? [{ name: 'weekdays', label: 'Repeats on', type: 'weekday-picker', options: WEEKDAYS, hint: 'e.g. Mon/Wed/Fri' }]
+              : []),
             { name: 'xpReward', label: 'XP per completion', type: 'number', min: 0, max: 50 },
             { name: 'duration', label: 'Duration (min)', type: 'number', min: 1 },
             { name: 'targetStreak', label: 'Target streak (days)', type: 'number', min: 1 },
