@@ -3,7 +3,10 @@ import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { BOOK_CATALOG } from '../utils/book-catalog';
 import { BOOK_CATALOG_V2 } from '../utils/book-catalog-2';
+import { BOOK_CATALOG_V3 } from '../utils/book-catalog-3';
+import { BOOK_CATALOG_V4 } from '../utils/book-catalog-4';
 import { GENRE_TO_READER_SKILL } from '../utils/life-skills';
+import { skillsForBook } from '../utils/book-skills';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -29,17 +32,29 @@ export const useReadingsStore = create(
       // so user deletions stick while new catalog editions still merge in.
       seedCatalog: () => {
         const key = (b) => `${b.title}|${b.author}`.toLowerCase();
-        const catalog = [...BOOK_CATALOG, ...BOOK_CATALOG_V2];
+        const catalog = [...BOOK_CATALOG, ...BOOK_CATALOG_V2, ...BOOK_CATALOG_V3, ...BOOK_CATALOG_V4];
         // Migration from the v1 boolean flag: books already in the library count as seen.
         let seen = new Set(get().seededKeys ?? (get().catalogSeeded ? get().library.map(key) : []));
         const have = new Set(get().library.map(key));
         const now = Date.now();
+        // New books get their genre+title skills computed up front.
         const added = catalog
           .filter((c) => !have.has(key(c)) && !seen.has(key(c)))
-          .map((c) => ({ ...c, id: uid(), words: Math.round(c.pages * 250), linkedSkills: [], addedAt: now, updatedAt: now }));
+          .map((c) => ({ ...c, id: uid(), words: Math.round(c.pages * 250), linkedSkills: skillsForBook(c), addedAt: now, updatedAt: now }));
         for (const c of catalog) seen.add(key(c));
-        if (added.length || get().seededKeys === null) {
-          set({ library: [...get().library, ...added], seededKeys: [...seen], catalogSeeded: true });
+        // Retroactive backfill: existing library books that have no linked skills
+        // (older seeds set []) get theirs filled in — without clobbering any the
+        // user chose manually.
+        let backfilled = false;
+        const enriched = get().library.map((b) => {
+          if (b.linkedSkills && b.linkedSkills.length) return b;
+          const skills = skillsForBook(b);
+          if (!skills.length) return b;
+          backfilled = true;
+          return { ...b, linkedSkills: skills };
+        });
+        if (added.length || get().seededKeys === null || backfilled) {
+          set({ library: [...enriched, ...added], seededKeys: [...seen], catalogSeeded: true });
         }
         if (added.length) toast(`Library: ${added.length} nouveaux livres ajoutés au catalogue`, 'success');
       },
