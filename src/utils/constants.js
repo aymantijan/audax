@@ -82,7 +82,13 @@ export const LIABILITY_TYPES = [
 export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery'];
 // 'custom' = repeats only on the specific weekdays chosen in `habit.weekdays`
 // (e.g. Heavy Weight Lifting on Mon/Wed/Fri) — see utils/calculations.js#isHabitDueOn.
-export const HABIT_FREQUENCIES = ['daily', 'weekly', 'custom'];
+// Labeled explicitly (not plain strings) so the day-picker option is discoverable
+// in the dropdown itself, rather than reading as the bare word "custom".
+export const HABIT_FREQUENCIES = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'custom', label: 'Specific days (e.g. Mon/Wed/Fri)' },
+];
 export const WEEKDAYS = [
   { value: 'mon', label: 'Mon' },
   { value: 'tue', label: 'Tue' },

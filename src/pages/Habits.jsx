@@ -369,11 +369,11 @@ export default function Habits() {
             <Field label="Category">
               <Select value={habitForm.category} onChange={(e) => setHabitForm({ ...habitForm, category: e.target.value })} options={HABIT_CATEGORIES} />
             </Field>
-            <Field label="Frequency">
+            <Field label="Frequency" hint="Pick 'Specific days' to choose exact weekdays, e.g. Mon/Wed/Fri">
               <Select value={habitForm.frequency} onChange={(e) => setHabitForm({ ...habitForm, frequency: e.target.value })} options={HABIT_FREQUENCIES} />
             </Field>
             {habitForm.frequency === 'custom' && (
-              <Field label="Repeats on" hint="e.g. Mon/Wed/Fri for Heavy Weight Lifting">
+              <Field label="Repeats on" hint="Click each day this habit repeats">
                 <WeekdayPicker value={habitForm.weekdays} onChange={(v) => setHabitForm({ ...habitForm, weekdays: v })} options={WEEKDAYS} />
               </Field>
             )}
