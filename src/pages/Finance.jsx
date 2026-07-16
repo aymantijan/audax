@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack } from 'lucide-react';
+import { useHabitStore } from '../store/habitStore';
+import { todayKey } from '../utils/formatters';
 import AccountingOverview from './finance/AccountingOverview';
 import Journal from './finance/Journal';
 import Ledger from './finance/Ledger';
@@ -27,6 +29,7 @@ const TABS = [
 export default function Finance() {
   const [tab, setTab] = useState('overview');
   const Active = TABS.find((t) => t.key === tab)?.Component || AccountingOverview;
+  const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -36,6 +39,13 @@ export default function Finance() {
           Comptabilité personnelle en partie double — journal, états de synthèse, analyse financière, budget, trésorerie et objectifs. Montants en dirhams (DH).
         </p>
       </div>
+
+      {todayEnergyLog && todayEnergyLog.stressLevel > 7 && (
+        <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-3">
+          <HeartCrack size={16} className="shrink-0" />
+          Stress is high today ({todayEnergyLog.stressLevel}/10) — avoid non-essential purchases for the next 24h. High-stress spending tends to be emotional, not planned.
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => {

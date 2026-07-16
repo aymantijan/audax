@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { useSkillStore } from './skillStore';
+import { useHealthStore } from './healthStore';
 import { toast } from './uiStore';
 
 export const useHabitStore = create(
@@ -52,6 +53,7 @@ export const useHabitStore = create(
         } else {
           set({ logs: [...get().logs, { habitId, date, completed: true, createdAt: Date.now() }] });
           if (habit?.linkedSkill) useSkillStore.getState().awardXP(habit.linkedSkill, habit.xpReward, `habit: ${habit.name}`);
+          if (habit?.healthLink && date === todayKey()) useHealthStore.getState().queueHabitPrompt(habit);
         }
       },
 

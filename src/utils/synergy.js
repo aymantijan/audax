@@ -9,14 +9,14 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // All five domain scores are 0-100. Weighted composite = primary*0.75 + avg(others)*0.25.
 // Note: the raw spec formulas divided each weighted sum by 3, which caps scores near 33 —
 // implemented here as proper 0-100 weighted averages instead so color thresholds work.
-export function calculateSynergies({ trades, courses, transactions, budgets, energyLogs, habits, habitLogs, skills, primaryDomain, today }) {
+export function calculateSynergies({ trades, courses, transactions, budgets, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras }) {
   const monthStart = startOfMonth(new Date());
 
   const scores = {
     trading: tradingScore(trades, habits, habitLogs, monthStart, today),
     learning: learningScore(courses),
     finance: financeScore(transactions, budgets, monthStart),
-    health: healthScore(energyLogs, habits, habitLogs, monthStart, today),
+    health: healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras),
     growth: growthScore(skills, habits, monthStart),
   };
 
@@ -81,7 +81,10 @@ function financeScore(transactions, budgets, monthStart) {
   return r1(clamp(adherence * 0.5 + clamp(savingsRate) * 0.5));
 }
 
-function healthScore(energyLogs, habits, habitLogs, monthStart, today) {
+// healthExtras (optional) folds in the newer healthStore domain — workouts logged,
+// nutrition quality, today's readiness — without disturbing the original
+// energyLogs-only formula for anyone calling this before healthStore existed.
+function healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras = {}) {
   const monthLogs = energyLogs.filter((l) => new Date(l.date + 'T00:00:00') >= monthStart);
   if (!monthLogs.length) return 0;
   const avgEnergy = monthLogs.reduce((a, l) => a + (l.energyStartLevel || 0), 0) / monthLogs.length;
@@ -91,7 +94,14 @@ function healthScore(energyLogs, habits, habitLogs, monthStart, today) {
   const comp = habitCompliance(healthHabits, habitLogs, 30, today);
   const habitComponent = healthHabits.length ? comp.rate * 100 : (avgEnergy / 10) * 100;
 
-  return r1(clamp(avgEnergy * 10 * 0.3 + avgSleep * 10 * 0.4 + habitComponent * 0.3));
+  const legacyScore = clamp(avgEnergy * 10 * 0.3 + avgSleep * 10 * 0.4 + habitComponent * 0.3);
+
+  const { workoutsThisMonth = 0, avgNutritionQuality = null, avgReadiness = null } = healthExtras;
+  if (!workoutsThisMonth && avgNutritionQuality == null && avgReadiness == null) return r1(legacyScore);
+
+  const workoutComponent = clamp(workoutsThisMonth * 8); // ~12+ sessions/month → near-max
+  const storeScore = clamp(workoutComponent * 0.4 + (avgNutritionQuality ?? legacyScore) * 0.3 + (avgReadiness ?? legacyScore) * 0.3);
+  return r1(clamp(legacyScore * 0.6 + storeScore * 0.4));
 }
 
 function growthScore(skills, habits, monthStart) {

@@ -8,6 +8,7 @@ const mk = (category) => (id, name, subcategory, prereqs, description) => ({ id,
 const k = mk('Knowledge');
 const f = mk('Finance');
 const d = mk('Discipline');
+const hh = mk('Health');
 
 export const LIFE_SKILLS = [
   // ════════ KNOWLEDGE · Reading & Literature ════════
@@ -40,6 +41,23 @@ export const LIFE_SKILLS = [
   d('spaced-repetition-lv1', 'Spaced Repetition Lv1', 'Learning Rituals', ['note-taking-lv1'], 'Review on a schedule — retain instead of re-learn'),
   d('deep-focus-lv1', 'Deep Focus Lv1', 'Learning Rituals', [], 'Long uninterrupted study blocks without context switching'),
   d('teach-to-learn-lv1', 'Teach to Learn Lv1', 'Learning Rituals', ['note-taking-lv1'], 'Explain concepts simply — the Feynman technique'),
+
+  // ════════ HEALTH · Body & Recovery (feeds the Health page) ════════
+  hh('aerobic-capacity-lv1', 'Aerobic Capacity Lv1', 'Body & Recovery', [], 'Zone-2 cardio consistency — mitochondrial base-building over intensity'),
+  hh('aerobic-capacity-lv2', 'Aerobic Capacity Lv2', 'Body & Recovery', ['aerobic-capacity-lv1'], 'Sustained weekly cardio volume and improving heart-rate efficiency'),
+  hh('aerobic-capacity-lv3', 'Aerobic Capacity Lv3', 'Body & Recovery', ['aerobic-capacity-lv2'], 'Endurance as a durable trait, not a phase'),
+  hh('strength-training-lv1', 'Strength Training Lv1', 'Body & Recovery', [], 'Resistance training logged with sets, reps, and load'),
+  hh('strength-training-lv2', 'Strength Training Lv2', 'Body & Recovery', ['strength-training-lv1'], 'Progressive overload tracked across weeks'),
+  hh('strength-training-lv3', 'Strength Training Lv3', 'Body & Recovery', ['strength-training-lv2'], 'Strength as a compounding long-term asset'),
+  hh('sleep-optimization-lv1', 'Sleep Optimization Lv1', 'Body & Recovery', [], 'Consistent bed/wake timing and tracked sleep quality'),
+  hh('sleep-optimization-lv2', 'Sleep Optimization Lv2', 'Body & Recovery', ['sleep-optimization-lv1'], 'Sustained 8h+ nights and a stable circadian rhythm'),
+  hh('sleep-optimization-lv3', 'Sleep Optimization Lv3', 'Body & Recovery', ['sleep-optimization-lv2'], 'Sleep as a trained skill, not an afterthought'),
+  hh('nutrition-discipline-lv1', 'Nutrition Discipline Lv1', 'Body & Recovery', [], 'Logging meals honestly and hitting protein targets'),
+  hh('nutrition-discipline-lv2', 'Nutrition Discipline Lv2', 'Body & Recovery', ['nutrition-discipline-lv1'], 'A high food-quality score sustained across weeks'),
+  hh('nutrition-discipline-lv3', 'Nutrition Discipline Lv3', 'Body & Recovery', ['nutrition-discipline-lv2'], 'Nutrition dialed in as a long-term system'),
+  hh('form-mastery-lv1', 'Form Mastery Lv1', 'Body & Recovery', ['strength-training-lv1'], 'Clean technique under load — quality over ego lifting'),
+  hh('form-mastery-lv2', 'Form Mastery Lv2', 'Body & Recovery', ['form-mastery-lv1'], 'Consistent high-quality reps across many sessions'),
+  hh('form-mastery-lv3', 'Form Mastery Lv3', 'Body & Recovery', ['form-mastery-lv2'], 'Technique so trained it holds up under fatigue'),
 ];
 
 // Genre du livre → skill « lecteur » créditée à la fin d'un livre.

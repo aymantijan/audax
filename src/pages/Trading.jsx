@@ -1,14 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, BatteryLow } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
 import { startOfMonth } from 'date-fns';
 import { useTradingStore } from '../store/tradingStore';
 import { useAuthStore } from '../store/authStore';
+import { useHabitStore } from '../store/habitStore';
 import { tradeStats, equityCurve, currentAccountValue, maxDrawdown } from '../utils/calculations';
 import { INSTRUMENTS, STRATEGIES } from '../utils/constants';
-import { fmtMoney, fmtSignedMoney, fmtPct, fmtDateShort } from '../utils/formatters';
+import { fmtMoney, fmtSignedMoney, fmtPct, fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, EmptyState } from '../components/common/ui';
 import AccountSwitcher from '../components/common/AccountSwitcher';
 import TradeForm from '../components/trading/TradeForm';
@@ -36,6 +37,7 @@ export default function Trading() {
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
 
   const onStatus = useCallback((v) => setClearToTrade(v), []);
+  const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 
   // Everything on this page is scoped to the active account — via centralized selectors.
   const activeAccount = user?.activeAccount || 'demo';
@@ -79,6 +81,13 @@ export default function Trading() {
           </Button>
         </div>
       </div>
+
+      {todayEnergyLog && todayEnergyLog.energyStartLevel < 5 && (
+        <div className="flex items-center gap-2 text-sm border border-warn/50 bg-warn/10 text-warn rounded-lg px-4 py-3">
+          <BatteryLow size={16} className="shrink-0" />
+          Energy is low today ({todayEnergyLog.energyStartLevel}/10) — consider skipping afternoon trading or cutting position size. Low energy correlates with worse decision-making.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-card border border-line rounded-xl p-4">

@@ -101,6 +101,19 @@ export const WEEKDAYS = [
 export const MOODS = ['great', 'good', 'okay', 'bad', 'terrible'];
 export const RECOVERY_ACTIVITIES = ['exercise', 'meditation', 'walk', 'social', 'hobby', 'rest'];
 
+// Optional link from a habit to a Health-page activity type: completing the habit
+// queues a one-tap "log it in Health?" prompt (see healthStore#queueHabitPrompt).
+export const HEALTH_LINK_TYPES = [
+  { value: '', label: 'None' },
+  { value: 'cardio', label: 'Cardio workout' },
+  { value: 'strength', label: 'Strength workout' },
+  { value: 'recovery', label: 'Recovery activity' },
+  { value: 'mindfulness', label: 'Mindfulness / stress' },
+  { value: 'nutrition', label: 'Nutrition / protein' },
+  { value: 'sleep', label: 'Sleep tracking' },
+  { value: 'reflection', label: 'Health reflection' },
+];
+
 export const STRESS_ITEMS = [
   { key: 'heartPalpitations', label: 'Heart palpitations' },
   { key: 'muscleTension', label: 'Muscle tension' },

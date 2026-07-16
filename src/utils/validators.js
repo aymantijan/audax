@@ -47,6 +47,7 @@ export const habitSchema = z.object({
   category: z.enum(HABIT_CATEGORIES),
   xpReward: z.coerce.number().min(0).max(50),
   linkedSkill: z.string().optional(),
+  healthLink: z.string().optional(),
   mandatory: z.boolean().optional(),
 });
 

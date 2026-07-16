@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/learning', label: 'Learning' },
   { to: '/finance', label: 'Finance' },
   { to: '/habits', label: 'Habits' },
+  { to: '/health', label: 'Health' },
   { to: '/deals', label: 'PE / Deals' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },

@@ -8,7 +8,7 @@ import { habitStreak, habitCompliance, isHabitDueOn } from '../utils/calculation
 import { calculateSleepScore, SLEEP_BAND_COLOR, SLEEP_BAND_LABEL } from '../utils/sleep-quality';
 import { calculateStressLevel, stressLabel } from '../utils/stress-calculator';
 import { checkBurnoutTriggers } from '../utils/burnout';
-import { HABIT_CATEGORIES, HABIT_FREQUENCIES, WEEKDAYS, MOODS, RECOVERY_ACTIVITIES, STRESS_ITEMS, SKILL_MAP } from '../utils/constants';
+import { HABIT_CATEGORIES, HABIT_FREQUENCIES, WEEKDAYS, MOODS, RECOVERY_ACTIVITIES, STRESS_ITEMS, SKILL_MAP, HEALTH_LINK_TYPES } from '../utils/constants';
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { habitSchema, validate } from '../utils/validators';
 import { todayKey } from '../utils/formatters';
@@ -38,7 +38,7 @@ export default function Habits() {
   const skills = useSkillStore((s) => s.skills);
 
   const today = todayKey();
-  const blankHabit = { name: '', category: 'trading', xpReward: 5, linkedSkill: '', mandatory: false, frequency: 'daily', weekdays: [], duration: 15, targetStreak: 30 };
+  const blankHabit = { name: '', category: 'trading', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], duration: 15, targetStreak: 30 };
   const [habitModal, setHabitModal] = useState(false);
   const [habitForm, setHabitForm] = useState(blankHabit);
   const [habitError, setHabitError] = useState('');
@@ -99,7 +99,7 @@ export default function Habits() {
 
   const submitHabit = (e) => {
     e.preventDefault();
-    const res = validate(habitSchema, { ...habitForm, linkedSkill: habitForm.linkedSkill || undefined });
+    const res = validate(habitSchema, { ...habitForm, linkedSkill: habitForm.linkedSkill || undefined, healthLink: habitForm.healthLink || undefined });
     if (!res.ok) return setHabitError(res.error);
     addHabit({
       ...res.data,
@@ -396,6 +396,13 @@ export default function Habits() {
           <Field label="Linked skill (optional — earns XP on completion)">
             <SkillPicker multi={false} value={habitForm.linkedSkill} onChange={(id) => setHabitForm({ ...habitForm, linkedSkill: id })} />
           </Field>
+          <Field label="Health link (optional)" hint="Completing this habit prompts a 1-tap log on the Health page">
+            <Select
+              value={habitForm.healthLink}
+              onChange={(e) => setHabitForm({ ...habitForm, healthLink: e.target.value })}
+              options={HEALTH_LINK_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+            />
+          </Field>
           {habitError && <p className="text-bad text-sm">{habitError}</p>}
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setHabitModal(false)}>Cancel</Button>
@@ -419,6 +426,7 @@ export default function Habits() {
             { name: 'xpReward', label: 'XP per completion', type: 'number', min: 0, max: 50 },
             { name: 'duration', label: 'Duration (min)', type: 'number', min: 1 },
             { name: 'targetStreak', label: 'Target streak (days)', type: 'number', min: 1 },
+            { name: 'healthLink', label: 'Health link', type: 'select', options: HEALTH_LINK_TYPES.map((t) => ({ value: t.value, label: t.label })) },
             { name: 'mandatory', label: 'Mandatory', type: 'checkbox', checkboxLabel: 'Blocks trading if missed' },
           ]}
           initial={editing}

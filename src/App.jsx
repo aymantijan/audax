@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from './services/supabase';
 import { getSession, onAuthChange } from './services/auth-supabase';
 import { startCloudSync, stopCloudSync } from './services/cloud-sync';
 import { toast } from './store/uiStore';
+import { useHealthReminders } from './hooks/useHealthReminders';
 import MainLayout from './components/layout/MainLayout';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
@@ -19,6 +20,7 @@ const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
 const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
 const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
 const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
+const Health = lazy(lazyWithRetry(() => import('./pages/Health'), 'Health'));
 const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
 const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
 const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
@@ -44,6 +46,8 @@ export default function App() {
   useEffect(() => {
     checkDecay(); // daily skill decay pass on app load
   }, [checkDecay]);
+
+  useHealthReminders(); // local-only browser-notification reminders (see hook for scope/limits)
 
   // Cloud sync: only active when Supabase is configured AND the user has a
   // real Supabase session (not just a local profile). Starts/stops on login/logout
@@ -93,6 +97,7 @@ export default function App() {
         <Route path="/learning/readings/library" element={<Library />} />
         <Route path="/finance" element={<Finance />} />
         <Route path="/habits" element={<Habits />} />
+        <Route path="/health" element={<Health />} />
         <Route path="/deals" element={<Deals />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
