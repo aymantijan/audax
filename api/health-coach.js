@@ -27,17 +27,26 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return res.status(503).json({ error: 'AI coach is not configured on this deployment.' });
+  if (!apiKey) {
+    console.error('[health-coach] OPENROUTER_API_KEY not set');
+    return res.status(503).json({ error: 'AI coach is not configured on this deployment.' });
+  }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
   if (supabaseUrl && supabaseAnonKey) {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    if (!token) {
+      console.error('[health-coach] missing bearer token');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const verify = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${token}` },
     });
-    if (!verify.ok) return res.status(401).json({ error: 'Unauthorized' });
+    if (!verify.ok) {
+      console.error('[health-coach] supabase token verify failed', verify.status, await verify.text());
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
 
   const { mode, context, question } = req.body || {};
@@ -51,8 +60,8 @@ export default async function handler(req, res) {
     { role: 'user', content: userInstruction },
   ];
 
+  const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.2-3b-instruct:free';
   try {
-    const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.2-3b-instruct:free';
     const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,14 +75,19 @@ export default async function handler(req, res) {
 
     if (!upstream.ok) {
       const detail = await upstream.text();
+      console.error('[health-coach] upstream OpenRouter error', upstream.status, 'model:', model, detail.slice(0, 500));
       return res.status(502).json({ error: 'AI request failed', detail: detail.slice(0, 300) });
     }
 
     const data = await upstream.json();
     const text = data.choices?.[0]?.message?.content?.trim();
-    if (!text) return res.status(502).json({ error: 'Empty AI response' });
+    if (!text) {
+      console.error('[health-coach] empty AI response', JSON.stringify(data).slice(0, 500));
+      return res.status(502).json({ error: 'Empty AI response' });
+    }
     return res.status(200).json({ text });
-  } catch {
+  } catch (e) {
+    console.error('[health-coach] request threw', model, e?.message || e);
     return res.status(500).json({ error: 'AI request error' });
   }
 }

@@ -16,7 +16,11 @@ async function callHealthCoach(mode, context, question) {
     headers,
     body: JSON.stringify({ mode, context, question }),
   });
-  if (!res.ok) throw new Error(`health-coach ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    console.error('[health-coach-ai] request failed', res.status, body.error, body.detail || '');
+    throw new Error(`health-coach ${res.status}: ${body.error || ''}`);
+  }
   const data = await res.json();
   if (!data.text) throw new Error('health-coach empty response');
   return data.text;
