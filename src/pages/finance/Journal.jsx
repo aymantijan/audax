@@ -2,13 +2,43 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceStore } from '../../store/financeStore';
-import { ENTRY_TEMPLATES, accountLabel, ACCOUNT_MAP } from '../../utils/chart-of-accounts';
+import { ENTRY_TEMPLATES, accountLabel, ACCOUNT_MAP, classOf } from '../../utils/chart-of-accounts';
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Button, Field, Input, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
 import { toast } from '../../store/uiStore';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+// Libellé avec autocomplétion (libellés déjà utilisés pour CE compte de dépense)
+// + suggestion "voulez-vous dire ?" en cas de quasi-doublon (ex : "Omar Café" vs
+// "Omar's Café" déjà saisi) — account=null (compte non-charge) désactive les deux.
+function LabelField({ label, value, onChange, account, placeholder }) {
+  const { getLabelSuggestions, getLabelDidYouMean } = useAccountingStore();
+  const suggestions = account ? getLabelSuggestions(account, value) : [];
+  const didYouMean = account ? getLabelDidYouMean(account, value) : null;
+  const listId = `label-suggestions-${account || 'none'}`;
+
+  return (
+    <Field label={label}>
+      <Input list={account ? listId : undefined} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      {account && (
+        <datalist id={listId}>
+          {suggestions.map((s) => <option key={s.label} value={s.label} />)}
+        </datalist>
+      )}
+      {didYouMean && (
+        <button
+          type="button"
+          onClick={() => onChange(didYouMean.label)}
+          className="block text-[11px] text-accent hover:underline mt-1 cursor-pointer"
+        >
+          Vous voulez dire : « {didYouMean.label} » ?
+        </button>
+      )}
+    </Field>
+  );
+}
 
 const blankExpert = () => ({
   date: today(),
@@ -76,9 +106,13 @@ function TemplateForm({ onSubmit, onCancel }) {
           <AccountSelect classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
         </Field>
       </div>
-      <Field label="Libellé">
-        <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={tpl.label} />
-      </Field>
+      <LabelField
+        label="Libellé"
+        value={form.label}
+        onChange={(v) => setForm({ ...form, label: v })}
+        account={classOf(form.debitAccount) === 6 ? form.debitAccount : null}
+        placeholder={tpl.label}
+      />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onCancel}>Annuler</Button>
         <Button type="submit">Enregistrer l'écriture</Button>
@@ -94,6 +128,7 @@ function ExpertForm({ initial, onSubmit, onCancel }) {
   const totalD = form.lines.reduce((a, l) => a + (Number(l.debit) || 0), 0);
   const totalC = form.lines.reduce((a, l) => a + (Number(l.credit) || 0), 0);
   const balanced = Math.abs(totalD - totalC) < 0.01 && totalD > 0;
+  const expenseAccount = form.lines.find((l) => classOf(l.account) === 6)?.account || null;
 
   return (
     <form
@@ -107,9 +142,13 @@ function ExpertForm({ initial, onSubmit, onCancel }) {
         <Field label="Date">
           <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
         </Field>
-        <Field label="Libellé">
-          <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="ex : Salaire du mois" autoFocus />
-        </Field>
+        <LabelField
+          label="Libellé"
+          value={form.label}
+          onChange={(v) => setForm({ ...form, label: v })}
+          account={expenseAccount}
+          placeholder="ex : Salaire du mois"
+        />
       </div>
       <div className="space-y-2">
         <div className="grid grid-cols-[1fr_110px_110px_32px] gap-2 text-xs text-mute px-1">

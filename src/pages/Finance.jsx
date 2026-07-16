@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { todayKey } from '../utils/formatters';
 import AccountingOverview from './finance/AccountingOverview';
@@ -10,6 +10,7 @@ import Analysis from './finance/Analysis';
 import Budget from './finance/Budget';
 import TreasuryPure from './finance/TreasuryPure';
 import Goals from './finance/Goals';
+import Labels from './finance/Labels';
 
 // Système financier personnel interconnecté, fondé sur la comptabilité générale
 // en partie double (inspiration : plan comptable marocain adapté à une personne
@@ -18,6 +19,7 @@ import Goals from './finance/Goals';
 const TABS = [
   { key: 'overview', label: "Vue d'ensemble", icon: LayoutDashboard, Component: AccountingOverview },
   { key: 'journal', label: 'Journal', icon: BookOpen, Component: Journal },
+  { key: 'labels', label: 'Libellés', icon: Tag, Component: Labels },
   { key: 'ledger', label: 'Grand Livre & Balance', icon: Library, Component: Ledger },
   { key: 'statements', label: 'Bilan · CPC · ESG', icon: FileSpreadsheet, Component: Statements },
   { key: 'analysis', label: 'Analyse & Ratios', icon: LineChart, Component: Analysis },

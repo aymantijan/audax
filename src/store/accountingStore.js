@@ -6,7 +6,8 @@ import {
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
 } from '../utils/accounting-engine';
-import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT } from '../utils/chart-of-accounts';
+import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP } from '../utils/chart-of-accounts';
+import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
 import { calculateGoalXP, badgeForGoal } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
 import { useSkillStore } from './skillStore';
@@ -26,12 +27,40 @@ export const useAccountingStore = create(
       budgets: [], // [{ id, account, amount }] — budget mensuel par compte (classes 6 & 7)
       corrections: [], // [{ id, type:'plus-value'|'moins-value', label, amount, account, date }] — ANC → ANCC
       goals: [], // [{ id, type:'treasury'|'networth', name, targetAmount, targetDate, achieved, achievedAt, xpAwarded, badge }]
+      labelLimits: [], // [{ id, account, label, maxRatioToIncomePct, maxRatioToAccountSpendPct, createdAt }]
       legacyImported: false,
+
+      // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
+      // limite est configurée pour son (compte, libellé) et si l'ajout de ce
+      // montant la franchirait — appelé par addEntry/editEntry avant sauvegarde.
+      // Retourne { ok:false, error } (même contrat que validateEntry) ou { ok:true }.
+      _checkLabelLimits: (entry, excludeEntryId) => {
+        const limits = get().labelLimits;
+        if (!limits.length || !entry.label?.trim()) return { ok: true };
+        const journal = excludeEntryId ? get().journal.filter((e) => e.id !== excludeEntryId) : get().journal;
+        for (const line of entry.lines || []) {
+          if (classOf(line.account) !== 6 || !(Number(line.debit) > 0)) continue;
+          const limit = limits.find(
+            (l) => l.account === line.account && l.label.trim().toLowerCase() === entry.label.trim().toLowerCase()
+          );
+          if (!limit) continue;
+          const ratios = computeLabelRatiosAfter(journal, { account: line.account, label: entry.label, amount: Number(line.debit), date: entry.date });
+          if (limit.maxRatioToIncomePct != null && ratios.ratioToIncome != null && ratios.ratioToIncome > limit.maxRatioToIncomePct) {
+            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToIncome}% de vos revenus du mois (limite : ${limit.maxRatioToIncomePct}%). Ajustez ou supprimez la limite dans l'onglet Libellés si vous voulez tout de même saisir cette dépense.` };
+          }
+          if (limit.maxRatioToAccountSpendPct != null && ratios.ratioToAccountSpend != null && ratios.ratioToAccountSpend > limit.maxRatioToAccountSpendPct) {
+            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToAccountSpend}% de vos dépenses "${ACCOUNT_MAP[line.account]?.label || line.account}" du mois (limite : ${limit.maxRatioToAccountSpendPct}%). Ajustez ou supprimez la limite dans l'onglet Libellés si vous voulez tout de même saisir cette dépense.` };
+          }
+        }
+        return { ok: true };
+      },
 
       // ─────────── Journal (mutations) ───────────
       addEntry: (entry) => {
         const res = validateEntry(entry);
         if (!res.ok) return res;
+        const limitCheck = get()._checkLabelLimits(entry);
+        if (!limitCheck.ok) return limitCheck;
         const clean = {
           id: uid(),
           date: entry.date,
@@ -53,6 +82,8 @@ export const useAccountingStore = create(
       editEntry: (id, entry) => {
         const res = validateEntry(entry);
         if (!res.ok) return res;
+        const limitCheck = get()._checkLabelLimits(entry, id);
+        if (!limitCheck.ok) return limitCheck;
         set({
           journal: get().journal.map((e) =>
             e.id === id
@@ -63,6 +94,40 @@ export const useAccountingStore = create(
         return { ok: true };
       },
       deleteEntry: (id) => set({ journal: get().journal.filter((e) => e.id !== id) }),
+
+      // ─────────── Analyse & limites par libellé ───────────
+      // maxRatioToIncomePct / maxRatioToAccountSpendPct sont optionnels (l'un des
+      // deux, ou les deux) — null/undefined désactive ce garde-fou pour cette limite.
+      setLabelLimit: (account, label, { maxRatioToIncomePct, maxRatioToAccountSpendPct }) => {
+        const key = label.trim().toLowerCase();
+        const existing = get().labelLimits.find((l) => l.account === account && l.label.trim().toLowerCase() === key);
+        const values = {
+          maxRatioToIncomePct: maxRatioToIncomePct === '' || maxRatioToIncomePct == null ? null : Number(maxRatioToIncomePct),
+          maxRatioToAccountSpendPct: maxRatioToAccountSpendPct === '' || maxRatioToAccountSpendPct == null ? null : Number(maxRatioToAccountSpendPct),
+        };
+        if (existing) {
+          set({ labelLimits: get().labelLimits.map((l) => (l.id === existing.id ? { ...l, ...values, updatedAt: Date.now() } : l)) });
+        } else {
+          set({ labelLimits: [...get().labelLimits, { id: uid(), account, label: label.trim(), ...values, createdAt: Date.now() }] });
+        }
+        toast(`Limite enregistrée pour "${label.trim()}"`, 'success');
+      },
+      deleteLabelLimit: (id) => set({ labelLimits: get().labelLimits.filter((l) => l.id !== id) }),
+
+      getLabelsForAccount: (account) => getLabelsForAccount(get().journal, account),
+      getLabelSuggestions: (account, query) => suggestLabels(get().journal, account, query),
+      getLabelDidYouMean: (account, inputLabel) => findClosestLabel(get().journal, account, inputLabel),
+
+      // Statut courant (mois en cours) de chaque limite configurée — pour l'onglet Libellés.
+      getLabelLimitsStatus: () => {
+        const today = new Date().toISOString().slice(0, 10);
+        return get().labelLimits.map((limit) => {
+          const ratios = computeLabelRatiosAfter(get().journal, { account: limit.account, label: limit.label, amount: 0, date: today });
+          const overIncome = limit.maxRatioToIncomePct != null && ratios.ratioToIncome != null && ratios.ratioToIncome > limit.maxRatioToIncomePct;
+          const overAccount = limit.maxRatioToAccountSpendPct != null && ratios.ratioToAccountSpend != null && ratios.ratioToAccountSpend > limit.maxRatioToAccountSpendPct;
+          return { ...limit, accountLabel: ACCOUNT_MAP[limit.account]?.label || limit.account, ratios, breached: overIncome || overAccount };
+        });
+      },
 
       // ─────────── Budgets ───────────
       setBudget: (account, amount) => {
@@ -189,7 +254,7 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], legacyImported: false }),
+      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false }),
     }),
     { name: 'audax-accounting' }
   )
