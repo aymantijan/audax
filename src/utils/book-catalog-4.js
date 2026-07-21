@@ -276,4 +276,28 @@ export const BOOK_CATALOG_V4 = [
   { title: 'The Double', author: 'Fyodor Dostoevsky', genre: 'Literary Fiction', year: 1846, pages: 160, popularity: 77, description: 'A clerk meets his exact and sinister double.' },
   { title: 'The Cossacks', author: 'Leo Tolstoy', genre: 'Literary Fiction', year: 1863, pages: 176, popularity: 77, description: 'A disillusioned nobleman among the Cossacks of the Caucasus.' },
   { title: 'Master and Man', author: 'Leo Tolstoy', genre: 'Literary Fiction', year: 1895, pages: 96, popularity: 77, description: 'A master and servant caught in a deadly snowstorm.' },
+
+  // ── Ralph Waldo Emerson (complete) ──
+  { title: 'Nature', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1836, pages: 95, popularity: 85, description: "Emerson's first book: direct experience of the natural world as a path to spiritual insight." },
+  { title: 'Essays: First Series', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1841, pages: 336, popularity: 88, description: "Includes 'Self-Reliance' and 'The Over-Soul' — the founding essays of American transcendentalism." },
+  { title: 'Essays: Second Series', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1844, pages: 320, popularity: 82, description: 'A second volume on poetry, experience, and character, deepening his transcendentalist philosophy.' },
+  { title: 'Representative Men', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1850, pages: 176, popularity: 76, description: 'Profiles of Plato, Swedenborg, Montaigne, Shakespeare, Napoleon, and Goethe as models of human possibility.' },
+  { title: 'English Traits', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1856, pages: 304, popularity: 74, description: "Emerson's observations on English character and culture, drawn from his travels and friendship with Carlyle." },
+  { title: 'The Conduct of Life', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1860, pages: 256, popularity: 77, description: 'Later essays on fate, power, wealth, and culture that temper his earlier idealism with hard-won realism.' },
+  { title: 'Society and Solitude', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1870, pages: 256, popularity: 73, description: 'Essays weighing the pull between public life and solitary reflection.' },
+  { title: 'Letters and Social Aims', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1875, pages: 256, popularity: 71, description: 'His final essay collection, on rhetoric, poetry, and the aims of a well-lived life.' },
+  { title: 'Poems', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1847, pages: 256, popularity: 75, description: "Emerson's collected verse, exploring nature, the soul, and the transcendent." },
+  { title: 'May-Day and Other Pieces', author: 'Ralph Waldo Emerson', genre: 'Essays', year: 1867, pages: 200, popularity: 68, description: 'A later poetry collection reflecting on the Civil War era and the turning seasons.' },
+
+  // ── Henry David Thoreau (Emerson's protégé — same transcendentalist circle) ──
+  { title: 'Walden', author: 'Henry David Thoreau', genre: 'Essays', year: 1854, pages: 357, popularity: 90, description: 'Two years living deliberately at Walden Pond become a meditation on simplicity and self-reliance.' },
+  { title: 'Civil Disobedience', author: 'Henry David Thoreau', genre: 'Essays', year: 1849, pages: 48, popularity: 82, description: 'An argument that individual conscience can justify refusing to obey an unjust law.' },
+  { title: 'A Week on the Concord and Merrimack Rivers', author: 'Henry David Thoreau', genre: 'Essays', year: 1849, pages: 413, popularity: 65, description: 'A boat trip with his brother frames essays on nature, philosophy, and history.' },
+  { title: 'The Maine Woods', author: 'Henry David Thoreau', genre: 'Travel', year: 1864, pages: 372, popularity: 68, description: 'Three journeys into the Maine wilderness, published after his death.' },
+  { title: 'Cape Cod', author: 'Henry David Thoreau', genre: 'Travel', year: 1865, pages: 214, popularity: 66, description: 'Essays from his walking trips along the Massachusetts coastline.' },
+
+  // ── Walt Whitman (the third pillar of American transcendentalism/individualism) ──
+  { title: 'Leaves of Grass', author: 'Walt Whitman', genre: 'Essays', year: 1855, pages: 438, popularity: 89, description: 'An ever-expanding collection of free verse celebrating the self, democracy, and the American landscape.' },
+  { title: 'Specimen Days', author: 'Walt Whitman', genre: 'Memoir', year: 1882, pages: 296, popularity: 72, description: 'A prose memoir spanning his Civil War hospital work and later reflections on nature and aging.' },
+  { title: 'Democratic Vistas', author: 'Walt Whitman', genre: 'Essays', year: 1871, pages: 96, popularity: 69, description: "An essay defending democracy's promise while criticizing post-Civil War American culture." },
 ];
