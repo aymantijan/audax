@@ -14,7 +14,7 @@ const STATUS_COLOR = {
 };
 
 export default function TradingAccounts() {
-  const { accounts, activeAccountId, setActiveAccount, archiveAccount, deleteAccount, accountValue, getStats } = useTradingStore();
+  const { accounts, activeAccountId, setActiveAccount, archiveAccount, deleteAccount, accountValue, getStats, getTypeScore, getAccountScore } = useTradingStore();
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -29,6 +29,7 @@ export default function TradingAccounts() {
 
   const Row = ({ a }) => {
     const stats = getStats(a.id);
+    const score = getAccountScore(a.id);
     return (
       <li className="border border-line rounded-lg p-4">
         <div className="flex items-center gap-3 mb-2">
@@ -51,11 +52,12 @@ export default function TradingAccounts() {
             <button className="text-mute hover:text-bad cursor-pointer" onClick={() => remove(a)} title="Delete"><Trash2 size={14} /></button>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
           <div><div className="text-xs text-mute">Value</div><div className="font-semibold">{fmtMoney(accountValue(a.id))}</div></div>
           <div><div className="text-xs text-mute">Start</div><div>{fmtMoney(a.initialBalance)}</div></div>
           <div><div className="text-xs text-mute">Trades</div><div>{stats.count}</div></div>
           <div><div className="text-xs text-mute">Win rate</div><div>{stats.count ? fmtPct(stats.winRate) : '—'}</div></div>
+          <div><div className="text-xs text-mute">Score</div><div className="font-semibold" style={{ color: score.band?.color }}>{score.score ?? '—'}</div></div>
         </div>
       </li>
     );
@@ -79,12 +81,17 @@ export default function TradingAccounts() {
             const group = active.filter((a) => a.type === type);
             if (!group.length) return null;
             const totalValue = group.reduce((a, acc) => a + accountValue(acc.id), 0);
+            const typeScore = getTypeScore(type);
+            const sub = [
+              type === 'propfirm' ? `${group.filter((a) => a.status === 'funded').length} funded` : null,
+              typeScore ? `Score ${typeScore.score}` : null,
+            ].filter(Boolean).join(' · ');
             return (
               <Stat
                 key={type}
                 label={`${TYPE_LABEL[type]} (${group.length})`}
                 value={fmtMoney(totalValue)}
-                sub={type === 'propfirm' ? `${group.filter((a) => a.status === 'funded').length} funded` : undefined}
+                sub={sub || undefined}
               />
             );
           })}

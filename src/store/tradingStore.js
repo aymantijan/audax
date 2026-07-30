@@ -6,6 +6,7 @@ import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } fro
 import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics';
 import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
 import { generateTradingCoachRecommendation } from '../utils/trading-coach';
+import { computeAccountScore, computeGroupScore, computeOverallScore, DEFAULT_SCORE_WEIGHTS } from '../utils/trading-score';
 import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
@@ -43,6 +44,38 @@ export const useTradingStore = create(
       alerts: { enabled: false, lastShown: {} },
       setAlertsEnabled: (enabled) => set({ alerts: { ...get().alerts, enabled } }),
       markAlertShown: (key, dateKey) => set({ alerts: { ...get().alerts, lastShown: { ...get().alerts.lastShown, [key]: dateKey } } }),
+
+      // ─────────── Score system (Phase 8) ───────────
+      // See utils/trading-score.js for the full Score-1/2/3 design. Only the
+      // Score-3 (overall Trading-page) inputs are user-configurable/persisted —
+      // Score-1 (per account) and Score-2 (per type) are pure derived selectors.
+      scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
+      setScoreSettings: (updates) =>
+        set({
+          scoreSettings: {
+            ...get().scoreSettings,
+            ...updates,
+            includedTypes: updates.includedTypes ? { ...get().scoreSettings.includedTypes, ...updates.includedTypes } : get().scoreSettings.includedTypes,
+            weights: updates.weights ? { ...get().scoreSettings.weights, ...updates.weights } : get().scoreSettings.weights,
+          },
+        }),
+
+      getAccountScore: (accountId) => computeAccountScore(get().getAccountTrades(accountId), get().getInitialBalance(accountId)),
+
+      getTypeScore: (type) => {
+        const accts = get().accounts.filter((a) => a.status !== 'archived' && a.type === type);
+        return computeGroupScore(accts, get().getAccountTrades, get().accountValue);
+      },
+
+      getOverallScore: () =>
+        computeOverallScore({
+          accounts: get().accounts,
+          getTrades: get().getAccountTrades,
+          getValue: get().accountValue,
+          included: get().scoreSettings.includedTypes,
+          weights: get().scoreSettings.weights,
+          mode: get().scoreSettings.mode,
+        }),
 
       // ─────────── AI Trading Coach (Phase 7) ───────────
       // Same architecture as healthStore's coach (see healthStore.js#getCoachRecommendation):
@@ -420,7 +453,12 @@ export const useTradingStore = create(
         toast('Trade deleted', 'info');
       },
 
-      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null, alerts: { enabled: false, lastShown: {} }, coachCache: {} }),
+      resetAll: () =>
+        set({
+          trades: [], accounts: [], activeAccountId: null,
+          alerts: { enabled: false, lastShown: {} }, coachCache: {},
+          scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
+        }),
     }),
     { name: 'audax-trading' }
   )

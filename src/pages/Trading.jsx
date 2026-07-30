@@ -20,6 +20,7 @@ import TradingPsychology from '../components/trading/TradingPsychology';
 import JournalAnalysis from '../components/trading/JournalAnalysis';
 import PredictionsPanel from '../components/trading/PredictionsPanel';
 import TradingCoach from '../components/trading/TradingCoach';
+import ScorePanel from '../components/trading/ScorePanel';
 import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
@@ -98,6 +99,8 @@ export default function Trading() {
           </Button>
         </div>
       </div>
+
+      <ScorePanel />
 
       <TradingCoach accountId={activeAccountId} />
 

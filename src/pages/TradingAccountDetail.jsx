@@ -35,7 +35,7 @@ function RuleGauge({ label, value, max, unit = '%', invert = false }) {
 export default function TradingAccountDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { accounts, getStats, accountValue, getEquityCurve, getAccountTrades, getPropFirmProgress, advancePropFirmPhase, adjustAccountBalance, setActiveAccount, addPayout, deletePayout, getTotalPayouts } = useTradingStore();
+  const { accounts, getStats, accountValue, getEquityCurve, getAccountTrades, getPropFirmProgress, advancePropFirmPhase, adjustAccountBalance, setActiveAccount, addPayout, deletePayout, getTotalPayouts, getAccountScore } = useTradingStore();
   const [editModal, setEditModal] = useState(false);
   const [balModal, setBalModal] = useState(false);
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
@@ -60,6 +60,7 @@ export default function TradingAccountDetail() {
   const totalPayouts = account.type === 'propfirm' ? getTotalPayouts(account.id) : 0;
   const demoReadiness = account.type === 'demo' ? computeDemoReadiness(getAccountTrades(account.id), account.initialBalance) : null;
   const brokerHealth = account.type === 'broker' ? computeBrokerHealth(account, getAccountTrades(account.id)) : null;
+  const score = getAccountScore(account.id);
 
   const goTrade = () => { setActiveAccount(account.id); navigate('/trading'); };
   const submitPayout = (e) => {
@@ -101,6 +102,21 @@ export default function TradingAccountDetail() {
         <Stat label="Win rate" value={stats.count ? fmtPct(stats.winRate) : '—'} sub={`${stats.wins}W / ${stats.losses}L`} />
         <Stat label="Trades" value={stats.count} />
       </div>
+
+      {!score.insufficientData && (
+        <Card title="Account Score">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl font-bold" style={{ color: score.band.color }}>{score.score}</div>
+            <Badge color={score.band.color}>{score.band.label}</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+            <div><div className="text-xs text-mute mb-1">Profitability</div><div className="text-sm font-semibold">{score.breakdown.profitability}/30</div></div>
+            <div><div className="text-xs text-mute mb-1">Risk control</div><div className="text-sm font-semibold">{score.breakdown.riskControl}/25</div></div>
+            <div><div className="text-xs text-mute mb-1">Discipline</div><div className="text-sm font-semibold">{score.breakdown.discipline}/25</div></div>
+            <div><div className="text-xs text-mute mb-1">Consistency</div><div className="text-sm font-semibold">{score.breakdown.consistency}/20</div></div>
+          </div>
+        </Card>
+      )}
 
       {demoReadiness && (
         <Card title="Readiness to Go Live">
