@@ -8,6 +8,7 @@ import AccountSelect from '../../components/common/AccountSelect';
 
 export default function Ledger() {
   const store = useAccountingStore();
+  const accountMap = store.getAccountMap();
   const [account, setAccount] = useState('511');
   const rows = store.getLedger(account);
   const tb = store.getTrialBalance();
@@ -48,7 +49,7 @@ export default function Ledger() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-line font-semibold">
-                  <td colSpan={4} className="py-2 pr-4 text-right text-xs text-mute uppercase">Solde final — {accountLabel(account)}</td>
+                  <td colSpan={4} className="py-2 pr-4 text-right text-xs text-mute uppercase">Solde final — {accountLabel(account, accountMap)}</td>
                   <td className="py-2 text-right">{fmtMAD(Math.abs(finalBalance))} {finalBalance >= 0 ? 'Débiteur' : 'Créditeur'}</td>
                 </tr>
               </tfoot>

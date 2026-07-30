@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceStore } from '../../store/financeStore';
-import { ENTRY_TEMPLATES, accountLabel, ACCOUNT_MAP, classOf } from '../../utils/chart-of-accounts';
+import { ENTRY_TEMPLATES, accountLabel, classOf } from '../../utils/chart-of-accounts';
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Button, Field, Input, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
@@ -190,7 +190,8 @@ function ExpertForm({ initial, onSubmit, onCancel }) {
 }
 
 export default function Journal() {
-  const { journal, addEntry, editEntry, deleteEntry, importLegacyTransactions, legacyImported } = useAccountingStore();
+  const { journal, addEntry, editEntry, deleteEntry, importLegacyTransactions, legacyImported, getAccountMap } = useAccountingStore();
+  const accountMap = getAccountMap();
   const legacyCount = useFinanceStore((s) => s.transactions.length);
   const [modal, setModal] = useState(null); // 'template' | 'expert'
   const [editing, setEditing] = useState(null);
@@ -282,8 +283,8 @@ export default function Journal() {
                       {e.lines.map((l, i) => (
                         <tr key={i} className="border-b border-line/40 last:border-0">
                           <td className={`py-1.5 px-3 ${l.credit ? 'pl-10 text-mute' : ''}`}>
-                            {accountLabel(l.account)}
-                            {ACCOUNT_MAP[l.account]?.group ? <span className="text-mute"> · {ACCOUNT_MAP[l.account].group}</span> : null}
+                            {accountLabel(l.account, accountMap)}
+                            {accountMap[l.account]?.group ? <span className="text-mute"> · {accountMap[l.account].group}</span> : null}
                           </td>
                           <td className="py-1.5 px-3 text-right w-28">{l.debit ? fmtMAD(l.debit) : ''}</td>
                           <td className="py-1.5 px-3 text-right w-28 text-mute">{l.credit ? fmtMAD(l.credit) : ''}</td>

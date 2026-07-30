@@ -6,7 +6,7 @@ import {
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
 } from '../utils/accounting-engine';
-import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP } from '../utils/chart-of-accounts';
+import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
 import { calculateGoalXP, badgeForGoal } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
@@ -29,6 +29,7 @@ export const useAccountingStore = create(
       goals: [], // [{ id, type:'treasury'|'networth', name, targetAmount, targetDate, achieved, achievedAt, xpAwarded, badge }]
       labelLimits: [], // [{ id, account, label, maxRatioToIncomePct, maxRatioToAccountSpendPct, createdAt }]
       legacyImported: false,
+      treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -55,9 +56,53 @@ export const useAccountingStore = create(
         return { ok: true };
       },
 
+      // ─────────── Comptes auxiliaires de trésorerie ───────────
+      // Un compte auxiliaire (ex: "CIH") est rattaché à un compte collectif de
+      // classe 5 fixe (ex: "511" Compte bancaire courant) via son propre code
+      // généré ("511-<uid>") — le chiffre de classe reste en tête donc classOf()
+      // continue de le traiter comme un compte de trésorerie ordinaire partout
+      // dans le moteur comptable ; seul le LIBELLÉ affiché doit passer par
+      // getAccountMap() (voir mergedAccountMap dans chart-of-accounts.js).
+      getAccountMap: () => mergedAccountMap(get().treasuryAccounts),
+
+      addTreasuryAccount: ({ parentCode, name, bank }) => {
+        if (classOf(parentCode) !== 5) return { ok: false, error: 'Le compte auxiliaire doit être rattaché à un compte de trésorerie (classe 5).' };
+        if (!name?.trim()) return { ok: false, error: 'Le nom du compte est requis.' };
+        const account = {
+          id: uid(), code: `${parentCode}-${uid()}`, parentCode, name: name.trim(), bank: bank?.trim() || '',
+          archived: false, createdAt: Date.now(), updatedAt: Date.now(),
+        };
+        set({ treasuryAccounts: [...get().treasuryAccounts, account] });
+        toast(`Compte auxiliaire créé : ${account.name}`, 'success');
+        return { ok: true, code: account.code };
+      },
+      editTreasuryAccount: (id, updates) =>
+        set({
+          treasuryAccounts: get().treasuryAccounts.map((a) =>
+            a.id === id ? stamp({ ...a, ...updates, name: updates.name != null ? updates.name.trim() : a.name }) : a
+          ),
+        }),
+      archiveTreasuryAccount: (id) => {
+        set({ treasuryAccounts: get().treasuryAccounts.map((a) => (a.id === id ? stamp({ ...a, archived: true }) : a)) });
+        toast('Compte auxiliaire archivé', 'info');
+      },
+      unarchiveTreasuryAccount: (id) =>
+        set({ treasuryAccounts: get().treasuryAccounts.map((a) => (a.id === id ? stamp({ ...a, archived: false }) : a)) }),
+      // Suppression définitive seulement si le compte n'a aucune écriture —
+      // sinon on archive (même logique que tradingStore.deleteAccount).
+      deleteTreasuryAccount: (id) => {
+        const acct = get().treasuryAccounts.find((a) => a.id === id);
+        if (!acct) return { ok: false, error: 'Compte introuvable.' };
+        const used = get().journal.some((e) => e.lines.some((l) => l.account === acct.code));
+        if (used) return { ok: false, error: 'Ce compte a des écritures au journal — archivez-le plutôt que de le supprimer.' };
+        set({ treasuryAccounts: get().treasuryAccounts.filter((a) => a.id !== id) });
+        toast('Compte auxiliaire supprimé', 'info');
+        return { ok: true };
+      },
+
       // ─────────── Journal (mutations) ───────────
       addEntry: (entry) => {
-        const res = validateEntry(entry);
+        const res = validateEntry(entry, get().getAccountMap());
         if (!res.ok) return res;
         const limitCheck = get()._checkLabelLimits(entry);
         if (!limitCheck.ok) return limitCheck;
@@ -80,7 +125,7 @@ export const useAccountingStore = create(
         return { ok: true, id: clean.id };
       },
       editEntry: (id, entry) => {
-        const res = validateEntry(entry);
+        const res = validateEntry(entry, get().getAccountMap());
         if (!res.ok) return res;
         const limitCheck = get()._checkLabelLimits(entry, id);
         if (!limitCheck.ok) return limitCheck;
@@ -202,11 +247,11 @@ export const useAccountingStore = create(
       // ─────────── Sélecteurs (tout dérive du journal) ───────────
       getBalances: (period) => accountBalances(get().journal, period),
       getLedger: (code, period) => ledgerFor(get().journal, code, period),
-      getTrialBalance: (period) => trialBalance(get().journal, period),
-      getBalanceSheet: (until) => balanceSheet(get().journal, until),
-      getCPC: (period) => cpc(get().journal, period),
+      getTrialBalance: (period) => trialBalance(get().journal, period, get().getAccountMap()),
+      getBalanceSheet: (until) => balanceSheet(get().journal, until, get().getAccountMap()),
+      getCPC: (period) => cpc(get().journal, period, get().getAccountMap()),
       getESG: (period) => esg(get().journal, period),
-      getAnalysis: (until) => financialAnalysis(get().journal, until),
+      getAnalysis: (until) => financialAnalysis(get().journal, until, get().getAccountMap()),
       // Net worth automatique : ANC (Actif − Dettes) puis ANCC (+ corrections manuelles).
       getNetWorth: (until) => {
         const a = get().getAnalysis(until);
@@ -214,7 +259,7 @@ export const useAccountingStore = create(
         return { anc: a.anc, ...cv };
       },
       getMonthlySeries: (months = 6) => monthlySeries(get().journal, months),
-      getBudgetVariance: (mk) => budgetVariance(get().journal, get().budgets, mk || monthKey(new Date().toISOString())),
+      getBudgetVariance: (mk) => budgetVariance(get().journal, get().budgets, mk || monthKey(new Date().toISOString()), get().getAccountMap()),
       getTreasuryForecast: (months = 6) => treasuryForecast(get().journal, get().budgets, months),
 
       // Période du mois courant : { from, to }
@@ -254,7 +299,7 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false }),
+      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [] }),
     }),
     { name: 'audax-accounting' }
   )

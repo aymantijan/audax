@@ -96,10 +96,25 @@ export const classOf = (code) => Number(String(code)[0]);
 // Nature débitrice (actif + charges) ou créditrice (passif + produits)
 export const isDebitNature = (code) => ['2', '3', '5', '6'].includes(String(code)[0]);
 
-export const accountLabel = (code) => {
-  const a = ACCOUNT_MAP[code];
+export const accountLabel = (code, accountMap = ACCOUNT_MAP) => {
+  const a = accountMap[code];
   return a ? `${a.code} — ${a.label}` : code;
 };
+
+// Comptes auxiliaires de trésorerie (ex : "511-xxx" → "CIH" sous "Compte
+// bancaire courant") créés par l'utilisateur dans accountingStore.treasuryAccounts.
+// Le code garde toujours le chiffre de classe en tête (classOf ne lit que le
+// 1er caractère), donc le moteur comptable n'a besoin de connaître ce mapping
+// QUE pour l'affichage du libellé — d'où ce merge explicite, injecté par les
+// sélecteurs qui en ont besoin plutôt que muté globalement dans ce module.
+export function mergedAccountMap(treasuryAccounts = []) {
+  if (!treasuryAccounts.length) return ACCOUNT_MAP;
+  const extra = {};
+  for (const a of treasuryAccounts) {
+    extra[a.code] = { code: a.code, label: a.name, cls: 5, parentCode: a.parentCode, group: ACCOUNT_MAP[a.parentCode]?.label };
+  }
+  return { ...ACCOUNT_MAP, ...extra };
+}
 
 // Modèles d'écritures pour rendre la partie double accessible :
 // chaque modèle définit quels comptes on débite et on crédite.

@@ -12,13 +12,13 @@ const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 // Une écriture est valide si : date + libellé, ≥ 2 lignes, comptes connus,
 // chaque ligne a débit XOR crédit > 0, et Σ débits = Σ crédits (partie double).
-export function validateEntry(entry) {
+export function validateEntry(entry, accountMap = ACCOUNT_MAP) {
   if (!entry.date) return { ok: false, error: 'La date est requise.' };
   if (!entry.label?.trim()) return { ok: false, error: 'Le libellé est requis.' };
   const lines = (entry.lines || []).filter((l) => Number(l.debit) || Number(l.credit));
   if (lines.length < 2) return { ok: false, error: 'Une écriture exige au moins deux lignes (partie double).' };
   for (const l of lines) {
-    if (!ACCOUNT_MAP[l.account]) return { ok: false, error: `Compte inconnu : ${l.account}` };
+    if (!accountMap[l.account]) return { ok: false, error: `Compte inconnu : ${l.account}` };
     const d = Number(l.debit) || 0;
     const c = Number(l.credit) || 0;
     if (d < 0 || c < 0) return { ok: false, error: 'Les montants doivent être positifs.' };
@@ -80,12 +80,12 @@ export function ledgerFor(journal, code, period) {
 }
 
 // Balance générale : une ligne par compte mouvementé + totaux (débits = crédits).
-export function trialBalance(journal, period) {
+export function trialBalance(journal, period, accountMap = ACCOUNT_MAP) {
   const balances = accountBalances(journal, period);
   const rows = Object.entries(balances)
     .map(([code, b]) => ({
       code,
-      label: ACCOUNT_MAP[code]?.label || code,
+      label: accountMap[code]?.label || code,
       cls: classOf(code),
       debit: b.debit,
       credit: b.credit,
@@ -110,15 +110,15 @@ export function trialBalance(journal, period) {
 const sumClass = (balances, cls, sign = 1) =>
   r2(Object.entries(balances).filter(([c]) => classOf(c) === cls).reduce((a, [, b]) => a + sign * b.balance, 0));
 
-const detailClass = (balances, cls, sign = 1) =>
+const detailClass = (balances, cls, sign = 1, accountMap = ACCOUNT_MAP) =>
   Object.entries(balances)
     .filter(([c]) => classOf(c) === cls)
-    .map(([code, b]) => ({ code, label: ACCOUNT_MAP[code]?.label || code, group: ACCOUNT_MAP[code]?.group, amount: r2(sign * b.balance) }))
+    .map(([code, b]) => ({ code, label: accountMap[code]?.label || code, group: accountMap[code]?.group, amount: r2(sign * b.balance) }))
     .filter((x) => x.amount !== 0)
     .sort((a, b) => b.amount - a.amount);
 
 // BILAN à une date : Actif (2+3+5) = Passif (1+4) + Résultat cumulé (7−6).
-export function balanceSheet(journal, until) {
+export function balanceSheet(journal, until, accountMap = ACCOUNT_MAP) {
   const balances = accountBalances(journal, until ? { to: until } : undefined);
   const immobilise = sumClass(balances, 2);
   const creances = sumClass(balances, 3);
@@ -134,25 +134,25 @@ export function balanceSheet(journal, until) {
   return {
     actif: {
       immobilise, creances, tresorerie, total: totalActif,
-      detailImmobilise: detailClass(balances, 2),
-      detailCreances: detailClass(balances, 3),
-      detailTresorerie: detailClass(balances, 5),
+      detailImmobilise: detailClass(balances, 2, 1, accountMap),
+      detailCreances: detailClass(balances, 3, 1, accountMap),
+      detailTresorerie: detailClass(balances, 5, 1, accountMap),
     },
     passif: {
       capitaux, dettesCT, resultat, total: totalPassif,
-      detailCapitaux: detailClass(balances, 1, -1),
-      detailDettesCT: detailClass(balances, 4, -1),
+      detailCapitaux: detailClass(balances, 1, -1, accountMap),
+      detailDettesCT: detailClass(balances, 4, -1, accountMap),
     },
     equilibre: Math.abs(totalActif - totalPassif) < 0.01,
   };
 }
 
 // CPC sur une période : produits/charges courants et exceptionnels → résultat net.
-export function cpc(journal, period) {
+export function cpc(journal, period, accountMap = ACCOUNT_MAP) {
   const balances = accountBalances(journal, period);
-  const detailProduits = detailClass(balances, 7, -1);
-  const detailCharges = detailClass(balances, 6);
-  const isExcep = (code) => !!ACCOUNT_MAP[code]?.exceptional;
+  const detailProduits = detailClass(balances, 7, -1, accountMap);
+  const detailCharges = detailClass(balances, 6, 1, accountMap);
+  const isExcep = (code) => !!accountMap[code]?.exceptional;
   const sum = (rows, pred) => r2(rows.filter(pred).reduce((a, x) => a + x.amount, 0));
 
   const produitsCourants = sum(detailProduits, (x) => !isExcep(x.code));
@@ -221,8 +221,8 @@ export function esg(journal, period) {
 // dettes envers un tiers, donc exclus de "Total des dettes". Par construction de
 // la partie double, ANC = Capital + Report à nouveau + Résultat cumulé — l'égalité
 // est vérifiée automatiquement à chaque écriture, sans aucune saisie manuelle.
-export function financialAnalysis(journal, until) {
-  const bs = balanceSheet(journal, until);
+export function financialAnalysis(journal, until, accountMap = ACCOUNT_MAP) {
+  const bs = balanceSheet(journal, until, accountMap);
   const financementPermanent = r2(bs.passif.capitaux + bs.passif.resultat);
   const fondsRoulement = r2(financementPermanent - bs.actif.immobilise);
   const bfr = r2(bs.actif.creances - bs.passif.dettesCT);
@@ -314,7 +314,7 @@ export function monthlySeries(journal, months = 6) {
 // Convention gestion budgétaire : écart = réel − budget ;
 //   compte de charges  → écart > 0 défavorable ;
 //   compte de produits → écart > 0 favorable.
-export function budgetVariance(journal, budgets, mk) {
+export function budgetVariance(journal, budgets, mk, accountMap = ACCOUNT_MAP) {
   const period = { from: `${mk}-01`, to: `${mk}-31` };
   const balances = accountBalances(journal, period);
   return budgets.map((b) => {
@@ -324,7 +324,7 @@ export function budgetVariance(journal, budgets, mk) {
     const ecart = r2(reel - b.amount);
     const favorable = cls === 7 ? ecart >= 0 : ecart <= 0;
     const realisation = b.amount > 0 ? r2((reel / b.amount) * 100) : null;
-    return { ...b, cls, label: ACCOUNT_MAP[b.account]?.label || b.account, reel, ecart, favorable, realisation };
+    return { ...b, cls, label: accountMap[b.account]?.label || b.account, reel, ecart, favorable, realisation };
   });
 }
 
