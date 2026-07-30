@@ -15,6 +15,8 @@ import TradeForm from '../components/trading/TradeForm';
 import PreTradingChecklist from '../components/trading/PreTradingChecklist';
 import BurnRateTracker from '../components/trading/BurnRateTracker';
 import AdvancedAnalytics from '../components/trading/AdvancedAnalytics';
+import RiskManagement from '../components/trading/RiskManagement';
+import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
@@ -168,6 +170,8 @@ export default function Trading() {
 
       <AdvancedAnalytics trades={trades} />
 
+      <RiskManagement trades={trades} accountValue={account} />
+
       <Card
         title={`Trade Log (${filtered.length})`}
         action={
@@ -188,6 +192,7 @@ export default function Trading() {
                   <th className="py-2 pr-4">Dir</th>
                   <th className="py-2 pr-4 text-right">Pips</th>
                   <th className="py-2 pr-4 text-right">P&L</th>
+                  <th className="py-2 pr-4 text-right">R</th>
                   <th className="py-2 pr-4">Emotion</th>
                   <th className="py-2 pr-4">Journal</th>
                   <th className="py-2" />
@@ -204,6 +209,7 @@ export default function Trading() {
                     <td className="py-2.5 pr-4 text-right font-medium" style={{ color: t.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>
                       {fmtSignedMoney(t.pnl)}
                     </td>
+                    <td className="py-2.5 pr-4 text-right text-mute">{tradeRMultiple(t) != null ? `${tradeRMultiple(t)}R` : '—'}</td>
                     <td className="py-2.5 pr-4 capitalize text-mute">{t.journal?.emotion}</td>
                     <td className="py-2.5 pr-4">{t.journal?.reasoning ? '✓' : <span className="text-warn">—</span>}</td>
                     <td className="py-2.5 text-right whitespace-nowrap">
