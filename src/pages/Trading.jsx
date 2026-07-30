@@ -16,6 +16,7 @@ import PreTradingChecklist from '../components/trading/PreTradingChecklist';
 import BurnRateTracker from '../components/trading/BurnRateTracker';
 import AdvancedAnalytics from '../components/trading/AdvancedAnalytics';
 import RiskManagement from '../components/trading/RiskManagement';
+import TradingPsychology from '../components/trading/TradingPsychology';
 import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
@@ -171,6 +172,8 @@ export default function Trading() {
       <AdvancedAnalytics trades={trades} />
 
       <RiskManagement trades={trades} accountValue={account} />
+
+      <TradingPsychology trades={trades} />
 
       <Card
         title={`Trade Log (${filtered.length})`}
