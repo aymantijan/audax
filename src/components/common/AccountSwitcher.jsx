@@ -1,97 +1,100 @@
-import { useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, Plus, Settings2 } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
 import { fmtMoney } from '../../utils/formatters';
-import { Button, Field, Input, Modal } from './ui';
+import AccountFormModal from '../trading/AccountFormModal';
 
-// Demo/Real trading account toggle + balance. Real account is created on first switch.
+const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
+const STATUS_COLOR = {
+  active: 'var(--accent-primary)', funded: 'var(--success)', passed: 'var(--success)',
+  failed: 'var(--error)', archived: 'var(--text-secondary)',
+};
+
+// Multi-account switcher: any number of Demo / Broker / Prop Firm accounts,
+// grouped, with quick balance display and a "+ New account" shortcut.
 export default function AccountSwitcher({ compact = false }) {
-  const user = useAuthStore((s) => s.user);
-  const setActiveAccount = useAuthStore((s) => s.setActiveAccount);
-  const createRealAccount = useAuthStore((s) => s.createRealAccount);
-  const trades = useTradingStore((s) => s.trades);
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ initialBalance: '', brokerName: 'Interactive Brokers', accountNumber: '', leverage: '30', ack: false });
+  const { accounts, activeAccountId, setActiveAccount, accountValue } = useTradingStore();
+  const [open, setOpen] = useState(false);
+  const [createModal, setCreateModal] = useState(false);
 
-  const active = user?.activeAccount || 'demo';
-  const hasReal = !!user?.accounts?.real;
+  const active = accounts.find((a) => a.id === activeAccountId);
+  const visible = accounts.filter((a) => a.status !== 'archived');
+  const grouped = ['demo', 'broker', 'propfirm'].map((type) => ({ type, items: visible.filter((a) => a.type === type) })).filter((g) => g.items.length);
 
-  const balance = useMemo(() => {
-    const acct = user?.accounts?.[active];
-    const initial = acct?.initialBalance ?? 52000;
-    return initial + trades.filter((t) => t.accountType === active).reduce((a, t) => a + t.pnl, 0);
-  }, [user, active, trades]);
-
-  const pick = (type) => {
-    if (type === 'real' && !hasReal) return setModal(true);
-    setActiveAccount(type);
+  const pick = (id) => {
+    setActiveAccount(id);
+    setOpen(false);
   };
-
-  const submit = (e) => {
-    e.preventDefault();
-    if (!form.ack || !Number(form.initialBalance) || !form.brokerName.trim()) return;
-    createRealAccount(form);
-    setModal(false);
-  };
-
-  const Pill = ({ type, label }) => (
-    <button
-      onClick={() => pick(type)}
-      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-        active === type ? 'bg-accent text-black' : 'text-mute hover:text-ink'
-      }`}
-    >
-      {label}
-    </button>
-  );
 
   return (
     <>
-      <div className={`flex items-center gap-3 ${compact ? '' : 'bg-card border border-line rounded-xl px-4 py-2'}`}>
-        <div className="flex items-center gap-1 bg-surface border border-line rounded-lg p-0.5">
-          <Pill type="demo" label="Demo" />
-          <Pill type="real" label={hasReal ? 'Real' : 'Real +'} />
-        </div>
-        <div className="text-sm">
-          <span className="text-mute">Balance: </span>
-          <span className="font-semibold" style={{ color: active === 'real' ? 'var(--accent-secondary)' : 'var(--text-primary)' }}>
-            {fmtMoney(balance)}
-          </span>
-          <span className="text-mute text-xs"> ({active})</span>
-        </div>
+      <div className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={`flex items-center gap-3 cursor-pointer ${compact ? '' : 'bg-card border border-line rounded-xl px-4 py-2'}`}
+        >
+          {active ? (
+            <>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: `color-mix(in srgb, ${STATUS_COLOR[active.status]} 15%, transparent)`, color: STATUS_COLOR[active.status] }}>
+                {TYPE_LABEL[active.type]}
+              </span>
+              <span className="text-sm">
+                <span className="font-semibold">{active.name}</span>
+                <span className="text-mute"> · {fmtMoney(accountValue(active.id))}</span>
+              </span>
+            </>
+          ) : (
+            <span className="text-sm text-mute">No account</span>
+          )}
+          <ChevronDown size={14} className="text-mute" />
+        </button>
+
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 mt-2 w-80 bg-card border border-line rounded-xl shadow-2xl z-50 p-2 max-h-96 overflow-y-auto">
+              {grouped.map((g) => (
+                <div key={g.type} className="mb-2 last:mb-0">
+                  <div className="text-[11px] font-semibold text-mute uppercase tracking-wide px-2 py-1">{TYPE_LABEL[g.type]}</div>
+                  {g.items.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => pick(a.id)}
+                      className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg text-sm text-left cursor-pointer ${
+                        a.id === activeAccountId ? 'bg-accent/10 text-accent' : 'hover:bg-surface'
+                      }`}
+                    >
+                      <span className="truncate">
+                        {a.name}
+                        {a.type === 'propfirm' && a.phase && <span className="text-mute"> · {a.phase}</span>}
+                      </span>
+                      <span className="text-xs text-mute shrink-0">{fmtMoney(accountValue(a.id))}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div className="border-t border-line mt-1 pt-1 flex gap-1">
+                <button
+                  onClick={() => { setOpen(false); setCreateModal(true); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-mute hover:text-accent hover:bg-surface cursor-pointer"
+                >
+                  <Plus size={13} /> New account
+                </button>
+                <Link
+                  to="/trading/accounts"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-mute hover:text-accent hover:bg-surface cursor-pointer"
+                >
+                  <Settings2 size={13} /> Manage
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Create Real Account">
-        <form onSubmit={submit} className="space-y-3">
-          <div className="flex items-start gap-2 text-sm bg-warn/10 border border-warn/40 rounded-lg p-3 text-warn">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-            <span>Real trading risks real capital. Log honestly — this account drives your true P&L and burn-rate warnings.</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Starting balance ($)">
-              <Input type="number" step="any" value={form.initialBalance} onChange={(e) => setForm({ ...form, initialBalance: e.target.value })} autoFocus />
-            </Field>
-            <Field label="Broker">
-              <Input value={form.brokerName} onChange={(e) => setForm({ ...form, brokerName: e.target.value })} />
-            </Field>
-            <Field label="Account number (optional)">
-              <Input value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} />
-            </Field>
-            <Field label="Leverage (e.g. 30)">
-              <Input type="number" value={form.leverage} onChange={(e) => setForm({ ...form, leverage: e.target.value })} />
-            </Field>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-mute cursor-pointer">
-            <input type="checkbox" checked={form.ack} onChange={(e) => setForm({ ...form, ack: e.target.checked })} />
-            I understand real trading involves real financial risk.
-          </label>
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setModal(false)}>Cancel</Button>
-            <Button type="submit" disabled={!form.ack}>Create real account</Button>
-          </div>
-        </form>
-      </Modal>
+      <AccountFormModal open={createModal} onClose={() => setCreateModal(false)} />
     </>
   );
 }

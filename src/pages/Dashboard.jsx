@@ -14,7 +14,7 @@ import { useDealsStore } from '../store/dealsStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
-import { habitCompliance, weightedGPA, habitStreak } from '../utils/calculations';
+import { habitCompliance, weightedGPA, habitStreak, tradeStats } from '../utils/calculations';
 import { checkBurnoutTriggers } from '../utils/burnout';
 import { buildObservations } from '../utils/observations';
 import { calculateCourseProgress } from '../utils/course-progress';
@@ -52,15 +52,20 @@ export default function Dashboard() {
   const totalPagesRead = readingRows.reduce((a, r) => a + r.pagesRead, 0);
 
   const today = todayKey();
-  const activeAccount = user?.activeAccount || 'demo';
-  const acctTrades = tradingStore.getAccountTrades(activeAccount);
+  const activeAccountId = tradingStore.activeAccountId;
+  const activeAccountObj = tradingStore.getAccount(activeAccountId);
+  const acctTrades = tradingStore.getAccountTrades(activeAccountId);
   const monthTrades = acctTrades.filter((t) => new Date(t.date) >= startOfMonth(new Date()));
-  const monthStats = tradingStore.getMonthStats(activeAccount);
-  const account = tradingStore.accountValue(activeAccount);
+  const monthStats = tradingStore.getMonthStats(activeAccountId);
+  const account = tradingStore.accountValue(activeAccountId);
 
-  const hasReal = !!user?.accounts?.real;
-  const demoStats = tradingStore.getStats('demo');
-  const demoAccount = tradingStore.accountValue('demo');
+  // Demo accounts are aggregated (any number of them) and shown as a secondary
+  // breakdown whenever the account currently being viewed is NOT itself a demo.
+  const demoAccounts = tradingStore.getAccountsByType('demo').filter((a) => a.status !== 'archived');
+  const hasNonDemo = tradingStore.accounts.some((a) => a.type !== 'demo' && a.status !== 'archived');
+  const demoTrades = demoAccounts.flatMap((a) => tradingStore.getAccountTrades(a.id));
+  const demoStats = tradeStats(demoTrades);
+  const demoAccount = demoAccounts.reduce((a, acc) => a + tradingStore.accountValue(acc.id), 0);
   const gpa = weightedGPA(courses, GRADE_POINTS);
   // Automatic net worth: Actif Net Comptable Corrigé from the double-entry journal
   // (ANC = Actif − Dettes, then + plus-values − moins-values). No manual snapshot.
@@ -73,8 +78,8 @@ export default function Dashboard() {
   const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
   const grade = gradeFor(lifetimeXP, synergy.weighted);
   const equityCurve = useMemo(
-    () => tradingStore.getEquityCurve(activeAccount).map((p, i) => ({ i, value: p.value })),
-    [acctTrades, activeAccount]
+    () => tradingStore.getEquityCurve(activeAccountId).map((p, i) => ({ i, value: p.value })),
+    [acctTrades, activeAccountId]
   );
   const lifeBalance = [
     { label: 'Skills', value: Math.round((Object.values(skills).filter((s) => !s.locked).length / Object.values(skills).length) * 100), sub: `${Object.values(skills).filter((s) => !s.locked).length}/${Object.values(skills).length} unlocked`, color: 'var(--accent-primary)' },
@@ -107,11 +112,11 @@ export default function Dashboard() {
         : undefined,
       trading: acctTrades.length
         ? {
-            maxDrawdownPct: tradingStore.getMaxDrawdown(activeAccount),
+            maxDrawdownPct: tradingStore.getMaxDrawdown(activeAccountId),
             tradesCount: acctTrades.length,
             daysSinceLastTrade: lastTrade ? Math.floor((Date.now() - new Date(lastTrade.date).getTime()) / 86400000) : null,
             winRate: monthTrades.length >= 5 ? monthStats.winRate : null,
-            baselineWinRate: acctTrades.length >= 10 ? tradingStore.getStats(activeAccount).winRate : null,
+            baselineWinRate: acctTrades.length >= 10 ? tradingStore.getStats(activeAccountId).winRate : null,
           }
         : undefined,
       habits: activeHabits.length ? { complianceRate: habitCompliance(activeHabits, logs, 7, today).rate * 100 } : undefined,
@@ -127,7 +132,7 @@ export default function Dashboard() {
       },
       readings: { streak: readingStreak, inProgressCount: readingRows.filter((r) => r.status !== 'completed').length },
     });
-  }, [hasJournal, accountingStore, acctTrades, tradingStore, activeAccount, monthTrades, monthStats, activeHabits, logs, today, courses, gpa, skills, readingStreak, readingRows]);
+  }, [hasJournal, accountingStore, acctTrades, tradingStore, activeAccountId, monthTrades, monthStats, activeHabits, logs, today, courses, gpa, skills, readingStreak, readingRows]);
 
   const OBS_ICON = { danger: AlertTriangle, warning: AlertCircle, success: CheckCircle2, info: Info };
   const OBS_COLOR = { danger: 'var(--error)', warning: 'var(--warning)', success: 'var(--success)', info: 'var(--text-secondary)' };
@@ -259,11 +264,11 @@ export default function Dashboard() {
         <Stat label="Energy today" value={todayEnergy ? `${todayEnergy.energyStartLevel}/10` : '—'} sub={todayEnergy ? `Stress ${todayEnergy.stressLevel}/10` : 'Not logged yet'} />
       </div>
 
-      {hasReal && activeAccount === 'real' && (
+      {hasNonDemo && activeAccountObj?.type !== 'demo' && demoAccounts.length > 0 && (
         <div className="border border-line rounded-xl bg-card">
           <button onClick={() => setDemoOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm cursor-pointer text-left">
             {demoOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span className="text-mute">Demo account (learning)</span>
+            <span className="text-mute">Demo account{demoAccounts.length > 1 ? `s (${demoAccounts.length})` : ''} (learning)</span>
             <span className="ml-auto text-mute">{fmtMoney(demoAccount)} · {demoStats.count} trades{demoStats.count ? ` · ${Math.round(demoStats.winRate)}% win` : ''}</span>
           </button>
           {demoOpen && (
@@ -279,7 +284,7 @@ export default function Dashboard() {
 
       {/* Visualizations replace the old wall of KPI cards */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title={`Account equity · ${activeAccount}`}>
+        <Card title={`Account equity · ${activeAccountObj?.name || ''}`}>
           {equityCurve.length > 1 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={equityCurve} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>

@@ -5,7 +5,6 @@ import {
 } from 'recharts';
 import { startOfMonth } from 'date-fns';
 import { useTradingStore } from '../store/tradingStore';
-import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
 import { tradeStats, equityCurve, currentAccountValue, maxDrawdown } from '../utils/calculations';
 import { INSTRUMENTS, STRATEGIES } from '../utils/constants';
@@ -25,9 +24,7 @@ const tooltipStyle = {
 export default function Trading() {
   // Subscribe to the whole store so any trade change (add/edit/delete) re-renders.
   const tradingStore = useTradingStore();
-  const { deleteTrade } = tradingStore;
-  const user = useAuthStore((s) => s.user);
-  const adjustAccountBalance = useAuthStore((s) => s.adjustAccountBalance);
+  const { deleteTrade, adjustAccountBalance } = tradingStore;
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [clearToTrade, setClearToTrade] = useState(false);
@@ -40,14 +37,15 @@ export default function Trading() {
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 
   // Everything on this page is scoped to the active account — via centralized selectors.
-  const activeAccount = user?.activeAccount || 'demo';
-  const initialBalance = tradingStore.getInitialBalance(activeAccount);
-  const trades = tradingStore.getAccountTrades(activeAccount);
-  const stats = tradingStore.getStats(activeAccount);
-  const monthStats = tradingStore.getMonthStats(activeAccount);
-  const account = tradingStore.accountValue(activeAccount);
-  const curve = tradingStore.getEquityCurve(activeAccount);
-  const maxDd = tradingStore.getMonthMaxDrawdown(activeAccount);
+  const activeAccountId = tradingStore.activeAccountId;
+  const activeAccount = tradingStore.getAccount(activeAccountId);
+  const initialBalance = tradingStore.getInitialBalance(activeAccountId);
+  const trades = tradingStore.getAccountTrades(activeAccountId);
+  const stats = tradingStore.getStats(activeAccountId);
+  const monthStats = tradingStore.getMonthStats(activeAccountId);
+  const account = tradingStore.accountValue(activeAccountId);
+  const curve = tradingStore.getEquityCurve(activeAccountId);
+  const maxDd = tradingStore.getMonthMaxDrawdown(activeAccountId);
 
   const byStrategy = useMemo(
     () => STRATEGIES.map((s) => ({ name: s, pnl: trades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })),
@@ -228,13 +226,13 @@ export default function Trading() {
 
       <TradeForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
 
-      <Modal open={balModal} onClose={() => setBalModal(false)} title={`Edit ${activeAccount} account balance`}>
+      <Modal open={balModal} onClose={() => setBalModal(false)} title={`Edit ${activeAccount?.name || 'account'} balance`}>
         <form
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (!Number(balForm.newBalance)) return;
-            adjustAccountBalance(activeAccount, balForm.newBalance, balForm.reason);
+            adjustAccountBalance(activeAccountId, balForm.newBalance, balForm.reason);
             setBalModal(false);
           }}
         >

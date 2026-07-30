@@ -3,12 +3,14 @@ import { persist } from 'zustand/middleware';
 import { startOfMonth } from 'date-fns';
 import { uid } from '../utils/formatters';
 import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } from '../utils/calculations';
+import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics';
 import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
 import { toast } from './uiStore';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
+const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
 
 // Derived XP awards for a trade (in addition to user-picked linkedSkills).
 // awardXP no-ops on locked/unknown skills, so mapping to locked masteries is safe.
@@ -24,51 +26,233 @@ export function autoAwardsFor(trade) {
   return out;
 }
 
+const DEFAULT_DEMO_BALANCE = 52000;
+
 export const useTradingStore = create(
   persist(
     (set, get) => ({
-      trades: [],
+      trades: [], // trades[].accountId points into accounts[] (was accountType — 'demo'/'real' ids preserved for backward compat)
+      accounts: [], // [{ id, type:'demo'|'broker'|'propfirm', name, broker, accountNumber, leverage, initialBalance, status, phase?, currentPhaseStartAt, phaseHistory, propFirmRules?, balanceAdjustments, createdAt, updatedAt }]
+      activeAccountId: null,
+
+      // One-time bootstrap: migrates the legacy authStore.user.accounts (demo/real)
+      // into the new accounts[] list on first load after this refactor, or creates
+      // a fresh default Demo account for a brand-new user. Idempotent — no-ops once
+      // accounts[] is populated. Call once from App.jsx on mount.
+      ensureAccounts: () => {
+        if (get().accounts.length > 0) {
+          // Still-needed one-time trade field migration for users who somehow
+          // already have accounts[] but pre-migration trades (defensive).
+          const trades = get().trades;
+          if (trades.some((t) => !t.accountId && t.accountType)) {
+            set({ trades: trades.map((t) => ({ ...t, accountId: t.accountId || t.accountType || 'demo' })) });
+          }
+          return;
+        }
+        const legacyUser = useAuthStore.getState().user;
+        const legacyAccounts = legacyUser?.accounts;
+        const accounts = [];
+
+        accounts.push({
+          id: 'demo',
+          type: 'demo',
+          name: 'Demo Account',
+          broker: legacyAccounts?.demo?.brokerName || 'Demo Sim',
+          initialBalance: legacyAccounts?.demo?.initialBalance ?? DEFAULT_DEMO_BALANCE,
+          status: 'active',
+          balanceAdjustments: legacyAccounts?.demo?.balanceAdjustments || [],
+          createdAt: legacyAccounts?.demo?.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        });
+
+        if (legacyAccounts?.real) {
+          accounts.push({
+            id: 'real',
+            type: 'broker',
+            name: legacyAccounts.real.brokerName || 'Broker Account',
+            broker: legacyAccounts.real.brokerName || '',
+            accountNumber: legacyAccounts.real.accountNumber || '',
+            leverage: legacyAccounts.real.leverage || undefined,
+            initialBalance: legacyAccounts.real.initialBalance || 0,
+            status: 'active',
+            balanceAdjustments: legacyAccounts.real.balanceAdjustments || [],
+            createdAt: legacyAccounts.real.createdAt || Date.now(),
+            updatedAt: Date.now(),
+          });
+        }
+
+        const activeAccountId = legacyUser?.activeAccount === 'real' && legacyAccounts?.real ? 'real' : 'demo';
+        set({ accounts, activeAccountId });
+
+        const trades = get().trades;
+        if (trades.some((t) => !t.accountId)) {
+          set({ trades: trades.map((t) => ({ ...t, accountId: t.accountId || t.accountType || 'demo' })) });
+        }
+      },
+
+      // ─────────── Account CRUD ───────────
+      addAccount: (data) => {
+        const account = {
+          id: uid(),
+          type: data.type,
+          name: data.name.trim(),
+          broker: data.broker?.trim() || '',
+          accountNumber: data.accountNumber?.trim() || '',
+          leverage: data.leverage ? Number(data.leverage) : undefined,
+          initialBalance: Number(data.initialBalance) || 0,
+          status: data.type === 'propfirm' && data.startFunded ? 'funded' : 'active',
+          phase: data.type === 'propfirm' ? (data.startFunded ? 'funded' : 'phase1') : undefined,
+          propFirmRules:
+            data.type === 'propfirm'
+              ? {
+                  maxDailyLossPct: numOrNull(data.maxDailyLossPct),
+                  maxTotalDrawdownPct: numOrNull(data.maxTotalDrawdownPct),
+                  profitTargetPct: numOrNull(data.profitTargetPct),
+                  minTradingDays: numOrNull(data.minTradingDays),
+                  consistencyRulePct: numOrNull(data.consistencyRulePct),
+                }
+              : undefined,
+          currentPhaseStartAt: Date.now(),
+          phaseHistory: [],
+          balanceAdjustments: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set({ accounts: [...get().accounts, account], activeAccountId: account.id });
+        toast(`Account created: ${account.name}`, 'success');
+        return account.id;
+      },
+
+      editAccount: (id, updates) =>
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === id
+              ? stamp({
+                  ...a,
+                  ...updates,
+                  initialBalance: updates.initialBalance != null ? Number(updates.initialBalance) : a.initialBalance,
+                  propFirmRules: updates.propFirmRules ? { ...a.propFirmRules, ...updates.propFirmRules } : a.propFirmRules,
+                })
+              : a
+          ),
+        }),
+
+      archiveAccount: (id) => {
+        set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, status: 'archived' }) : a)) });
+        if (get().activeAccountId === id) {
+          const next = get().accounts.find((a) => a.id !== id && a.status !== 'archived');
+          if (next) set({ activeAccountId: next.id });
+        }
+        toast('Account archived', 'info');
+      },
+
+      // Hard delete only when the account has no trades — otherwise archive
+      // instead, so trade history is never silently lost.
+      deleteAccount: (id) => {
+        if (get().trades.some((t) => t.accountId === id)) {
+          return { ok: false, error: 'This account has trades — archive it instead of deleting.' };
+        }
+        set({ accounts: get().accounts.filter((a) => a.id !== id) });
+        if (get().activeAccountId === id) {
+          const next = get().accounts.find((a) => a.id !== id);
+          set({ activeAccountId: next?.id || null });
+        }
+        toast('Account deleted', 'info');
+        return { ok: true };
+      },
+
+      setActiveAccount: (id) => set({ activeAccountId: id }),
+
+      // Update a trading account's starting balance (deposit/withdraw/adjust).
+      // Trades stay untouched, so metrics recalc naturally on the next render.
+      adjustAccountBalance: (id, newInitialBalance, reason) => {
+        const acct = get().accounts.find((a) => a.id === id);
+        if (!acct) return;
+        const prev = acct.initialBalance;
+        const adj = { date: Date.now(), previousBalance: prev, newBalance: Number(newInitialBalance), change: Number(newInitialBalance) - prev, reason: reason || '' };
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === id ? stamp({ ...a, initialBalance: Number(newInitialBalance), balanceAdjustments: [...(a.balanceAdjustments || []), adj] }) : a
+          ),
+        });
+      },
+
+      // ─────────── Prop firm phase lifecycle ───────────
+      // outcome: 'advance' (phase1→phase2→funded) | 'failed'.
+      advancePropFirmPhase: (id, outcome) => {
+        const acct = get().accounts.find((a) => a.id === id);
+        if (!acct || acct.type !== 'propfirm') return;
+        const progress = computePropFirmProgress(acct, get().trades.filter((t) => t.accountId === id));
+        const historyEntry = {
+          phase: acct.phase,
+          startedAt: acct.currentPhaseStartAt,
+          endedAt: Date.now(),
+          outcome: outcome === 'failed' ? 'failed' : 'passed',
+          snapshot: { profitPct: progress.profitPct, tradingDays: progress.tradingDays, maxDrawdownPct: progress.maxDrawdownPct },
+        };
+        let newPhase = acct.phase;
+        let newStatus = acct.status;
+        if (outcome === 'failed') {
+          newStatus = 'failed';
+        } else {
+          const np = nextPhase(acct.phase);
+          newPhase = np || acct.phase;
+          newStatus = newPhase === 'funded' ? 'funded' : 'active';
+        }
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === id ? stamp({ ...a, phase: newPhase, status: newStatus, currentPhaseStartAt: Date.now(), phaseHistory: [...(a.phaseHistory || []), historyEntry] }) : a
+          ),
+        });
+        if (outcome !== 'failed') useSkillStore.getState().awardXP('discipline-execution-lv1', 15, `prop firm phase passed: ${acct.name}`);
+        toast(outcome === 'failed' ? `${acct.name} marked as failed` : `${acct.name} advanced to ${newPhase}`, outcome === 'failed' ? 'error' : 'success');
+      },
 
       // ─────────── SELECTORS ───────────
-      // Everything here is scoped to an account type. Dashboard / Trading / burn-rate /
+      // Everything here is scoped to an account id. Dashboard / Trading / burn-rate /
       // Advanced Analytics all call these — same account, same numbers, no drift.
+      getAccount: (accountId) => get().accounts.find((a) => a.id === (accountId || get().activeAccountId)),
+      getAccountsByType: (type) => get().accounts.filter((a) => a.type === type),
 
-      getAccountTrades: (accountType) => {
-        const type = accountType || useAuthStore.getState().user?.activeAccount || 'demo';
-        return get().trades.filter((t) => (t.accountType || 'demo') === type);
+      getAccountTrades: (accountId) => {
+        const id = accountId || get().activeAccountId;
+        return get().trades.filter((t) => (t.accountId || 'demo') === id);
       },
-      getInitialBalance: (accountType) => {
-        const type = accountType || useAuthStore.getState().user?.activeAccount || 'demo';
-        return useAuthStore.getState().user?.accounts?.[type]?.initialBalance ?? 52000;
-      },
+      getInitialBalance: (accountId) => get().getAccount(accountId)?.initialBalance ?? 0,
       // Current account balance (initial + all P&L). This is THE canonical account value.
-      accountValue: (accountType) => get().getInitialBalance(accountType) + get().getAccountTrades(accountType).reduce((a, t) => a + t.pnl, 0),
-      getTotalPnL: (accountType) => get().getAccountTrades(accountType).reduce((a, t) => a + t.pnl, 0),
-      getMonthPnL: (accountType) => {
+      accountValue: (accountId) => get().getInitialBalance(accountId) + get().getAccountTrades(accountId).reduce((a, t) => a + t.pnl, 0),
+      getTotalPnL: (accountId) => get().getAccountTrades(accountId).reduce((a, t) => a + t.pnl, 0),
+      getMonthPnL: (accountId) => {
         const cutoff = startOfMonth(new Date());
-        return get().getAccountTrades(accountType).filter((t) => new Date(t.date) >= cutoff).reduce((a, t) => a + t.pnl, 0);
+        return get().getAccountTrades(accountId).filter((t) => new Date(t.date) >= cutoff).reduce((a, t) => a + t.pnl, 0);
       },
       // Full stats object: count, winRate, expectancy, profit factor, etc.
-      getStats: (accountType) => tradeStats(get().getAccountTrades(accountType)),
-      getMonthStats: (accountType) => {
+      getStats: (accountId) => tradeStats(get().getAccountTrades(accountId)),
+      getMonthStats: (accountId) => {
         const cutoff = startOfMonth(new Date());
-        return tradeStats(get().getAccountTrades(accountType).filter((t) => new Date(t.date) >= cutoff));
+        return tradeStats(get().getAccountTrades(accountId).filter((t) => new Date(t.date) >= cutoff));
       },
-      getMaxDrawdown: (accountType) => maxDrawdown(equityCurve(get().getAccountTrades(accountType), get().getInitialBalance(accountType))),
-      getMonthMaxDrawdown: (accountType) => {
+      getMaxDrawdown: (accountId) => maxDrawdown(equityCurve(get().getAccountTrades(accountId), get().getInitialBalance(accountId))),
+      getMonthMaxDrawdown: (accountId) => {
         const cutoff = startOfMonth(new Date());
-        return maxDrawdown(equityCurve(get().getAccountTrades(accountType).filter((t) => new Date(t.date) >= cutoff), get().getInitialBalance(accountType)));
+        return maxDrawdown(equityCurve(get().getAccountTrades(accountId).filter((t) => new Date(t.date) >= cutoff), get().getInitialBalance(accountId)));
       },
-      getEquityCurve: (accountType) => equityCurve(get().getAccountTrades(accountType), get().getInitialBalance(accountType)),
+      getEquityCurve: (accountId) => equityCurve(get().getAccountTrades(accountId), get().getInitialBalance(accountId)),
+
+      // Prop-firm rule tracking for the account's current phase.
+      getPropFirmProgress: (accountId) => {
+        const acct = get().getAccount(accountId);
+        if (!acct || acct.type !== 'propfirm') return null;
+        return computePropFirmProgress(acct, get().getAccountTrades(acct.id));
+      },
 
       addTrade: (data) => {
-        const activeAccount = useAuthStore.getState().user?.activeAccount || 'demo';
-        const accountType = data.accountType || activeAccount;
+        const accountId = data.accountId || get().activeAccountId;
         const { pnlPips } = computeTradeDerived(data);
-        const balance = get().accountValue(accountType);
+        const balance = get().accountValue(accountId);
         const trade = {
           ...data,
-          accountType,
+          accountId,
           id: uid(),
           pnl: round2(Number(data.pnl)),
           pnlPips,
@@ -84,8 +268,9 @@ export const useTradingStore = create(
         for (const { skillId, amount } of auto) award(skillId, amount, 'trade (auto)');
 
         const autoXP = auto.reduce((a, x) => a + x.amount, 0);
+        const acctName = get().getAccount(accountId)?.name || accountId;
         toast(
-          `Trade saved (${accountType}) — ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl} · +${autoXP + (trade.linkedSkills?.length || 0) * TRADE_XP} XP`,
+          `Trade saved (${acctName}) — ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl} · +${autoXP + (trade.linkedSkills?.length || 0) * TRADE_XP} XP`,
           trade.pnl >= 0 ? 'success' : 'info'
         );
         return trade.id;
@@ -114,7 +299,7 @@ export const useTradingStore = create(
         toast('Trade deleted', 'info');
       },
 
-      resetAll: () => set({ trades: [] }),
+      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null }),
     }),
     { name: 'audax-trading' }
   )

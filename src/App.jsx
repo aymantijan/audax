@@ -2,6 +2,7 @@ import { useEffect, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useSkillStore } from './store/skillStore';
+import { useTradingStore } from './store/tradingStore';
 import { isSupabaseConfigured } from './services/supabase';
 import { getSession, onAuthChange } from './services/auth-supabase';
 import { startCloudSync, stopCloudSync } from './services/cloud-sync';
@@ -17,6 +18,8 @@ import { lazyWithRetry } from './utils/lazyRetry';
 // 404 — one automatic reload fetches the current build instead of crashing.
 const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
 const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
+const TradingAccounts = lazy(lazyWithRetry(() => import('./pages/TradingAccounts'), 'TradingAccounts'));
+const TradingAccountDetail = lazy(lazyWithRetry(() => import('./pages/TradingAccountDetail'), 'TradingAccountDetail'));
 const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
 const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
 const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
@@ -38,6 +41,7 @@ function AuthGuard({ children }) {
 export default function App() {
   const user = useAuthStore((s) => s.user);
   const checkDecay = useSkillStore((s) => s.checkDecay);
+  const ensureAccounts = useTradingStore((s) => s.ensureAccounts);
 
   useEffect(() => {
     document.documentElement.dataset.theme = user?.theme || 'dark';
@@ -46,6 +50,10 @@ export default function App() {
   useEffect(() => {
     checkDecay(); // daily skill decay pass on app load
   }, [checkDecay]);
+
+  useEffect(() => {
+    if (user) ensureAccounts(); // one-time migration/bootstrap of tradingStore.accounts[]
+  }, [user, ensureAccounts]);
 
   useHealthReminders(); // local-only browser-notification reminders (see hook for scope/limits)
 
@@ -91,6 +99,8 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/trading" element={<Trading />} />
+        <Route path="/trading/accounts" element={<TradingAccounts />} />
+        <Route path="/trading/account/:id" element={<TradingAccountDetail />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/course/:courseId" element={<CoursePage />} />
         <Route path="/learning/readings" element={<Readings />} />
