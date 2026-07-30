@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet, BatteryLow } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
@@ -18,6 +18,7 @@ import AdvancedAnalytics from '../components/trading/AdvancedAnalytics';
 import RiskManagement from '../components/trading/RiskManagement';
 import TradingPsychology from '../components/trading/TradingPsychology';
 import JournalAnalysis from '../components/trading/JournalAnalysis';
+import PredictionsPanel from '../components/trading/PredictionsPanel';
 import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
@@ -28,7 +29,7 @@ const tooltipStyle = {
 export default function Trading() {
   // Subscribe to the whole store so any trade change (add/edit/delete) re-renders.
   const tradingStore = useTradingStore();
-  const { deleteTrade, adjustAccountBalance } = tradingStore;
+  const { deleteTrade, adjustAccountBalance, alerts, setAlertsEnabled } = tradingStore;
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [clearToTrade, setClearToTrade] = useState(false);
@@ -39,6 +40,13 @@ export default function Trading() {
 
   const onStatus = useCallback((v) => setClearToTrade(v), []);
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
+
+  const toggleAlerts = async () => {
+    if (alerts.enabled) return setAlertsEnabled(false);
+    if (typeof Notification === 'undefined') return;
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') setAlertsEnabled(true);
+  };
 
   // Everything on this page is scoped to the active account — via centralized selectors.
   const activeAccountId = tradingStore.activeAccountId;
@@ -77,6 +85,12 @@ export default function Trading() {
           <p className="text-mute text-sm mt-1">P&L tracking and edge validation — in USD.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleAlerts}>
+            <span className="flex items-center gap-2">
+              {alerts.enabled ? <Bell size={13} /> : <BellOff size={13} />}
+              {alerts.enabled ? 'Alerts on' : 'Enable alerts'}
+            </span>
+          </Button>
           <AccountSwitcher />
           <Button onClick={() => { setEditing(null); setFormOpen(true); }} disabled={!clearToTrade} title={clearToTrade ? '' : 'Complete the pre-trading checklist first'}>
             <span className="flex items-center gap-2"><Plus size={16} /> Log Trade</span>
@@ -177,6 +191,8 @@ export default function Trading() {
       <TradingPsychology trades={trades} />
 
       <JournalAnalysis trades={trades} />
+
+      <PredictionsPanel account={activeAccount} trades={trades} />
 
       <Card
         title={`Trade Log (${filtered.length})`}

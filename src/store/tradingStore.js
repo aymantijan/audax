@@ -35,6 +35,13 @@ export const useTradingStore = create(
       accounts: [], // [{ id, type:'demo'|'broker'|'propfirm', name, broker, accountNumber, leverage, initialBalance, status, phase?, currentPhaseStartAt, phaseHistory, propFirmRules?, balanceAdjustments, createdAt, updatedAt }]
       activeAccountId: null,
 
+      // Phase 6: local-only browser-notification alerts (rule breaches/warnings,
+      // tilt, phase deadline). `lastShown` dedupes by `${accountId}|${conditionKey}`
+      // → date string, so each condition fires at most once per account per day.
+      alerts: { enabled: false, lastShown: {} },
+      setAlertsEnabled: (enabled) => set({ alerts: { ...get().alerts, enabled } }),
+      markAlertShown: (key, dateKey) => set({ alerts: { ...get().alerts, lastShown: { ...get().alerts.lastShown, [key]: dateKey } } }),
+
       // One-time bootstrap: migrates the legacy authStore.user.accounts (demo/real)
       // into the new accounts[] list on first load after this refactor, or creates
       // a fresh default Demo account for a brand-new user. Idempotent — no-ops once
@@ -311,7 +318,7 @@ export const useTradingStore = create(
         toast('Trade deleted', 'info');
       },
 
-      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null }),
+      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null, alerts: { enabled: false, lastShown: {} } }),
     }),
     { name: 'audax-trading' }
   )
