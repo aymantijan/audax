@@ -17,6 +17,7 @@ import BurnRateTracker from '../components/trading/BurnRateTracker';
 import AdvancedAnalytics from '../components/trading/AdvancedAnalytics';
 import RiskManagement from '../components/trading/RiskManagement';
 import TradingPsychology from '../components/trading/TradingPsychology';
+import JournalAnalysis from '../components/trading/JournalAnalysis';
 import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
@@ -174,6 +175,8 @@ export default function Trading() {
       <RiskManagement trades={trades} accountValue={account} />
 
       <TradingPsychology trades={trades} />
+
+      <JournalAnalysis trades={trades} />
 
       <Card
         title={`Trade Log (${filtered.length})`}
