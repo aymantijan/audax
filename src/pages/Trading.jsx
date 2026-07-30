@@ -19,6 +19,7 @@ import RiskManagement from '../components/trading/RiskManagement';
 import TradingPsychology from '../components/trading/TradingPsychology';
 import JournalAnalysis from '../components/trading/JournalAnalysis';
 import PredictionsPanel from '../components/trading/PredictionsPanel';
+import TradingCoach from '../components/trading/TradingCoach';
 import { tradeRMultiple } from '../utils/risk-management';
 
 const tooltipStyle = {
@@ -97,6 +98,8 @@ export default function Trading() {
           </Button>
         </div>
       </div>
+
+      <TradingCoach accountId={activeAccountId} />
 
       {todayEnergyLog && todayEnergyLog.energyStartLevel < 5 && (
         <div className="flex items-center gap-2 text-sm border border-warn/50 bg-warn/10 text-warn rounded-lg px-4 py-3">

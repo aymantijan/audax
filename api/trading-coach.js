@@ -9,16 +9,21 @@
 // existing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (safe to read
 // server-side too — the anon key is public by design, RLS is what protects
 // data, and here it's only used to verify a token belongs to a real session).
+//
+// Mirrors api/health-coach.js exactly (same auth guard, same free-model
+// fallback list/strategy) with a trading-focused system prompt — kept as a
+// separate file rather than a shared module since each is an independent
+// Vercel function entry point.
 
 const SYSTEM_PROMPT =
-  "You are a supportive, concise health & fitness coach embedded in a personal tracking app called AUDAX. " +
-  "You are given the user's own aggregated health metrics (sleep, energy, stress, nutrition, workouts, goals) as JSON, plus an optional `tradingSignals` field (drawdown, tilt/revenge-trading detected today) from the same user's trading journal — connect the two when relevant (e.g. low energy or poor sleep coinciding with tilt) but never invent numbers not present in the JSON. " +
-  'Never give medical diagnoses or claim to replace a doctor; for anything alarming, suggest they consult a professional. ' +
+  "You are a supportive, direct trading coach embedded in a personal trading journal app called AUDAX. " +
+  "You are given the user's own aggregated trading metrics (win rate, expectancy, drawdown, discipline score, revenge/tilt counts, prop-firm rule progress) as JSON — never invent numbers not present in it. " +
+  'Never give specific buy/sell/entry signals or personalized financial advice — you coach PROCESS and DISCIPLINE, not market calls. ' +
   'Be direct and specific to the numbers given — interpret them, do not just restate them verbatim.';
 
 const MODE_INSTRUCTIONS = {
   daily: 'Give one short (1-3 sentence) recommendation for today based on this data.',
-  digest: 'Write a short (3-5 sentence) narrative summary of the week based on this data — what went well, what to watch.',
+  digest: "Write a short (3-5 sentence) narrative summary of the trader's week based on this data — what went well process-wise, what to watch.",
 };
 
 const MAX_TOKENS = { daily: 150, digest: 250, ask: 500 };
@@ -46,7 +51,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.error('[health-coach] OPENROUTER_API_KEY not set');
+    console.error('[trading-coach] OPENROUTER_API_KEY not set');
     return res.status(503).json({ error: 'AI coach is not configured on this deployment.' });
   }
 
@@ -55,14 +60,14 @@ export default async function handler(req, res) {
   if (supabaseUrl && supabaseAnonKey) {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token) {
-      console.error('[health-coach] missing bearer token');
+      console.error('[trading-coach] missing bearer token');
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const verify = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${token}` },
     });
     if (!verify.ok) {
-      console.error('[health-coach] supabase token verify failed', verify.status, await verify.text());
+      console.error('[trading-coach] supabase token verify failed', verify.status, await verify.text());
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
@@ -77,7 +82,7 @@ export default async function handler(req, res) {
       : MODE_INSTRUCTIONS[mode];
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: `Here is my current health data (JSON): ${JSON.stringify(context || {}).slice(0, 4000)}` },
+    { role: 'user', content: `Here is my current trading data (JSON): ${JSON.stringify(context || {}).slice(0, 4000)}` },
     { role: 'user', content: userInstruction },
   ];
 
@@ -87,7 +92,7 @@ export default async function handler(req, res) {
   const envModel = process.env.OPENROUTER_MODEL;
   const modelsToTry = envModel && envModel.endsWith(':free') ? [envModel] : FALLBACK_FREE_MODELS;
   if (envModel && !envModel.endsWith(':free')) {
-    console.error('[health-coach] OPENROUTER_MODEL is set but not a :free slug — ignoring it, using the free fallback list instead:', envModel);
+    console.error('[trading-coach] OPENROUTER_MODEL is set but not a :free slug — ignoring it, using the free fallback list instead:', envModel);
   }
   let lastError = null;
 
@@ -99,14 +104,14 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://vaudax.vercel.app',
-          'X-Title': 'AUDAX Health Coach',
+          'X-Title': 'AUDAX Trading Coach',
         },
         body: JSON.stringify({ model, messages, max_tokens: MAX_TOKENS[mode], temperature: 0.7 }),
       });
 
       if (!upstream.ok) {
         const detail = await upstream.text();
-        console.error('[health-coach] upstream OpenRouter error', upstream.status, 'model:', model, detail.slice(0, 500));
+        console.error('[trading-coach] upstream OpenRouter error', upstream.status, 'model:', model, detail.slice(0, 500));
         lastError = { status: upstream.status, detail: detail.slice(0, 300) };
         continue; // try the next free model — a 429 on one doesn't mean the pool is down for all of them
       }
@@ -114,14 +119,14 @@ export default async function handler(req, res) {
       const data = await upstream.json();
       const text = data.choices?.[0]?.message?.content?.trim();
       if (!text) {
-        console.error('[health-coach] empty AI response', model, JSON.stringify(data).slice(0, 500));
+        console.error('[trading-coach] empty AI response', model, JSON.stringify(data).slice(0, 500));
         lastError = { status: 502, detail: 'Empty AI response' };
         continue;
       }
-      console.log('[health-coach] success', model);
+      console.log('[trading-coach] success', model);
       return res.status(200).json({ text, model });
     } catch (e) {
-      console.error('[health-coach] request threw', model, e?.message || e);
+      console.error('[trading-coach] request threw', model, e?.message || e);
       lastError = { status: 500, detail: e?.message || 'request error' };
     }
   }

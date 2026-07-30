@@ -10,6 +10,7 @@ import {
 import { useSkillStore } from './skillStore';
 import { useHabitStore } from './habitStore';
 import { useTradingStore } from './tradingStore';
+import { detectTiltSequences, detectRevengeTrades } from '../utils/trading-psychology';
 import { useAccountingStore } from './accountingStore';
 import { toast } from './uiStore';
 
@@ -331,6 +332,22 @@ export const useHealthStore = create(
         const nutrition = get().getTodayNutrition();
         const weekAgo = Date.now() - 7 * dayMs;
         const workoutsThisWeek = get().workouts.filter((w) => new Date(w.date).getTime() >= weekAgo).length;
+
+        // Cross-domain (Phase 7): feed the active trading account's discipline
+        // signals into the SAME coach that already sees sleep/energy/stress, so
+        // it can connect e.g. "low energy + tilt detected" instead of treating
+        // trading and health as unrelated. Read-only — never written back here.
+        const tradingStore = useTradingStore.getState();
+        const activeTradingAccountId = tradingStore.activeAccountId;
+        const activeAccountTrades = activeTradingAccountId ? tradingStore.getAccountTrades(activeTradingAccountId) : [];
+        const tradingSignals = activeTradingAccountId
+          ? {
+              maxDrawdownPct: r1(tradingStore.getMaxDrawdown(activeTradingAccountId)),
+              tiltDetectedToday: detectTiltSequences(activeAccountTrades).some((s) => s.nextTrade.date === today),
+              revengeDetectedToday: detectRevengeTrades(activeAccountTrades).some((f) => f.trade.date === today),
+            }
+          : null;
+
         return {
           readinessScore: readiness.score,
           readinessBreakdown: readiness.breakdown,
@@ -344,6 +361,7 @@ export const useHealthStore = create(
           overtrainingAlerts: alerts.map((a) => a.message),
           goals: get().getGoalsWithProgress().map((g) => ({ label: g.label, percent: g.percent })),
           weeklyDigest: get().getWeeklyDigest(),
+          tradingSignals,
         };
       },
 

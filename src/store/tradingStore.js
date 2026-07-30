@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { startOfMonth } from 'date-fns';
-import { uid } from '../utils/formatters';
+import { uid, todayKey } from '../utils/formatters';
 import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } from '../utils/calculations';
 import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics';
+import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
+import { generateTradingCoachRecommendation } from '../utils/trading-coach';
 import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
@@ -41,6 +43,106 @@ export const useTradingStore = create(
       alerts: { enabled: false, lastShown: {} },
       setAlertsEnabled: (enabled) => set({ alerts: { ...get().alerts, enabled } }),
       markAlertShown: (key, dateKey) => set({ alerts: { ...get().alerts, lastShown: { ...get().alerts.lastShown, [key]: dateKey } } }),
+
+      // ─────────── AI Trading Coach (Phase 7) ───────────
+      // Same architecture as healthStore's coach (see healthStore.js#getCoachRecommendation):
+      // an instant local heuristic cached 1x/day PER ACCOUNT (keyed by accountId,
+      // since a prop-firm account and a demo account need very different advice),
+      // optionally upgraded in place to an AI-generated one via refreshAICoach()
+      // when the OpenRouter proxy is configured/reachable.
+      coachCache: {},
+
+      getCoachRecommendation: (accountId) => {
+        const id = accountId || get().activeAccountId;
+        const today = todayKey();
+        const cached = get().coachCache[id];
+        if (cached?.date === today) return cached;
+
+        const trades = get().getAccountTrades(id);
+        const monthStats = get().getMonthStats(id);
+        const disc = computeDisciplineScore(trades);
+        const acct = get().getAccount(id);
+        const propFirmBreaches = acct?.type === 'propfirm' ? get().getPropFirmProgress(id)?.breaches || [] : [];
+        const weekAgo = Date.now() - 7 * 86400000;
+        const tradesThisWeek = trades.filter((t) => new Date(t.date).getTime() >= weekAgo).length;
+
+        const rec = generateTradingCoachRecommendation({
+          disciplineScore: disc?.score ?? null,
+          revengeCount: disc?.revengeCount ?? 0,
+          tiltCount: disc?.tiltCount ?? 0,
+          monthPnl: monthStats.totalPnl,
+          maxDrawdownPct: get().getMaxDrawdown(id),
+          propFirmBreaches,
+          tradesThisWeek,
+        });
+        const result = { date: today, source: 'local', ...rec };
+        set({ coachCache: { ...get().coachCache, [id]: result } });
+        return result;
+      },
+
+      // Aggregated (no raw per-trade data) snapshot handed to the AI coach.
+      buildCoachContext: (accountId) => {
+        const id = accountId || get().activeAccountId;
+        const acct = get().getAccount(id);
+        const trades = get().getAccountTrades(id);
+        const stats = get().getStats(id);
+        const monthStats = get().getMonthStats(id);
+        const disc = computeDisciplineScore(trades);
+        const propFirmProgress = acct?.type === 'propfirm' ? get().getPropFirmProgress(id) : null;
+        return {
+          accountName: acct?.name, accountType: acct?.type,
+          totalTrades: stats.count, winRate: round2(stats.winRate), profitFactor: stats.profitFactor,
+          expectancyUsd: round2(stats.expectancyUsd),
+          monthPnl: round2(monthStats.totalPnl),
+          maxDrawdownPct: round2(get().getMaxDrawdown(id)),
+          disciplineScore: disc?.score ?? null,
+          revengeCount: disc?.revengeCount ?? 0,
+          tiltCount: disc?.tiltCount ?? 0,
+          propFirmProgress: propFirmProgress
+            ? { profitPct: propFirmProgress.profitPct, tradingDays: propFirmProgress.tradingDays, breaches: propFirmProgress.breaches.map((b) => b.message) }
+            : null,
+        };
+      },
+
+      // Overwrites coachCache[id] with an AI-generated recommendation when the
+      // OpenRouter proxy is configured and reachable. Silently does nothing on
+      // failure — the local heuristic (already cached) stays displayed.
+      refreshAICoach: async (accountId) => {
+        const id = accountId || get().activeAccountId;
+        const today = todayKey();
+        const cached = get().coachCache[id];
+        if (cached?.date === today && cached?.source === 'ai') return;
+        try {
+          const { getAITradingRecommendation } = await import('../services/trading-coach-ai');
+          const text = await getAITradingRecommendation(get().buildCoachContext(id));
+          set({ coachCache: { ...get().coachCache, [id]: { date: today, text, tone: 'info', source: 'ai' } } });
+        } catch {
+          // AI unavailable — local heuristic (already cached) remains shown.
+        }
+      },
+
+      // Free-form Q&A about the user's own trading data, scoped to one account.
+      // Throws on failure — callers should catch and show a fallback message.
+      askTradingQuestion: async (accountId, question) => {
+        const { askAITradingQuestion } = await import('../services/trading-coach-ai');
+        return askAITradingQuestion(get().buildCoachContext(accountId || get().activeAccountId), question);
+      },
+
+      // Last-7-days rollup used for the "weekly journal digest" (local stats;
+      // the narrative version is generated on-demand via the AI ask/digest mode).
+      getWeeklyDigest: (accountId) => {
+        const id = accountId || get().activeAccountId;
+        const weekAgo = Date.now() - 7 * 86400000;
+        const trades = get().getAccountTrades(id).filter((t) => new Date(t.date).getTime() >= weekAgo);
+        const stats = tradeStats(trades);
+        return {
+          tradeCount: stats.count,
+          winRate: round2(stats.winRate),
+          totalPnl: round2(stats.totalPnl),
+          revengeCount: detectRevengeTrades(trades).length,
+          tiltCount: detectTiltSequences(trades).length,
+        };
+      },
 
       // One-time bootstrap: migrates the legacy authStore.user.accounts (demo/real)
       // into the new accounts[] list on first load after this refactor, or creates
@@ -318,7 +420,7 @@ export const useTradingStore = create(
         toast('Trade deleted', 'info');
       },
 
-      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null, alerts: { enabled: false, lastShown: {} } }),
+      resetAll: () => set({ trades: [], accounts: [], activeAccountId: null, alerts: { enabled: false, lastShown: {} }, coachCache: {} }),
     }),
     { name: 'audax-trading' }
   )
