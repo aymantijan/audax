@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
@@ -22,6 +22,7 @@ import PredictionsPanel from '../components/trading/PredictionsPanel';
 import TradingCoach from '../components/trading/TradingCoach';
 import ScorePanel from '../components/trading/ScorePanel';
 import { tradeRMultiple } from '../utils/risk-management';
+import { currentLossStreak } from '../utils/trading-psychology';
 
 const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
@@ -60,6 +61,14 @@ export default function Trading() {
   const account = tradingStore.accountValue(activeAccountId);
   const curve = tradingStore.getEquityCurve(activeAccountId);
   const maxDd = tradingStore.getMonthMaxDrawdown(activeAccountId);
+
+  // Cross-domain risk banners (Phase 9): same idea as the existing low-energy
+  // banner below, but surfacing Phase-4's live loss-streak signal and Phase-1's
+  // prop-firm rule breaches directly on the trading page, not just buried in
+  // the Psychology/Prop-Firm cards further down.
+  const lossStreak = currentLossStreak(trades);
+  const propFirmProgress = activeAccount?.type === 'propfirm' ? tradingStore.getPropFirmProgress(activeAccountId) : null;
+  const hardBreach = propFirmProgress?.breaches?.find((b) => b.level === 'danger');
 
   const byStrategy = useMemo(
     () => STRATEGIES.map((s) => ({ name: s, pnl: trades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })),
@@ -103,6 +112,20 @@ export default function Trading() {
       <ScorePanel />
 
       <TradingCoach accountId={activeAccountId} />
+
+      {hardBreach && (
+        <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-3">
+          <ShieldAlert size={16} className="shrink-0" />
+          {hardBreach.message} Stop trading on this account for today.
+        </div>
+      )}
+
+      {lossStreak >= 2 && (
+        <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-3">
+          <Flame size={16} className="shrink-0" />
+          You're on a {lossStreak}-loss streak on this account — classic tilt territory. Step away or cut size before the next trade.
+        </div>
+      )}
 
       {todayEnergyLog && todayEnergyLog.energyStartLevel < 5 && (
         <div className="flex items-center gap-2 text-sm border border-warn/50 bg-warn/10 text-warn rounded-lg px-4 py-3">

@@ -22,6 +22,9 @@ export const HABIT_TEMPLATES = [
       h('Monthly performance review', 'trading', 15, 'trading-discipline-lv2', { frequency: 'weekly', duration: 60 }),
       h('Backtest system weekly', 'trading', 12, 'statistical-modeling-lv1', { frequency: 'weekly', duration: 60 }),
       h('Adjust position size to volatility', 'trading', 6, 'volatility-adjustment-lv1'),
+      h('Check prop-firm rules before trading', 'trading', 6, 'portfolio-risk-lv1', { duration: 5 }),
+      h('Cooldown after 2 losses', 'trading', 8, 'emotional-regulation-lv1', { duration: 10 }),
+      h('Tag trade emotion honestly', 'trading', 4, 'emotional-regulation-lv1', { duration: 2 }),
     ],
   },
   {

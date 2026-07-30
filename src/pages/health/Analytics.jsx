@@ -10,6 +10,8 @@ const CORRELATIONS = [
   { key: 'sleepVsTradingAccuracy', label: 'Sleep Quality ↔ Trading Win Rate', desc: 'Cross-domain: does better sleep track with a higher win rate? (Trading)' },
   { key: 'stressVsSpending', label: 'Stress ↔ Spending', desc: 'Cross-domain: does stress correlate with discretionary spending? (Finance)' },
   { key: 'energyVsTradingAccuracy', label: 'Energy ↔ Trading Win Rate', desc: 'Cross-domain: does energy level track with trading win rate? (Trading)' },
+  { key: 'sleepVsTiltRisk', label: 'Sleep Quality ↔ Tilt/Revenge Days', desc: 'Cross-domain: does poor sleep track with days a tilt or revenge pattern got flagged? (Trading)' },
+  { key: 'energyVsTiltRisk', label: 'Energy ↔ Tilt/Revenge Days', desc: 'Cross-domain: does low energy track with days a tilt or revenge pattern got flagged? (Trading)' },
 ];
 
 export default function Analytics() {

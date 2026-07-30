@@ -64,6 +64,20 @@ export function detectTiltSequences(trades) {
   return sequences;
 }
 
+// Live loss-streak length ending at the MOST RECENT trade (0 if it was a
+// win/breakeven) — a forward-looking "you're on N losses right now, watch
+// sizing on the next one" signal, distinct from detectTiltSequences' backward-
+// looking flagging of trades that already happened.
+export function currentLossStreak(trades) {
+  const sorted = chronological(trades);
+  let streak = 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (sorted[i].pnl < 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
 // Discipline score (0-100): four equal components — using a stop loss, writing
 // a reasoning journal, staying in a calm/neutral emotional state, and process
 // quality self-ratings — minus a penalty for revenge/tilt flags found above.

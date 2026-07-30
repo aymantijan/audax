@@ -472,7 +472,21 @@ export const useHealthStore = create(
           Object.keys(winRateByDate).map((d) => [sleepByDate[d] ?? null, winRateByDate[d]]).filter(([x]) => x !== null)
         );
 
-        return { sleepVsStrength, stressVsSpending, energyVsTradingAccuracy, sleepVsTradingAccuracy };
+        // Sleep/energy vs. tilt-or-revenge-flagged trading days (Phase 9): reuses
+        // Phase-4's detectors. Every day WITH trades gets a 0/1 flag (not just the
+        // flagged days) so Pearson sees real variance instead of a degenerate
+        // all-1s series.
+        const riskDayFlag = Object.fromEntries(Object.keys(tradesByDate).map((d) => [d, 0]));
+        for (const s of detectTiltSequences(trades)) riskDayFlag[s.nextTrade.date] = 1;
+        for (const f of detectRevengeTrades(trades)) riskDayFlag[f.trade.date] = 1;
+        const energyVsTiltRisk = pearsonCorrelation(
+          Object.keys(riskDayFlag).map((d) => [energyByDate[d] ?? null, riskDayFlag[d]]).filter(([x]) => x !== null)
+        );
+        const sleepVsTiltRisk = pearsonCorrelation(
+          Object.keys(riskDayFlag).map((d) => [sleepByDate[d] ?? null, riskDayFlag[d]]).filter(([x]) => x !== null)
+        );
+
+        return { sleepVsStrength, stressVsSpending, energyVsTradingAccuracy, sleepVsTradingAccuracy, energyVsTiltRisk, sleepVsTiltRisk };
       },
 
       // Per-habit energy correlation: average morning energy on days the habit was
