@@ -15,6 +15,7 @@ const blank = () => ({
   profitTargetPct: '',
   minTradingDays: '',
   consistencyRulePct: '',
+  maxPhaseDurationDays: '',
 });
 
 const TYPE_OPTIONS = [
@@ -48,6 +49,7 @@ export default function AccountFormModal({ open, onClose, account }) {
             profitTargetPct: account.propFirmRules?.profitTargetPct ?? '',
             minTradingDays: account.propFirmRules?.minTradingDays ?? '',
             consistencyRulePct: account.propFirmRules?.consistencyRulePct ?? '',
+            maxPhaseDurationDays: account.propFirmRules?.maxPhaseDurationDays ?? '',
           }
         : blank()
     );
@@ -71,6 +73,7 @@ export default function AccountFormModal({ open, onClose, account }) {
                 profitTargetPct: form.profitTargetPct,
                 minTradingDays: form.minTradingDays,
                 consistencyRulePct: form.consistencyRulePct,
+                maxPhaseDurationDays: form.maxPhaseDurationDays,
               }
             : undefined,
       });
@@ -134,6 +137,9 @@ export default function AccountFormModal({ open, onClose, account }) {
               </Field>
               <Field label="Consistency rule (%)" hint="Max % of profit from a single day">
                 <Input type="number" step="0.1" value={form.consistencyRulePct} onChange={(e) => setForm({ ...form, consistencyRulePct: e.target.value })} placeholder="e.g. 30" />
+              </Field>
+              <Field label="Phase time limit (days)" hint="Leave blank if the firm gives unlimited time">
+                <Input type="number" value={form.maxPhaseDurationDays} onChange={(e) => setForm({ ...form, maxPhaseDurationDays: e.target.value })} placeholder="e.g. 30" />
               </Field>
             </div>
           </div>

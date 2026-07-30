@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil, Archive, Trash2, ChevronRight } from 'lucide-react';
 import { useTradingStore } from '../store/tradingStore';
 import { fmtMoney, fmtPct } from '../utils/formatters';
-import { Card, Button, Badge, EmptyState } from '../components/common/ui';
+import { Card, Stat, Button, Badge, EmptyState } from '../components/common/ui';
 import AccountFormModal from '../components/trading/AccountFormModal';
 
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
+const TYPE_ORDER = ['demo', 'broker', 'propfirm'];
 const STATUS_COLOR = {
   active: 'var(--accent-primary)', funded: 'var(--success)', passed: 'var(--success)',
   failed: 'var(--error)', archived: 'var(--text-secondary)',
@@ -71,6 +72,24 @@ export default function TradingAccounts() {
           <span className="flex items-center gap-2"><Plus size={16} /> New account</span>
         </Button>
       </div>
+
+      {active.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {TYPE_ORDER.map((type) => {
+            const group = active.filter((a) => a.type === type);
+            if (!group.length) return null;
+            const totalValue = group.reduce((a, acc) => a + accountValue(acc.id), 0);
+            return (
+              <Stat
+                key={type}
+                label={`${TYPE_LABEL[type]} (${group.length})`}
+                value={fmtMoney(totalValue)}
+                sub={type === 'propfirm' ? `${group.filter((a) => a.status === 'funded').length} funded` : undefined}
+              />
+            );
+          })}
+        </div>
+      )}
 
       <Card title={`Active accounts (${active.length})`}>
         {active.length ? <ul className="space-y-3">{active.map((a) => <Row key={a.id} a={a} />)}</ul> : <EmptyState>No accounts yet.</EmptyState>}

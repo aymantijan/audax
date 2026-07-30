@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Pencil, Wallet, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Pencil, Wallet, ArrowRight, Clock, Plus, Trash2 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useTradingStore } from '../store/tradingStore';
 import { PROP_FIRM_PHASES } from '../utils/prop-firm-analytics';
+import { computeDemoReadiness, computeBrokerHealth, computePropFirmTimeline } from '../utils/account-type-analytics';
 import { fmtMoney, fmtSignedMoney, fmtPct } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Modal, Badge, ProgressBar, EmptyState } from '../components/common/ui';
 import AccountFormModal from '../components/trading/AccountFormModal';
@@ -34,10 +35,11 @@ function RuleGauge({ label, value, max, unit = '%', invert = false }) {
 export default function TradingAccountDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { accounts, getStats, accountValue, getEquityCurve, getPropFirmProgress, advancePropFirmPhase, adjustAccountBalance, setActiveAccount } = useTradingStore();
+  const { accounts, getStats, accountValue, getEquityCurve, getAccountTrades, getPropFirmProgress, advancePropFirmPhase, adjustAccountBalance, setActiveAccount, addPayout, deletePayout, getTotalPayouts } = useTradingStore();
   const [editModal, setEditModal] = useState(false);
   const [balModal, setBalModal] = useState(false);
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
+  const [payoutForm, setPayoutForm] = useState({ amount: '', date: new Date().toISOString().slice(0, 10), notes: '' });
 
   const account = accounts.find((a) => a.id === id);
   if (!account) {
@@ -54,8 +56,18 @@ export default function TradingAccountDetail() {
   const progress = account.type === 'propfirm' ? getPropFirmProgress(account.id) : null;
   const phaseIdx = account.type === 'propfirm' ? PROP_FIRM_PHASES.findIndex((p) => p.value === account.phase) : -1;
   const isLastPhase = phaseIdx === PROP_FIRM_PHASES.length - 1;
+  const timeline = account.type === 'propfirm' ? computePropFirmTimeline(account) : null;
+  const totalPayouts = account.type === 'propfirm' ? getTotalPayouts(account.id) : 0;
+  const demoReadiness = account.type === 'demo' ? computeDemoReadiness(getAccountTrades(account.id), account.initialBalance) : null;
+  const brokerHealth = account.type === 'broker' ? computeBrokerHealth(account, getAccountTrades(account.id)) : null;
 
   const goTrade = () => { setActiveAccount(account.id); navigate('/trading'); };
+  const submitPayout = (e) => {
+    e.preventDefault();
+    if (!Number(payoutForm.amount)) return;
+    addPayout(account.id, payoutForm);
+    setPayoutForm({ amount: '', date: new Date().toISOString().slice(0, 10), notes: '' });
+  };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -89,6 +101,79 @@ export default function TradingAccountDetail() {
         <Stat label="Win rate" value={stats.count ? fmtPct(stats.winRate) : '—'} sub={`${stats.wins}W / ${stats.losses}L`} />
         <Stat label="Trades" value={stats.count} />
       </div>
+
+      {demoReadiness && (
+        <Card title="Readiness to Go Live">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl font-bold" style={{ color: demoReadiness.band.color }}>{demoReadiness.score}</div>
+            <Badge color={demoReadiness.band.color}>{demoReadiness.band.label}</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center mb-4">
+            <div><div className="text-xs text-mute mb-1">Sample size</div><div className="text-sm font-semibold">{demoReadiness.breakdown.sample}/25</div></div>
+            <div><div className="text-xs text-mute mb-1">Expectancy</div><div className="text-sm font-semibold">{demoReadiness.breakdown.expectancy}/25</div></div>
+            <div><div className="text-xs text-mute mb-1">Profit factor</div><div className="text-sm font-semibold">{demoReadiness.breakdown.profitFactor}/25</div></div>
+            <div><div className="text-xs text-mute mb-1">Drawdown control</div><div className="text-sm font-semibold">{demoReadiness.breakdown.drawdown}/25</div></div>
+          </div>
+          {demoReadiness.gaps.length > 0 ? (
+            <ul className="space-y-1.5 text-sm text-mute">
+              {demoReadiness.gaps.map((g, i) => <li key={i}>· {g}</li>)}
+            </ul>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-good"><CheckCircle2 size={15} /> This strategy meets the readiness bar — consider opening a broker or prop firm account.</div>
+          )}
+        </Card>
+      )}
+
+      {brokerHealth && (
+        <Card title="Capital Preservation">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+            <div><div className="text-xs text-mute mb-1">ROI</div><div className="text-lg font-semibold" style={{ color: brokerHealth.roiPct >= 0 ? 'var(--success)' : 'var(--error)' }}>{brokerHealth.roiPct}%</div></div>
+            <div><div className="text-xs text-mute mb-1">Max drawdown</div><div className="text-lg font-semibold" style={{ color: brokerHealth.maxDrawdownPct > 15 ? 'var(--error)' : 'var(--text-primary)' }}>{brokerHealth.maxDrawdownPct}%</div></div>
+            <div><div className="text-xs text-mute mb-1">Annualized</div><div className="text-lg font-semibold">{brokerHealth.annualizedPct != null ? `${brokerHealth.annualizedPct}%` : '—'}</div></div>
+          </div>
+        </Card>
+      )}
+
+      {account.type === 'propfirm' && timeline && (
+        <div className={`flex items-center gap-2 text-sm border rounded-lg px-4 py-3 ${timeline.overdue ? 'border-bad/50 bg-bad/10 text-bad' : timeline.daysRemaining <= 3 ? 'border-warn/50 bg-warn/10 text-warn' : 'border-line bg-card'}`}>
+          <Clock size={15} className="shrink-0" />
+          {timeline.overdue
+            ? `Phase deadline passed (${timeline.deadline}) — ${Math.abs(timeline.daysRemaining)} day(s) overdue.`
+            : `${timeline.daysRemaining} day(s) left in this phase — deadline ${timeline.deadline}.`}
+        </div>
+      )}
+
+      {account.type === 'propfirm' && account.status === 'funded' && (
+        <Card title="Payouts" action={<Badge color="var(--success)">Total: {fmtMoney(totalPayouts)}</Badge>}>
+          <form onSubmit={submitPayout} className="flex flex-wrap gap-2 items-end mb-4">
+            <Field label="Amount ($)">
+              <Input type="number" step="any" value={payoutForm.amount} onChange={(e) => setPayoutForm({ ...payoutForm, amount: e.target.value })} className="w-32" />
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={payoutForm.date} onChange={(e) => setPayoutForm({ ...payoutForm, date: e.target.value })} />
+            </Field>
+            <Field label="Notes (optional)">
+              <Input value={payoutForm.notes} onChange={(e) => setPayoutForm({ ...payoutForm, notes: e.target.value })} placeholder="e.g. 1st payout" />
+            </Field>
+            <Button type="submit"><span className="flex items-center gap-2"><Plus size={14} /> Log payout</span></Button>
+          </form>
+          {account.payouts?.length ? (
+            <ul className="space-y-1.5">
+              {[...account.payouts].reverse().map((p) => (
+                <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                  <span>{p.date} {p.notes && <span className="text-mute">· {p.notes}</span>}</span>
+                  <span className="flex items-center gap-3">
+                    <span className="font-medium text-good">{fmtMoney(p.amount)}</span>
+                    <button onClick={() => deletePayout(account.id, p.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState>No payouts logged yet.</EmptyState>
+          )}
+        </Card>
+      )}
 
       {account.type === 'propfirm' && progress && (
         <Card

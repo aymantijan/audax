@@ -110,11 +110,13 @@ export const useTradingStore = create(
                   profitTargetPct: numOrNull(data.profitTargetPct),
                   minTradingDays: numOrNull(data.minTradingDays),
                   consistencyRulePct: numOrNull(data.consistencyRulePct),
+                  maxPhaseDurationDays: numOrNull(data.maxPhaseDurationDays),
                 }
               : undefined,
           currentPhaseStartAt: Date.now(),
           phaseHistory: [],
           balanceAdjustments: [],
+          payouts: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -176,6 +178,16 @@ export const useTradingStore = create(
           ),
         });
       },
+
+      // ─────────── Prop firm payouts ───────────
+      addPayout: (id, { amount, date, notes }) => {
+        const payout = { id: uid(), amount: Number(amount) || 0, date: date || new Date().toISOString().slice(0, 10), notes: notes || '', createdAt: Date.now() };
+        set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: [...(a.payouts || []), payout] }) : a)) });
+        toast(`Payout logged: $${payout.amount}`, 'success');
+      },
+      deletePayout: (id, payoutId) =>
+        set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: (a.payouts || []).filter((p) => p.id !== payoutId) }) : a)) }),
+      getTotalPayouts: (id) => (get().getAccount(id)?.payouts || []).reduce((a, p) => a + p.amount, 0),
 
       // ─────────── Prop firm phase lifecycle ───────────
       // outcome: 'advance' (phase1→phase2→funded) | 'failed'.
