@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTradingStore } from '../../store/tradingStore';
+import { CURRENCIES } from '../../utils/constants';
 import { Button, Field, Input, Select, Modal } from '../common/ui';
 
 const blank = () => ({
   type: 'demo',
   name: '',
+  currency: 'USD',
   broker: '',
   accountNumber: '',
   leverage: '',
@@ -39,6 +41,7 @@ export default function AccountFormModal({ open, onClose, account }) {
             ...blank(),
             type: account.type,
             name: account.name,
+            currency: account.currency || 'USD',
             broker: account.broker || '',
             accountNumber: account.accountNumber || '',
             leverage: account.leverage || '',
@@ -61,6 +64,7 @@ export default function AccountFormModal({ open, onClose, account }) {
     if (isEdit) {
       editAccount(account.id, {
         name: form.name,
+        currency: form.currency,
         broker: form.broker,
         accountNumber: form.accountNumber,
         leverage: form.leverage,
@@ -96,7 +100,10 @@ export default function AccountFormModal({ open, onClose, account }) {
           <Field label={form.type === 'propfirm' ? 'Prop firm name' : 'Broker'}>
             <Input value={form.broker} onChange={(e) => setForm({ ...form, broker: e.target.value })} placeholder={form.type === 'propfirm' ? 'e.g. FTMO' : 'e.g. Interactive Brokers'} />
           </Field>
-          <Field label="Starting balance ($)">
+          <Field label="Currency">
+            <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} options={CURRENCIES} />
+          </Field>
+          <Field label="Starting balance">
             <Input type="number" step="any" value={form.initialBalance} onChange={(e) => setForm({ ...form, initialBalance: e.target.value })} required />
           </Field>
           {form.type === 'broker' && (

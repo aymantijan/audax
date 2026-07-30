@@ -1,17 +1,27 @@
 import { format } from 'date-fns';
+import { CURRENCY_SYMBOL } from './constants';
 
 // ---- Currency ----
-// Trading is denominated in USD ($). Everything else (personal finance: net worth,
-// budgets, transactions, goals) is in Moroccan dirhams (DH). Fixed peg for any
-// cross-domain figure (e.g. the trading account counted toward net worth).
+// Trading is denominated per-account (each Demo/Broker/Prop Firm account picks
+// its own currency — see tradingStore.js `accounts[].currency`, default 'USD').
+// Everything else (personal finance: net worth, budgets, transactions, goals)
+// is in Moroccan dirhams (DH). USD_TO_MAD is a fixed peg used only for cross-
+// domain figures (e.g. a USD trading account counted toward MAD net worth) —
+// it does NOT convert between trading account currencies themselves.
 export const USD_TO_MAD = 10;
 export const usdToMad = (usd) => (usd ?? 0) * USD_TO_MAD;
 
-// USD (trading)
-export const fmtMoney = (n, digits = 0) =>
-  (n < 0 ? '-$' : '$') + Math.abs(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) });
+// Trading money, symbol per account currency (defaults to USD for callers that
+// don't pass one — i.e. anywhere not yet scoped to a specific account).
+export const fmtMoney = (n, digits = 0, currency = 'USD') => {
+  const sym = CURRENCY_SYMBOL[currency] || currency;
+  return (n < 0 ? `-${sym}` : sym) + Math.abs(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) });
+};
 
-export const fmtSignedMoney = (n) => (n >= 0 ? '+' : '-') + '$' + Math.abs(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+export const fmtSignedMoney = (n, currency = 'USD') => {
+  const sym = CURRENCY_SYMBOL[currency] || currency;
+  return (n >= 0 ? '+' : '-') + sym + Math.abs(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+};
 
 // MAD (personal finance) — dirham shown as a "DH" suffix
 export const fmtMAD = (n, digits = 0) =>

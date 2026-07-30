@@ -14,7 +14,7 @@ const tooltipStyle = {
 
 const fmtRatio = (v) => (v === null ? '—' : v === Infinity ? '∞' : v.toFixed(2));
 
-export default function AdvancedAnalytics({ trades }) {
+export default function AdvancedAnalytics({ trades, currency = 'USD' }) {
   const sharpe = useMemo(() => sharpeRatio(trades), [trades]);
   const sortino = useMemo(() => sortinoRatio(trades), [trades]);
   const calmar = useMemo(() => calmarRatio(trades), [trades]);
@@ -64,11 +64,11 @@ export default function AdvancedAnalytics({ trades }) {
                     <td className="py-2 pr-3">{s.strategy}</td>
                     <td className="py-2 pr-3 text-right">{s.count}</td>
                     <td className="py-2 pr-3 text-right">{fmtPct(s.winRate)}</td>
-                    <td className="py-2 pr-3 text-right text-good">{fmtSignedMoney(s.avgWin)}</td>
-                    <td className="py-2 pr-3 text-right text-bad">{fmtSignedMoney(s.avgLoss)}</td>
-                    <td className="py-2 pr-3 text-right">{fmtSignedMoney(s.expectancy)}</td>
+                    <td className="py-2 pr-3 text-right text-good">{fmtSignedMoney(s.avgWin, currency)}</td>
+                    <td className="py-2 pr-3 text-right text-bad">{fmtSignedMoney(s.avgLoss, currency)}</td>
+                    <td className="py-2 pr-3 text-right">{fmtSignedMoney(s.expectancy, currency)}</td>
                     <td className="py-2 text-right font-medium" style={{ color: s.totalPnl >= 0 ? 'var(--success)' : 'var(--error)' }}>
-                      {fmtSignedMoney(s.totalPnl)}
+                      {fmtSignedMoney(s.totalPnl, currency)}
                     </td>
                   </tr>
                 ))}
@@ -152,7 +152,7 @@ export default function AdvancedAnalytics({ trades }) {
                           <div className="h-full" style={{ width: `${r.winRate}%`, background: r.winRate >= 50 ? 'var(--success)' : 'var(--error)' }} />
                         </div>
                         <span className="w-32 text-right text-xs text-mute">
-                          {fmtPct(r.winRate)} · {r.count} trades · {fmtSignedMoney(r.pnl)}
+                          {fmtPct(r.winRate)} · {r.count} trades · {fmtSignedMoney(r.pnl, currency)}
                         </span>
                       </div>
                     ))}

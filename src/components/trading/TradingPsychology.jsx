@@ -7,7 +7,7 @@ import { Card, Badge, EmptyState } from '../common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
-export default function TradingPsychology({ trades }) {
+export default function TradingPsychology({ trades, currency = 'USD' }) {
   const discipline = useMemo(() => computeDisciplineScore(trades), [trades]);
   const revengeFlags = useMemo(() => detectRevengeTrades(trades), [trades]);
   const tiltFlags = useMemo(() => detectTiltSequences(trades), [trades]);
@@ -47,7 +47,7 @@ export default function TradingPsychology({ trades }) {
                 <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                 <span>
                   <span className="font-medium">{fmtDateShort(f.trade.date)} · {f.trade.instrument}</span> — {f.reason}
-                  <span className="block text-[11px] text-mute mt-0.5">Previous trade: {fmtSignedMoney(f.previousTrade.pnl)} on {f.previousTrade.instrument}</span>
+                  <span className="block text-[11px] text-mute mt-0.5">Previous trade: {fmtSignedMoney(f.previousTrade.pnl, currency)} on {f.previousTrade.instrument}</span>
                 </span>
               </li>
             ))}
@@ -64,7 +64,7 @@ export default function TradingPsychology({ trades }) {
               <li key={i} className="flex items-start gap-2 text-sm border border-warn/50 bg-warn/10 text-warn rounded-lg px-3 py-2">
                 <Flame size={14} className="shrink-0 mt-0.5" />
                 <span>
-                  After {f.streakLength} straight losses ({fmtSignedMoney(f.streakLossTotal)}), position size jumped to {f.nextTrade.positionSize} (avg during the streak: {f.avgStreakSize}) on {fmtDateShort(f.nextTrade.date)}.
+                  After {f.streakLength} straight losses ({fmtSignedMoney(f.streakLossTotal, currency)}), position size jumped to {f.nextTrade.positionSize} (avg during the streak: {f.avgStreakSize}) on {fmtDateShort(f.nextTrade.date)}.
                 </span>
               </li>
             ))}
@@ -81,7 +81,7 @@ export default function TradingPsychology({ trades }) {
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="emotion" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-              <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} (${p.payload.count} trades, ${fmtSignedMoney(p.payload.pnl)})`, 'Win rate']} />
+              <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} (${p.payload.count} trades, ${fmtSignedMoney(p.payload.pnl, currency)})`, 'Win rate']} />
               <Bar dataKey="winRate" radius={[4, 4, 0, 0]}>
                 {emotions.map((e) => (
                   <Cell key={e.emotion} fill={e.winRate >= 50 ? '#00d97f' : '#ff6b6b'} />

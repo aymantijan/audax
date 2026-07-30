@@ -7,7 +7,7 @@ import { Card, Select, EmptyState } from '../common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
-export default function JournalAnalysis({ trades }) {
+export default function JournalAnalysis({ trades, currency = 'USD' }) {
   const [lessonFilter, setLessonFilter] = useState('all');
 
   const qualityCorr = useMemo(() => processQualityCorrelation(trades), [trades]);
@@ -28,7 +28,7 @@ export default function JournalAnalysis({ trades }) {
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} label={{ value: 'Self-rated process quality', position: 'insideBottom', offset: -2, fill: 'var(--text-secondary)', fontSize: 11 }} />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-              <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} win rate (${p.payload.count} trades, avg ${fmtSignedMoney(p.payload.avgPnl)})`, '']} />
+              <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} win rate (${p.payload.count} trades, avg ${fmtSignedMoney(p.payload.avgPnl, currency)})`, '']} />
               <Bar dataKey="winRate" radius={[4, 4, 0, 0]}>
                 {qualityCorr.map((d) => (
                   <Cell key={d.label} fill={d.winRate >= 50 ? '#00d97f' : '#ff6b6b'} />
@@ -59,7 +59,7 @@ export default function JournalAnalysis({ trades }) {
                   <td className="py-2 pr-3">{e.category}</td>
                   <td className="py-2 pr-3 text-right">{e.count}</td>
                   <td className="py-2 pr-3 text-right">{fmtPct(e.winRate)}</td>
-                  <td className="py-2 text-right font-medium" style={{ color: e.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(e.pnl)}</td>
+                  <td className="py-2 text-right font-medium" style={{ color: e.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(e.pnl, currency)}</td>
                 </tr>
               ))}
             </tbody>
@@ -102,7 +102,7 @@ export default function JournalAnalysis({ trades }) {
                 <BookOpen size={14} className="text-mute shrink-0 mt-0.5" />
                 <div>
                   <div className="text-[11px] text-mute mb-0.5">
-                    {fmtDateShort(l.date)} · {l.instrument} · <span style={{ color: l.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(l.pnl)}</span> · {l.emotion}
+                    {fmtDateShort(l.date)} · {l.instrument} · <span style={{ color: l.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(l.pnl, currency)}</span> · {l.emotion}
                   </div>
                   {l.lesson}
                 </div>

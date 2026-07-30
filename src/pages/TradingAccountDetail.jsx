@@ -61,6 +61,7 @@ export default function TradingAccountDetail() {
   const demoReadiness = account.type === 'demo' ? computeDemoReadiness(getAccountTrades(account.id), account.initialBalance) : null;
   const brokerHealth = account.type === 'broker' ? computeBrokerHealth(account, getAccountTrades(account.id)) : null;
   const score = getAccountScore(account.id);
+  const currency = account.currency || 'USD';
 
   const goTrade = () => { setActiveAccount(account.id); navigate('/trading'); };
   const submitPayout = (e) => {
@@ -77,6 +78,7 @@ export default function TradingAccountDetail() {
           <div className="flex items-center gap-2 mb-1">
             <Badge color={STATUS_COLOR[account.status]}>{TYPE_LABEL[account.type]}</Badge>
             <span className="text-xs capitalize" style={{ color: STATUS_COLOR[account.status] }}>{account.status}</span>
+            <span className="text-xs text-mute">· {currency}</span>
           </div>
           <h1 className="text-2xl font-bold">{account.name}</h1>
           {account.broker && <p className="text-mute text-sm mt-1">{account.broker}</p>}
@@ -95,10 +97,10 @@ export default function TradingAccountDetail() {
               <Wallet size={13} />
             </button>
           </div>
-          <div className="text-2xl font-bold">{fmtMoney(value)}</div>
-          <div className="text-xs text-mute mt-1">Start: {fmtMoney(account.initialBalance)}</div>
+          <div className="text-2xl font-bold">{fmtMoney(value, 0, currency)}</div>
+          <div className="text-xs text-mute mt-1">Start: {fmtMoney(account.initialBalance, 0, currency)}</div>
         </div>
-        <Stat label="Total P&L" value={fmtSignedMoney(stats.totalPnl)} color={stats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
+        <Stat label="Total P&L" value={fmtSignedMoney(stats.totalPnl, currency)} color={stats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
         <Stat label="Win rate" value={stats.count ? fmtPct(stats.winRate) : '—'} sub={`${stats.wins}W / ${stats.losses}L`} />
         <Stat label="Trades" value={stats.count} />
       </div>
@@ -160,9 +162,9 @@ export default function TradingAccountDetail() {
       )}
 
       {account.type === 'propfirm' && account.status === 'funded' && (
-        <Card title="Payouts" action={<Badge color="var(--success)">Total: {fmtMoney(totalPayouts)}</Badge>}>
+        <Card title="Payouts" action={<Badge color="var(--success)">Total: {fmtMoney(totalPayouts, 0, currency)}</Badge>}>
           <form onSubmit={submitPayout} className="flex flex-wrap gap-2 items-end mb-4">
-            <Field label="Amount ($)">
+            <Field label={`Amount (${currency})`}>
               <Input type="number" step="any" value={payoutForm.amount} onChange={(e) => setPayoutForm({ ...payoutForm, amount: e.target.value })} className="w-32" />
             </Field>
             <Field label="Date">
@@ -179,7 +181,7 @@ export default function TradingAccountDetail() {
                 <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                   <span>{p.date} {p.notes && <span className="text-mute">· {p.notes}</span>}</span>
                   <span className="flex items-center gap-3">
-                    <span className="font-medium text-good">{fmtMoney(p.amount)}</span>
+                    <span className="font-medium text-good">{fmtMoney(p.amount, 0, currency)}</span>
                     <button onClick={() => deletePayout(account.id, p.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                   </span>
                 </li>
@@ -263,8 +265,8 @@ export default function TradingAccountDetail() {
               </defs>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="i" hide />
-              <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={(v) => fmtMoney(v)} width={54} />
-              <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtMoney(v)} labelFormatter={() => ''} />
+              <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={(v) => fmtMoney(v, 0, currency)} width={54} />
+              <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtMoney(v, 0, currency)} labelFormatter={() => ''} />
               <Area type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} fill="url(#acctEqFill)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -286,11 +288,11 @@ export default function TradingAccountDetail() {
           }}
         >
           <div className="text-sm text-mute">
-            Current start: <span className="text-ink font-medium">{fmtMoney(account.initialBalance)}</span> · trades P&amp;L: <span className="text-ink">{fmtSignedMoney(value - account.initialBalance)}</span>
+            Current start: <span className="text-ink font-medium">{fmtMoney(account.initialBalance, 0, currency)}</span> · trades P&amp;L: <span className="text-ink">{fmtSignedMoney(value - account.initialBalance, currency)}</span>
           </div>
           <div className="text-xs text-mute">Changing the starting balance recalculates account value, ROI, and drawdown. Trades are not modified.</div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="New starting balance ($)">
+            <Field label={`New starting balance (${currency})`}>
               <Input type="number" step="any" value={balForm.newBalance} onChange={(e) => setBalForm({ ...balForm, newBalance: e.target.value })} autoFocus />
             </Field>
             <Field label="Reason">

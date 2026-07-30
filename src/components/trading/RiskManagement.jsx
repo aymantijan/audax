@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Calculator } from 'lucide-react';
 import { instrumentCorrelation } from '../../utils/analytics';
 import { computePositionSize, rMultipleStats, sameDayExposureWarnings, DEFAULT_PIP_VALUE_PER_LOT } from '../../utils/risk-management';
-import { INSTRUMENTS } from '../../utils/constants';
+import { INSTRUMENTS, CURRENCY_SYMBOL } from '../../utils/constants';
 import { fmtMoney } from '../../utils/formatters';
 import { Card, Field, Input, Select, EmptyState } from '../common/ui';
 
-export default function RiskManagement({ trades, accountValue }) {
+export default function RiskManagement({ trades, accountValue, currency = 'USD' }) {
   const [calc, setCalc] = useState({ riskPct: 1, instrument: 'EURUSD', stopDistancePips: 20, pipValuePerLot: DEFAULT_PIP_VALUE_PER_LOT.EURUSD });
 
   const sizing = computePositionSize({
@@ -39,7 +39,7 @@ export default function RiskManagement({ trades, accountValue }) {
           <Field label="Stop distance (pips)">
             <Input type="number" step="any" min="0" value={calc.stopDistancePips} onChange={(e) => setCalc({ ...calc, stopDistancePips: e.target.value })} />
           </Field>
-          <Field label="$ per pip / lot" hint="Override if your broker quotes differently">
+          <Field label={`${CURRENCY_SYMBOL[currency] || currency} per pip / lot`} hint="Override if your broker quotes differently">
             <Input type="number" step="any" min="0" value={calc.pipValuePerLot} onChange={(e) => setCalc({ ...calc, pipValuePerLot: e.target.value })} />
           </Field>
         </div>
@@ -47,13 +47,13 @@ export default function RiskManagement({ trades, accountValue }) {
           <Calculator size={20} className="text-accent shrink-0" />
           <div>
             <div className="text-xs text-mute">Dollar risk</div>
-            <div className="text-lg font-semibold">{fmtMoney(sizing.dollarRisk)}</div>
+            <div className="text-lg font-semibold">{fmtMoney(sizing.dollarRisk, 0, currency)}</div>
           </div>
           <div>
             <div className="text-xs text-mute">Position size</div>
             <div className="text-lg font-semibold">{sizing.lots != null ? `${sizing.lots} lots` : '—'}</div>
           </div>
-          <div className="text-xs text-mute ml-auto">Based on {fmtMoney(accountValue)} account value</div>
+          <div className="text-xs text-mute ml-auto">Based on {fmtMoney(accountValue, 0, currency)} account value</div>
         </div>
       </Card>
 
@@ -82,7 +82,7 @@ export default function RiskManagement({ trades, accountValue }) {
             )}
           </>
         ) : (
-          <EmptyState>Log a trade's "Risk ($)" field to see R-multiple analysis.</EmptyState>
+          <EmptyState>Log a trade's "Risk ({currency})" field to see R-multiple analysis.</EmptyState>
         )}
       </Card>
 

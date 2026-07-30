@@ -41,7 +41,7 @@ export default function AccountSwitcher({ compact = false }) {
               </span>
               <span className="text-sm">
                 <span className="font-semibold">{active.name}</span>
-                <span className="text-mute"> · {fmtMoney(accountValue(active.id))}</span>
+                <span className="text-mute"> · {fmtMoney(accountValue(active.id), 0, active.currency)}</span>
               </span>
             </>
           ) : (
@@ -69,7 +69,7 @@ export default function AccountSwitcher({ compact = false }) {
                         {a.name}
                         {a.type === 'propfirm' && a.phase && <span className="text-mute"> · {a.phase}</span>}
                       </span>
-                      <span className="text-xs text-mute shrink-0">{fmtMoney(accountValue(a.id))}</span>
+                      <span className="text-xs text-mute shrink-0">{fmtMoney(accountValue(a.id), 0, a.currency)}</span>
                     </button>
                   ))}
                 </div>

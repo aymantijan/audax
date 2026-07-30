@@ -28,6 +28,12 @@ const blank = () => ({
 export default function TradeForm({ open, onClose, editing }) {
   const addTrade = useTradingStore((s) => s.addTrade);
   const editTrade = useTradingStore((s) => s.editTrade);
+  // `accounts.find` returns the SAME object reference across renders while the
+  // accounts array itself is unchanged, so this selector is safe (unlike
+  // selecting the return value of a store method that allocates a new
+  // array/object every call, which loops with useSyncExternalStore).
+  const activeAccount = useTradingStore((s) => s.accounts.find((a) => a.id === (editing?.accountId || s.activeAccountId)));
+  const currency = activeAccount?.currency || 'USD';
   const [form, setForm] = useState(blank());
   const [pnlTouched, setPnlTouched] = useState(false);
   const [error, setError] = useState('');
@@ -92,10 +98,10 @@ export default function TradeForm({ open, onClose, editing }) {
           <Field label="Size (lots / coins)">
             <Input type="number" step="any" value={form.positionSize} onChange={(e) => upd('positionSize', e.target.value)} />
           </Field>
-          <Field label="Risk ($)">
+          <Field label={`Risk (${currency})`}>
             <Input type="number" step="any" value={form.riskAmount} onChange={(e) => upd('riskAmount', e.target.value)} />
           </Field>
-          <Field label="P&L ($)" hint={derived.pnl ? `Auto: $${derived.pnl} (${derived.pnlPips} pips)` : ''}>
+          <Field label={`P&L (${currency})`} hint={derived.pnl ? `Auto: ${derived.pnl} (${derived.pnlPips} pips)` : ''}>
             <Input
               type="number"
               step="any"

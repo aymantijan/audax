@@ -6,7 +6,7 @@ import { Card, Button, Input } from '../common/ui';
 
 const toneColor = { danger: 'var(--error)', warning: 'var(--warning)', success: 'var(--success)', info: 'var(--accent-primary)' };
 
-export default function TradingCoach({ accountId }) {
+export default function TradingCoach({ accountId, currency = 'USD' }) {
   const { getCoachRecommendation, refreshAICoach, askTradingQuestion, getWeeklyDigest } = useTradingStore();
   const coach = getCoachRecommendation(accountId);
   const digest = getWeeklyDigest(accountId);
@@ -70,7 +70,7 @@ export default function TradingCoach({ accountId }) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
             <div><div className="text-xs text-mute mb-1">Trades</div><div className="text-lg font-semibold">{digest.tradeCount}</div></div>
             <div><div className="text-xs text-mute mb-1">Win rate</div><div className="text-lg font-semibold">{fmtPct(digest.winRate)}</div></div>
-            <div><div className="text-xs text-mute mb-1">P&L</div><div className="text-lg font-semibold" style={{ color: digest.totalPnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(digest.totalPnl)}</div></div>
+            <div><div className="text-xs text-mute mb-1">P&L</div><div className="text-lg font-semibold" style={{ color: digest.totalPnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(digest.totalPnl, currency)}</div></div>
             <div><div className="text-xs text-mute mb-1">Revenge/Tilt flags</div><div className="text-lg font-semibold">{digest.revengeCount + digest.tiltCount}</div></div>
           </div>
         </Card>

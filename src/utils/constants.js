@@ -23,6 +23,24 @@ export const INITIAL_ACCOUNT_VALUE = 52000;
 
 export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];
 export const STRATEGIES = ['Trend', 'Range', 'Breakout'];
+
+// Per-account trading currency (Demo/Broker/Prop Firm each pick their own —
+// see tradingStore.js `accounts[].currency`, default 'USD' for pre-existing
+// accounts). Purely a DISPLAY symbol swap — no FX conversion between accounts
+// of different currencies; cross-account aggregates (Score-3, TradingAccounts
+// by-type totals) still sum raw numbers, so mixing currencies there is a
+// known simplification, not a bug.
+export const CURRENCIES = [
+  { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
+  { value: 'EUR', label: 'Euro (€)', symbol: '€' },
+  { value: 'GBP', label: 'British Pound (£)', symbol: '£' },
+  { value: 'MAD', label: 'Moroccan Dirham (DH)', symbol: 'DH' },
+  { value: 'CHF', label: 'Swiss Franc (CHF)', symbol: 'CHF' },
+  { value: 'JPY', label: 'Japanese Yen (¥)', symbol: '¥' },
+  { value: 'AUD', label: 'Australian Dollar (A$)', symbol: 'A$' },
+  { value: 'CAD', label: 'Canadian Dollar (C$)', symbol: 'C$' },
+];
+export const CURRENCY_SYMBOL = Object.fromEntries(CURRENCIES.map((c) => [c.value, c.symbol]));
 export const DIRECTIONS = ['long', 'short'];
 export const EMOTIONS = ['calm', 'greedy', 'scared', 'bored', 'FOMO', 'neutral'];
 

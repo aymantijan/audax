@@ -37,6 +37,7 @@ export default function TradingAccounts() {
           <Link to={`/trading/account/${a.id}`} className="font-medium hover:text-accent flex items-center gap-1">
             {a.name} <ChevronRight size={14} />
           </Link>
+          <span className="text-xs text-mute">{a.currency || 'USD'}</span>
           {a.type === 'propfirm' && a.phase && <span className="text-xs text-mute">· {a.phase}</span>}
           <span className="text-xs capitalize" style={{ color: STATUS_COLOR[a.status] }}>{a.status}</span>
           <div className="ml-auto flex items-center gap-2">
@@ -53,8 +54,8 @@ export default function TradingAccounts() {
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
-          <div><div className="text-xs text-mute">Value</div><div className="font-semibold">{fmtMoney(accountValue(a.id))}</div></div>
-          <div><div className="text-xs text-mute">Start</div><div>{fmtMoney(a.initialBalance)}</div></div>
+          <div><div className="text-xs text-mute">Value</div><div className="font-semibold">{fmtMoney(accountValue(a.id), 0, a.currency)}</div></div>
+          <div><div className="text-xs text-mute">Start</div><div>{fmtMoney(a.initialBalance, 0, a.currency)}</div></div>
           <div><div className="text-xs text-mute">Trades</div><div>{stats.count}</div></div>
           <div><div className="text-xs text-mute">Win rate</div><div>{stats.count ? fmtPct(stats.winRate) : '—'}</div></div>
           <div><div className="text-xs text-mute">Score</div><div className="font-semibold" style={{ color: score.band?.color }}>{score.score ?? '—'}</div></div>

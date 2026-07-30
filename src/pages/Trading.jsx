@@ -61,6 +61,7 @@ export default function Trading() {
   const account = tradingStore.accountValue(activeAccountId);
   const curve = tradingStore.getEquityCurve(activeAccountId);
   const maxDd = tradingStore.getMonthMaxDrawdown(activeAccountId);
+  const currency = activeAccount?.currency || 'USD';
 
   // Cross-domain risk banners (Phase 9): same idea as the existing low-energy
   // banner below, but surfacing Phase-4's live loss-streak signal and Phase-1's
@@ -93,7 +94,7 @@ export default function Trading() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Trading</h1>
-          <p className="text-mute text-sm mt-1">P&L tracking and edge validation — in USD.</p>
+          <p className="text-mute text-sm mt-1">P&L tracking and edge validation — in {currency}.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleAlerts}>
@@ -111,7 +112,7 @@ export default function Trading() {
 
       <ScorePanel />
 
-      <TradingCoach accountId={activeAccountId} />
+      <TradingCoach accountId={activeAccountId} currency={currency} />
 
       {hardBreach && (
         <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-3">
@@ -142,19 +143,19 @@ export default function Trading() {
               <Wallet size={13} />
             </button>
           </div>
-          <div className="text-2xl font-bold">{fmtMoney(account)}</div>
-          <div className="text-xs text-mute mt-1">Start: {fmtMoney(initialBalance)}</div>
+          <div className="text-2xl font-bold">{fmtMoney(account, 0, currency)}</div>
+          <div className="text-xs text-mute mt-1">Start: {fmtMoney(initialBalance, 0, currency)}</div>
         </div>
-        <Stat label="Total P&L" value={fmtSignedMoney(stats.totalPnl)} color={stats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
-        <Stat label="Month P&L" value={fmtSignedMoney(monthStats.totalPnl)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
+        <Stat label="Total P&L" value={fmtSignedMoney(stats.totalPnl, currency)} color={stats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
+        <Stat label="Month P&L" value={fmtSignedMoney(monthStats.totalPnl, currency)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
         <Stat label="Win rate" value={stats.count ? fmtPct(stats.winRate) : '—'} sub={`${stats.wins}W / ${stats.losses}L`} />
-        <Stat label="Expectancy" value={stats.count ? `${stats.expectancyPips.toFixed(1)} pips` : '—'} sub={stats.count ? fmtSignedMoney(stats.expectancyUsd) + ' / trade' : ''} />
+        <Stat label="Expectancy" value={stats.count ? `${stats.expectancyPips.toFixed(1)} pips` : '—'} sub={stats.count ? fmtSignedMoney(stats.expectancyUsd, currency) + ' / trade' : ''} />
         <Stat label="Max DD (month)" value={fmtPct(maxDd, 1)} color={maxDd > 10 ? 'var(--error)' : undefined} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <PreTradingChecklist onStatus={onStatus} />
-        <BurnRateTracker trades={trades} accountValue={account} />
+        <BurnRateTracker trades={trades} accountValue={account} currency={currency} />
         <Card title="Strategy P&L">
           {trades.length ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -162,7 +163,7 @@ export default function Trading() {
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-                <Tooltip {...tooltipStyle} formatter={(v) => fmtSignedMoney(v)} />
+                <Tooltip {...tooltipStyle} formatter={(v) => fmtSignedMoney(v, currency)} />
                 <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                   {byStrategy.map((d) => (
                     <Cell key={d.name} fill={d.pnl >= 0 ? '#00d97f' : '#ff6b6b'} />
@@ -184,7 +185,7 @@ export default function Trading() {
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-                <Tooltip {...tooltipStyle} formatter={(v) => fmtMoney(v)} />
+                <Tooltip {...tooltipStyle} formatter={(v) => fmtMoney(v, 0, currency)} />
                 <Line type="monotone" dataKey="value" stroke="#00d9ff" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -199,7 +200,7 @@ export default function Trading() {
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-                <Tooltip {...tooltipStyle} formatter={(v) => fmtSignedMoney(v)} />
+                <Tooltip {...tooltipStyle} formatter={(v) => fmtSignedMoney(v, currency)} />
                 <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                   {byInstrument.map((d) => (
                     <Cell key={d.name} fill={d.pnl >= 0 ? '#00d97f' : '#ff6b6b'} />
@@ -213,15 +214,15 @@ export default function Trading() {
         </Card>
       </div>
 
-      <AdvancedAnalytics trades={trades} />
+      <AdvancedAnalytics trades={trades} currency={currency} />
 
-      <RiskManagement trades={trades} accountValue={account} />
+      <RiskManagement trades={trades} accountValue={account} currency={currency} />
 
-      <TradingPsychology trades={trades} />
+      <TradingPsychology trades={trades} currency={currency} />
 
-      <JournalAnalysis trades={trades} />
+      <JournalAnalysis trades={trades} currency={currency} />
 
-      <PredictionsPanel account={activeAccount} trades={trades} />
+      <PredictionsPanel account={activeAccount} trades={trades} currency={currency} />
 
       <Card
         title={`Trade Log (${filtered.length})`}
@@ -258,7 +259,7 @@ export default function Trading() {
                     <td className="py-2.5 pr-4 capitalize">{t.direction}</td>
                     <td className="py-2.5 pr-4 text-right">{t.pnlPips}</td>
                     <td className="py-2.5 pr-4 text-right font-medium" style={{ color: t.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>
-                      {fmtSignedMoney(t.pnl)}
+                      {fmtSignedMoney(t.pnl, currency)}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-mute">{tradeRMultiple(t) != null ? `${tradeRMultiple(t)}R` : '—'}</td>
                     <td className="py-2.5 pr-4 capitalize text-mute">{t.journal?.emotion}</td>
@@ -294,11 +295,11 @@ export default function Trading() {
           }}
         >
           <div className="text-sm text-mute">
-            Current start: <span className="text-ink font-medium">{fmtMoney(initialBalance)}</span> · trades P&amp;L: <span className="text-ink">{fmtSignedMoney(account - initialBalance)}</span>
+            Current start: <span className="text-ink font-medium">{fmtMoney(initialBalance, 0, currency)}</span> · trades P&amp;L: <span className="text-ink">{fmtSignedMoney(account - initialBalance, currency)}</span>
           </div>
           <div className="text-xs text-mute">Changing the starting balance recalculates account value, ROI, and max drawdown. Trades are not modified.</div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="New starting balance ($)">
+            <Field label={`New starting balance (${currency})`}>
               <Input type="number" step="any" value={balForm.newBalance} onChange={(e) => setBalForm({ ...balForm, newBalance: e.target.value })} autoFocus />
             </Field>
             <Field label="Reason">
