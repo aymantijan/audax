@@ -24,6 +24,12 @@ export default function AdvancedAnalytics({ trades, currency = 'USD', instrument
   const dow = useMemo(() => byDayOfWeek(trades), [trades]);
   const strat = useMemo(() => strategyComparison(trades, strategies).filter((s) => s.count > 0), [trades, strategies]);
   const corr = useMemo(() => instrumentCorrelation(trades, instruments), [trades, instruments]);
+  // Fees/commissions are informational (see validators.js#tradeSchema) — pnl
+  // already reflects the actual balance-affecting result, so "net of fees"
+  // here is purely a reporting view: how much of the gross edge is being
+  // eaten by cost, not a second balance calculation.
+  const totalFees = useMemo(() => trades.reduce((a, t) => a + (Number(t.fees) || 0), 0), [trades]);
+  const grossPnl = useMemo(() => trades.reduce((a, t) => a + t.pnl, 0), [trades]);
   const macroRows = useMemo(
     () =>
       MACRO_FIELDS.map((mf) => ({ field: mf, rows: macroEdge(trades, mf.key) })).filter((m) => m.rows.length > 0),
@@ -41,6 +47,7 @@ export default function AdvancedAnalytics({ trades, currency = 'USD', instrument
         <Stat label="Recovery factor" value={fmtRatio(recovery)} sub="profit / max DD" />
         <Stat label="Streaks" value={`${maxWinStreak}W / ${maxLossStreak}L`} sub="max consecutive" />
         <Stat label="Top-3 concentration" value={conc === null ? '—' : fmtPct(conc)} sub="of gross wins" />
+        <Stat label="Total fees paid" value={fmtSignedMoney(-totalFees, currency)} color={totalFees > 0 ? 'var(--error)' : undefined} sub={grossPnl ? `${fmtPct((totalFees / Math.abs(grossPnl)) * 100, 1)} of gross P&L` : ''} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

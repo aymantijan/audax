@@ -4,6 +4,7 @@ import { startOfMonth } from 'date-fns';
 import { uid, todayKey } from '../utils/formatters';
 import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } from '../utils/calculations';
 import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics';
+import { computeRiskLimitBreaches } from '../utils/risk-management';
 import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
 import { generateTradingCoachRecommendation } from '../utils/trading-coach';
 import { computeAccountScore, computeGroupScore, computeOverallScore, DEFAULT_SCORE_WEIGHTS } from '../utils/trading-score';
@@ -175,7 +176,7 @@ export const useTradingStore = create(
         const monthStats = get().getMonthStats(id);
         const disc = computeDisciplineScore(trades);
         const acct = get().getAccount(id);
-        const propFirmBreaches = acct?.type === 'propfirm' ? get().getPropFirmProgress(id)?.breaches || [] : [];
+        const riskBreaches = acct?.type === 'propfirm' ? get().getPropFirmProgress(id)?.breaches || [] : get().getRiskLimitBreaches(id);
         const weekAgo = Date.now() - 7 * 86400000;
         const tradesThisWeek = trades.filter((t) => new Date(t.date).getTime() >= weekAgo).length;
 
@@ -185,7 +186,7 @@ export const useTradingStore = create(
           tiltCount: disc?.tiltCount ?? 0,
           monthPnl: monthStats.totalPnl,
           maxDrawdownPct: get().getMaxDrawdown(id),
-          propFirmBreaches,
+          riskBreaches,
           tradesThisWeek,
         });
         const result = { date: today, source: 'local', ...rec };
@@ -338,6 +339,11 @@ export const useTradingStore = create(
                   maxPhaseDurationDays: numOrNull(data.maxPhaseDurationDays),
                 }
               : undefined,
+          // Demo/Broker only — prop-firm accounts use propFirmRules instead.
+          riskLimits:
+            data.type !== 'propfirm' && (data.riskMaxDailyLossPct || data.riskMaxTotalDrawdownPct)
+              ? { maxDailyLossPct: numOrNull(data.riskMaxDailyLossPct), maxTotalDrawdownPct: numOrNull(data.riskMaxTotalDrawdownPct) }
+              : undefined,
           currentPhaseStartAt: Date.now(),
           phaseHistory: [],
           balanceAdjustments: [],
@@ -359,6 +365,11 @@ export const useTradingStore = create(
                   ...updates,
                   initialBalance: updates.initialBalance != null ? Number(updates.initialBalance) : a.initialBalance,
                   propFirmRules: updates.propFirmRules ? { ...a.propFirmRules, ...updates.propFirmRules } : a.propFirmRules,
+                  // 'riskLimits' in updates (not just !== undefined) so passing
+                  // `riskLimits: undefined` explicitly CLEARS it (both fields
+                  // emptied in the form) rather than being indistinguishable
+                  // from "this call didn't touch riskLimits at all".
+                  riskLimits: 'riskLimits' in updates ? (updates.riskLimits ? { ...a.riskLimits, ...updates.riskLimits } : undefined) : a.riskLimits,
                 })
               : a
           ),
@@ -482,6 +493,15 @@ export const useTradingStore = create(
         const acct = get().getAccount(accountId);
         if (!acct || acct.type !== 'propfirm') return null;
         return computePropFirmProgress(acct, get().getAccountTrades(acct.id));
+      },
+
+      // Simpler risk-limit checks (daily loss / total drawdown) for Demo &
+      // Broker accounts — prop-firm accounts use their own richer propFirmRules
+      // instead, so this always returns [] for them (no double-checking).
+      getRiskLimitBreaches: (accountId) => {
+        const acct = get().getAccount(accountId);
+        if (!acct || acct.type === 'propfirm') return [];
+        return computeRiskLimitBreaches(acct, get().getAccountTrades(acct.id));
       },
 
       addTrade: (data) => {

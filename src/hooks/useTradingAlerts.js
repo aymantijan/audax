@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTradingStore } from '../store/tradingStore';
 import { computePropFirmProgress } from '../utils/prop-firm-analytics';
 import { computePropFirmTimeline } from '../utils/account-type-analytics';
+import { computeRiskLimitBreaches } from '../utils/risk-management';
 import { detectTiltSequences } from '../utils/trading-psychology';
 import { todayKey } from '../utils/formatters';
 
@@ -35,6 +36,10 @@ export function useTradingAlerts() {
           const timeline = computePropFirmTimeline(account);
           if (timeline && !timeline.overdue && timeline.daysRemaining <= DEADLINE_WARNING_DAYS) {
             fire(account.id, 'deadline', `${account.name}: only ${timeline.daysRemaining} day(s) left in this phase (deadline ${timeline.deadline}).`);
+          }
+        } else {
+          for (const breach of computeRiskLimitBreaches(account, accountTrades)) {
+            fire(account.id, `risk-${breach.rule}`, `${account.name}: ${breach.message}`);
           }
         }
 

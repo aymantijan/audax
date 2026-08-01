@@ -22,6 +22,8 @@ import PredictionsPanel from '../components/trading/PredictionsPanel';
 import TradingCoach from '../components/trading/TradingCoach';
 import ScorePanel from '../components/trading/ScorePanel';
 import CustomizeTradingModal from '../components/trading/CustomizeTradingModal';
+import PnLCalendar from '../components/trading/PnLCalendar';
+import TradeCsvTools from '../components/trading/TradeCsvTools';
 import { tradeRMultiple } from '../utils/risk-management';
 import { currentLossStreak } from '../utils/trading-psychology';
 
@@ -71,7 +73,8 @@ export default function Trading() {
   // the Psychology/Prop-Firm cards further down.
   const lossStreak = currentLossStreak(trades);
   const propFirmProgress = activeAccount?.type === 'propfirm' ? tradingStore.getPropFirmProgress(activeAccountId) : null;
-  const hardBreach = propFirmProgress?.breaches?.find((b) => b.level === 'danger');
+  const riskLimitBreaches = activeAccount?.type !== 'propfirm' ? tradingStore.getRiskLimitBreaches(activeAccountId) : [];
+  const hardBreach = propFirmProgress?.breaches?.find((b) => b.level === 'danger') || riskLimitBreaches.find((b) => b.level === 'danger');
 
   const instrumentList = useMemo(
     () => [...INSTRUMENTS, ...tradingStore.customInstruments.map((c) => c.code)],
@@ -228,6 +231,8 @@ export default function Trading() {
         </Card>
       </div>
 
+      <PnLCalendar trades={trades} currency={currency} />
+
       <AdvancedAnalytics trades={trades} currency={currency} instruments={instrumentList} strategies={strategyList} />
 
       <RiskManagement trades={trades} accountValue={account} currency={currency} instruments={instrumentList} />
@@ -241,9 +246,10 @@ export default function Trading() {
       <Card
         title={`Trade Log (${filtered.length})`}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={filterInstrument} onChange={(e) => setFilterInstrument(e.target.value)} options={[{ value: 'all', label: 'All instruments' }, ...instrumentList.map((i) => ({ value: i, label: i }))]} />
             <Select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} options={[{ value: 'all', label: 'All strategies' }, ...strategyList.map((s) => ({ value: s, label: s }))]} />
+            <TradeCsvTools trades={filtered} accountName={activeAccount?.name} />
           </div>
         }
       >
@@ -274,6 +280,7 @@ export default function Trading() {
                     <td className="py-2.5 pr-4 text-right">{t.pnlPips}</td>
                     <td className="py-2.5 pr-4 text-right font-medium" style={{ color: t.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>
                       {fmtSignedMoney(t.pnl, currency)}
+                      {Number(t.fees) > 0 && <div className="text-[10px] font-normal text-mute">fees {fmtMoney(t.fees, 0, currency)}</div>}
                     </td>
                     <td className="py-2.5 pr-4 text-right text-mute">{tradeRMultiple(t) != null ? `${tradeRMultiple(t)}R` : '—'}</td>
                     <td className="py-2.5 pr-4 capitalize text-mute">{t.journal?.emotion}</td>

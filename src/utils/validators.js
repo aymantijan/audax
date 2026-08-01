@@ -18,6 +18,10 @@ export const tradeSchema = z.object({
   positionSize: z.coerce.number().positive('Position size must be > 0'),
   riskAmount: z.coerce.number().nonnegative(),
   pnl: z.coerce.number(),
+  // Commission/spread/swap costs — informational only, does NOT change `pnl`
+  // (which is still the actual balance-affecting result). Lets fee-heavy
+  // traders see cost drag separately without touching the core P&L math.
+  fees: z.coerce.number().nonnegative().optional(),
   holdingTime: z.coerce.number().nonnegative(),
   journal: z.object({
     reasoning: z.string(),

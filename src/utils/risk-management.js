@@ -6,7 +6,43 @@
 // day that also move together historically" rather than concurrently open
 // positions in the brokerage sense.
 
+import { equityCurve, maxDrawdown } from './calculations';
+
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+// ---- Risk limits for Demo/Broker accounts ----
+// Prop-firm accounts get their own richer rule set (propFirmRules — profit
+// target, min trading days, consistency, phase deadline — see
+// prop-firm-analytics.js). Demo/Broker accounts don't have "phases", so this
+// is the simpler subset that still matters for discipline: a daily loss cap
+// and a total-drawdown cap, both scored over the account's ENTIRE trade
+// history (there's no phase boundary to scope them to). `account.riskLimits`
+// is optional — accounts without it are simply never checked.
+export function computeRiskLimitBreaches(account, trades, today = new Date().toISOString().slice(0, 10)) {
+  const rules = account?.riskLimits;
+  if (!rules || (rules.maxDailyLossPct == null && rules.maxTotalDrawdownPct == null)) return [];
+
+  const initial = account.initialBalance || 0;
+  const dd = maxDrawdown(equityCurve(trades, initial));
+
+  const daily = {};
+  for (const t of trades) daily[t.date] = (daily[t.date] || 0) + t.pnl;
+  const todayPnL = daily[today] || 0;
+  const dailyLossPct = todayPnL < 0 && initial > 0 ? (Math.abs(todayPnL) / initial) * 100 : 0;
+
+  const breaches = [];
+  if (rules.maxDailyLossPct != null && dailyLossPct > rules.maxDailyLossPct) {
+    breaches.push({ rule: 'dailyLoss', level: 'danger', message: `Today's loss is ${r2(dailyLossPct)}% of the account — over your ${rules.maxDailyLossPct}% daily limit.` });
+  }
+  if (rules.maxTotalDrawdownPct != null && dd > rules.maxTotalDrawdownPct) {
+    breaches.push({ rule: 'totalDrawdown', level: 'danger', message: `Drawdown is ${r2(dd)}% — over your ${rules.maxTotalDrawdownPct}% limit.` });
+  }
+  // Soft warning at 70% of the daily cap — same "stop before you actually breach" idea as prop-firm rules.
+  if (rules.maxDailyLossPct != null && dailyLossPct > rules.maxDailyLossPct * 0.7 && dailyLossPct <= rules.maxDailyLossPct) {
+    breaches.push({ rule: 'dailyLossWarning', level: 'warning', message: `Today's loss is ${r2(dailyLossPct)}% — approaching your ${rules.maxDailyLossPct}% daily limit.` });
+  }
+  return breaches;
+}
 
 // ---- Position sizing ----
 // pipValuePerLot: $ value of a 1-pip move for 1.0 standard lot of this

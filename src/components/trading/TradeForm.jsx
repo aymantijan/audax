@@ -18,6 +18,7 @@ const blank = () => ({
   positionSize: '',
   riskAmount: '',
   pnl: '',
+  fees: '',
   holdingTime: '',
   journal: { reasoning: '', emotion: 'neutral', processQuality: 7, exitReason: '' },
   lesson: '',
@@ -125,6 +126,9 @@ export default function TradeForm({ open, onClose, editing }) {
                 upd('pnl', e.target.value);
               }}
             />
+          </Field>
+          <Field label={`Fees / commission (${currency})`} hint="Optional — informational only, doesn't change P&L above">
+            <Input type="number" step="any" min="0" value={form.fees} onChange={(e) => upd('fees', e.target.value)} />
           </Field>
           <Field label="Holding time (min)">
             <Input type="number" value={form.holdingTime} onChange={(e) => upd('holdingTime', e.target.value)} />

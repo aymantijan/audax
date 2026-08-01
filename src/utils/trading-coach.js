@@ -5,9 +5,9 @@
 
 export function generateTradingCoachRecommendation({
   disciplineScore = null, revengeCount = 0, tiltCount = 0, monthPnl = 0,
-  maxDrawdownPct = 0, propFirmBreaches = [], tradesThisWeek = 0,
+  maxDrawdownPct = 0, riskBreaches = [], tradesThisWeek = 0,
 } = {}) {
-  const hardBreach = propFirmBreaches.find((b) => b.level === 'danger');
+  const hardBreach = riskBreaches.find((b) => b.level === 'danger');
   if (hardBreach) return { text: `${hardBreach.message} Stop trading for today.`, tone: 'danger' };
   if (revengeCount > 0 || tiltCount > 0) {
     return { text: `${revengeCount + tiltCount} revenge/tilt pattern(s) detected recently — step away from the screen before the next trade.`, tone: 'danger' };

@@ -18,6 +18,8 @@ const blank = () => ({
   minTradingDays: '',
   consistencyRulePct: '',
   maxPhaseDurationDays: '',
+  riskMaxDailyLossPct: '',
+  riskMaxTotalDrawdownPct: '',
 });
 
 const TYPE_OPTIONS = [
@@ -53,6 +55,8 @@ export default function AccountFormModal({ open, onClose, account }) {
             minTradingDays: account.propFirmRules?.minTradingDays ?? '',
             consistencyRulePct: account.propFirmRules?.consistencyRulePct ?? '',
             maxPhaseDurationDays: account.propFirmRules?.maxPhaseDurationDays ?? '',
+            riskMaxDailyLossPct: account.riskLimits?.maxDailyLossPct ?? '',
+            riskMaxTotalDrawdownPct: account.riskLimits?.maxTotalDrawdownPct ?? '',
           }
         : blank()
     );
@@ -79,6 +83,10 @@ export default function AccountFormModal({ open, onClose, account }) {
                 consistencyRulePct: form.consistencyRulePct,
                 maxPhaseDurationDays: form.maxPhaseDurationDays,
               }
+            : undefined,
+        riskLimits:
+          form.type !== 'propfirm' && (form.riskMaxDailyLossPct || form.riskMaxTotalDrawdownPct)
+            ? { maxDailyLossPct: form.riskMaxDailyLossPct, maxTotalDrawdownPct: form.riskMaxTotalDrawdownPct }
             : undefined,
       });
     } else {
@@ -147,6 +155,20 @@ export default function AccountFormModal({ open, onClose, account }) {
               </Field>
               <Field label="Phase time limit (days)" hint="Leave blank if the firm gives unlimited time">
                 <Input type="number" value={form.maxPhaseDurationDays} onChange={(e) => setForm({ ...form, maxPhaseDurationDays: e.target.value })} placeholder="e.g. 30" />
+              </Field>
+            </div>
+          </div>
+        )}
+
+        {form.type !== 'propfirm' && (
+          <div className="border-t border-line pt-4 space-y-3">
+            <h4 className="text-xs font-semibold text-mute uppercase tracking-wide">Risk Limits (optional — same discipline check prop-firm accounts get)</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Max daily loss (%)">
+                <Input type="number" step="0.1" value={form.riskMaxDailyLossPct} onChange={(e) => setForm({ ...form, riskMaxDailyLossPct: e.target.value })} placeholder="e.g. 5" />
+              </Field>
+              <Field label="Max total drawdown (%)">
+                <Input type="number" step="0.1" value={form.riskMaxTotalDrawdownPct} onChange={(e) => setForm({ ...form, riskMaxTotalDrawdownPct: e.target.value })} placeholder="e.g. 15" />
               </Field>
             </div>
           </div>
