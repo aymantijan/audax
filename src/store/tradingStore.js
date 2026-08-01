@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { startOfMonth } from 'date-fns';
 import { uid, todayKey } from '../utils/formatters';
 import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } from '../utils/calculations';
-import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics';
+import { computePropFirmProgress, computeRulesProgress, nextPhase } from '../utils/prop-firm-analytics';
 import { computeRiskLimitBreaches } from '../utils/risk-management';
 import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
 import { generateTradingCoachRecommendation } from '../utils/trading-coach';
@@ -457,6 +457,84 @@ export const useTradingStore = create(
         toast(outcome === 'failed' ? `${acct.name} marked as failed` : `${acct.name} advanced to ${newPhase}`, outcome === 'failed' ? 'error' : 'success');
       },
 
+      // ─────────── Demo account: opt-in Prop Firm simulation ───────────
+      // Lets a Demo account train against a self-configured multi-phase
+      // ruleset (pick 1-3 phases, each with its own profit target / daily
+      // loss / drawdown / min days / consistency / max-daily-profit) — same
+      // computeRulesProgress engine a REAL Prop Firm account uses, so a
+      // trader can rehearse passing before paying for an actual evaluation.
+      // Entirely separate fields from propFirmRules/phase/phaseHistory (which
+      // stay reserved for actual type:'propfirm' accounts) — purely additive,
+      // zero migration risk to existing accounts.
+      setSimPhases: (accountId, phases) => {
+        const acct = get().getAccount(accountId);
+        if (!acct || acct.type !== 'demo') return { ok: false, error: 'Simulation is only available on Demo accounts.' };
+        if (!phases?.length) return { ok: false, error: 'Select at least one phase.' };
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === accountId
+              ? stamp({
+                  ...a, simEnabled: true, simPhases: phases,
+                  simCurrentPhaseIndex: 0, simCurrentPhaseStartAt: Date.now(), simPhaseHistory: [], simStatus: 'active',
+                })
+              : a
+          ),
+        });
+        toast(`Simulation configured for ${acct.name} (${phases.length} phase${phases.length > 1 ? 's' : ''})`, 'success');
+        return { ok: true };
+      },
+      disableSim: (accountId) =>
+        set({ accounts: get().accounts.map((a) => (a.id === accountId ? stamp({ ...a, simEnabled: false }) : a)) }),
+
+      // outcome: 'advance' | 'failed'.
+      advanceSimPhase: (accountId, outcome) => {
+        const acct = get().getAccount(accountId);
+        if (!acct?.simEnabled || !acct.simPhases?.length) return;
+        const idx = acct.simCurrentPhaseIndex || 0;
+        const progress = get().getSimProgress(accountId);
+        const historyEntry = {
+          phaseIndex: idx,
+          startedAt: acct.simCurrentPhaseStartAt,
+          endedAt: Date.now(),
+          outcome: outcome === 'failed' ? 'failed' : 'passed',
+          snapshot: { profitPct: progress.profitPct, tradingDays: progress.tradingDays, maxDrawdownPct: progress.maxDrawdownPct },
+        };
+        const isLast = idx >= acct.simPhases.length - 1;
+        const newStatus = outcome === 'failed' ? 'failed' : isLast ? 'completed' : 'active';
+        const newIndex = outcome === 'failed' || isLast ? idx : idx + 1;
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === accountId
+              ? stamp({
+                  ...a, simCurrentPhaseIndex: newIndex, simCurrentPhaseStartAt: Date.now(),
+                  simPhaseHistory: [...(a.simPhaseHistory || []), historyEntry], simStatus: newStatus,
+                })
+              : a
+          ),
+        });
+        if (outcome !== 'failed') {
+          useSkillStore.getState().awardXP('discipline-execution-lv1', isLast ? 20 : 10, `sim phase passed: ${acct.name}`);
+        }
+        toast(
+          outcome === 'failed' ? `${acct.name} simulation: phase failed — reset when ready` : isLast ? `${acct.name}: simulation completed — all phases passed` : `${acct.name}: advanced to simulated phase ${newIndex + 1}`,
+          outcome === 'failed' ? 'error' : 'success'
+        );
+      },
+
+      // Current simulated phase's rules + progress — [] rules / null-safe if
+      // simulation isn't enabled or has no phases configured.
+      getSimPhaseRules: (accountId) => {
+        const acct = get().getAccount(accountId);
+        if (!acct?.simEnabled || !acct.simPhases?.length) return null;
+        return acct.simPhases[acct.simCurrentPhaseIndex || 0] || null;
+      },
+      getSimProgress: (accountId) => {
+        const acct = get().getAccount(accountId);
+        const rules = get().getSimPhaseRules(accountId);
+        if (!acct || !rules) return null;
+        return computeRulesProgress(rules, acct.simCurrentPhaseStartAt || acct.createdAt, acct.initialBalance || 0, get().getAccountTrades(accountId));
+      },
+
       // ─────────── SELECTORS ───────────
       // Everything here is scoped to an account id. Dashboard / Trading / burn-rate /
       // Advanced Analytics all call these — same account, same numbers, no drift.
@@ -497,10 +575,14 @@ export const useTradingStore = create(
 
       // Simpler risk-limit checks (daily loss / total drawdown) for Demo &
       // Broker accounts — prop-firm accounts use their own richer propFirmRules
-      // instead, so this always returns [] for them (no double-checking).
+      // instead, so this always returns [] for them (no double-checking). A
+      // Demo account running a phase simulation uses ITS breaches instead of
+      // the flat riskLimits (the simulated phase's rules are the more precise
+      // check once the user has configured one).
       getRiskLimitBreaches: (accountId) => {
         const acct = get().getAccount(accountId);
         if (!acct || acct.type === 'propfirm') return [];
+        if (acct.simEnabled) return get().getSimProgress(accountId)?.breaches || [];
         return computeRiskLimitBreaches(acct, get().getAccountTrades(acct.id));
       },
 

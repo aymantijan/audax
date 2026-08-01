@@ -6,31 +6,16 @@ import { useTradingStore } from '../store/tradingStore';
 import { PROP_FIRM_PHASES } from '../utils/prop-firm-analytics';
 import { computeDemoReadiness, computeBrokerHealth, computePropFirmTimeline } from '../utils/account-type-analytics';
 import { fmtMoney, fmtSignedMoney, fmtPct } from '../utils/formatters';
-import { Card, Stat, Button, Field, Input, Modal, Badge, ProgressBar, EmptyState } from '../components/common/ui';
+import { Card, Stat, Button, Field, Input, Modal, Badge, EmptyState } from '../components/common/ui';
 import AccountFormModal from '../components/trading/AccountFormModal';
+import RuleGauge from '../components/trading/RuleGauge';
+import PropFirmSimConfig from '../components/trading/PropFirmSimConfig';
 
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
 const STATUS_COLOR = {
   active: 'var(--accent-primary)', funded: 'var(--success)', passed: 'var(--success)',
   failed: 'var(--error)', archived: 'var(--text-secondary)',
 };
-
-function RuleGauge({ label, value, max, unit = '%', invert = false }) {
-  if (max == null) return null;
-  const pct = Math.min(100, (value / max) * 100);
-  const danger = invert ? value < max * 0.3 : pct >= 100;
-  const warn = invert ? value < max * 0.6 : pct >= 70;
-  const color = danger ? 'var(--error)' : warn ? 'var(--warning)' : 'var(--success)';
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span className="text-mute">{label}</span>
-        <span style={{ color }}>{value}{unit} / {max}{unit}</span>
-      </div>
-      <ProgressBar value={pct} color={color} />
-    </div>
-  );
-}
 
 export default function TradingAccountDetail() {
   const { id } = useParams();
@@ -141,6 +126,8 @@ export default function TradingAccountDetail() {
           )}
         </Card>
       )}
+
+      {account.type === 'demo' && <PropFirmSimConfig account={account} />}
 
       {brokerHealth && (
         <Card title="Capital Preservation">

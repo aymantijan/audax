@@ -22,23 +22,24 @@ function tradesPerDay(trades) {
   return days ? trades.length / days : 0;
 }
 
-// Simulates the rest of the current prop-firm phase by resampling historical
-// trade P&Ls, at the trader's own historical trades/day pace, until either the
+// Simulates the rest of the current phase by resampling historical trade
+// P&Ls, at the trader's own historical trades/day pace, until either the
 // deadline (maxPhaseDurationDays) or a 200-day cap is hit. A run "passes" if
 // equity reaches the profit target without breaching daily-loss or
-// total-drawdown limits along the way.
-export function monteCarloPropFirmPass(account, trades, { simulations = 1000 } = {}) {
-  if (!account || account.type !== 'propfirm') return null;
-  const rules = account.propFirmRules || {};
-  if (rules.profitTargetPct == null) return { insufficientData: true, reason: 'No profit target set on this account.' };
+// total-drawdown limits along the way. Works for a real Prop Firm account's
+// `propFirmRules` OR a Demo account's current simulated phase — both are
+// just a `{rules, phaseStartAt, initialBalance}` triple to this function, it
+// doesn't know or care which one it's looking at.
+export function monteCarloPropFirmPass(rules, phaseStartAt, initialBalance, trades, { simulations = 1000 } = {}) {
+  if (!rules || rules.profitTargetPct == null) return { insufficientData: true, reason: 'No profit target set on this account.' };
   if (trades.length < MIN_TRADES_FOR_SIM) return { insufficientData: true, reason: `Need at least ${MIN_TRADES_FOR_SIM} trades this phase for a meaningful simulation.` };
 
-  const initial = account.initialBalance || 0;
+  const initial = initialBalance || 0;
   const pnlPool = trades.map((t) => t.pnl);
   const pace = Math.max(tradesPerDay(trades), 0.2); // trades per calendar day, floored to avoid runaway sim length
 
   const maxDays = rules.maxPhaseDurationDays;
-  const daysElapsed = account.currentPhaseStartAt ? (Date.now() - account.currentPhaseStartAt) / 86400000 : 0;
+  const daysElapsed = phaseStartAt ? (Date.now() - phaseStartAt) / 86400000 : 0;
   const daysRemaining = maxDays ? Math.max(0, Math.ceil(maxDays - daysElapsed)) : 200;
   const simDayCap = Math.min(daysRemaining || 200, 200);
 
@@ -96,14 +97,13 @@ export function monteCarloPropFirmPass(account, trades, { simulations = 1000 } =
 // Simple linear projection (no simulation): at the trader's average $/trading-day
 // pace over the current phase, how many more calendar days to close the gap to
 // the profit target. Returns null when there's no target, no pace, or the pace
-// is negative (target already unreachable at this rate).
-export function daysToTargetProjection(account, trades) {
-  if (!account || account.type !== 'propfirm') return null;
-  const rules = account.propFirmRules || {};
-  if (rules.profitTargetPct == null) return null;
+// is negative (target already unreachable at this rate). Same generalization
+// as monteCarloPropFirmPass above — works off any {rules, initialBalance} pair.
+export function daysToTargetProjection(rules, initialBalance, trades) {
+  if (!rules || rules.profitTargetPct == null) return null;
   if (trades.length < 3) return { insufficientData: true };
 
-  const initial = account.initialBalance || 0;
+  const initial = initialBalance || 0;
   const totalPnl = trades.reduce((a, t) => a + t.pnl, 0);
   const targetAmount = (rules.profitTargetPct / 100) * initial;
   const remaining = targetAmount - totalPnl;

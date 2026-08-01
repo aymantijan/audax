@@ -1,7 +1,7 @@
-// Pure functions tracking a prop-firm account's OWN rules (set by the user to
-// match their firm's actual terms) against the trades logged in its current
-// phase. Nothing here is specific to any one firm — every threshold is a
-// number the user enters when creating/editing the account.
+// Pure functions tracking a prop-firm RULE SET (the user's own firm's actual
+// terms, or a self-imposed simulation on a Demo account — see below) against
+// the trades logged since a given phase-start timestamp. Nothing here is
+// specific to any one firm; every threshold is a number the user enters.
 
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -23,23 +23,43 @@ function dailyPnL(trades) {
   return map;
 }
 
-// `account.currentPhaseStartAt` scopes every metric to the CURRENT phase only —
-// advancing a phase resets these numbers without touching trade history.
-export function computePropFirmProgress(account, trades, today = new Date().toISOString().slice(0, 10)) {
-  const rules = account.propFirmRules || {};
-  const phaseStart = account.currentPhaseStartAt || account.createdAt;
-  const phaseTrades = trades.filter((t) => new Date(t.date).getTime() >= phaseStart);
+// The shared engine: checks ONE rule set against trades since `phaseStart`.
+// Used by both a real Prop Firm account's `propFirmRules` AND a Demo
+// account's opt-in phase simulation (`simPhases[i]`) — same math, same
+// breach shape, so every downstream consumer (banners, alerts, coach,
+// predictions) works for either without knowing which one it's looking at.
+//
+// `rules.maxTotalDrawdownType`: 'trailing' (default, peak-to-trough — this
+// was the ONLY behavior before this field existed, so omitting it changes
+// nothing for existing accounts) or 'static' (measured from the phase's
+// starting balance only, ignoring any peak reached in between — the other
+// convention real prop firms use for "Max Overall Loss").
+// `rules.maxDailyProfitAmount`: optional absolute $ cap on a single day's
+// profit (some firms flag/disqualify unusually large single-day gains as
+// a sign of over-leveraging or exploiting a pricing glitch).
+export function computeRulesProgress(rules, phaseStart, initialBalance, trades, today = new Date().toISOString().slice(0, 10)) {
+  rules = rules || {};
+  // Compare at CALENDAR-DAY granularity, not raw milliseconds: `t.date` is a
+  // day-only string ('YYYY-MM-DD', midnight), while `phaseStart` is a precise
+  // timestamp (whatever moment the phase/simulation was started/advanced). A
+  // phase that starts mid-day would otherwise wrongly exclude every trade
+  // logged that SAME day (midnight-of-today < phase-start-later-today) —
+  // trades are only ever dated by day, so the phase boundary should be too.
+  const phaseStartDay = new Date(phaseStart).toISOString().slice(0, 10);
+  const phaseTrades = trades.filter((t) => String(t.date).slice(0, 10) >= phaseStartDay);
   const sorted = [...phaseTrades].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  const initial = account.initialBalance || 0;
+  const initial = initialBalance || 0;
   let equity = initial;
   let peak = initial;
-  let maxDrawdownPct = 0;
+  let trailingDrawdownPct = 0;
   for (const t of sorted) {
     equity += t.pnl;
     peak = Math.max(peak, equity);
-    if (peak > 0) maxDrawdownPct = Math.max(maxDrawdownPct, ((peak - equity) / peak) * 100);
+    if (peak > 0) trailingDrawdownPct = Math.max(trailingDrawdownPct, ((peak - equity) / peak) * 100);
   }
+  const staticLossPct = initial > 0 ? Math.max(0, ((initial - equity) / initial) * 100) : 0;
+  const maxDrawdownPct = rules.maxTotalDrawdownType === 'static' ? staticLossPct : trailingDrawdownPct;
 
   const totalProfit = equity - initial;
   const profitPct = initial > 0 ? (totalProfit / initial) * 100 : 0;
@@ -47,6 +67,7 @@ export function computePropFirmProgress(account, trades, today = new Date().toIS
   const daily = dailyPnL(phaseTrades);
   const todayPnL = daily[today] || 0;
   const dailyLossPct = todayPnL < 0 && initial > 0 ? (Math.abs(todayPnL) / initial) * 100 : 0;
+  const todayProfitAmount = todayPnL > 0 ? todayPnL : 0;
 
   const tradingDays = Object.keys(daily).length;
 
@@ -62,10 +83,14 @@ export function computePropFirmProgress(account, trades, today = new Date().toIS
     breaches.push({ rule: 'dailyLoss', level: 'danger', message: `Today's loss is ${r2(dailyLossPct)}% of the account — over the ${rules.maxDailyLossPct}% max daily loss.` });
   }
   if (rules.maxTotalDrawdownPct != null && maxDrawdownPct > rules.maxTotalDrawdownPct) {
-    breaches.push({ rule: 'totalDrawdown', level: 'danger', message: `Max drawdown this phase is ${r2(maxDrawdownPct)}% — over the ${rules.maxTotalDrawdownPct}% limit.` });
+    const kind = rules.maxTotalDrawdownType === 'static' ? 'Overall loss' : 'Max drawdown';
+    breaches.push({ rule: 'totalDrawdown', level: 'danger', message: `${kind} this phase is ${r2(maxDrawdownPct)}% — over the ${rules.maxTotalDrawdownPct}% limit.` });
   }
   if (rules.consistencyRulePct != null && consistencyPct > rules.consistencyRulePct) {
     breaches.push({ rule: 'consistency', level: 'warning', message: `Your best day is ${r2(consistencyPct)}% of total profit — over the ${rules.consistencyRulePct}% consistency cap.` });
+  }
+  if (rules.maxDailyProfitAmount != null && todayProfitAmount > rules.maxDailyProfitAmount) {
+    breaches.push({ rule: 'maxDailyProfit', level: 'warning', message: `Today's profit (${r2(todayProfitAmount)}) is over your ${rules.maxDailyProfitAmount} max-daily-profit cap — some firms flag or disqualify outsized single-day gains.` });
   }
   // Soft warning (not a breach) when getting close to the daily loss limit —
   // gives a chance to stop trading for the day before actually breaching it.
@@ -80,8 +105,16 @@ export function computePropFirmProgress(account, trades, today = new Date().toIS
 
   return {
     equity: r2(equity), totalProfit: r2(totalProfit), profitPct: r2(profitPct),
-    dailyLossPct: r2(dailyLossPct), maxDrawdownPct: r2(maxDrawdownPct),
+    dailyLossPct: r2(dailyLossPct), maxDrawdownPct: r2(maxDrawdownPct), todayProfitAmount: r2(todayProfitAmount),
     tradingDays, consistencyPct: r2(consistencyPct),
     breaches, profitTargetMet, minDaysMet, readyToAdvance, rules,
   };
+}
+
+// `account.currentPhaseStartAt` scopes every metric to the CURRENT phase only —
+// advancing a phase resets these numbers without touching trade history.
+// Thin wrapper over computeRulesProgress for a real Prop Firm account.
+export function computePropFirmProgress(account, trades, today = new Date().toISOString().slice(0, 10)) {
+  const phaseStart = account.currentPhaseStartAt || account.createdAt;
+  return computeRulesProgress(account.propFirmRules, phaseStart, account.initialBalance || 0, trades, today);
 }

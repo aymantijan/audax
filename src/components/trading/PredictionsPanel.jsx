@@ -3,16 +3,26 @@ import { TrendingUp } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { monteCarloPropFirmPass, daysToTargetProjection, equityConfidenceBands } from '../../utils/trading-predictions';
 import { computePropFirmTimeline } from '../../utils/account-type-analytics';
+import { useTradingStore } from '../../store/tradingStore';
 import { fmtMoney, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function PredictionsPanel({ account, trades, currency = 'USD' }) {
+  // Works for a real Prop Firm account's own rules, OR a Demo account's
+  // opt-in phase simulation — same underlying engine either way (see
+  // utils/trading-predictions.js and tradingStore.getSimPhaseRules).
+  const simRules = useTradingStore((s) => (account?.type === 'demo' && account.simEnabled ? s.getSimPhaseRules(account.id) : null));
+  const isPropFirm = account?.type === 'propfirm';
+  const rules = isPropFirm ? account.propFirmRules : simRules;
+  const phaseStartAt = isPropFirm ? account?.currentPhaseStartAt : account?.simCurrentPhaseStartAt;
+  const label = isPropFirm ? 'Prop-Firm' : 'Simulation';
+
   const bands = useMemo(() => equityConfidenceBands(trades, account?.initialBalance || 0), [trades, account]);
-  const passSim = useMemo(() => monteCarloPropFirmPass(account, trades), [account, trades]);
-  const daysToTarget = useMemo(() => daysToTargetProjection(account, trades), [account, trades]);
-  const timeline = useMemo(() => (account ? computePropFirmTimeline(account) : null), [account]);
+  const passSim = useMemo(() => monteCarloPropFirmPass(rules, phaseStartAt, account?.initialBalance || 0, trades), [rules, phaseStartAt, account, trades]);
+  const daysToTarget = useMemo(() => daysToTargetProjection(rules, account?.initialBalance || 0, trades), [rules, account, trades]);
+  const timeline = useMemo(() => (isPropFirm && account ? computePropFirmTimeline(account) : null), [isPropFirm, account]);
 
   if (!trades.length) return null;
 
@@ -41,15 +51,17 @@ export default function PredictionsPanel({ account, trades, currency = 'USD' }) 
         )}
       </Card>
 
-      {account?.type === 'propfirm' && (
-        <Card title="Prop-Firm Pass Probability">
+      {rules && (
+        <Card title={`${label} Pass Probability`}>
           {passSim && !passSim.insufficientData ? (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Stat label="Pass probability" value={fmtPct(passSim.passProbability)} color={passSim.passProbability >= 60 ? 'var(--success)' : passSim.passProbability >= 30 ? 'var(--warning)' : 'var(--error)'} />
                 <Stat label="Fail probability" value={fmtPct(passSim.failProbability)} />
                 <Stat label="Median days to target" value={passSim.medianDaysToTarget != null ? `${passSim.medianDaysToTarget}d` : '—'} />
-                <Stat label="Days left in phase" value={timeline ? (timeline.overdue ? 'Overdue' : `${timeline.daysRemaining}d`) : '—'} color={timeline && !timeline.overdue && timeline.daysRemaining <= 3 ? 'var(--warning)' : undefined} />
+                {isPropFirm && (
+                  <Stat label="Days left in phase" value={timeline ? (timeline.overdue ? 'Overdue' : `${timeline.daysRemaining}d`) : '—'} color={timeline && !timeline.overdue && timeline.daysRemaining <= 3 ? 'var(--warning)' : undefined} />
+                )}
               </div>
               {daysToTarget && !daysToTarget.insufficientData && !daysToTarget.alreadyMet && daysToTarget.daysRemaining != null && (
                 <p className="text-[11px] text-mute mt-3 flex items-center gap-1.5">

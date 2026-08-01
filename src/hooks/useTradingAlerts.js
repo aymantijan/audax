@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useTradingStore } from '../store/tradingStore';
 import { computePropFirmProgress } from '../utils/prop-firm-analytics';
 import { computePropFirmTimeline } from '../utils/account-type-analytics';
-import { computeRiskLimitBreaches } from '../utils/risk-management';
 import { detectTiltSequences } from '../utils/trading-psychology';
 import { todayKey } from '../utils/formatters';
 
@@ -14,7 +13,7 @@ const DEADLINE_WARNING_DAYS = 3;
 export function useTradingAlerts() {
   useEffect(() => {
     const check = () => {
-      const { alerts, accounts, trades, markAlertShown } = useTradingStore.getState();
+      const { alerts, accounts, trades, markAlertShown, getRiskLimitBreaches } = useTradingStore.getState();
       if (!alerts.enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
       const today = todayKey();
@@ -38,7 +37,7 @@ export function useTradingAlerts() {
             fire(account.id, 'deadline', `${account.name}: only ${timeline.daysRemaining} day(s) left in this phase (deadline ${timeline.deadline}).`);
           }
         } else {
-          for (const breach of computeRiskLimitBreaches(account, accountTrades)) {
+          for (const breach of getRiskLimitBreaches(account.id)) {
             fire(account.id, `risk-${breach.rule}`, `${account.name}: ${breach.message}`);
           }
         }
