@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import { INSTRUMENTS, STRATEGIES, DIRECTIONS, EMOTIONS, HABIT_CATEGORIES, GRADES } from './constants';
+import { DIRECTIONS, EMOTIONS, HABIT_CATEGORIES, GRADES } from './constants';
 
+// instrument/strategy are free strings, not a static enum — the trade form's
+// <Select> already constrains input to the built-in list plus the user's own
+// custom instruments/strategies (tradingStore.customInstruments/customStrategies),
+// so a non-empty check here is enough without this module needing to know
+// about that store.
 export const tradeSchema = z.object({
   date: z.string().min(1, 'Date is required'),
-  instrument: z.enum(INSTRUMENTS),
-  strategy: z.enum(STRATEGIES),
+  instrument: z.string().min(1, 'Instrument is required'),
+  strategy: z.string().min(1, 'Strategy is required'),
   direction: z.enum(DIRECTIONS),
   entryPrice: z.coerce.number().positive('Entry price must be > 0'),
   exitPrice: z.coerce.number().positive('Exit price must be > 0'),

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert, Settings2 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
@@ -21,6 +21,7 @@ import JournalAnalysis from '../components/trading/JournalAnalysis';
 import PredictionsPanel from '../components/trading/PredictionsPanel';
 import TradingCoach from '../components/trading/TradingCoach';
 import ScorePanel from '../components/trading/ScorePanel';
+import CustomizeTradingModal from '../components/trading/CustomizeTradingModal';
 import { tradeRMultiple } from '../utils/risk-management';
 import { currentLossStreak } from '../utils/trading-psychology';
 
@@ -40,6 +41,7 @@ export default function Trading() {
   const [filterStrategy, setFilterStrategy] = useState('all');
   const [balModal, setBalModal] = useState(false);
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
+  const [customizeOpen, setCustomizeOpen] = useState(false);
 
   const onStatus = useCallback((v) => setClearToTrade(v), []);
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
@@ -71,13 +73,22 @@ export default function Trading() {
   const propFirmProgress = activeAccount?.type === 'propfirm' ? tradingStore.getPropFirmProgress(activeAccountId) : null;
   const hardBreach = propFirmProgress?.breaches?.find((b) => b.level === 'danger');
 
+  const instrumentList = useMemo(
+    () => [...INSTRUMENTS, ...tradingStore.customInstruments.map((c) => c.code)],
+    [tradingStore.customInstruments]
+  );
+  const strategyList = useMemo(
+    () => [...STRATEGIES, ...tradingStore.customStrategies.map((c) => c.name)],
+    [tradingStore.customStrategies]
+  );
+
   const byStrategy = useMemo(
-    () => STRATEGIES.map((s) => ({ name: s, pnl: trades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })),
-    [trades]
+    () => strategyList.map((s) => ({ name: s, pnl: trades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })),
+    [trades, strategyList]
   );
   const byInstrument = useMemo(
-    () => INSTRUMENTS.map((i) => ({ name: i, pnl: trades.filter((t) => t.instrument === i).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
-    [trades]
+    () => instrumentList.map((i) => ({ name: i, pnl: trades.filter((t) => t.instrument === i).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
+    [trades, instrumentList]
   );
 
   const filtered = useMemo(
@@ -97,6 +108,9 @@ export default function Trading() {
           <p className="text-mute text-sm mt-1">P&L tracking and edge validation — in {currency}.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setCustomizeOpen(true)} title="Customize instruments & strategies">
+            <Settings2 size={16} />
+          </button>
           <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleAlerts}>
             <span className="flex items-center gap-2">
               {alerts.enabled ? <Bell size={13} /> : <BellOff size={13} />}
@@ -214,9 +228,9 @@ export default function Trading() {
         </Card>
       </div>
 
-      <AdvancedAnalytics trades={trades} currency={currency} />
+      <AdvancedAnalytics trades={trades} currency={currency} instruments={instrumentList} strategies={strategyList} />
 
-      <RiskManagement trades={trades} accountValue={account} currency={currency} />
+      <RiskManagement trades={trades} accountValue={account} currency={currency} instruments={instrumentList} />
 
       <TradingPsychology trades={trades} currency={currency} />
 
@@ -228,8 +242,8 @@ export default function Trading() {
         title={`Trade Log (${filtered.length})`}
         action={
           <div className="flex gap-2">
-            <Select value={filterInstrument} onChange={(e) => setFilterInstrument(e.target.value)} options={[{ value: 'all', label: 'All instruments' }, ...INSTRUMENTS.map((i) => ({ value: i, label: i }))]} />
-            <Select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} options={[{ value: 'all', label: 'All strategies' }, ...STRATEGIES.map((s) => ({ value: s, label: s }))]} />
+            <Select value={filterInstrument} onChange={(e) => setFilterInstrument(e.target.value)} options={[{ value: 'all', label: 'All instruments' }, ...instrumentList.map((i) => ({ value: i, label: i }))]} />
+            <Select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} options={[{ value: 'all', label: 'All strategies' }, ...strategyList.map((s) => ({ value: s, label: s }))]} />
           </div>
         }
       >
@@ -283,6 +297,8 @@ export default function Trading() {
       </Card>
 
       <TradeForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
+
+      <CustomizeTradingModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
 
       <Modal open={balModal} onClose={() => setBalModal(false)} title={`Edit ${activeAccount?.name || 'account'} balance`}>
         <form

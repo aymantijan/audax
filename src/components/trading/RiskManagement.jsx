@@ -4,9 +4,19 @@ import { instrumentCorrelation } from '../../utils/analytics';
 import { computePositionSize, rMultipleStats, sameDayExposureWarnings, DEFAULT_PIP_VALUE_PER_LOT } from '../../utils/risk-management';
 import { INSTRUMENTS, CURRENCY_SYMBOL } from '../../utils/constants';
 import { fmtMoney } from '../../utils/formatters';
+import { useTradingStore } from '../../store/tradingStore';
 import { Card, Field, Input, Select, EmptyState } from '../common/ui';
 
-export default function RiskManagement({ trades, accountValue, currency = 'USD' }) {
+export default function RiskManagement({ trades, accountValue, currency = 'USD', instruments = INSTRUMENTS }) {
+  const customInstruments = useTradingStore((s) => s.customInstruments);
+  // Merge built-in defaults with each custom pip-based instrument's own pip
+  // value (direct-kind instruments have no pip concept, so they're omitted —
+  // the calculator's stop-distance-in-pips model doesn't apply to them).
+  const pipValueDefaults = useMemo(() => {
+    const extra = Object.fromEntries(customInstruments.filter((c) => c.kind === 'pip').map((c) => [c.code, c.pipValuePerLot]));
+    return { ...DEFAULT_PIP_VALUE_PER_LOT, ...extra };
+  }, [customInstruments]);
+
   const [calc, setCalc] = useState({ riskPct: 1, instrument: 'EURUSD', stopDistancePips: 20, pipValuePerLot: DEFAULT_PIP_VALUE_PER_LOT.EURUSD });
 
   const sizing = computePositionSize({
@@ -17,7 +27,7 @@ export default function RiskManagement({ trades, accountValue, currency = 'USD' 
   });
 
   const rStats = useMemo(() => rMultipleStats(trades), [trades]);
-  const corr = useMemo(() => instrumentCorrelation(trades, INSTRUMENTS), [trades]);
+  const corr = useMemo(() => instrumentCorrelation(trades, instruments), [trades, instruments]);
   const exposureWarnings = useMemo(() => sameDayExposureWarnings(trades, corr.matrix).slice(0, 10), [trades, corr]);
 
   const maxBucket = rStats ? Math.max(1, ...Object.values(rStats.buckets)) : 1;
@@ -32,8 +42,8 @@ export default function RiskManagement({ trades, accountValue, currency = 'USD' 
           <Field label="Instrument">
             <Select
               value={calc.instrument}
-              onChange={(e) => setCalc({ ...calc, instrument: e.target.value, pipValuePerLot: DEFAULT_PIP_VALUE_PER_LOT[e.target.value] ?? calc.pipValuePerLot })}
-              options={INSTRUMENTS}
+              onChange={(e) => setCalc({ ...calc, instrument: e.target.value, pipValuePerLot: pipValueDefaults[e.target.value] ?? calc.pipValuePerLot })}
+              options={instruments}
             />
           </Field>
           <Field label="Stop distance (pips)">

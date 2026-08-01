@@ -14,7 +14,7 @@ const tooltipStyle = {
 
 const fmtRatio = (v) => (v === null ? '—' : v === Infinity ? '∞' : v.toFixed(2));
 
-export default function AdvancedAnalytics({ trades, currency = 'USD' }) {
+export default function AdvancedAnalytics({ trades, currency = 'USD', instruments = INSTRUMENTS, strategies = STRATEGIES }) {
   const sharpe = useMemo(() => sharpeRatio(trades), [trades]);
   const sortino = useMemo(() => sortinoRatio(trades), [trades]);
   const calmar = useMemo(() => calmarRatio(trades), [trades]);
@@ -22,8 +22,8 @@ export default function AdvancedAnalytics({ trades, currency = 'USD' }) {
   const { maxWinStreak, maxLossStreak } = useMemo(() => streaks(trades), [trades]);
   const conc = useMemo(() => concentration(trades), [trades]);
   const dow = useMemo(() => byDayOfWeek(trades), [trades]);
-  const strat = useMemo(() => strategyComparison(trades, STRATEGIES).filter((s) => s.count > 0), [trades]);
-  const corr = useMemo(() => instrumentCorrelation(trades, INSTRUMENTS), [trades]);
+  const strat = useMemo(() => strategyComparison(trades, strategies).filter((s) => s.count > 0), [trades, strategies]);
+  const corr = useMemo(() => instrumentCorrelation(trades, instruments), [trades, instruments]);
   const macroRows = useMemo(
     () =>
       MACRO_FIELDS.map((mf) => ({ field: mf, rows: macroEdge(trades, mf.key) })).filter((m) => m.rows.length > 0),

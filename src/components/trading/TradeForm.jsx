@@ -34,6 +34,17 @@ export default function TradeForm({ open, onClose, editing }) {
   // array/object every call, which loops with useSyncExternalStore).
   const activeAccount = useTradingStore((s) => s.accounts.find((a) => a.id === (editing?.accountId || s.activeAccountId)));
   const currency = activeAccount?.currency || 'USD';
+  // Raw arrays selected directly from state (not a store method's return
+  // value) are stable references across renders — safe to select, unlike
+  // `s.getInstrumentList()` which allocates a new array every call.
+  const customInstruments = useTradingStore((s) => s.customInstruments);
+  const customStrategies = useTradingStore((s) => s.customStrategies);
+  const instrumentOptions = useMemo(() => [...INSTRUMENTS, ...customInstruments.map((c) => c.code)], [customInstruments]);
+  const strategyOptions = useMemo(() => [...STRATEGIES, ...customStrategies.map((c) => c.name)], [customStrategies]);
+  const instrumentSpecs = useMemo(
+    () => Object.fromEntries(customInstruments.map((c) => [c.code, { pipSize: c.pipSize, pipValuePerLot: c.pipValuePerLot, kind: c.kind }])),
+    [customInstruments]
+  );
   const [form, setForm] = useState(blank());
   const [pnlTouched, setPnlTouched] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +57,10 @@ export default function TradeForm({ open, onClose, editing }) {
     }
   }, [open, editing]);
 
-  const derived = useMemo(() => computeTradeDerived(form), [form.instrument, form.direction, form.entryPrice, form.exitPrice, form.positionSize]);
+  const derived = useMemo(
+    () => computeTradeDerived(form, instrumentSpecs),
+    [form.instrument, form.direction, form.entryPrice, form.exitPrice, form.positionSize, instrumentSpecs]
+  );
 
   // Auto-fill PnL from prices unless user overrode it manually
   useEffect(() => {
@@ -75,10 +89,10 @@ export default function TradeForm({ open, onClose, editing }) {
             <Input type="date" value={form.date} onChange={(e) => upd('date', e.target.value)} />
           </Field>
           <Field label="Instrument">
-            <Select value={form.instrument} onChange={(e) => upd('instrument', e.target.value)} options={INSTRUMENTS} />
+            <Select value={form.instrument} onChange={(e) => upd('instrument', e.target.value)} options={instrumentOptions} />
           </Field>
           <Field label="Strategy">
-            <Select value={form.strategy} onChange={(e) => upd('strategy', e.target.value)} options={STRATEGIES} />
+            <Select value={form.strategy} onChange={(e) => upd('strategy', e.target.value)} options={strategyOptions} />
           </Field>
           <Field label="Direction">
             <Select value={form.direction} onChange={(e) => upd('direction', e.target.value)} options={['long', 'short']} />

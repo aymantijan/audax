@@ -9,7 +9,11 @@ const PIP_SPECS = {
 };
 
 // Derive pips + suggested USD PnL from prices. BTC positionSize is in coins.
-export function computeTradeDerived({ instrument, direction, entryPrice, exitPrice, positionSize }) {
+// `customSpecs` (instrument code -> {pipSize, pipValuePerLot, kind}) comes from
+// tradingStore.getInstrumentSpecs() — user-added instruments beyond the 4
+// built-in PIP_SPECS. A 'direct' kind (or BTC) skips pips entirely: PnL is
+// just price move × size, same as a stock/coin quote.
+export function computeTradeDerived({ instrument, direction, entryPrice, exitPrice, positionSize }, customSpecs = {}) {
   const entry = Number(entryPrice);
   const exit = Number(exitPrice);
   const size = Number(positionSize);
@@ -18,10 +22,11 @@ export function computeTradeDerived({ instrument, direction, entryPrice, exitPri
   const sign = direction === 'short' ? -1 : 1;
   const rawMove = (exit - entry) * sign;
 
-  if (instrument === 'BTC') {
+  const custom = customSpecs[instrument];
+  if (instrument === 'BTC' || custom?.kind === 'direct') {
     return { pnlPips: Math.round(rawMove), pnl: round2(rawMove * size) };
   }
-  const spec = PIP_SPECS[instrument] || PIP_SPECS.EURUSD;
+  const spec = custom || PIP_SPECS[instrument] || PIP_SPECS.EURUSD;
   const pips = rawMove / spec.pipSize;
   return { pnlPips: round2(pips), pnl: round2(pips * spec.pipValuePerLot * size) };
 }

@@ -7,7 +7,7 @@ import { computePropFirmProgress, nextPhase } from '../utils/prop-firm-analytics
 import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
 import { generateTradingCoachRecommendation } from '../utils/trading-coach';
 import { computeAccountScore, computeGroupScore, computeOverallScore, DEFAULT_SCORE_WEIGHTS } from '../utils/trading-score';
-import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL } from '../utils/constants';
+import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL, INSTRUMENTS, STRATEGIES, CURRENCY_SYMBOL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
 import { toast } from './uiStore';
@@ -37,6 +37,86 @@ export const useTradingStore = create(
       trades: [], // trades[].accountId points into accounts[] (was accountType — 'demo'/'real' ids preserved for backward compat)
       accounts: [], // [{ id, type:'demo'|'broker'|'propfirm', name, broker, accountNumber, leverage, initialBalance, status, phase?, currentPhaseStartAt, phaseHistory, propFirmRules?, balanceAdjustments, createdAt, updatedAt }]
       activeAccountId: null,
+
+      // ─────────── Custom instruments & strategies ───────────
+      // The 5 INSTRUMENTS / 3 STRATEGIES in constants.js stay fixed (they're
+      // also the keys for the auto-XP skill maps and the default pip specs) —
+      // these are user-added EXTRAS, global across all accounts (an instrument
+      // or strategy isn't account-specific). `kind: 'pip'` computes PnL the
+      // forex way (price move / pipSize * pipValuePerLot * lots); `'direct'`
+      // computes it the crypto/stock way (price move * size), same as BTC.
+      customInstruments: [], // [{ id, code, kind:'pip'|'direct', pipSize?, pipValuePerLot?, createdAt }]
+      customStrategies: [], // [{ id, name, createdAt }]
+
+      getInstrumentList: () => [...INSTRUMENTS, ...get().customInstruments.map((c) => c.code)],
+      getStrategyList: () => [...STRATEGIES, ...get().customStrategies.map((c) => c.name)],
+      // code -> {pipSize, pipValuePerLot, kind} for every CUSTOM instrument —
+      // merged with the built-in PIP_SPECS inside calculations.js#computeTradeDerived.
+      getInstrumentSpecs: () =>
+        Object.fromEntries(get().customInstruments.map((c) => [c.code, { pipSize: c.pipSize, pipValuePerLot: c.pipValuePerLot, kind: c.kind }])),
+
+      addCustomInstrument: ({ code, kind, pipSize, pipValuePerLot }) => {
+        const clean = (code || '').trim().toUpperCase();
+        if (!clean) return { ok: false, error: 'Symbol is required.' };
+        const taken = INSTRUMENTS.includes(clean) || get().customInstruments.some((c) => c.code === clean);
+        if (taken) return { ok: false, error: `"${clean}" already exists.` };
+        if (kind === 'pip' && (!Number(pipSize) || !Number(pipValuePerLot))) {
+          return { ok: false, error: 'Pip size and pip value per lot are required for a pip-based instrument.' };
+        }
+        const instrument = {
+          id: uid(), code: clean, kind,
+          pipSize: kind === 'pip' ? Number(pipSize) : undefined,
+          pipValuePerLot: kind === 'pip' ? Number(pipValuePerLot) : undefined,
+          createdAt: Date.now(),
+        };
+        set({ customInstruments: [...get().customInstruments, instrument] });
+        toast(`Instrument added: ${clean}`, 'success');
+        return { ok: true };
+      },
+      editCustomInstrument: (id, updates) =>
+        set({
+          customInstruments: get().customInstruments.map((c) =>
+            c.id === id
+              ? {
+                  ...c, ...updates,
+                  pipSize: updates.kind === 'pip' || (!updates.kind && c.kind === 'pip') ? Number(updates.pipSize ?? c.pipSize) : undefined,
+                  pipValuePerLot: updates.kind === 'pip' || (!updates.kind && c.kind === 'pip') ? Number(updates.pipValuePerLot ?? c.pipValuePerLot) : undefined,
+                }
+              : c
+          ),
+        }),
+      deleteCustomInstrument: (id) => {
+        const inst = get().customInstruments.find((c) => c.id === id);
+        if (!inst) return { ok: false, error: 'Instrument not found.' };
+        if (get().trades.some((t) => t.instrument === inst.code)) {
+          return { ok: false, error: 'This instrument has logged trades — it cannot be deleted.' };
+        }
+        set({ customInstruments: get().customInstruments.filter((c) => c.id !== id) });
+        toast('Instrument removed', 'info');
+        return { ok: true };
+      },
+
+      addCustomStrategy: ({ name }) => {
+        const clean = (name || '').trim();
+        if (!clean) return { ok: false, error: 'Strategy name is required.' };
+        const taken = STRATEGIES.includes(clean) || get().customStrategies.some((c) => c.name.toLowerCase() === clean.toLowerCase());
+        if (taken) return { ok: false, error: `"${clean}" already exists.` };
+        set({ customStrategies: [...get().customStrategies, { id: uid(), name: clean, createdAt: Date.now() }] });
+        toast(`Strategy added: ${clean}`, 'success');
+        return { ok: true };
+      },
+      editCustomStrategy: (id, name) =>
+        set({ customStrategies: get().customStrategies.map((c) => (c.id === id ? { ...c, name: name.trim() } : c)) }),
+      deleteCustomStrategy: (id) => {
+        const strat = get().customStrategies.find((c) => c.id === id);
+        if (!strat) return { ok: false, error: 'Strategy not found.' };
+        if (get().trades.some((t) => t.strategy === strat.name)) {
+          return { ok: false, error: 'This strategy has logged trades — it cannot be deleted.' };
+        }
+        set({ customStrategies: get().customStrategies.filter((c) => c.id !== id) });
+        toast('Strategy removed', 'info');
+        return { ok: true };
+      },
 
       // Phase 6: local-only browser-notification alerts (rule breaches/warnings,
       // tilt, phase deadline). `lastShown` dedupes by `${accountId}|${conditionKey}`
@@ -328,7 +408,8 @@ export const useTradingStore = create(
       addPayout: (id, { amount, date, notes }) => {
         const payout = { id: uid(), amount: Number(amount) || 0, date: date || new Date().toISOString().slice(0, 10), notes: notes || '', createdAt: Date.now() };
         set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: [...(a.payouts || []), payout] }) : a)) });
-        toast(`Payout logged: $${payout.amount}`, 'success');
+        const sym = CURRENCY_SYMBOL[get().getAccount(id)?.currency] || '$';
+        toast(`Payout logged: ${sym}${payout.amount}`, 'success');
       },
       deletePayout: (id, payoutId) =>
         set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: (a.payouts || []).filter((p) => p.id !== payoutId) }) : a)) }),
@@ -405,7 +486,7 @@ export const useTradingStore = create(
 
       addTrade: (data) => {
         const accountId = data.accountId || get().activeAccountId;
-        const { pnlPips } = computeTradeDerived(data);
+        const { pnlPips } = computeTradeDerived(data, get().getInstrumentSpecs());
         const balance = get().accountValue(accountId);
         const trade = {
           ...data,
@@ -425,9 +506,10 @@ export const useTradingStore = create(
         for (const { skillId, amount } of auto) award(skillId, amount, 'trade (auto)');
 
         const autoXP = auto.reduce((a, x) => a + x.amount, 0);
-        const acctName = get().getAccount(accountId)?.name || accountId;
+        const acct = get().getAccount(accountId);
+        const sym = CURRENCY_SYMBOL[acct?.currency] || '$';
         toast(
-          `Trade saved (${acctName}) — ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl} · +${autoXP + (trade.linkedSkills?.length || 0) * TRADE_XP} XP`,
+          `Trade saved (${acct?.name || accountId}) — ${trade.pnl >= 0 ? '+' : ''}${sym}${trade.pnl} · +${autoXP + (trade.linkedSkills?.length || 0) * TRADE_XP} XP`,
           trade.pnl >= 0 ? 'success' : 'info'
         );
         return trade.id;
@@ -438,7 +520,7 @@ export const useTradingStore = create(
           trades: get().trades.map((t) => {
             if (t.id !== id) return t;
             const merged = stamp({ ...t, ...updates });
-            const { pnlPips } = computeTradeDerived(merged);
+            const { pnlPips } = computeTradeDerived(merged, get().getInstrumentSpecs());
             return { ...merged, pnl: round2(Number(merged.pnl)), pnlPips };
           }),
         });
@@ -461,6 +543,7 @@ export const useTradingStore = create(
           trades: [], accounts: [], activeAccountId: null,
           alerts: { enabled: false, lastShown: {} }, coachCache: {},
           scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
+          customInstruments: [], customStrategies: [],
         }),
     }),
     { name: 'audax-trading' }
