@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
-import { FOOD_DB } from '../../utils/nutrition-db';
+import { FOOD_DB, getServingOptions } from '../../utils/nutrition-db';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge } from '../../components/common/ui';
 
 // Rough daily macro targets derived from the protein target (spec: progress bars
@@ -16,23 +16,45 @@ function macroTargets(proteinTargetG) {
 export default function NutritionTracker({ pendingPrompt }) {
   const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition } = useHealthStore();
   const [name, setName] = useState('');
-  const [grams, setGrams] = useState(100);
+  const [amount, setAmount] = useState(100);
+  const [unit, setUnit] = useState('g');
   const [templateName, setTemplateName] = useState('');
 
   const { entries, totals, quality } = getTodayNutrition();
   const targets = macroTargets(proteinTargetG);
 
+  // Unit choices update as the food name changes — e.g. typing "egg" reveals
+  // an "egg" option alongside the always-available "g", so 100g of guessing
+  // isn't the only way to log a natural-serving food.
+  const servingOptions = useMemo(() => getServingOptions(name), [name]);
+
+  const changeName = (v) => {
+    setName(v);
+    // Default to the food's natural serving when it has one (e.g. "egg" →
+    // unit "egg", amount 1) rather than making the user guess grams — 'g' is
+    // always still available in the dropdown if they'd rather use it.
+    const opts = getServingOptions(v);
+    if (opts.length > 1) {
+      setUnit(opts[1].label);
+      setAmount(1);
+    } else {
+      setUnit('g');
+      setAmount(100);
+    }
+  };
+
   const submit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    logMeal(name.trim(), grams, pendingPrompt?.id);
+    logMeal(name.trim(), amount, unit, pendingPrompt?.id);
     setName('');
-    setGrams(100);
+    setAmount(100);
+    setUnit('g');
   };
 
   const saveTemplate = () => {
     if (!templateName.trim() || !entries.length) return;
-    saveMealTemplate(templateName.trim(), entries.map((e) => ({ name: e.name, grams: e.grams })));
+    saveMealTemplate(templateName.trim(), entries.map((e) => ({ name: e.name, amount: e.amount, unit: e.unit })));
     setTemplateName('');
   };
 
@@ -41,13 +63,16 @@ export default function NutritionTracker({ pendingPrompt }) {
       <Card title="Quick Log">
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end">
           <Field label="Food">
-            <Input list="food-db" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Chicken breast" />
+            <Input list="food-db" value={name} onChange={(e) => changeName(e.target.value)} placeholder="e.g. Chicken breast, egg, banana…" />
             <datalist id="food-db">
               {FOOD_DB.map((f) => <option key={f.name} value={f.name} />)}
             </datalist>
           </Field>
-          <Field label="Grams">
-            <Input type="number" min="1" value={grams} onChange={(e) => setGrams(Number(e.target.value))} className="w-24" />
+          <Field label="Amount">
+            <Input type="number" min="0.1" step="any" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-24" />
+          </Field>
+          <Field label="Unit">
+            <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={servingOptions.map((o) => ({ value: o.label, label: o.label }))} className="w-32" />
           </Field>
           <Button type="submit">Log meal</Button>
         </form>
@@ -82,7 +107,7 @@ export default function NutritionTracker({ pendingPrompt }) {
           <ul className="space-y-1.5">
             {entries.map((en) => (
               <li key={en.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>{en.name} <span className="text-mute text-xs">({en.grams}g)</span></span>
+                <span>{en.name} <span className="text-mute text-xs">({en.amount ?? en.grams}{en.unit && en.unit !== 'g' ? ` ${en.unit}${en.amount > 1 ? 's' : ''}` : 'g'}{en.unit && en.unit !== 'g' ? ` · ${en.grams}g` : ''})</span></span>
                 <span className="flex items-center gap-3">
                   <span className="text-mute text-xs">{en.kcal} kcal · {en.protein}g P {!en.matched && '· unrecognized'}</span>
                   <button onClick={() => deleteMeal(en.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>

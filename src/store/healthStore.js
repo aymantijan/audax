@@ -101,13 +101,17 @@ export const useHealthStore = create(
       deleteWorkout: (id) => set({ workouts: get().workouts.filter((w) => w.id !== id) }),
 
       // ─────────── Nutrition ───────────
-      logMeal: (name, grams, fulfillsPromptId) => {
-        const est = estimateMacros(name, grams);
+      // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
+      // natural servings (e.g. amount=2, unit='egg') — see nutrition-db.js.
+      logMeal: (name, amount, unit = 'g', fulfillsPromptId) => {
+        const est = estimateMacros(name, amount, unit);
         const entry = {
           id: uid(),
           date: todayKey(),
           name,
-          grams: Number(grams) || 100,
+          amount: Number(amount) || (unit === 'g' ? 100 : 1),
+          unit,
+          grams: est?.grams ?? (unit === 'g' ? Number(amount) || 100 : null),
           protein: est?.protein ?? 0,
           carbs: est?.carbs ?? 0,
           fat: est?.fat ?? 0,
@@ -132,10 +136,13 @@ export const useHealthStore = create(
       setProteinTarget: (g) => set({ proteinTargetG: Number(g) || 140 }),
       saveMealTemplate: (name, items) => set({ mealTemplates: [...get().mealTemplates, { id: uid(), name, items }] }),
       deleteMealTemplate: (id) => set({ mealTemplates: get().mealTemplates.filter((t) => t.id !== id) }),
+      // `item.grams` (no unit/amount) is the legacy template shape from
+      // before unit-based logging existed — treat it as a plain-grams entry
+      // so old saved templates keep working unchanged.
       logMealTemplate: (templateId) => {
         const tpl = get().mealTemplates.find((t) => t.id === templateId);
         if (!tpl) return;
-        for (const item of tpl.items) get().logMeal(item.name, item.grams);
+        for (const item of tpl.items) get().logMeal(item.name, item.amount ?? item.grams, item.unit ?? 'g');
       },
 
       // ─────────── Body composition ───────────
