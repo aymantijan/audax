@@ -1,8 +1,28 @@
 import { useState, useMemo } from 'react';
-import { Trash2, FileDown } from 'lucide-react';
+import { Trash2, FileDown, Camera } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
+import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
 import { Card, Button, Field, Input, Select, EmptyState } from '../../components/common/ui';
+
+const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
+const CALORIE_GOALS = [
+  { key: 'cut20', label: 'Aggressive cut', pct: -0.2 },
+  { key: 'cut10', label: 'Mild cut', pct: -0.1 },
+  { key: 'maintain', label: 'Maintain', pct: 0 },
+  { key: 'bulk10', label: 'Mild bulk', pct: 0.1 },
+  { key: 'bulk20', label: 'Aggressive bulk', pct: 0.2 },
+];
+
+function readPhotoAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_PHOTO_BYTES) return reject(new Error('Photo is too large (max 1.5MB) — try a smaller image.'));
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -80,17 +100,37 @@ export default function BodyComposition() {
     neckCm: latest?.neckCm || '',
     hipCm: latest?.hipCm || '',
     heightCm: latest?.heightCm || '',
+    ageYears: latest?.ageYears || '',
     sex: latest?.sex || 'male',
     absRating: latest?.absRating || 5,
     visualBodyFatPct: '',
+    photo: null,
   });
+  const [photoError, setPhotoError] = useState('');
+  const [activityLevel, setActivityLevel] = useState('moderate');
 
   const submit = (e) => {
     e.preventDefault();
     logBodyComp(form);
+    setForm((f) => ({ ...f, photo: null }));
+  };
+
+  const onPhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError('');
+    try {
+      const dataUrl = await readPhotoAsDataUrl(file);
+      setForm((f) => ({ ...f, photo: dataUrl }));
+    } catch (err) {
+      setPhotoError(err.message);
+    }
   };
 
   const prediction = getWeightPrediction();
+
+  const bmr = latest ? computeBMR({ weightKg: latest.weightKg, heightCm: latest.heightCm, age: latest.ageYears, sex: latest.sex }) : null;
+  const tdee = bmr ? computeTDEE(bmr, activityLevel) : null;
 
   const trend = useMemo(
     () =>
@@ -113,6 +153,9 @@ export default function BodyComposition() {
           <Field label="Height (cm)">
             <Input type="number" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
+          <Field label="Age (years)" hint="For the BMR/TDEE estimate below">
+            <Input type="number" min="10" max="100" value={form.ageYears} onChange={(e) => setForm({ ...form, ageYears: e.target.value })} />
+          </Field>
           <Field label="Waist (cm)">
             <Input type="number" step="0.1" value={form.waistCm} onChange={(e) => setForm({ ...form, waistCm: e.target.value })} />
           </Field>
@@ -129,6 +172,14 @@ export default function BodyComposition() {
           </Field>
           <Field label="Visual body-fat estimate % (optional fallback)">
             <Input type="number" step="0.1" value={form.visualBodyFatPct} onChange={(e) => setForm({ ...form, visualBodyFatPct: e.target.value })} placeholder="Used only if Navy formula inputs are incomplete" />
+          </Field>
+          <Field label="Progress photo (optional)" hint="Stored locally, max 1.5MB">
+            <label className="flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-xs text-mute cursor-pointer hover:text-ink">
+              <Camera size={14} />
+              {form.photo ? 'Photo attached ✓' : 'Choose photo…'}
+              <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
+            </label>
+            {photoError && <p className="text-bad text-[11px] mt-1">{photoError}</p>}
           </Field>
           <div className="col-span-2 md:col-span-4">
             <Button type="submit" className="w-full">Log today</Button>
@@ -153,6 +204,48 @@ export default function BodyComposition() {
               <div className="text-xl font-bold">{latest.waistCm ?? '—'} cm</div>
             </div>
           </div>
+        </Card>
+      )}
+
+      {latest && (
+        <Card title="Energy Needs (BMR / TDEE)">
+          {bmr ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 text-center mb-4">
+                <div>
+                  <div className="text-xs text-mute mb-1">BMR</div>
+                  <div className="text-xl font-bold">{bmr} kcal/day</div>
+                  <div className="text-[11px] text-mute">Mifflin-St Jeor, at rest</div>
+                </div>
+                <div>
+                  <div className="text-xs text-mute mb-1">TDEE</div>
+                  <div className="text-xl font-bold">{tdee} kcal/day</div>
+                  <div className="text-[11px] text-mute">BMR × activity level</div>
+                </div>
+              </div>
+              <Field label="Activity level">
+                <Select
+                  value={activityLevel}
+                  onChange={(e) => setActivityLevel(e.target.value)}
+                  options={Object.entries(ACTIVITY_MULTIPLIERS).map(([value, v]) => ({ value, label: v.label }))}
+                />
+              </Field>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+                {CALORIE_GOALS.map((g) => (
+                  <div key={g.key} className="bg-surface border border-line rounded-lg p-2.5 text-center">
+                    <div className="text-[11px] text-mute mb-1">{g.label}</div>
+                    <div className="text-sm font-semibold">{Math.round(tdee * (1 + g.pct))}</div>
+                    <div className="text-[10px] text-mute">kcal/day</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-mute mt-3">
+                An estimate, not a prescription — actual maintenance varies by individual. Track weight trend over 2-3 weeks at a target and adjust from there.
+              </p>
+            </>
+          ) : (
+            <EmptyState>Log weight, height, age, and sex above to estimate your energy needs.</EmptyState>
+          )}
         </Card>
       )}
 
@@ -214,7 +307,10 @@ export default function BodyComposition() {
           <ul className="space-y-1.5">
             {[...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1)).map((b) => (
               <li key={b.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span className="text-mute text-xs">{b.date}</span>
+                <span className="flex items-center gap-2">
+                  {b.photo && <img src={b.photo} alt="" className="w-8 h-8 rounded object-cover" />}
+                  <span className="text-mute text-xs">{b.date}</span>
+                </span>
                 <span>{b.weightKg ?? '—'}kg · BF {b.bodyFatPct ?? '—'}%</span>
                 <button onClick={() => deleteBodyComp(b.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>

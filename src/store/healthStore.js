@@ -159,6 +159,7 @@ export const useHealthStore = create(
           neckCm: Number(data.neckCm) || null,
           hipCm: Number(data.hipCm) || null,
           heightCm: Number(data.heightCm) || null,
+          ageYears: data.ageYears ? Number(data.ageYears) : null,
           sex: data.sex || 'male',
           absRating: data.absRating != null ? Number(data.absRating) : null,
           bodyFatPct: bodyFatPct ?? (data.visualBodyFatPct != null ? Number(data.visualBodyFatPct) : null),
@@ -173,14 +174,44 @@ export const useHealthStore = create(
       deleteBodyComp: (id) => set({ bodyComp: get().bodyComp.filter((b) => b.id !== id) }),
 
       // ─────────── Recovery activities ───────────
+      customRecoveryActivities: [], // [{key, label}] — user-added, beyond the 5 built into RecoveryTracker.jsx
+      addCustomRecoveryActivity: (label) => {
+        const clean = (label || '').trim();
+        if (!clean) return;
+        const key = clean.toLowerCase().replace(/\s+/g, '-');
+        if (get().customRecoveryActivities.some((a) => a.key === key)) return;
+        set({ customRecoveryActivities: [...get().customRecoveryActivities, { key, label: clean }] });
+      },
+      removeCustomRecoveryActivity: (key) => set({ customRecoveryActivities: get().customRecoveryActivities.filter((a) => a.key !== key) }),
+
+      // logRecovery preserves the day's already-logged water (waterMl) instead
+      // of wiping it — the two are logged independently (activities via a
+      // save button, water via quick-add) but share one per-day entry.
       logRecovery: (activities, fulfillsPromptId) => {
-        const entry = { id: uid(), date: todayKey(), activities, createdAt: Date.now() };
-        set({ recoveryLogs: [...get().recoveryLogs.filter((r) => r.date !== entry.date), entry] });
+        const today = todayKey();
+        const existing = get().recoveryLogs.find((r) => r.date === today);
+        const entry = { id: existing?.id || uid(), date: today, activities, waterMl: existing?.waterMl || 0, createdAt: existing?.createdAt || Date.now() };
+        set({ recoveryLogs: [...get().recoveryLogs.filter((r) => r.date !== today), entry] });
         useSkillStore.getState().awardXP('health-discipline-lv1', 5, 'recovery activities logged');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         get().checkBadges();
         toast('Recovery logged', 'success');
       },
+
+      // ─────────── Water intake ───────────
+      waterTargetMl: 2500,
+      setWaterTarget: (ml) => set({ waterTargetMl: Number(ml) || 2500 }),
+      logWater: (ml) => {
+        const today = todayKey();
+        const existing = get().recoveryLogs.find((r) => r.date === today);
+        const newTotal = Math.max(0, (existing?.waterMl || 0) + Number(ml));
+        if (existing) {
+          set({ recoveryLogs: get().recoveryLogs.map((r) => (r.id === existing.id ? { ...r, waterMl: newTotal } : r)) });
+        } else {
+          set({ recoveryLogs: [...get().recoveryLogs, { id: uid(), date: today, activities: [], waterMl: newTotal, createdAt: Date.now() }] });
+        }
+      },
+      getTodayWaterMl: () => get().recoveryLogs.find((r) => r.date === todayKey())?.waterMl || 0,
 
       // ─────────── Multi-slot energy/stress check-ins ───────────
       // Separate from habitStore's single daily energyLog (which still powers
@@ -192,31 +223,51 @@ export const useHealthStore = create(
       },
 
       // ─────────── Cycle tracking (optional) ───────────
+      customCycleSymptoms: [], // user-added symptom tags, beyond the built-in list in CycleTracking.jsx
+      addCustomSymptom: (name) => {
+        const clean = (name || '').trim();
+        if (!clean || get().customCycleSymptoms.some((s) => s.toLowerCase() === clean.toLowerCase())) return;
+        set({ customCycleSymptoms: [...get().customCycleSymptoms, clean] });
+      },
+      removeCustomSymptom: (name) => set({ customCycleSymptoms: get().customCycleSymptoms.filter((s) => s !== name) }),
+
       logCycleStart: (date, flow = 'medium', symptoms = [], notes = '') => {
-        const entry = { id: uid(), date: date || todayKey(), flow, symptoms, notes, createdAt: Date.now() };
+        const entry = { id: uid(), date: date || todayKey(), flow, symptoms, notes, endDate: null, createdAt: Date.now() };
         set({ cycleLogs: [...get().cycleLogs.filter((c) => c.date !== entry.date), entry].sort((a, b) => (a.date < b.date ? -1 : 1)) });
         useSkillStore.getState().awardXP('health-discipline-lv1', 3, 'cycle logged');
         toast('Cycle entry logged', 'success');
       },
+      // Sets an end date on the most recent OPEN (no endDate yet) cycle log —
+      // period length is optional context, not required for phase estimation.
+      markPeriodEnd: (id, endDate) =>
+        set({ cycleLogs: get().cycleLogs.map((c) => (c.id === id ? { ...c, endDate: endDate || todayKey() } : c)) }),
       deleteCycleLog: (id) => set({ cycleLogs: get().cycleLogs.filter((c) => c.id !== id) }),
       getCyclePhase: () => computeCyclePhase(get().cycleLogs.map((c) => c.date), null, todayKey()),
 
       // ─────────── Health goals ───────────
       addGoal: (goal) => {
-        const latestWeight = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.weightKg ?? null;
+        const latestBodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
         const entry = {
           id: uid(),
           type: goal.type,
           targetKg: goal.targetKg != null ? Number(goal.targetKg) : undefined,
           exercise: goal.exercise || undefined,
           targetScore: goal.targetScore != null ? Number(goal.targetScore) : undefined,
-          startWeightKg: goal.type === 'weight' ? latestWeight : undefined,
+          targetBodyFatPct: goal.targetBodyFatPct != null ? Number(goal.targetBodyFatPct) : undefined,
+          targetPerWeek: goal.targetPerWeek != null ? Number(goal.targetPerWeek) : undefined,
+          startWeightKg: goal.type === 'weight' ? (latestBodyComp?.weightKg ?? null) : undefined,
+          startBodyFatPct: goal.type === 'bodyfat' ? (latestBodyComp?.bodyFatPct ?? null) : undefined,
+          targetDate: goal.targetDate || undefined,
           achieved: false,
           createdAt: Date.now(),
         };
         set({ goals: [...get().goals, entry] });
         toast('Goal added', 'success');
       },
+      // Only the target value(s) + date are editable — type is fixed once
+      // created (same reasoning as Trading account type: changing it after
+      // the fact would make the stored start* baseline incoherent).
+      editGoal: (id, updates) => set({ goals: get().goals.map((g) => (g.id === id ? { ...g, ...updates } : g)) }),
       deleteGoal: (id) => set({ goals: get().goals.filter((g) => g.id !== id) }),
 
       // Progress for every goal, computed from data the app already tracks
@@ -224,9 +275,12 @@ export const useHealthStore = create(
       getGoalsWithProgress: () => {
         const bodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1));
         const currentWeightKg = bodyComp[0]?.weightKg ?? null;
+        const currentBodyFatPct = bodyComp[0]?.bodyFatPct ?? null;
         const currentPRs = get().getPRs();
         const sleepLogs = useHabitStore.getState().energyLogs;
         const prediction = get().getWeightPrediction();
+        const weekAgo = Date.now() - 7 * dayMs;
+        const workoutsPerWeek = get().workouts.filter((w) => new Date(w.date).getTime() >= weekAgo).length;
 
         const results = get().goals.map((g) => {
           const progress = computeGoalProgress(g, {
@@ -235,6 +289,8 @@ export const useHealthStore = create(
             currentPRs,
             sleepLogs,
             weeklyRateKg: prediction.weeklyRateKg.realistic,
+            currentBodyFatPct,
+            workoutsPerWeek,
           });
           return { ...g, ...progress };
         });
@@ -610,6 +666,7 @@ export const useHealthStore = create(
         set({
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
+          customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500,
           reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
         }),
     }),

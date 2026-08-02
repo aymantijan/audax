@@ -63,6 +63,28 @@ export function bodyFatNavyFemale({ waistCm, hipCm, neckCm, heightCm }) {
   return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
 }
 
+// ---- BMR / TDEE (Mifflin-St Jeor — the modern standard, more accurate than
+// Harris-Benedict for most adults) ----
+export const ACTIVITY_MULTIPLIERS = {
+  sedentary: { label: 'Sedentary (little/no exercise)', mult: 1.2 },
+  light: { label: 'Light (exercise 1-3x/week)', mult: 1.375 },
+  moderate: { label: 'Moderate (exercise 3-5x/week)', mult: 1.55 },
+  active: { label: 'Active (exercise 6-7x/week)', mult: 1.725 },
+  veryActive: { label: 'Very active (hard exercise + physical job)', mult: 1.9 },
+};
+
+export function computeBMR({ weightKg, heightCm, age, sex }) {
+  if (!weightKg || !heightCm || !age) return null;
+  const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+  return Math.round(sex === 'female' ? base - 161 : base + 5);
+}
+
+export function computeTDEE(bmr, activityLevel) {
+  if (!bmr) return null;
+  const mult = ACTIVITY_MULTIPLIERS[activityLevel]?.mult ?? ACTIVITY_MULTIPLIERS.sedentary.mult;
+  return Math.round(bmr * mult);
+}
+
 // ---- Weight-change prediction ----
 // A transparent, simplified energy-balance model: 1 kg of body-fat mass holds
 // roughly 7700 kcal. A sustained daily deficit is converted to a weekly rate,
@@ -218,7 +240,7 @@ export function computeCyclePhase(cycleStartDates, avgCycleLength, today) {
   return { dayOfCycle, phase, cycleLength: cycleLen };
 }
 
-function estimateCycleLength(sortedDates) {
+export function estimateCycleLength(sortedDates) {
   if (sortedDates.length < 2) return null;
   const gaps = [];
   for (let i = 1; i < sortedDates.length; i++) {
@@ -236,7 +258,7 @@ export const CYCLE_PHASE_COLOR = { menstrual: 'var(--error)', follicular: 'var(-
 // app already tracks rather than asking for anything new. `weeklyRateKg` (the
 // realistic weekly rate from computeWeightPrediction) lets weight goals project
 // an estimated completion date instead of just a static percentage.
-export function computeGoalProgress(goal, { startWeightKg, currentWeightKg, currentPRs, sleepLogs, weeklyRateKg } = {}) {
+export function computeGoalProgress(goal, { startWeightKg, currentWeightKg, currentPRs, sleepLogs, weeklyRateKg, currentBodyFatPct, workoutsPerWeek } = {}) {
   if (goal.type === 'weight') {
     if (currentWeightKg == null || startWeightKg == null) return { percent: 0, current: currentWeightKg ?? null, label: `${goal.targetKg}kg`, etaWeeks: null };
     const totalDelta = goal.targetKg - startWeightKg;
@@ -260,6 +282,20 @@ export function computeGoalProgress(goal, { startWeightKg, currentWeightKg, curr
     const current = recent.length ? r1(recent.reduce((a, b) => a + b, 0) / recent.length) : 0;
     const percent = clamp((current / goal.targetScore) * 100, 0, 100);
     return { percent: r1(percent), current, label: `${goal.targetScore}/10 avg sleep quality`, etaWeeks: null };
+  }
+  if (goal.type === 'bodyfat') {
+    // Body fat is a REDUCTION goal (target < start, typically) — percent moved
+    // is measured the same directional way as the weight goal above.
+    if (currentBodyFatPct == null || goal.startBodyFatPct == null) return { percent: 0, current: currentBodyFatPct ?? null, label: `${goal.targetBodyFatPct}% body fat`, etaWeeks: null };
+    const totalDelta = goal.targetBodyFatPct - goal.startBodyFatPct;
+    const doneDelta = currentBodyFatPct - goal.startBodyFatPct;
+    const percent = totalDelta === 0 ? 100 : clamp((doneDelta / totalDelta) * 100, 0, 100);
+    return { percent: r1(percent), current: currentBodyFatPct, label: `${goal.targetBodyFatPct}% body fat`, etaWeeks: null };
+  }
+  if (goal.type === 'workoutFrequency') {
+    const current = workoutsPerWeek ?? 0;
+    const percent = clamp((current / goal.targetPerWeek) * 100, 0, 100);
+    return { percent: r1(percent), current: r1(current), label: `${goal.targetPerWeek} workouts/week`, etaWeeks: null };
   }
   return { percent: 0, current: null, label: '', etaWeeks: null };
 }

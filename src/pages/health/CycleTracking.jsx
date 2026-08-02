@@ -1,20 +1,23 @@
 import { useState, useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus, X } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
-import { CYCLE_PHASE_LABEL, CYCLE_PHASE_COLOR } from '../../utils/health-science';
+import { CYCLE_PHASE_LABEL, CYCLE_PHASE_COLOR, estimateCycleLength } from '../../utils/health-science';
+import { fmtDateShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
 
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, getCyclePhase } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
   const [notes, setNotes] = useState('');
+  const [newSymptom, setNewSymptom] = useState('');
 
   const phase = getCyclePhase();
+  const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
   const toggleSymptom = (s) => setSymptoms((arr) => (arr.includes(s) ? arr.filter((x) => x !== s) : [...arr, s]));
 
   const save = () => {
@@ -23,18 +26,31 @@ export default function CycleTracking() {
     setNotes('');
   };
 
+  const submitCustomSymptom = (e) => {
+    e.preventDefault();
+    if (!newSymptom.trim()) return;
+    addCustomSymptom(newSymptom.trim());
+    setNewSymptom('');
+  };
+
+  // The most recent period-start log without a recorded end date — surfaces a
+  // "mark ended" action instead of forcing a second explicit start-date entry.
+  const openPeriod = [...cycleLogs].reverse().find((c) => !c.endDate);
+
   // Average energy by cycle phase — a light correlation view without needing
-  // a full Pearson r (phase is categorical, not continuous).
-  const energyByPhase = useMemo(() => {
+  // a full Pearson r (phase is categorical, not continuous). Uses the SAME
+  // estimated cycle length as the "Current Phase" card above (previously
+  // hardcoded to 28 here, which could silently disagree with that card).
+  const { energyByPhase, cycleLen } = useMemo(() => {
     const dates = cycleLogs.map((c) => c.date).sort();
-    if (dates.length < 2) return null;
+    if (dates.length < 2) return { energyByPhase: null, cycleLen: null };
+    const cycleLen = estimateCycleLength(dates) || 28;
     const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
     for (const log of energyLogs) {
       const cyclesBefore = dates.filter((d) => d <= log.date);
       if (!cyclesBefore.length) continue;
       const lastStart = cyclesBefore[cyclesBefore.length - 1];
       const dayOfCycle = Math.floor((new Date(log.date) - new Date(lastStart)) / 86400000) + 1;
-      const cycleLen = 28;
       let p;
       if (dayOfCycle <= 5) p = 'menstrual';
       else if (dayOfCycle <= cycleLen * 0.46) p = 'follicular';
@@ -44,18 +60,37 @@ export default function CycleTracking() {
       if (log.energyStartLevel != null) buckets[p].push(log.energyStartLevel);
     }
     const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
-    return Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, avg(v)]));
+    return { energyByPhase: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, avg(v)])), cycleLen };
   }, [cycleLogs, energyLogs]);
+
+  // Predicted next period = last start + estimated cycle length. A rough
+  // calendar projection, not a fertility/ovulation prediction.
+  const predictedNext = useMemo(() => {
+    if (!cycleLogs.length) return null;
+    const lastStart = [...cycleLogs].map((c) => c.date).sort().at(-1);
+    const len = (cycleLogs.length >= 2 ? estimateCycleLength(cycleLogs.map((c) => c.date).sort()) : null) || 28;
+    const d = new Date(lastStart + 'T00:00:00');
+    d.setDate(d.getDate() + len);
+    return d.toISOString().slice(0, 10);
+  }, [cycleLogs]);
 
   return (
     <div className="space-y-6">
       {phase && (
         <Card title="Current Phase">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Badge color={CYCLE_PHASE_COLOR[phase.phase]}>{CYCLE_PHASE_LABEL[phase.phase]}</Badge>
             {phase.dayOfCycle && <span className="text-sm text-mute">Day {phase.dayOfCycle} of ~{phase.cycleLength}</span>}
+            {predictedNext && <span className="text-sm text-mute">· Next period expected ~{fmtDateShort(predictedNext)}</span>}
           </div>
         </Card>
+      )}
+
+      {openPeriod && (
+        <div className="flex items-center justify-between gap-3 border border-line rounded-lg px-4 py-3 bg-card">
+          <span className="text-sm">Period started {fmtDateShort(openPeriod.date)} — still open.</span>
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => markPeriodEnd(openPeriod.id)}>Mark ended today</Button>
+        </div>
       )}
 
       <Card title="Log Period Start">
@@ -67,25 +102,39 @@ export default function CycleTracking() {
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
         </div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {SYMPTOMS.map((s) => (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {allSymptoms.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => toggleSymptom(s)}
-              className={`px-3 py-1.5 rounded-full text-xs border cursor-pointer transition-colors ${
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs border cursor-pointer transition-colors ${
                 symptoms.includes(s) ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute'
               }`}
             >
               {s}
+              {customCycleSymptoms.includes(s) && (
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  onClick={(e) => { e.stopPropagation(); removeCustomSymptom(s); }}
+                  className="hover:text-bad"
+                >
+                  <X size={11} />
+                </span>
+              )}
             </button>
           ))}
         </div>
+        <form onSubmit={submitCustomSymptom} className="flex gap-2 mb-3">
+          <Input value={newSymptom} onChange={(e) => setNewSymptom(e.target.value)} placeholder="Add a custom symptom…" className="flex-1 !py-1.5 text-xs" />
+          <Button type="submit" variant="ghost" className="!px-2 !py-1"><Plus size={13} /></Button>
+        </form>
         <Button onClick={save}>Log today as period start</Button>
       </Card>
 
       {energyByPhase && (
-        <Card title="Energy by Phase">
+        <Card title="Energy by Phase" action={cycleLen && <span className="text-xs text-mute">est. cycle length: {cycleLen}d</span>}>
           <div className="grid grid-cols-4 gap-3 text-center">
             {Object.entries(energyByPhase).map(([phaseKey, val]) => (
               <div key={phaseKey}>
@@ -102,7 +151,9 @@ export default function CycleTracking() {
           <ul className="space-y-1.5">
             {[...cycleLogs].reverse().map((c) => (
               <li key={c.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>{c.date} · {c.flow}{c.symptoms.length ? ` · ${c.symptoms.join(', ')}` : ''}</span>
+                <span>
+                  {c.date}{c.endDate ? ` → ${c.endDate}` : ''} · {c.flow}{c.symptoms.length ? ` · ${c.symptoms.join(', ')}` : ''}
+                </span>
                 <button onClick={() => deleteCycleLog(c.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>
             ))}
