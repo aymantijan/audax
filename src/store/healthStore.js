@@ -5,7 +5,7 @@ import { estimateMacros, foodQualityScore } from '../utils/nutrition-db';
 import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
-  bestSleepWindow, computeCyclePhase, computeGoalProgress,
+  bestSleepWindow, computeCyclePhase, computeGoalProgress, estimate1RM,
 } from '../utils/health-science';
 import { useSkillStore } from './skillStore';
 import { useHabitStore } from './habitStore';
@@ -58,6 +58,8 @@ export const useHealthStore = create(
       cycleLogs: [], // [{ id, date, flow:'light'|'medium'|'heavy', symptoms:[...], notes }] — one per period start date
       goals: [], // [{ id, type:'weight'|'strength'|'sleep', targetKg?, exercise?, targetScore?, startWeightKg?, achieved, createdAt }]
       reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
+      weightUnit: 'kg', // 'kg' | 'lb' — display/input preference only; all workout/body-comp data is stored in kg
+      setWeightUnit: (unit) => set({ weightUnit: unit === 'lb' ? 'lb' : 'kg' }),
 
       // ─────────── Habit → Health integration ───────────
       // Called by habitStore.toggleHabit when a habit with a `healthLink` is
@@ -552,6 +554,104 @@ export const useHealthStore = create(
         return { sleepVsStrength, stressVsSpending, energyVsTradingAccuracy, sleepVsTradingAccuracy, energyVsTiltRisk, sleepVsTiltRisk };
       },
 
+      // ─────────── Custom correlation picker (Analytics: "pick any two") ───────────
+      getMetricRegistry: () => [
+        { value: 'sleepQuality', label: 'Sleep Quality' },
+        { value: 'stress', label: 'Stress' },
+        { value: 'energy', label: 'Energy' },
+        { value: 'strengthVolume', label: 'Strength Volume (kg)' },
+        { value: 'cardioMinutes', label: 'Cardio Minutes' },
+        { value: 'workoutQuality', label: 'Workout Quality' },
+        { value: 'spending', label: 'Spending (DH)' },
+        { value: 'tradingWinRate', label: 'Trading Win Rate' },
+        { value: 'tradingPnl', label: 'Trading P&L' },
+        { value: 'waterMl', label: 'Water Intake (ml)' },
+        { value: 'weightKg', label: 'Body Weight (kg)' },
+        { value: 'proteinG', label: 'Protein (g)' },
+        { value: 'caloriesKcal', label: 'Calories (kcal)' },
+      ],
+
+      // date → value map for one metric key from the registry above.
+      getMetricSeriesMap: (key) => {
+        const s = get();
+        const energyLogs = useHabitStore.getState().energyLogs;
+        switch (key) {
+          case 'sleepQuality':
+            return Object.fromEntries(energyLogs.map((l) => [l.date, l.sleepData?.sleepQualityScore ?? null]).filter(([, v]) => v != null));
+          case 'stress':
+            return Object.fromEntries(energyLogs.map((l) => [l.date, l.stressLevel ?? null]).filter(([, v]) => v != null));
+          case 'energy':
+            return Object.fromEntries(energyLogs.map((l) => [l.date, l.energyStartLevel ?? null]).filter(([, v]) => v != null));
+          case 'strengthVolume': {
+            const m = {};
+            for (const w of s.workouts.filter((w) => w.type === 'strength')) {
+              m[w.date] = (m[w.date] || 0) + (w.sets || []).reduce((a, st) => a + (Number(st.reps) || 0) * (Number(st.weight) || 0), 0);
+            }
+            return m;
+          }
+          case 'cardioMinutes': {
+            const m = {};
+            for (const w of s.workouts.filter((w) => w.type === 'cardio')) m[w.date] = (m[w.date] || 0) + (Number(w.durationMin) || 0);
+            return m;
+          }
+          case 'workoutQuality': {
+            const byDate = {};
+            for (const w of s.workouts.filter((w) => w.quality)) (byDate[w.date] ||= []).push(w.quality);
+            return Object.fromEntries(Object.entries(byDate).map(([d, arr]) => [d, arr.reduce((a, b) => a + b, 0) / arr.length]));
+          }
+          case 'spending': {
+            const journal = useAccountingStore.getState().journal;
+            const m = {};
+            for (const e of journal) {
+              const spend = (e.lines || []).filter((l) => String(l.account).startsWith('6')).reduce((a, l) => a + (Number(l.debit) || 0), 0);
+              if (spend > 0) m[e.date] = (m[e.date] || 0) + spend;
+            }
+            return m;
+          }
+          case 'tradingWinRate': {
+            const trades = useTradingStore.getState().trades;
+            const byDate = {};
+            for (const t of trades) (byDate[String(t.date).slice(0, 10)] ||= []).push(t);
+            return Object.fromEntries(Object.entries(byDate).map(([d, ts]) => [d, ts.filter((t) => t.pnl > 0).length / ts.length]));
+          }
+          case 'tradingPnl': {
+            const trades = useTradingStore.getState().trades;
+            const m = {};
+            for (const t of trades) {
+              const d = String(t.date).slice(0, 10);
+              m[d] = (m[d] || 0) + (Number(t.pnl) || 0);
+            }
+            return m;
+          }
+          case 'waterMl':
+            return Object.fromEntries(s.recoveryLogs.filter((r) => r.waterMl).map((r) => [r.date, r.waterMl]));
+          case 'weightKg':
+            return Object.fromEntries(s.bodyComp.filter((b) => b.weightKg).map((b) => [b.date, b.weightKg]));
+          case 'proteinG': {
+            const m = {};
+            for (const n of s.nutritionLogs) m[n.date] = (m[n.date] || 0) + (Number(n.protein) || 0);
+            return m;
+          }
+          case 'caloriesKcal': {
+            const m = {};
+            for (const n of s.nutritionLogs) m[n.date] = (m[n.date] || 0) + (Number(n.kcal) || 0);
+            return m;
+          }
+          default:
+            return {};
+        }
+      },
+
+      getCustomCorrelation: (keyA, keyB) => {
+        if (!keyA || !keyB) return { r: null, points: [] };
+        const a = get().getMetricSeriesMap(keyA);
+        const b = get().getMetricSeriesMap(keyB);
+        const dates = Object.keys(a).filter((d) => b[d] != null);
+        const points = dates.sort().map((d) => ({ date: d, x: r1(a[d]), y: r1(b[d]) }));
+        const r = pearsonCorrelation(points.map((p) => [p.x, p.y]));
+        return { r, points };
+      },
+
       // Per-habit energy correlation: average morning energy on days the habit was
       // completed vs. days it wasn't — a simple, readable alternative to Pearson r
       // for a boolean×continuous relationship, used by the Health Analytics tab.
@@ -612,6 +712,42 @@ export const useHealthStore = create(
         return buckets.map(({ label, volume, sessions }) => ({ label, volume, sessions }));
       },
 
+      // Best estimated 1RM (Epley) per exercise, checked across every logged
+      // set — a lower-weight, higher-rep set can imply a higher 1RM than the
+      // outright weight PR, so this isn't just getPRs() run through the formula.
+      getEstimated1RMs: () => {
+        const best = {};
+        for (const w of get().workouts.filter((w) => w.type === 'strength')) {
+          for (const st of w.sets || []) {
+            const weight = Number(st.weight) || 0;
+            const reps = Number(st.reps) || 0;
+            if (!weight || !reps) continue;
+            const key = w.exercise?.trim().toLowerCase();
+            if (!key) continue;
+            const oneRM = estimate1RM(weight, reps);
+            if (!best[key] || oneRM > best[key].oneRM) {
+              best[key] = { exercise: w.exercise, oneRM: r1(oneRM), weight, reps, date: w.date };
+            }
+          }
+        }
+        return Object.values(best).sort((a, b) => b.oneRM - a.oneRM);
+      },
+
+      // Every distinct exercise ever logged, with session count / last-performed
+      // date / best effort — powers the Workout tab's exercise library.
+      getExerciseLibrary: () => {
+        const byExercise = {};
+        for (const w of get().workouts) {
+          const key = (w.exercise?.trim() || (w.type === 'cardio' ? 'Cardio (unnamed)' : 'Strength (unnamed)'));
+          const entry = (byExercise[key] ||= { exercise: key, type: w.type, sessions: 0, lastDate: w.date, bestWeightKg: 0, totalMinutes: 0 });
+          entry.sessions += 1;
+          if (w.date > entry.lastDate) entry.lastDate = w.date;
+          if (w.type === 'cardio') entry.totalMinutes += Number(w.durationMin) || 0;
+          else entry.bestWeightKg = Math.max(entry.bestWeightKg, 0, ...(w.sets || []).map((s) => Number(s.weight) || 0));
+        }
+        return Object.values(byExercise).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
+      },
+
       // Set-level RPE-vs-reps scatter — surfaces whether higher reps correlate
       // with higher perceived exertion for this user specifically.
       getRpeRepsScatter: () =>
@@ -666,7 +802,7 @@ export const useHealthStore = create(
         set({
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
-          customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500,
+          customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
         }),
     }),

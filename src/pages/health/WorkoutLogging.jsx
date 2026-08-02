@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Dumbbell, HeartPulse, Trophy } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
+import { kgToLb, lbToKg } from '../../utils/health-science';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function WorkoutLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, deleteWorkout, getPRs, getWorkoutVolumeSeries } = useHealthStore();
+  const { workouts, logWorkout, deleteWorkout, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
   const [type, setType] = useState(pendingPrompt?.type === 'cardio' ? 'cardio' : 'strength');
   const [exercise, setExercise] = useState(pendingPrompt?.habitName || '');
   const [durationMin, setDurationMin] = useState(pendingPrompt?.duration || 30);
@@ -17,6 +18,10 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const [quality, setQuality] = useState(7);
   const [notes, setNotes] = useState('');
   const [progressExercise, setProgressExercise] = useState('');
+
+  const isLb = weightUnit === 'lb';
+  const dispW = (kg) => (kg ? Math.round((isLb ? kgToLb(kg) : kg) * 10) / 10 : 0);
+  const toKg = (v) => (isLb ? lbToKg(Number(v) || 0) : Number(v) || 0);
 
   const addSet = () => setSets((s) => [...s, blankSet()]);
   const updateSet = (i, patch) => setSets((s) => s.map((set, idx) => (idx === i ? { ...set, ...patch } : set)));
@@ -29,7 +34,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
         type,
         exercise,
         durationMin: type === 'cardio' ? durationMin : undefined,
-        sets: type === 'strength' ? sets.filter((s) => s.reps || s.weight) : [],
+        sets: type === 'strength' ? sets.filter((s) => s.reps || s.weight).map((s) => ({ ...s, weight: toKg(s.weight) })) : [],
         quality,
         notes,
       },
@@ -46,6 +51,8 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const history = [...workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 20);
   const prs = getPRs();
   const volumeSeries = getWorkoutVolumeSeries();
+  const oneRMs = getEstimated1RMs();
+  const library = getExerciseLibrary();
 
   const strengthExercises = useMemo(
     () => [...new Set(workouts.filter((w) => w.type === 'strength' && w.exercise).map((w) => w.exercise))],
@@ -58,10 +65,10 @@ export default function WorkoutLogging({ pendingPrompt }) {
       .sort((a, b) => (a.date < b.date ? -1 : 1))
       .map((w) => ({
         date: w.date.slice(5),
-        maxWeight: Math.max(0, ...(w.sets || []).map((s) => Number(s.weight) || 0)),
+        maxWeight: dispW(Math.max(0, ...(w.sets || []).map((s) => Number(s.weight) || 0))),
         volume: (w.sets || []).reduce((a, s) => a + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0),
       }));
-  }, [workouts, progressExercise]);
+  }, [workouts, progressExercise, weightUnit]);
 
   return (
     <div className="space-y-6">
@@ -82,11 +89,25 @@ export default function WorkoutLogging({ pendingPrompt }) {
             </Field>
           ) : (
             <div className="space-y-2">
-              <div className="text-xs text-mute uppercase tracking-wide">Sets</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-mute uppercase tracking-wide">Sets</div>
+                <div className="flex gap-1">
+                  {['kg', 'lb'].map((u) => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => setWeightUnit(u)}
+                      className={`px-2 py-0.5 rounded text-[10px] uppercase cursor-pointer border ${weightUnit === u ? 'border-accent text-accent' : 'border-line text-mute'}`}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {sets.map((s, i) => (
                 <div key={i} className="grid grid-cols-5 gap-2 items-center">
                   <Input type="number" placeholder="Reps" value={s.reps} onChange={(e) => updateSet(i, { reps: e.target.value })} />
-                  <Input type="number" placeholder="Weight (kg)" value={s.weight} onChange={(e) => updateSet(i, { weight: e.target.value })} />
+                  <Input type="number" placeholder={`Weight (${weightUnit})`} value={s.weight} onChange={(e) => updateSet(i, { weight: e.target.value })} />
                   <div>
                     <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSet(i, { rpe: Number(e.target.value) })} className="w-full" />
                     <div className="text-[10px] text-mute text-center">RPE {s.rpe}</div>
@@ -132,8 +153,22 @@ export default function WorkoutLogging({ pendingPrompt }) {
               <li key={pr.exercise} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
                 <Trophy size={14} className="text-warn shrink-0" />
                 <span className="flex-1">{pr.exercise}</span>
-                <span className="font-semibold">{pr.weight}kg × {pr.reps}</span>
+                <span className="font-semibold">{dispW(pr.weight)}{weightUnit} × {pr.reps}</span>
                 <span className="text-mute text-xs">{pr.date}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {oneRMs.length > 0 && (
+        <Card title="Estimated 1RM" action={<span className="text-[10px] text-mute">Epley formula</span>}>
+          <ul className="space-y-1.5">
+            {oneRMs.map((rm) => (
+              <li key={rm.exercise} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
+                <span className="flex-1">{rm.exercise}</span>
+                <span className="font-semibold">{dispW(rm.oneRM)}{weightUnit}</span>
+                <span className="text-mute text-xs">from {dispW(rm.weight)}{weightUnit} × {rm.reps} on {rm.date}</span>
               </li>
             ))}
           </ul>
@@ -152,12 +187,36 @@ export default function WorkoutLogging({ pendingPrompt }) {
                 <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} />
-                <Line type="monotone" dataKey="maxWeight" name="Max weight (kg)" stroke="#00d9ff" strokeWidth={2} dot />
+                <Line type="monotone" dataKey="maxWeight" name={`Max weight (${weightUnit})`} stroke="#00d9ff" strokeWidth={2} dot />
               </LineChart>
             </ResponsiveContainer>
           ) : (
             <div className="text-center text-mute text-sm py-6">{progressExercise ? 'Log a few more sessions to see a trend.' : 'Pick an exercise to see its progression.'}</div>
           )}
+        </Card>
+      )}
+
+      {library.length > 0 && (
+        <Card title="Exercise Library" action={<Library size={16} className="text-mute" />}>
+          <ul className="space-y-1.5">
+            {library.map((ex) => (
+              <li
+                key={ex.exercise}
+                onClick={() => ex.type === 'strength' && setProgressExercise(ex.exercise)}
+                className={`flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm ${ex.type === 'strength' ? 'cursor-pointer hover:border-accent' : ''}`}
+              >
+                {ex.type === 'cardio' ? <HeartPulse size={14} className="text-accent shrink-0" /> : <Dumbbell size={14} className="text-accent shrink-0" />}
+                <span className="flex-1">{ex.exercise}</span>
+                <span className="text-mute text-xs">{ex.sessions} session{ex.sessions !== 1 ? 's' : ''}</span>
+                {ex.type === 'strength' ? (
+                  <span className="text-xs">best {dispW(ex.bestWeightKg)}{weightUnit}</span>
+                ) : (
+                  <span className="text-xs">{ex.totalMinutes}min total</span>
+                )}
+                <span className="text-mute text-xs">last {ex.lastDate}</span>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

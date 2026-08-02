@@ -1,7 +1,8 @@
+import { useState, useMemo } from 'react';
 import { ResponsiveContainer, ComposedChart, Bar, Line, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { correlationStrength } from '../../utils/health-science';
-import { Card, Badge, EmptyState } from '../../components/common/ui';
+import { Card, Badge, EmptyState, Field, Select } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -15,7 +16,10 @@ const CORRELATIONS = [
 ];
 
 export default function Analytics() {
-  const { getCorrelations, getWeightPrediction, getBadges, getHabitEnergyCorrelations, getStressSpendingSeries, getRpeRepsScatter, getAnnualReport } = useHealthStore();
+  const {
+    getCorrelations, getWeightPrediction, getBadges, getHabitEnergyCorrelations, getStressSpendingSeries, getRpeRepsScatter, getAnnualReport,
+    getMetricRegistry, getCustomCorrelation,
+  } = useHealthStore();
   const correlations = getCorrelations();
   const prediction = getWeightPrediction();
   const badges = getBadges();
@@ -23,9 +27,45 @@ export default function Analytics() {
   const stressSpending = getStressSpendingSeries();
   const rpeReps = getRpeRepsScatter();
   const annual = getAnnualReport();
+  const registry = getMetricRegistry();
+  const [metricA, setMetricA] = useState('sleepQuality');
+  const [metricB, setMetricB] = useState('energy');
+  const custom = useMemo(() => getCustomCorrelation(metricA, metricB), [metricA, metricB, getCustomCorrelation]);
+  const customStrength = correlationStrength(custom.r);
+  const labelFor = (key) => registry.find((m) => m.value === key)?.label || key;
 
   return (
     <div className="space-y-6">
+      <Card title="Custom Correlation">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <Field label="Metric A">
+            <Select value={metricA} onChange={(e) => setMetricA(e.target.value)} options={registry} />
+          </Field>
+          <Field label="Metric B">
+            <Select value={metricB} onChange={(e) => setMetricB(e.target.value)} options={registry} />
+          </Field>
+        </div>
+        {custom.points.length > 2 ? (
+          <>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm">{labelFor(metricA)} ↔ {labelFor(metricB)}</span>
+              <Badge color={customStrength.color}>{custom.r != null ? `r = ${custom.r}` : customStrength.label}</Badge>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <ScatterChart>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                <XAxis type="number" dataKey="x" name={labelFor(metricA)} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                <YAxis type="number" dataKey="y" name={labelFor(metricB)} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
+                <Scatter data={custom.points} fill="#00d9ff" />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </>
+        ) : (
+          <EmptyState>Not enough overlapping days logged for both metrics yet — need at least 3.</EmptyState>
+        )}
+      </Card>
+
       <Card title="Cross-Domain Correlations">
         <div className="space-y-3">
           {CORRELATIONS.map((c) => {

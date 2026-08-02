@@ -85,6 +85,19 @@ export function computeTDEE(bmr, activityLevel) {
   return Math.round(bmr * mult);
 }
 
+// ---- Weight units (all workout/body-comp data is stored in kg; these only
+// convert for display/input in the optional lb view) ----
+const KG_PER_LB = 0.453592;
+export const kgToLb = (kg) => kg / KG_PER_LB;
+export const lbToKg = (lb) => lb * KG_PER_LB;
+
+// Epley formula, the standard estimate for reps under ~12 (beyond that the
+// linear model overstates 1RM, but it's still a useful relative signal).
+export function estimate1RM(weight, reps) {
+  if (!weight || !reps) return 0;
+  return reps === 1 ? weight : weight * (1 + reps / 30);
+}
+
 // ---- Weight-change prediction ----
 // A transparent, simplified energy-balance model: 1 kg of body-fat mass holds
 // roughly 7700 kcal. A sustained daily deficit is converted to a weekly rate,
