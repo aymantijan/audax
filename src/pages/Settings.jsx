@@ -20,7 +20,7 @@ const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-fina
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid' });
+  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid', gender: user?.gender || '' });
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
@@ -108,6 +108,13 @@ export default function SettingsPage() {
               value={form.careerGoal}
               onChange={(e) => setForm({ ...form, careerGoal: e.target.value })}
               options={CAREER_GOALS}
+            />
+          </Field>
+          <Field label="Gender" hint="Shows/hides the Cycle tab in Health.">
+            <Select
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
             />
           </Field>
         </div>

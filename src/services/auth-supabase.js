@@ -14,14 +14,14 @@ const notConfigured = { error: 'Cloud auth is not configured. Set VITE_SUPABASE_
 
 // Register. Supabase hashes the password (bcrypt) server-side and sends the
 // verification email automatically. Profile fields ride along in user_metadata.
-export async function register({ email, password, fullName, careerGoal }) {
+export async function register({ email, password, fullName, careerGoal, gender }) {
   if (!isSupabaseConfigured) return notConfigured;
   const strength = validatePasswordStrength(password);
   if (strength) return { error: strength };
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, career_goal: careerGoal }, emailRedirectTo: `${window.location.origin}/welcome` },
+    options: { data: { full_name: fullName, career_goal: careerGoal, gender }, emailRedirectTo: `${window.location.origin}/welcome` },
   });
   if (error) return { error: error.message };
   return { user: data.user, needsVerification: !data.session, message: 'Check your email to verify your account.' };

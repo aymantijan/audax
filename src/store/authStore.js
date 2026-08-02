@@ -29,6 +29,10 @@ export const useAuthStore = create(
             email: profile.email || '',
             primaryDomain: profile.primaryDomain || 'trading',
             careerGoal: profile.careerGoal || 'Hybrid',
+            // null = not set (legacy accounts from before this field existed,
+            // or a user who skipped it) — Health.jsx treats null the same as
+            // 'female' (shows Cycle) so this is never a breaking default.
+            gender: profile.gender || null,
             theme: 'dark',
             createdAt: Date.now(),
           },

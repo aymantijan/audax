@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target } from 'lucide-react';
 import { useHealthStore } from '../store/healthStore';
+import { useAuthStore } from '../store/authStore';
 import { Modal, Button } from '../components/common/ui';
 import HealthDashboard from './health/Dashboard';
 import SleepTracker from './health/SleepTracker';
@@ -31,10 +32,16 @@ const TAB_FOR_LINK = { cardio: 'workout', strength: 'workout', recovery: 'recove
 export default function Health() {
   const [tab, setTab] = useState('dashboard');
   const { pendingPrompts, dismissPrompt } = useHealthStore();
+  const gender = useAuthStore((s) => s.user?.gender);
   const [activePrompt, setActivePrompt] = useState(null);
 
-  const Active = TABS.find((t) => t.key === tab)?.Component || HealthDashboard;
-  const promptForActiveTab = activePrompt && TAB_FOR_LINK[activePrompt.type] === tab ? activePrompt : null;
+  // Cycle only hides for an explicit 'male' — unset/legacy accounts (no
+  // gender on file yet) keep seeing it exactly as before this field existed.
+  const visibleTabs = useMemo(() => (gender === 'male' ? TABS.filter((t) => t.key !== 'cycle') : TABS), [gender]);
+  const effectiveTab = visibleTabs.some((t) => t.key === tab) ? tab : 'dashboard';
+
+  const Active = visibleTabs.find((t) => t.key === effectiveTab)?.Component || HealthDashboard;
+  const promptForActiveTab = activePrompt && TAB_FOR_LINK[activePrompt.type] === effectiveTab ? activePrompt : null;
 
   const openPrompt = (p) => {
     setActivePrompt(p);
@@ -63,9 +70,9 @@ export default function Health() {
       )}
 
       <div className="flex flex-wrap gap-1 border-b border-line overflow-x-auto">
-        {TABS.map((t) => {
+        {visibleTabs.map((t) => {
           const Icon = t.icon;
-          const active = tab === t.key;
+          const active = effectiveTab === t.key;
           return (
             <button
               key={t.key}

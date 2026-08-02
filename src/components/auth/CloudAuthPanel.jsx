@@ -11,13 +11,13 @@ export default function CloudAuthPanel() {
   const localRegister = useAuthStore((s) => s.register);
   const user = useAuthStore((s) => s.user);
   const [mode, setMode] = useState('login'); // login | register | forgot
-  const [form, setForm] = useState({ email: '', password: '', fullName: '', careerGoal: 'Hybrid' });
+  const [form, setForm] = useState({ email: '', password: '', fullName: '', careerGoal: 'Hybrid', gender: '' });
   const [msg, setMsg] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const hydrateLocal = (meta = {}) => {
-    if (!user) localRegister({ name: meta.fullName || form.fullName || form.email.split('@')[0], email: form.email, careerGoal: meta.careerGoal || form.careerGoal });
+    if (!user) localRegister({ name: meta.fullName || form.fullName || form.email.split('@')[0], email: form.email, careerGoal: meta.careerGoal || form.careerGoal, gender: meta.gender || form.gender || null });
   };
 
   const submit = async (e) => {
@@ -25,14 +25,14 @@ export default function CloudAuthPanel() {
     setErr(null); setMsg(null); setBusy(true);
     try {
       if (mode === 'register') {
-        const r = await register({ email: form.email, password: form.password, fullName: form.fullName, careerGoal: form.careerGoal });
+        const r = await register({ email: form.email, password: form.password, fullName: form.fullName, careerGoal: form.careerGoal, gender: form.gender || null });
         if (r.error) setErr(r.error);
         else if (r.needsVerification) setMsg(r.message);
-        else { hydrateLocal({ fullName: form.fullName, careerGoal: form.careerGoal }); }
+        else { hydrateLocal({ fullName: form.fullName, careerGoal: form.careerGoal, gender: form.gender }); }
       } else if (mode === 'login') {
         const r = await login({ email: form.email, password: form.password });
         if (r.error) setErr(r.error);
-        else hydrateLocal({ fullName: r.user?.user_metadata?.full_name, careerGoal: r.user?.user_metadata?.career_goal });
+        else hydrateLocal({ fullName: r.user?.user_metadata?.full_name, careerGoal: r.user?.user_metadata?.career_goal, gender: r.user?.user_metadata?.gender });
       } else {
         const r = await requestPasswordReset(form.email);
         setMsg(r.message || r.error);
@@ -63,6 +63,13 @@ export default function CloudAuthPanel() {
           </Field>
           <Field label="Career goal">
             <Select value={form.careerGoal} onChange={(e) => setForm({ ...form, careerGoal: e.target.value })} options={CAREER_GOALS} />
+          </Field>
+          <Field label="Gender" hint="Only used to show/hide the Cycle tab in Health.">
+            <Select
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+            />
           </Field>
         </>
       )}

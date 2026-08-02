@@ -19,7 +19,7 @@ const CAREER_LABELS = {
 // with no Supabase project at all.
 export default function Welcome() {
   const register = useAuthStore((s) => s.register);
-  const [form, setForm] = useState({ name: '', email: '', primaryDomain: 'trading', careerGoal: 'Hybrid' });
+  const [form, setForm] = useState({ name: '', email: '', primaryDomain: 'trading', careerGoal: 'Hybrid', gender: '' });
   const [error, setError] = useState('');
 
   const submit = (e) => {
@@ -69,6 +69,13 @@ export default function Welcome() {
                 value={form.careerGoal}
                 onChange={(e) => setForm({ ...form, careerGoal: e.target.value })}
                 options={CAREER_GOALS.map((g) => ({ value: g, label: CAREER_LABELS[g] }))}
+              />
+            </Field>
+            <Field label="Gender" hint="Only used to show/hide the Cycle tab in Health.">
+              <Select
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
               />
             </Field>
             {error && <p className="text-bad text-sm">{error}</p>}
