@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { FOOD_DB, getServingOptions } from '../../utils/nutrition-db';
+import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge } from '../../components/common/ui';
 
 // Rough daily macro targets derived from the protein target (spec: progress bars
@@ -19,6 +20,7 @@ export default function NutritionTracker({ pendingPrompt }) {
   const [amount, setAmount] = useState(100);
   const [unit, setUnit] = useState('g');
   const [templateName, setTemplateName] = useState('');
+  const [logDate, setLogDate] = useState(todayKey());
 
   const { entries, totals, quality } = getTodayNutrition();
   const targets = macroTargets(proteinTargetG);
@@ -46,10 +48,11 @@ export default function NutritionTracker({ pendingPrompt }) {
   const submit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    logMeal(name.trim(), amount, unit, pendingPrompt?.id);
+    logMeal(name.trim(), amount, unit, pendingPrompt?.id, logDate);
     setName('');
     setAmount(100);
     setUnit('g');
+    setLogDate(todayKey());
   };
 
   const saveTemplate = () => {
@@ -73,6 +76,9 @@ export default function NutritionTracker({ pendingPrompt }) {
           </Field>
           <Field label="Unit">
             <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={servingOptions.map((o) => ({ value: o.label, label: o.label }))} className="w-32" />
+          </Field>
+          <Field label="Date" hint="Backdate a missed meal">
+            <Input type="date" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} />
           </Field>
           <Button type="submit">Log meal</Button>
         </form>
@@ -133,7 +139,7 @@ export default function NutritionTracker({ pendingPrompt }) {
               <li key={t.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{t.name} <span className="text-mute text-xs">({t.items.length} items)</span></span>
                 <span className="flex items-center gap-3">
-                  <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id)}>Log</Button>
+                  <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id, logDate)}>Log</Button>
                   <button onClick={() => deleteMealTemplate(t.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>

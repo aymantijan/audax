@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { AlertTriangle, Plus, X, Droplet } from 'lucide-react';
+import { AlertTriangle, Plus, X, Droplet, History } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { readinessBand } from '../../utils/health-science';
-import { todayKey } from '../../utils/formatters';
+import { todayKey, fmtDate } from '../../utils/formatters';
 import { Card, Button, Badge, Field, Input, ProgressBar } from '../../components/common/ui';
 
 const ACTIVITIES = [
@@ -22,18 +22,25 @@ export default function RecoveryTracker({ pendingPrompt }) {
     waterTargetMl, setWaterTarget, logWater, getTodayWaterMl,
   } = useHealthStore();
   const today = todayKey();
-  const todayLog = recoveryLogs.find((r) => r.date === today);
-  const [selected, setSelected] = useState(todayLog?.activities || []);
+  const [logDate, setLogDate] = useState(today);
+  const isPastDate = logDate !== today;
+  const dateLog = recoveryLogs.find((r) => r.date === logDate);
+  const [selected, setSelected] = useState(dateLog?.activities || []);
   const [newActivity, setNewActivity] = useState('');
 
   const readiness = getReadiness();
   const band = readinessBand(readiness.score);
   const alerts = getOvertrainingAlerts();
   const allActivities = [...ACTIVITIES, ...customRecoveryActivities];
-  const todayWater = getTodayWaterMl();
+  const dateWater = getTodayWaterMl(logDate);
 
   const toggle = (key) => setSelected((s) => (s.includes(key) ? s.filter((a) => a !== key) : [...s, key]));
-  const save = () => logRecovery(selected, pendingPrompt?.id);
+  const save = () => logRecovery(selected, pendingPrompt?.id, logDate);
+
+  const changeDate = (d) => {
+    setLogDate(d);
+    setSelected(recoveryLogs.find((r) => r.date === d)?.activities || []);
+  };
 
   const submitActivity = (e) => {
     e.preventDefault();
@@ -83,23 +90,39 @@ export default function RecoveryTracker({ pendingPrompt }) {
       <Card title="Water Intake" action={<Droplet size={16} className="text-mute" />}>
         <div className="mb-3">
           <div className="flex justify-between text-xs mb-1">
-            <span>Today</span>
-            <span className="text-mute">{todayWater}ml / {waterTargetMl}ml</span>
+            <span>{isPastDate ? fmtDate(logDate) : 'Today'}</span>
+            <span className="text-mute">{dateWater}ml / {waterTargetMl}ml</span>
           </div>
-          <ProgressBar value={todayWater} max={waterTargetMl} color={todayWater >= waterTargetMl ? 'var(--success)' : 'var(--accent-primary)'} />
+          <ProgressBar value={dateWater} max={waterTargetMl} color={dateWater >= waterTargetMl ? 'var(--success)' : 'var(--accent-primary)'} />
         </div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {WATER_QUICK_ADD.map((ml) => (
-            <Button key={ml} variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(ml)}>+{ml}ml</Button>
+            <Button key={ml} variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(ml, logDate)}>+{ml}ml</Button>
           ))}
-          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(-todayWater)}>Reset</Button>
+          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(-dateWater, logDate)}>Reset</Button>
         </div>
         <Field label="Daily target (ml)">
           <Input type="number" min="0" step="250" value={waterTargetMl} onChange={(e) => setWaterTarget(e.target.value)} className="w-32" />
         </Field>
       </Card>
 
-      <Card title="Today's Recovery Activities">
+      <Card
+        title={isPastDate ? `Recovery Activities — ${fmtDate(logDate)}` : "Today's Recovery Activities"}
+        action={
+          <input
+            type="date"
+            value={logDate}
+            max={today}
+            onChange={(e) => e.target.value && changeDate(e.target.value)}
+            className="bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink cursor-pointer"
+          />
+        }
+      >
+        {isPastDate && (
+          <div className="flex items-center gap-2 text-[11px] text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-1.5 mb-3">
+            <History size={12} /> Logging retroactively for {fmtDate(logDate)}.
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 mb-2">
           {allActivities.map((a) => (
             <button
@@ -123,7 +146,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
           <Input value={newActivity} onChange={(e) => setNewActivity(e.target.value)} placeholder="Add a custom activity (e.g. Sauna, Yoga)…" className="flex-1 !py-1.5 text-xs" />
           <Button type="submit" variant="ghost" className="!px-2 !py-1"><Plus size={13} /></Button>
         </form>
-        <Button onClick={save}>{todayLog ? 'Update' : 'Save'} recovery log</Button>
+        <Button onClick={save}>{dateLog ? 'Update' : 'Save'} recovery log</Button>
       </Card>
 
       <Card title="Last 14 Days">

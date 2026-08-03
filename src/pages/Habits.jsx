@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Plus, Trash2, Flame, AlertTriangle, Pencil } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
@@ -11,7 +11,7 @@ import { checkBurnoutTriggers } from '../utils/burnout';
 import { HABIT_CATEGORIES, HABIT_FREQUENCIES, WEEKDAYS, MOODS, RECOVERY_ACTIVITIES, STRESS_ITEMS, SKILL_MAP, HEALTH_LINK_TYPES } from '../utils/constants';
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { habitSchema, validate } from '../utils/validators';
-import { todayKey } from '../utils/formatters';
+import { todayKey, dateKey, fmtDate } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar, WeekdayPicker } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -38,6 +38,16 @@ export default function Habits() {
   const skills = useSkillStore((s) => s.skills);
 
   const today = todayKey();
+  const [checklistDate, setChecklistDate] = useState(today); // lets you step back and log a missed day retroactively
+  const isPastDate = checklistDate !== today;
+  const shiftChecklistDate = (days) => {
+    const d = new Date(checklistDate + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    const next = dateKey(d);
+    if (next > today) return; // never allow logging into the future
+    setChecklistDate(next);
+  };
+
   const blankHabit = { name: '', category: 'trading', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], duration: 15, targetStreak: 30 };
   const [habitModal, setHabitModal] = useState(false);
   const [habitForm, setHabitForm] = useState(blankHabit);
@@ -55,21 +65,43 @@ export default function Habits() {
     }
   };
 
-  const existing = energyLogs.find((l) => l.date === today);
+  const todayEnergyLog = energyLogs.find((l) => l.date === today);
+  const checklistEnergyLog = energyLogs.find((l) => l.date === checklistDate);
   const [checkIn, setCheckIn] = useState(() =>
-    existing
+    todayEnergyLog
       ? {
-          energyStartLevel: existing.energyStartLevel,
-          sleepHours: existing.sleepData.sleepHours,
-          sleepStartTime: existing.sleepData.sleepStartTime,
-          wakeTime: existing.sleepData.wakeTime,
-          stressChecklist: existing.stressChecklist,
-          recoveryActivities: existing.recoveryActivities || [],
-          energyEndLevel: existing.energyEndLevel,
-          mood: existing.mood,
+          energyStartLevel: todayEnergyLog.energyStartLevel,
+          sleepHours: todayEnergyLog.sleepData.sleepHours,
+          sleepStartTime: todayEnergyLog.sleepData.sleepStartTime,
+          wakeTime: todayEnergyLog.sleepData.wakeTime,
+          stressChecklist: todayEnergyLog.stressChecklist,
+          recoveryActivities: todayEnergyLog.recoveryActivities || [],
+          energyEndLevel: todayEnergyLog.energyEndLevel,
+          mood: todayEnergyLog.mood,
         }
       : blankCheckIn()
   );
+
+  // Re-seed the check-in form whenever the user steps to a different day, so
+  // editing a past day's check-in loads that day's values (or a blank form).
+  useEffect(() => {
+    const log = energyLogs.find((l) => l.date === checklistDate);
+    setCheckIn(
+      log
+        ? {
+            energyStartLevel: log.energyStartLevel,
+            sleepHours: log.sleepData.sleepHours,
+            sleepStartTime: log.sleepData.sleepStartTime,
+            wakeTime: log.sleepData.wakeTime,
+            stressChecklist: log.stressChecklist,
+            recoveryActivities: log.recoveryActivities || [],
+            energyEndLevel: log.energyEndLevel,
+            mood: log.mood,
+          }
+        : blankCheckIn()
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checklistDate]);
 
   const sleepEval = calculateSleepScore(checkIn.sleepStartTime, checkIn.wakeTime) || { score: 0, durationHours: 0, durationScore: 0, timingScore: 0, band: 'critical' };
   const sleepScore = sleepEval.score;
@@ -77,6 +109,7 @@ export default function Habits() {
 
   const active = habits.filter((h) => !h.archived);
   const dueToday = active.filter((h) => isHabitDueOn(h, today)); // e.g. hides a Mon/Wed/Fri habit on a Tuesday
+  const dueOnChecklistDate = active.filter((h) => isHabitDueOn(h, checklistDate) && h.startDate <= checklistDate);
   const compliance = habitCompliance(active, logs, 7, today);
   const burnout = useMemo(
     () => checkBurnoutTriggers({ energyLogs, compliance, trades }),
@@ -128,7 +161,7 @@ export default function Habits() {
 
   const submitCheckIn = () => {
     saveEnergyLog({
-      date: today,
+      date: checklistDate,
       energyStartLevel: Number(checkIn.energyStartLevel),
       sleepData: {
         sleepHours: Number(sleepEval.durationHours.toFixed(2)),
@@ -180,22 +213,51 @@ export default function Habits() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Habits today" value={`${dueToday.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed)).length}/${dueToday.length}`} />
         <Stat label="7-day compliance" value={compliance.total ? `${Math.round(compliance.rate * 100)}%` : '—'} />
-        <Stat label="Sleep quality today" value={existing ? `${existing.sleepData.sleepQualityScore}/10` : '—'} />
-        <Stat label="Stress today" value={existing ? `${existing.stressLevel}/10` : '—'} sub={existing ? stressLabel(existing.stressLevel) : ''} />
+        <Stat label="Sleep quality today" value={todayEnergyLog ? `${todayEnergyLog.sleepData.sleepQualityScore}/10` : '—'} />
+        <Stat label="Stress today" value={todayEnergyLog ? `${todayEnergyLog.stressLevel}/10` : '—'} sub={todayEnergyLog ? stressLabel(todayEnergyLog.stressLevel) : ''} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title="Today's Habits">
-          {dueToday.length ? (
+        <Card
+          title={isPastDate ? `Habits — ${fmtDate(checklistDate)}` : "Today's Habits"}
+          action={
+            <div className="flex items-center gap-1">
+              <button className="text-mute hover:text-ink cursor-pointer p-1" onClick={() => shiftChecklistDate(-1)} title="Previous day">
+                <ChevronLeft size={15} />
+              </button>
+              <input
+                type="date"
+                value={checklistDate}
+                max={today}
+                onChange={(e) => e.target.value && setChecklistDate(e.target.value)}
+                className="bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink cursor-pointer"
+              />
+              <button className="text-mute hover:text-ink cursor-pointer p-1 disabled:opacity-30 disabled:cursor-not-allowed" onClick={() => shiftChecklistDate(1)} disabled={!isPastDate} title="Next day">
+                <ChevronRight size={15} />
+              </button>
+              {isPastDate && (
+                <button className="text-accent hover:underline cursor-pointer text-[11px] ml-1" onClick={() => setChecklistDate(today)}>
+                  Back to today
+                </button>
+              )}
+            </div>
+          }
+        >
+          {isPastDate && (
+            <div className="flex items-center gap-2 text-[11px] text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-1.5 mb-3">
+              <History size={12} /> Logging retroactively for {fmtDate(checklistDate)} — XP and streaks update as if checked that day.
+            </div>
+          )}
+          {dueOnChecklistDate.length ? (
             <ul className="space-y-2.5">
-              {dueToday.map((h) => {
-                const done = logs.some((l) => l.habitId === h.id && l.date === today && l.completed);
+              {dueOnChecklistDate.map((h) => {
+                const done = logs.some((l) => l.habitId === h.id && l.date === checklistDate && l.completed);
                 const streak = habitStreak(h.id, logs, today, h);
                 const scheduleLabel =
                   h.frequency === 'weekly' ? 'weekly' : h.frequency === 'custom' && h.weekdays?.length ? h.weekdays.map((w) => WEEKDAYS.find((d) => d.value === w)?.label).join('/') : null;
                 return (
                   <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-3">
-                    <input type="checkbox" checked={done} onChange={() => toggleHabit(h.id)} className="w-4 h-4 cursor-pointer" />
+                    <input type="checkbox" checked={done} onChange={() => toggleHabit(h.id, checklistDate)} className="w-4 h-4 cursor-pointer" />
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
                       <div className="text-[11px] text-mute">
@@ -220,11 +282,14 @@ export default function Habits() {
               })}
             </ul>
           ) : (
-            <EmptyState>No habits yet. Start with one keystone habit.</EmptyState>
+            <EmptyState>{isPastDate ? 'No habits were due on this day.' : 'No habits yet. Start with one keystone habit.'}</EmptyState>
           )}
         </Card>
 
-        <Card title="Energy Check-in" action={existing && <Badge color="var(--success)">Logged today</Badge>}>
+        <Card
+          title={isPastDate ? `Energy Check-in — ${fmtDate(checklistDate)}` : 'Energy Check-in'}
+          action={checklistEnergyLog && <Badge color="var(--success)">{isPastDate ? 'Logged' : 'Logged today'}</Badge>}
+        >
           <div className="space-y-4">
             <div>
               <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Morning</div>
@@ -307,7 +372,7 @@ export default function Habits() {
             </div>
 
             <Button className="w-full" onClick={submitCheckIn}>
-              {existing ? 'Update check-in' : 'Save check-in'}
+              {checklistEnergyLog ? 'Update check-in' : 'Save check-in'}{isPastDate ? ` for ${fmtDate(checklistDate)}` : ''}
             </Button>
           </div>
         </Card>

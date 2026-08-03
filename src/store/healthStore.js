@@ -105,11 +105,12 @@ export const useHealthStore = create(
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
       // natural servings (e.g. amount=2, unit='egg') — see nutrition-db.js.
-      logMeal: (name, amount, unit = 'g', fulfillsPromptId) => {
+      logMeal: (name, amount, unit = 'g', fulfillsPromptId, date) => {
         const est = estimateMacros(name, amount, unit);
+        const entryDate = date || todayKey();
         const entry = {
           id: uid(),
-          date: todayKey(),
+          date: entryDate,
           name,
           amount: Number(amount) || (unit === 'g' ? 100 : 1),
           unit,
@@ -131,7 +132,8 @@ export const useHealthStore = create(
         if (entry.proteinTargetMet) award('nutrition-discipline-lv1', 5, 'protein target met');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         get().checkBadges();
-        toast(est ? `Logged ${name} (~${est.kcal} kcal)` : `Logged ${name} (unrecognized food — 0 macros, add manually)`, est ? 'success' : 'info');
+        const dateNote = entryDate === todayKey() ? '' : ` for ${entryDate}`;
+        toast(est ? `Logged ${name}${dateNote} (~${est.kcal} kcal)` : `Logged ${name}${dateNote} (unrecognized food — 0 macros, add manually)`, est ? 'success' : 'info');
         return entry;
       },
       deleteMeal: (id) => set({ nutritionLogs: get().nutritionLogs.filter((n) => n.id !== id) }),
@@ -141,10 +143,10 @@ export const useHealthStore = create(
       // `item.grams` (no unit/amount) is the legacy template shape from
       // before unit-based logging existed — treat it as a plain-grams entry
       // so old saved templates keep working unchanged.
-      logMealTemplate: (templateId) => {
+      logMealTemplate: (templateId, date) => {
         const tpl = get().mealTemplates.find((t) => t.id === templateId);
         if (!tpl) return;
-        for (const item of tpl.items) get().logMeal(item.name, item.amount ?? item.grams, item.unit ?? 'g');
+        for (const item of tpl.items) get().logMeal(item.name, item.amount ?? item.grams, item.unit ?? 'g', undefined, date);
       },
 
       // ─────────── Body composition ───────────
@@ -153,9 +155,10 @@ export const useHealthStore = create(
           data.sex === 'female'
             ? bodyFatNavyFemale({ waistCm: data.waistCm, hipCm: data.hipCm, neckCm: data.neckCm, heightCm: data.heightCm })
             : bodyFatNavyMale({ waistCm: data.waistCm, neckCm: data.neckCm, heightCm: data.heightCm });
+        const entryDate = data.date || todayKey();
         const entry = {
           id: uid(),
-          date: todayKey(),
+          date: entryDate,
           weightKg: Number(data.weightKg) || null,
           waistCm: Number(data.waistCm) || null,
           neckCm: Number(data.neckCm) || null,
@@ -171,7 +174,7 @@ export const useHealthStore = create(
         };
         set({ bodyComp: [...get().bodyComp.filter((b) => b.date !== entry.date), entry] });
         useSkillStore.getState().awardXP('health-discipline-lv1', 3, 'body composition logged');
-        toast('Body composition logged', 'success');
+        toast(`Body composition logged${entryDate === todayKey() ? '' : ` for ${entryDate}`}`, 'success');
       },
       deleteBodyComp: (id) => set({ bodyComp: get().bodyComp.filter((b) => b.id !== id) }),
 
@@ -189,38 +192,39 @@ export const useHealthStore = create(
       // logRecovery preserves the day's already-logged water (waterMl) instead
       // of wiping it — the two are logged independently (activities via a
       // save button, water via quick-add) but share one per-day entry.
-      logRecovery: (activities, fulfillsPromptId) => {
-        const today = todayKey();
-        const existing = get().recoveryLogs.find((r) => r.date === today);
-        const entry = { id: existing?.id || uid(), date: today, activities, waterMl: existing?.waterMl || 0, createdAt: existing?.createdAt || Date.now() };
-        set({ recoveryLogs: [...get().recoveryLogs.filter((r) => r.date !== today), entry] });
+      logRecovery: (activities, fulfillsPromptId, date) => {
+        const target = date || todayKey();
+        const existing = get().recoveryLogs.find((r) => r.date === target);
+        const entry = { id: existing?.id || uid(), date: target, activities, waterMl: existing?.waterMl || 0, createdAt: existing?.createdAt || Date.now() };
+        set({ recoveryLogs: [...get().recoveryLogs.filter((r) => r.date !== target), entry] });
         useSkillStore.getState().awardXP('health-discipline-lv1', 5, 'recovery activities logged');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         get().checkBadges();
-        toast('Recovery logged', 'success');
+        toast(`Recovery logged${target === todayKey() ? '' : ` for ${target}`}`, 'success');
       },
 
       // ─────────── Water intake ───────────
       waterTargetMl: 2500,
       setWaterTarget: (ml) => set({ waterTargetMl: Number(ml) || 2500 }),
-      logWater: (ml) => {
-        const today = todayKey();
-        const existing = get().recoveryLogs.find((r) => r.date === today);
+      logWater: (ml, date) => {
+        const target = date || todayKey();
+        const existing = get().recoveryLogs.find((r) => r.date === target);
         const newTotal = Math.max(0, (existing?.waterMl || 0) + Number(ml));
         if (existing) {
           set({ recoveryLogs: get().recoveryLogs.map((r) => (r.id === existing.id ? { ...r, waterMl: newTotal } : r)) });
         } else {
-          set({ recoveryLogs: [...get().recoveryLogs, { id: uid(), date: today, activities: [], waterMl: newTotal, createdAt: Date.now() }] });
+          set({ recoveryLogs: [...get().recoveryLogs, { id: uid(), date: target, activities: [], waterMl: newTotal, createdAt: Date.now() }] });
         }
       },
-      getTodayWaterMl: () => get().recoveryLogs.find((r) => r.date === todayKey())?.waterMl || 0,
+      // date param lets the Recovery tab's day-stepper read a past day's total; defaults to today for existing callers.
+      getTodayWaterMl: (date) => get().recoveryLogs.find((r) => r.date === (date || todayKey()))?.waterMl || 0,
 
       // ─────────── Multi-slot energy/stress check-ins ───────────
       // Separate from habitStore's single daily energyLog (which still powers
       // burnout triggers + synergy score, untouched) — this is a finer-grained
       // additional layer: Morning / Post-workout / Afternoon / Evening.
-      logCheckin: (slot, energy, stress, note = '') => {
-        const entry = { id: uid(), date: todayKey(), slot, energy: Number(energy), stress: Number(stress), note, createdAt: Date.now() };
+      logCheckin: (slot, energy, stress, note = '', date) => {
+        const entry = { id: uid(), date: date || todayKey(), slot, energy: Number(energy), stress: Number(stress), note, createdAt: Date.now() };
         set({ checkins: [...get().checkins.filter((c) => !(c.date === entry.date && c.slot === slot)), entry] });
       },
 

@@ -18,6 +18,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const [quality, setQuality] = useState(7);
   const [notes, setNotes] = useState('');
   const [progressExercise, setProgressExercise] = useState('');
+  const [logDate, setLogDate] = useState(todayKey());
 
   const isLb = weightUnit === 'lb';
   const dispW = (kg) => (kg ? Math.round((isLb ? kgToLb(kg) : kg) * 10) / 10 : 0);
@@ -31,6 +32,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
     e.preventDefault();
     logWorkout(
       {
+        date: logDate,
         type,
         exercise,
         durationMin: type === 'cardio' ? durationMin : undefined,
@@ -43,6 +45,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
     setExercise('');
     setSets([blankSet()]);
     setQuality(7);
+    setLogDate(todayKey());
     setNotes('');
   };
 
@@ -74,12 +77,15 @@ export default function WorkoutLogging({ pendingPrompt }) {
     <div className="space-y-6">
       <Card title="Log a Workout">
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Field label="Type">
               <Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: 'cardio', label: 'Cardio' }, { value: 'strength', label: 'Strength' }]} />
             </Field>
             <Field label="Exercise">
               <Input value={exercise} onChange={(e) => setExercise(e.target.value)} placeholder={type === 'cardio' ? 'e.g. Zone-2 run' : 'e.g. Deadlift'} required />
+            </Field>
+            <Field label="Date" hint="Backdate a missed session">
+              <Input type="date" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} />
             </Field>
           </div>
 

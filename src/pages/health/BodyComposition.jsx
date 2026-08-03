@@ -3,6 +3,7 @@ import { Trash2, FileDown, Camera } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
+import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, EmptyState } from '../../components/common/ui';
 
 const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
@@ -105,6 +106,7 @@ export default function BodyComposition() {
     absRating: latest?.absRating || 5,
     visualBodyFatPct: '',
     photo: null,
+    date: todayKey(),
   });
   const [photoError, setPhotoError] = useState('');
   const [activityLevel, setActivityLevel] = useState('moderate');
@@ -112,7 +114,7 @@ export default function BodyComposition() {
   const submit = (e) => {
     e.preventDefault();
     logBodyComp(form);
-    setForm((f) => ({ ...f, photo: null }));
+    setForm((f) => ({ ...f, photo: null, date: todayKey() }));
   };
 
   const onPhotoChange = async (e) => {
@@ -146,6 +148,9 @@ export default function BodyComposition() {
         <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Field label="Weight (kg)">
             <Input type="number" step="0.1" value={form.weightKg} onChange={(e) => setForm({ ...form, weightKg: e.target.value })} />
+          </Field>
+          <Field label="Date" hint="Backdate a missed entry">
+            <Input type="date" value={form.date} max={todayKey()} onChange={(e) => e.target.value && setForm({ ...form, date: e.target.value })} />
           </Field>
           <Field label="Sex (for Navy formula)">
             <Select value={form.sex} onChange={(e) => setForm({ ...form, sex: e.target.value })} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />
@@ -182,7 +187,7 @@ export default function BodyComposition() {
             {photoError && <p className="text-bad text-[11px] mt-1">{photoError}</p>}
           </Field>
           <div className="col-span-2 md:col-span-4">
-            <Button type="submit" className="w-full">Log today</Button>
+            <Button type="submit" className="w-full">{form.date === todayKey() ? 'Log today' : `Log for ${form.date}`}</Button>
           </div>
         </form>
       </Card>

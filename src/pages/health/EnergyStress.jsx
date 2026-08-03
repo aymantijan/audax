@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
+import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Select, Input } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
@@ -17,10 +18,12 @@ export default function EnergyStress() {
   const [energy, setEnergy] = useState(6);
   const [stress, setStress] = useState(4);
   const [note, setNote] = useState('');
+  const [checkinDate, setCheckinDate] = useState(todayKey());
 
   const save = () => {
-    logCheckin(slot, energy, stress, note);
+    logCheckin(slot, energy, stress, note, checkinDate);
     setNote('');
+    setCheckinDate(todayKey());
   };
 
   const trend = useMemo(() => {
@@ -43,7 +46,7 @@ export default function EnergyStress() {
   return (
     <div className="space-y-6">
       <Card title="Check-in">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
           <Field label="Time of day">
             <Select value={slot} onChange={(e) => setSlot(e.target.value)} options={SLOTS} />
           </Field>
@@ -56,8 +59,11 @@ export default function EnergyStress() {
           <Field label="Note (optional)">
             <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
+          <Field label="Date" hint="Backdate a missed check-in">
+            <Input type="date" value={checkinDate} max={todayKey()} onChange={(e) => e.target.value && setCheckinDate(e.target.value)} />
+          </Field>
         </div>
-        <Button className="mt-3" onClick={save}>Save check-in</Button>
+        <Button className="mt-3" onClick={save}>{checkinDate === todayKey() ? 'Save check-in' : `Save check-in for ${checkinDate}`}</Button>
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">

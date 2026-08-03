@@ -3,7 +3,7 @@ import { Trash2, Plus, X } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { CYCLE_PHASE_LABEL, CYCLE_PHASE_COLOR, estimateCycleLength } from '../../utils/health-science';
-import { fmtDateShort } from '../../utils/formatters';
+import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
 
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
@@ -15,15 +15,18 @@ export default function CycleTracking() {
   const [symptoms, setSymptoms] = useState([]);
   const [notes, setNotes] = useState('');
   const [newSymptom, setNewSymptom] = useState('');
+  const [startDate, setStartDate] = useState(todayKey());
+  const [endDate, setEndDate] = useState(todayKey());
 
   const phase = getCyclePhase();
   const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
   const toggleSymptom = (s) => setSymptoms((arr) => (arr.includes(s) ? arr.filter((x) => x !== s) : [...arr, s]));
 
   const save = () => {
-    logCycleStart(undefined, flow, symptoms, notes);
+    logCycleStart(startDate, flow, symptoms, notes);
     setSymptoms([]);
     setNotes('');
+    setStartDate(todayKey());
   };
 
   const submitCustomSymptom = (e) => {
@@ -89,14 +92,27 @@ export default function CycleTracking() {
       {openPeriod && (
         <div className="flex items-center justify-between gap-3 border border-line rounded-lg px-4 py-3 bg-card">
           <span className="text-sm">Period started {fmtDateShort(openPeriod.date)} — still open.</span>
-          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => markPeriodEnd(openPeriod.id)}>Mark ended today</Button>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={endDate}
+              min={openPeriod.date}
+              max={todayKey()}
+              onChange={(e) => e.target.value && setEndDate(e.target.value)}
+              className="bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink cursor-pointer"
+            />
+            <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => markPeriodEnd(openPeriod.id, endDate)}>Mark ended</Button>
+          </div>
         </div>
       )}
 
       <Card title="Log Period Start">
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-3 gap-3 mb-3">
           <Field label="Flow">
             <Select value={flow} onChange={(e) => setFlow(e.target.value)} options={[{ value: 'light', label: 'Light' }, { value: 'medium', label: 'Medium' }, { value: 'heavy', label: 'Heavy' }]} />
+          </Field>
+          <Field label="Start date" hint="Backdate a missed entry">
+            <Input type="date" value={startDate} max={todayKey()} onChange={(e) => e.target.value && setStartDate(e.target.value)} />
           </Field>
           <Field label="Notes (optional)">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -130,7 +146,7 @@ export default function CycleTracking() {
           <Input value={newSymptom} onChange={(e) => setNewSymptom(e.target.value)} placeholder="Add a custom symptom…" className="flex-1 !py-1.5 text-xs" />
           <Button type="submit" variant="ghost" className="!px-2 !py-1"><Plus size={13} /></Button>
         </form>
-        <Button onClick={save}>Log today as period start</Button>
+        <Button onClick={save}>{startDate === todayKey() ? 'Log today as period start' : `Log ${startDate} as period start`}</Button>
       </Card>
 
       {energyByPhase && (
