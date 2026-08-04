@@ -109,15 +109,12 @@ export default function CoursePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {course.googleEventLink ? (
-            <a href={course.googleEventLink} target="_blank" rel="noreferrer">
-              <Button variant="secondary"><span className="flex items-center gap-2"><CalendarCheck size={14} /> Scheduled</span></Button>
-            </a>
-          ) : (
-            <Button variant="secondary" onClick={() => setScheduleModal(true)}>
-              <span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule sessions</span>
-            </Button>
-          )}
+          <Button variant="secondary" onClick={() => setScheduleModal(true)}>
+            <span className="flex items-center gap-2">
+              {course.googleEventLink ? <CalendarCheck size={14} className="text-good" /> : <CalendarPlus size={14} />}
+              {course.googleEventLink ? 'Scheduled' : 'Schedule sessions'}
+            </span>
+          </Button>
           <Button variant="secondary" onClick={() => setChapterModal({ data: {}, isAdd: true })}>
             <span className="flex items-center gap-2"><Plus size={14} /> Chapter</span>
           </Button>
@@ -262,10 +259,13 @@ export default function CoursePage() {
       <ScheduleEventModal
         open={scheduleModal}
         onClose={() => setScheduleModal(false)}
-        title="Schedule sessions for this course"
+        title="sessions for this course"
         defaultSummary={`Study: ${course.name}`}
         recurring
+        existingEventId={course.googleEventId || null}
+        existingEventLink={course.googleEventLink || null}
         onScheduled={({ eventId, htmlLink }) => setCourseCalendarEvent(courseId, { eventId, htmlLink })}
+        onUnschedule={() => setCourseCalendarEvent(courseId, { eventId: null, htmlLink: null })}
       />
     </div>
   );

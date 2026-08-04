@@ -273,15 +273,13 @@ export default function Habits() {
                         <span className="flex items-center gap-1"><Flame size={11} /> {streak}</span>
                       </Badge>
                     )}
-                    {h.googleEventLink ? (
-                      <a href={h.googleEventLink} target="_blank" rel="noreferrer" className="text-good hover:text-accent cursor-pointer mr-1" title="Open in Google Calendar">
-                        <CalendarCheck size={13} />
-                      </a>
-                    ) : (
-                      <button className="text-mute hover:text-accent cursor-pointer mr-1" onClick={() => setScheduling(h)} title="Schedule in Google Calendar">
-                        <CalendarPlus size={13} />
-                      </button>
-                    )}
+                    <button
+                      className={`cursor-pointer mr-1 ${h.googleEventLink ? 'text-good hover:text-accent' : 'text-mute hover:text-accent'}`}
+                      onClick={() => setScheduling(h)}
+                      title={h.googleEventLink ? 'Edit Google Calendar schedule' : 'Schedule in Google Calendar'}
+                    >
+                      {h.googleEventLink ? <CalendarCheck size={13} /> : <CalendarPlus size={13} />}
+                    </button>
                     <button className="text-mute hover:text-accent cursor-pointer mr-1" onClick={() => setEditing(h)} title="Edit">
                       <Pencil size={13} />
                     </button>
@@ -515,10 +513,13 @@ export default function Habits() {
       <ScheduleEventModal
         open={!!scheduling}
         onClose={() => setScheduling(null)}
-        title="Schedule this habit"
+        title="this habit"
         defaultSummary={scheduling ? scheduling.name : ''}
         recurring
+        existingEventId={scheduling?.googleEventId || null}
+        existingEventLink={scheduling?.googleEventLink || null}
         onScheduled={({ eventId, htmlLink }) => editHabit(scheduling.id, { googleEventId: eventId, googleEventLink: htmlLink })}
+        onUnschedule={() => editHabit(scheduling.id, { googleEventId: null, googleEventLink: null })}
       />
     </div>
   );

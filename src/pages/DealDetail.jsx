@@ -210,15 +210,13 @@ export default function DealDetail() {
                       </button>
                     </td>
                     <td className="py-2.5 text-right whitespace-nowrap">
-                      {t.googleEventLink ? (
-                        <a href={t.googleEventLink} target="_blank" rel="noreferrer" className="text-good hover:text-accent mr-3" title="Open in Google Calendar">
-                          <CalendarCheck size={14} />
-                        </a>
-                      ) : (
-                        <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => setSchedulingTask(t)} title="Schedule in Google Calendar">
-                          <CalendarPlus size={14} />
-                        </button>
-                      )}
+                      <button
+                        className={`mr-3 cursor-pointer ${t.googleEventLink ? 'text-good hover:text-accent' : 'text-mute hover:text-accent'}`}
+                        onClick={() => setSchedulingTask(t)}
+                        title={t.googleEventLink ? 'Edit Google Calendar schedule' : 'Schedule in Google Calendar'}
+                      >
+                        {t.googleEventLink ? <CalendarCheck size={14} /> : <CalendarPlus size={14} />}
+                      </button>
                       <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => openEditTask(t)} title="Edit">
                         <Pencil size={14} />
                       </button>
@@ -276,10 +274,13 @@ export default function DealDetail() {
       <ScheduleEventModal
         open={!!schedulingTask}
         onClose={() => setSchedulingTask(null)}
-        title="Schedule this task"
+        title="this task"
         defaultSummary={schedulingTask ? `${schedulingTask.title} — ${deal.name}` : ''}
         description={deal.notes}
+        existingEventId={schedulingTask?.googleEventId || null}
+        existingEventLink={schedulingTask?.googleEventLink || null}
         onScheduled={({ eventId, htmlLink }) => setTaskCalendarEvent(deal.id, schedulingTask.id, { eventId, htmlLink })}
+        onUnschedule={() => setTaskCalendarEvent(deal.id, schedulingTask.id, { eventId: null, htmlLink: null })}
       />
     </div>
   );

@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Button, Field, Input, Modal, WeekdayPicker } from './ui';
 import { WEEKDAYS } from '../../utils/constants';
-import { connectGoogleCalendar, createCalendarEvent, createRecurringCalendarEvent, isGoogleCalendarConfigured } from '../../services/google-calendar';
+import {
+  connectGoogleCalendar,
+  createCalendarEvent,
+  createRecurringCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+  isGoogleCalendarConfigured,
+} from '../../services/google-calendar';
 import { useGoogleCalendarStatus } from '../../hooks/useGoogleCalendarStatus';
 import { toast } from '../../store/uiStore';
 
@@ -10,9 +17,16 @@ import { toast } from '../../store/uiStore';
 // a one-off event (task/workout) and an open-ended weekly series (course/habit),
 // which the caller later stops via services/google-calendar.endRecurringEvent
 // when the linked item is completed/archived.
-export default function ScheduleEventModal({ open, onClose, title = 'Schedule', defaultSummary = '', description = '', recurring = false, onScheduled }) {
+//
+// existingEventId (optional): editing an already-scheduled item instead of
+// creating a new one. Submit tries to PATCH that event first; if it no longer
+// exists — e.g. its calendar was deleted in Google Calendar directly, outside
+// AUDAX — it transparently falls back to creating a fresh event instead of
+// failing, and the caller still gets a valid {eventId, htmlLink} back either way.
+export default function ScheduleEventModal({ open, onClose, title = 'Schedule', defaultSummary = '', description = '', recurring = false, existingEventId = null, existingEventLink = null, onScheduled, onUnschedule }) {
   const { connected } = useGoogleCalendarStatus();
   const configured = isGoogleCalendarConfigured();
+  const isEdit = !!existingEventId;
   const [summary, setSummary] = useState(defaultSummary);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('09:00');
@@ -45,10 +59,22 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
       if (!connected) await connectGoogleCalendar();
       const start = new Date(`${date}T${time}:00`);
       const end = new Date(start.getTime() + durationMin * 60000);
-      const result = recurring
-        ? await createRecurringCalendarEvent({ summary, description, start, end, weekdays })
-        : await createCalendarEvent({ summary, description, start, end });
-      toast('Added to Google Calendar', 'success');
+      const eventData = { summary, description, start, end, ...(recurring ? { weekdays } : {}) };
+
+      let result;
+      if (isEdit) {
+        try {
+          result = await updateCalendarEvent(existingEventId, eventData);
+        } catch (updateErr) {
+          if (!updateErr.notFound) throw updateErr;
+          // The original event (or its whole calendar) is gone — recreate rather than fail.
+          result = recurring ? await createRecurringCalendarEvent(eventData) : await createCalendarEvent(eventData);
+        }
+      } else {
+        result = recurring ? await createRecurringCalendarEvent(eventData) : await createCalendarEvent(eventData);
+      }
+
+      toast(isEdit ? 'Schedule updated' : 'Added to Google Calendar', 'success');
       onScheduled(result);
       onClose();
     } catch (e2) {
@@ -58,8 +84,20 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
     }
   };
 
+  const unschedule = async () => {
+    if (!confirm('Remove this from Google Calendar?')) return;
+    setBusy(true);
+    try {
+      await deleteCalendarEvent(existingEventId);
+      onUnschedule();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title={isEdit ? `Edit: ${title}` : title}>
       <form onSubmit={submit} className="space-y-3">
         {!configured ? (
           <p className="text-sm text-mute">
@@ -67,6 +105,9 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
           </p>
         ) : (
           <>
+            {isEdit && existingEventLink && (
+              <a href={existingEventLink} target="_blank" rel="noreferrer" className="text-xs text-accent hover:underline">Open current event in Google Calendar ↗</a>
+            )}
             <Field label="Event title">
               <Input value={summary} onChange={(e) => setSummary(e.target.value)} autoFocus />
             </Field>
@@ -90,11 +131,18 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
             {err && <p className="text-bad text-sm">{err}</p>}
           </>
         )}
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={busy || !configured}>
-            {busy ? '…' : connected ? 'Schedule' : 'Connect & Schedule'}
-          </Button>
+        <div className="flex justify-between gap-3">
+          <div>
+            {isEdit && configured && (
+              <Button type="button" variant="danger" onClick={unschedule} disabled={busy}>Remove</Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={busy || !configured}>
+              {busy ? '…' : isEdit ? 'Save changes' : connected ? 'Schedule' : 'Connect & Schedule'}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

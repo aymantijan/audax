@@ -142,7 +142,9 @@ async function apiFetch(path, options = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error?.message || `Google Calendar request failed (${res.status})`);
+    const err = new Error(body.error?.message || `Google Calendar request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
   return res.status === 204 ? null : res.json();
 }
@@ -191,6 +193,33 @@ export async function createRecurringCalendarEvent({ summary, description, start
     }),
   });
   return { eventId: event.id, htmlLink: event.htmlLink };
+}
+
+// Reschedules an existing event (new date/time/duration, or new weekdays for
+// a recurring one). If the event no longer exists — e.g. its calendar was
+// deleted externally in Google Calendar itself — this throws with `.notFound
+// = true` instead of a generic error, so callers can fall back to creating a
+// fresh event rather than surfacing a confusing failure.
+export async function updateCalendarEvent(eventId, { summary, description, start, end, weekdays }) {
+  const calendarId = await ensureAudaxCalendarId();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body = {
+    summary,
+    description,
+    start: { dateTime: start.toISOString(), timeZone },
+    end: { dateTime: end.toISOString(), timeZone },
+  };
+  if (weekdays) {
+    const byday = weekdays.map((w) => WEEKDAY_RRULE[w]).filter(Boolean).join(',');
+    body.recurrence = [`RRULE:FREQ=WEEKLY;BYDAY=${byday}`];
+  }
+  try {
+    const event = await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    return { eventId: event.id, htmlLink: event.htmlLink };
+  } catch (e) {
+    if (e.status === 404) e.notFound = true;
+    throw e;
+  }
 }
 
 // Stops future occurrences of a recurring event as of today (past occurrences
