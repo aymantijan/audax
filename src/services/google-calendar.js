@@ -6,8 +6,14 @@
 // sessionStorage — no silent refresh without a backend, so re-connecting
 // occasionally is expected and normal.
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+// calendar.app.created (not calendar.events): scoped to calendars *this app
+// creates* — lets us create a dedicated "AUDAX" calendar and manage events
+// in it, without touching the user's other calendars (e.g. their primary
+// "Faculté"/work calendar, where calendar.events would have posted instead).
+const SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 const TOKEN_KEY = 'audax-google-calendar-token';
+const CALENDAR_ID_KEY = 'audax-google-calendar-id';
+const AUDAX_CALENDAR_NAME = 'AUDAX';
 const WEEKDAY_RRULE = { mon: 'MO', tue: 'TU', wed: 'WE', thu: 'TH', fri: 'FR', sat: 'SA', sun: 'SU' };
 
 let tokenClient = null;
@@ -141,10 +147,23 @@ async function apiFetch(path, options = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+// Every event goes into a dedicated secondary "AUDAX" calendar instead of the
+// user's primary one — created once (via the calendar.app.created scope) and
+// cached in localStorage so we reuse the same calendar on every later call
+// instead of creating a duplicate each session.
+async function ensureAudaxCalendarId() {
+  const cached = localStorage.getItem(CALENDAR_ID_KEY);
+  if (cached) return cached;
+  const created = await apiFetch('/calendars', { method: 'POST', body: JSON.stringify({ summary: AUDAX_CALENDAR_NAME }) });
+  localStorage.setItem(CALENDAR_ID_KEY, created.id);
+  return created.id;
+}
+
 // One-off event. start/end: Date objects.
 export async function createCalendarEvent({ summary, description, start, end }) {
+  const calendarId = await ensureAudaxCalendarId();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const event = await apiFetch('/calendars/primary/events', {
+  const event = await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events`, {
     method: 'POST',
     body: JSON.stringify({
       summary,
@@ -158,9 +177,10 @@ export async function createCalendarEvent({ summary, description, start, end }) 
 
 // Open-ended weekly recurring event — stopped later via endRecurringEvent().
 export async function createRecurringCalendarEvent({ summary, description, start, end, weekdays }) {
+  const calendarId = await ensureAudaxCalendarId();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const byday = weekdays.map((w) => WEEKDAY_RRULE[w]).filter(Boolean).join(',');
-  const event = await apiFetch('/calendars/primary/events', {
+  const event = await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events`, {
     method: 'POST',
     body: JSON.stringify({
       summary,
@@ -182,12 +202,13 @@ export async function createRecurringCalendarEvent({ summary, description, start
 export async function endRecurringEvent(eventId) {
   if (!eventId || !isGoogleCalendarConnected()) return;
   try {
+    const calendarId = await ensureAudaxCalendarId();
     const until = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const event = await apiFetch(`/calendars/primary/events/${eventId}`);
+    const event = await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`);
     const rrule = (event.recurrence || []).find((r) => r.startsWith('RRULE'));
     if (!rrule) return;
     const nextRule = /UNTIL=/.test(rrule) ? rrule.replace(/UNTIL=[^;]+/, `UNTIL=${until}`) : `${rrule};UNTIL=${until}`;
-    await apiFetch(`/calendars/primary/events/${eventId}`, { method: 'PATCH', body: JSON.stringify({ recurrence: [nextRule] }) });
+    await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`, { method: 'PATCH', body: JSON.stringify({ recurrence: [nextRule] }) });
   } catch (e) {
     console.warn('[google-calendar] failed to end recurring event:', e.message);
   }
@@ -197,7 +218,8 @@ export async function endRecurringEvent(eventId) {
 export async function deleteCalendarEvent(eventId) {
   if (!eventId || !isGoogleCalendarConnected()) return;
   try {
-    await apiFetch(`/calendars/primary/events/${eventId}`, { method: 'DELETE' });
+    const calendarId = await ensureAudaxCalendarId();
+    await apiFetch(`/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`, { method: 'DELETE' });
   } catch (e) {
     console.warn('[google-calendar] failed to delete event:', e.message);
   }
