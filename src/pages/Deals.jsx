@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, Trash2, Briefcase, Pencil } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useDealsStore } from '../store/dealsStore';
-import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_SKILL, SKILL_MAP } from '../utils/constants';
+import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_SKILL, DEAL_STAGES, SKILL_MAP } from '../utils/constants';
 import { fmtMoney, fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STATUS_COLOR = { ongoing: 'var(--accent-primary)', completed: 'var(--success)', passed: 'var(--text-secondary)' };
+const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 const blank = () => ({ name: '', type: 'LBO', size: '', role: 'Modeling', status: 'ongoing', firm: '', date: new Date().toISOString().slice(0, 10), notes: '' });
 
 export default function Deals() {
@@ -52,7 +54,7 @@ export default function Deals() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">PE / Deals</h1>
-          <p className="text-mute text-sm mt-1">Log deals you work on — each awards XP to the relevant PE/VC/RBF skills.</p>
+          <p className="text-mute text-sm mt-1">Log a deal, then open it to break down the tasks you work on — each completed task awards XP to its target skill.</p>
         </div>
         <Button onClick={() => setModal(true)}>
           <span className="flex items-center gap-2"><Plus size={16} /> Log Deal</span>
@@ -86,7 +88,7 @@ export default function Deals() {
         </Card>
 
         <Card title="Skills a Deal Builds">
-          <p className="text-xs text-mute mb-3">Logging a deal auto-awards XP to these skills (by type):</p>
+          <p className="text-xs text-mute mb-3">Tasks logged under each deal type suggest XP toward these skills (editable per task):</p>
           <div className="space-y-2.5">
             {DEAL_TYPES.map((t) => (
               <div key={t} className="text-sm">
@@ -114,32 +116,40 @@ export default function Deals() {
                   <th className="py-2 pr-4">Type</th>
                   <th className="py-2 pr-4">Role</th>
                   <th className="py-2 pr-4 text-right">Size</th>
+                  <th className="py-2 pr-4">Stage</th>
+                  <th className="py-2 pr-4">Tasks</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2" />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((d) => (
-                  <tr key={d.id} className="border-b border-line/50 hover:bg-surface/50">
-                    <td className="py-2.5 pr-4 whitespace-nowrap">{fmtDateShort(d.date)}</td>
-                    <td className="py-2.5 pr-4">
-                      {d.name}
-                      {d.firm && <span className="text-mute text-xs"> · {d.firm}</span>}
-                    </td>
-                    <td className="py-2.5 pr-4">{d.type}</td>
-                    <td className="py-2.5 pr-4 text-mute">{d.role}</td>
-                    <td className="py-2.5 pr-4 text-right">{d.size ? fmtMoney(d.size) : '—'}</td>
-                    <td className="py-2.5 pr-4"><Badge color={STATUS_COLOR[d.status]}>{d.status}</Badge></td>
-                    <td className="py-2.5 text-right whitespace-nowrap">
-                      <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => setEditing(d)} title="Edit">
-                        <Pencil size={14} />
-                      </button>
-                      <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Delete this deal? Its XP will be reversed.')) deleteDeal(d.id); }}>
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((d) => {
+                  const tasks = d.tasks || [];
+                  const done = tasks.filter((t) => t.status === 'done').length;
+                  return (
+                    <tr key={d.id} className="border-b border-line/50 hover:bg-surface/50">
+                      <td className="py-2.5 pr-4 whitespace-nowrap">{fmtDateShort(d.date)}</td>
+                      <td className="py-2.5 pr-4">
+                        <Link to={`/deals/${d.id}`} className="hover:text-accent">{d.name}</Link>
+                        {d.firm && <span className="text-mute text-xs"> · {d.firm}</span>}
+                      </td>
+                      <td className="py-2.5 pr-4">{d.type}</td>
+                      <td className="py-2.5 pr-4 text-mute">{d.role}</td>
+                      <td className="py-2.5 pr-4 text-right">{d.size ? fmtMoney(d.size) : '—'}</td>
+                      <td className="py-2.5 pr-4"><Badge color={STAGE_STATUS_COLOR[d.stageStatus] || 'var(--text-secondary)'}>{DEAL_STAGES[d.stageIndex ?? 0]}</Badge></td>
+                      <td className="py-2.5 pr-4 text-mute">{tasks.length ? `${done}/${tasks.length}` : '—'}</td>
+                      <td className="py-2.5 pr-4"><Badge color={STATUS_COLOR[d.status]}>{d.status}</Badge></td>
+                      <td className="py-2.5 text-right whitespace-nowrap">
+                        <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => setEditing(d)} title="Edit">
+                          <Pencil size={14} />
+                        </button>
+                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Delete this deal? Its tasks and their XP will be reversed.')) deleteDeal(d.id); }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

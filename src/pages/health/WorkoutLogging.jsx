@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { kgToLb, lbToKg } from '../../utils/health-science';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
+import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
@@ -19,6 +20,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const [notes, setNotes] = useState('');
   const [progressExercise, setProgressExercise] = useState('');
   const [logDate, setLogDate] = useState(todayKey());
+  const [scheduleModal, setScheduleModal] = useState(false);
 
   const isLb = weightUnit === 'lb';
   const dispW = (kg) => (kg ? Math.round((isLb ? kgToLb(kg) : kg) * 10) / 10 : 0);
@@ -75,7 +77,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
-      <Card title="Log a Workout">
+      <Card title="Log a Workout" action={<Button variant="secondary" onClick={() => setScheduleModal(true)}><span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule a session</span></Button>}>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <Field label="Type">
@@ -251,6 +253,14 @@ export default function WorkoutLogging({ pendingPrompt }) {
           <EmptyState>No workouts logged yet.</EmptyState>
         )}
       </Card>
+
+      <ScheduleEventModal
+        open={scheduleModal}
+        onClose={() => setScheduleModal(false)}
+        title="Schedule a workout"
+        defaultSummary="Workout"
+        onScheduled={() => {}}
+      />
     </div>
   );
 }

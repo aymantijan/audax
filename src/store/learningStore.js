@@ -6,6 +6,7 @@ import { calculateCourseProgress } from '../utils/course-progress';
 import { advance, preview, freshMomentumState, LEARNING_MOMENTUM_CONFIG } from '../utils/momentum';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
+import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calendar';
 
 export const useLearningStore = create(
   persist(
@@ -94,18 +95,27 @@ export const useLearningStore = create(
           const award = useSkillStore.getState().awardXP;
           for (const skillId of course.linkedSkills) award(skillId, xp, `course: ${course.name}`);
         }
+        if (course.googleEventId) endRecurringEvent(course.googleEventId);
         toast(`${course.name} completed with ${grade}${xp ? ` · +${xp} XP per linked skill` : ''}`, 'success');
       },
 
       dropCourse: (id) => {
+        const course = get().courses.find((c) => c.id === id);
         set({ courses: get().courses.map((c) => (c.id === id ? { ...c, status: 'dropped' } : c)) });
+        if (course?.googleEventId) endRecurringEvent(course.googleEventId);
         toast('Course dropped', 'info');
       },
 
       deleteCourse: (id) => {
+        const course = get().courses.find((c) => c.id === id);
         set({ courses: get().courses.filter((c) => c.id !== id) });
+        if (course?.googleEventId) deleteCalendarEvent(course.googleEventId);
         toast('Course deleted', 'info');
       },
+
+      // Records the Google Calendar event a course's "Schedule sessions" action created.
+      setCourseCalendarEvent: (id, { eventId, htmlLink }) =>
+        set({ courses: get().courses.map((c) => (c.id === id ? { ...c, googleEventId: eventId, googleEventLink: htmlLink } : c)) }),
 
       toggleReading: (courseId, index) =>
         set({

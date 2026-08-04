@@ -28,6 +28,7 @@ const Health = lazy(lazyWithRetry(() => import('./pages/Health'), 'Health'));
 const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
 const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
 const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
+const DealDetail = lazy(lazyWithRetry(() => import('./pages/DealDetail'), 'DealDetail'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
@@ -111,6 +112,7 @@ export default function App() {
         <Route path="/habits" element={<Habits />} />
         <Route path="/health" element={<Health />} />
         <Route path="/deals" element={<Deals />} />
+        <Route path="/deals/:id" element={<DealDetail />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />

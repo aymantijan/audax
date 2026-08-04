@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight, GraduationCap } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight, GraduationCap, CalendarPlus, CalendarCheck } from 'lucide-react';
 import { useLearningStore } from '../store/learningStore';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADES, SKILL_MAP } from '../utils/constants';
@@ -8,6 +8,7 @@ import { uid, fmtDate } from '../utils/formatters';
 import { Card, Stat, Button, Badge, ProgressBar, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import SkillPicker from '../components/common/SkillPicker';
+import ScheduleEventModal from '../components/common/ScheduleEventModal';
 
 // Detail page: /learning/course/:id — chapter + checklist CRUD.
 // Every mutation flows through learningStore.updateCourse → all pages using
@@ -15,12 +16,13 @@ import SkillPicker from '../components/common/SkillPicker';
 export default function CoursePage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { courses, updateCourse, deleteCourse, toggleChecklistItem, getCourseScore } = useLearningStore();
+  const { courses, updateCourse, deleteCourse, toggleChecklistItem, getCourseScore, setCourseCalendarEvent } = useLearningStore();
   const course = courses.find((c) => c.id === courseId);
   const [openChapters, setOpenChapters] = useState({});
   const [chapterModal, setChapterModal] = useState(null); // null | { data, isAdd }
   const [itemModal, setItemModal] = useState(null); // null | { chapterId, data, isAdd }
   const [courseNameModal, setCourseNameModal] = useState(false);
+  const [scheduleModal, setScheduleModal] = useState(false);
 
   if (!course) {
     return (
@@ -107,6 +109,15 @@ export default function CoursePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {course.googleEventLink ? (
+            <a href={course.googleEventLink} target="_blank" rel="noreferrer">
+              <Button variant="secondary"><span className="flex items-center gap-2"><CalendarCheck size={14} /> Scheduled</span></Button>
+            </a>
+          ) : (
+            <Button variant="secondary" onClick={() => setScheduleModal(true)}>
+              <span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule sessions</span>
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setChapterModal({ data: {}, isAdd: true })}>
             <span className="flex items-center gap-2"><Plus size={14} /> Chapter</span>
           </Button>
@@ -247,6 +258,15 @@ export default function CoursePage() {
           onSave={(values) => updateCourse(courseId, values)}
         />
       )}
+
+      <ScheduleEventModal
+        open={scheduleModal}
+        onClose={() => setScheduleModal(false)}
+        title="Schedule sessions for this course"
+        defaultSummary={`Study: ${course.name}`}
+        recurring
+        onScheduled={({ eventId, htmlLink }) => setCourseCalendarEvent(courseId, { eventId, htmlLink })}
+      />
     </div>
   );
 }

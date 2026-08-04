@@ -4,6 +4,7 @@ import { uid, todayKey } from '../utils/formatters';
 import { useSkillStore } from './skillStore';
 import { useHealthStore } from './healthStore';
 import { toast } from './uiStore';
+import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calendar';
 
 export const useHabitStore = create(
   persist(
@@ -33,14 +34,20 @@ export const useHabitStore = create(
           ),
         }),
 
-      archiveHabit: (id) =>
-        set({ habits: get().habits.map((h) => (h.id === id ? { ...h, archived: true, updatedAt: Date.now() } : h)) }),
+      archiveHabit: (id) => {
+        const habit = get().habits.find((h) => h.id === id);
+        set({ habits: get().habits.map((h) => (h.id === id ? { ...h, archived: true, updatedAt: Date.now() } : h)) });
+        if (habit?.googleEventId) endRecurringEvent(habit.googleEventId);
+      },
 
-      deleteHabit: (id) =>
+      deleteHabit: (id) => {
+        const habit = get().habits.find((h) => h.id === id);
         set({
           habits: get().habits.filter((h) => h.id !== id),
           logs: get().logs.filter((l) => l.habitId !== id),
-        }),
+        });
+        if (habit?.googleEventId) deleteCalendarEvent(habit.googleEventId);
+      },
 
       toggleHabit: (habitId, date = todayKey()) => {
         const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);

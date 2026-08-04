@@ -6,14 +6,37 @@ export const STRATEGY_SKILL = { Trend: 'trend-following-lv1', Range: 'range-trad
 export const INSTRUMENT_SKILL = { EURUSD: 'eurusd-mastery-lv1', GBPUSD: 'gbpusd-mastery-lv1', USDJPY: 'usdjpy-mastery-lv1', XAUUSD: 'gold-mastery-lv1', BTC: 'bitcoin-mastery-lv1' };
 export const MACRO_SKILL = { fedPolicy: 'central-bank-policy-lv1', inflation: 'inflation-cpi-lv1', growth: 'gdp-growth-data-lv1', riskSentiment: 'at-risk-onoff', volatility: 'volatility-analysis-lv1', usdStrength: 'capital-flows-lv1' };
 
-// Deal types → the PE/VC/GE/RBF skills they build (deal logging auto-award).
-export const DEAL_TYPES = ['LBO', 'Growth', 'VC', 'RBF', 'M&A', 'Distressed'];
+// Deal types → the PE/VC/GE skills their tasks target (see dealsStore.suggestTaskAward).
+// Scoped to what's actually worked on (PE/LBO, VC, Growth equity) — trimmed from the
+// original 6-type list; TASK_LEGACY_DEAL_SKILL below keeps the old full map so deals
+// logged under a since-removed type (RBF/M&A/Distressed) still migrate cleanly.
+export const DEAL_TYPES = ['LBO', 'Growth', 'VC'];
 export const DEAL_ROLES = ['Sourcing', 'Due Diligence', 'Modeling', 'Execution', 'Portfolio Ops'];
 export const DEAL_STATUS = ['ongoing', 'completed', 'passed'];
+export const TASK_STATUS = ['todo', 'in-progress', 'done'];
+// The deal's process pipeline — a deal sits at one DEAL_STAGES index with a
+// DEAL_STAGE_STATUS state. Generic across LBO/VC/Growth (real-world PE deal
+// flow varies only in detail, not in these gates).
+export const DEAL_STAGES = [
+  'Sourcing',
+  'NDA / Screening',
+  'Management Meeting',
+  'Due Diligence',
+  'Valuation & Modeling',
+  'LOI / Term Sheet',
+  'Negotiation',
+  'Closing',
+];
+export const DEAL_STAGE_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
 export const DEAL_SKILL = {
   LBO: ['pe-lbo-value-creation-lv1', 'pe-debt-structuring', 'pe-acquisition-valuation'],
   Growth: ['ge-thesis', 'ge-scaling-strategy', 'ge-saas-metrics'],
   VC: ['vc-thesis', 'vc-startup-eval', 'vc-term-sheets'],
+};
+// Old deal types no longer offered when logging a new deal, but a deal already
+// persisted with one of these still needs a valid skill list to suggest task XP for.
+export const TASK_LEGACY_DEAL_SKILL = {
+  ...DEAL_SKILL,
   RBF: ['rbf-mechanics', 'rbf-structure', 'rbf-vs-equity'],
   'M&A': ['ma-strategy-lv1', 'deal-structure-lv1', 'synergy-analysis-lv1'],
   Distressed: ['bankruptcy-distress-lv1', 'credit-analysis-lv1'],

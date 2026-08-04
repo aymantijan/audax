@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History } from 'lucide-react';
+import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
@@ -15,6 +15,7 @@ import { todayKey, dateKey, fmtDate } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar, WeekdayPicker } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
+import ScheduleEventModal from '../components/common/ScheduleEventModal';
 
 const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
@@ -34,6 +35,7 @@ const blankCheckIn = () => ({
 export default function Habits() {
   const { habits, logs, energyLogs, addHabit, editHabit, deleteHabit, toggleHabit, saveEnergyLog } = useHabitStore();
   const [editing, setEditing] = useState(null);
+  const [scheduling, setScheduling] = useState(null);
   const trades = useTradingStore((s) => s.trades);
   const skills = useSkillStore((s) => s.skills);
 
@@ -271,6 +273,15 @@ export default function Habits() {
                         <span className="flex items-center gap-1"><Flame size={11} /> {streak}</span>
                       </Badge>
                     )}
+                    {h.googleEventLink ? (
+                      <a href={h.googleEventLink} target="_blank" rel="noreferrer" className="text-good hover:text-accent cursor-pointer mr-1" title="Open in Google Calendar">
+                        <CalendarCheck size={13} />
+                      </a>
+                    ) : (
+                      <button className="text-mute hover:text-accent cursor-pointer mr-1" onClick={() => setScheduling(h)} title="Schedule in Google Calendar">
+                        <CalendarPlus size={13} />
+                      </button>
+                    )}
                     <button className="text-mute hover:text-accent cursor-pointer mr-1" onClick={() => setEditing(h)} title="Edit">
                       <Pencil size={13} />
                     </button>
@@ -500,6 +511,15 @@ export default function Habits() {
           onDelete={() => deleteHabit(editing.id)}
         />
       )}
+
+      <ScheduleEventModal
+        open={!!scheduling}
+        onClose={() => setScheduling(null)}
+        title="Schedule this habit"
+        defaultSummary={scheduling ? scheduling.name : ''}
+        recurring
+        onScheduled={({ eventId, htmlLink }) => editHabit(scheduling.id, { googleEventId: eventId, googleEventLink: htmlLink })}
+      />
     </div>
   );
 }

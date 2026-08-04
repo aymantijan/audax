@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff } from 'lucide-react';
+import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff } from 'lucide-react';
 import { isSupabaseConfigured } from '../services/supabase';
 import { getSession } from '../services/auth-supabase';
+import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
+import { useGoogleCalendarStatus } from '../hooks/useGoogleCalendarStatus';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
@@ -28,6 +30,21 @@ export default function SettingsPage() {
     if (!isSupabaseConfigured) return;
     getSession().then((s) => setCloudStatus(s?.user ? 'active' : 'offline'));
   }, []);
+
+  const gcalConfigured = isGoogleCalendarConfigured();
+  const { connected: gcalConnected, expiresAt: gcalExpiresAt } = useGoogleCalendarStatus();
+  const [gcalBusy, setGcalBusy] = useState(false);
+  const connectGcal = async () => {
+    setGcalBusy(true);
+    try {
+      await connectGoogleCalendar();
+      toast('Google Calendar connected', 'success');
+    } catch (err) {
+      toast(`Google Calendar connect failed: ${err.message}`, 'error');
+    } finally {
+      setGcalBusy(false);
+    }
+  };
 
   const exportJSON = () => {
     const data = {
@@ -156,6 +173,40 @@ export default function SettingsPage() {
               </>
             )}
             {cloudStatus === 'checking' && <span className="text-mute">Checking cloud session…</span>}
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Google Calendar">
+        <div className="flex items-start gap-3">
+          {gcalConnected ? (
+            <Calendar size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+          ) : (
+            <CalendarOff size={20} className="text-mute shrink-0 mt-0.5" />
+          )}
+          <div className="text-sm flex-1">
+            {!gcalConfigured && (
+              <>
+                <span className="font-medium text-mute">Not configured</span>
+                <p className="text-mute mt-1">Set VITE_GOOGLE_CLIENT_ID (see .env.example) to enable "Schedule" buttons on deal tasks, courses, habits, and workouts.</p>
+              </>
+            )}
+            {gcalConfigured && gcalConnected && (
+              <>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Connected</span>
+                <p className="text-mute mt-1">
+                  Session active until {new Date(gcalExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — you'll be asked to reconnect after that.
+                </p>
+                <Button variant="secondary" className="mt-3" onClick={disconnectGoogleCalendar}>Disconnect</Button>
+              </>
+            )}
+            {gcalConfigured && !gcalConnected && (
+              <>
+                <span className="font-medium text-mute">Not connected</span>
+                <p className="text-mute mt-1">Connect to schedule tasks, courses, habits, or workouts straight into your calendar.</p>
+                <Button className="mt-3" onClick={connectGcal} disabled={gcalBusy}>{gcalBusy ? '…' : 'Connect Google Calendar'}</Button>
+              </>
+            )}
           </div>
         </div>
       </Card>
