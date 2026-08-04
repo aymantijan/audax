@@ -6,6 +6,7 @@ import { useTradingStore } from './store/tradingStore';
 import { isSupabaseConfigured } from './services/supabase';
 import { getSession, onAuthChange } from './services/auth-supabase';
 import { startCloudSync, stopCloudSync } from './services/cloud-sync';
+import { preloadGoogleCalendar } from './services/google-calendar';
 import { toast } from './store/uiStore';
 import { useHealthReminders } from './hooks/useHealthReminders';
 import { useTradingAlerts } from './hooks/useTradingAlerts';
@@ -56,6 +57,13 @@ export default function App() {
   useEffect(() => {
     if (user) ensureAccounts(); // one-time migration/bootstrap of tradingStore.accounts[]
   }, [user, ensureAccounts]);
+
+  // Fetch the Google Identity Services script ahead of any click — see
+  // preloadGoogleCalendar's comment for why this must happen before, not
+  // during, the "Connect" click.
+  useEffect(() => {
+    preloadGoogleCalendar();
+  }, []);
 
   useHealthReminders(); // local-only browser-notification reminders (see hook for scope/limits)
   useTradingAlerts(); // local-only browser-notification alerts for rule breaches/tilt/deadlines

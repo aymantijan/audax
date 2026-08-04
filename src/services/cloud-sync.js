@@ -67,17 +67,38 @@ export async function fetchCloudState(userId) {
 let activeSubscription = null;
 let unsubscribeFns = [];
 let applyingRemote = false; // guards against echoing a remote update straight back up
+let generation = 0; // bumped by every start/stop — lets a superseded in-flight start abort itself
+
+function teardown() {
+  unsubscribeFns.forEach((fn) => fn());
+  unsubscribeFns = [];
+  if (activeSubscription) {
+    supabase.removeChannel(activeSubscription);
+    activeSubscription = null;
+  }
+}
 
 // Call once after a Supabase auth session is confirmed. Hydrates local stores
 // from the cloud (cloud wins for stores that already have a row — e.g. logging
 // in on a second device); stores with no cloud row yet get seeded from local
 // state instead (first-ever login populates the cloud from whatever's on this
 // device already). Then attaches push-on-change + realtime pull.
+//
+// App.jsx can legitimately call this twice in quick succession on load (the
+// initial getSession() check, plus onAuthChange firing immediately with the
+// same session) — without the generation guard below, both calls would race
+// to open a Realtime channel on the same topic and the second `.on()` call
+// would throw "cannot add postgres_changes callbacks ... after subscribe()".
+// Tracking a generation token lets the *earlier* call detect it's been
+// superseded (after its awaits) and bail out before touching the channel, so
+// only the latest call ever actually subscribes.
 export async function startCloudSync(userId) {
   if (!isSupabaseConfigured || !userId) return;
-  stopCloudSync();
+  const myGeneration = ++generation;
+  teardown();
 
   const cloud = await fetchCloudState(userId);
+  if (myGeneration !== generation) return;
 
   for (const { name, store } of REGISTRY) {
     if (cloud[name]) {
@@ -86,8 +107,10 @@ export async function startCloudSync(userId) {
       applyingRemote = false;
     } else {
       await pushStore(userId, name, serializableState(store.getState()));
+      if (myGeneration !== generation) return;
     }
   }
+  if (myGeneration !== generation) return;
 
   // Push-on-change, debounced per store so rapid edits (e.g. typing) coalesce
   // into one write instead of one per keystroke.
@@ -120,10 +143,6 @@ export async function startCloudSync(userId) {
 }
 
 export function stopCloudSync() {
-  unsubscribeFns.forEach((fn) => fn());
-  unsubscribeFns = [];
-  if (activeSubscription) {
-    supabase.removeChannel(activeSubscription);
-    activeSubscription = null;
-  }
+  generation += 1; // invalidate any in-flight startCloudSync so it can't subscribe after we've torn down
+  teardown();
 }
