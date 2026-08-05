@@ -7,8 +7,11 @@ import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '..
 import AccountSelect from '../../components/common/AccountSelect';
 
 // Seuls les modèles pertinents pour un mouvement RÉCURRENT/PROGRAMMÉ (pas les
-// virements internes ni les soldes d'ouverture, ponctuels par nature).
-const ECHEANCE_TEMPLATES = ENTRY_TEMPLATES.filter((t) => ['income', 'expense', 'invest', 'borrow', 'repay'].includes(t.id));
+// soldes d'ouverture, ponctuels par nature). transfer (virement interne, ex :
+// épargne automatique mensuelle) est neutre sur le total trésorerie classe 5
+// ET sur le patrimoine — les deux jambes sont en classe 5, treasuryDelta et
+// ancDelta s'annulent déjà correctement (voir accounting-engine.js).
+const ECHEANCE_TEMPLATES = ENTRY_TEMPLATES.filter((t) => ['income', 'expense', 'invest', 'borrow', 'repay', 'transfer'].includes(t.id));
 
 const RECURRENCE_OPTIONS = [
   { value: 'once', label: 'Ponctuelle' },
@@ -72,7 +75,7 @@ export default function Echeances() {
   return (
     <div className="space-y-6">
       <p className="text-xs text-mute -mt-2">
-        Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif — alors qu'un produit/charge le fait bouger.
+        Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif. Un virement entre vos propres comptes (ex : épargne automatique) est neutre à la fois sur le patrimoine et sur le total trésorerie. Seul un produit/charge fait vraiment bouger l'un ou l'autre.
       </p>
 
       <div className="flex flex-wrap gap-2">
