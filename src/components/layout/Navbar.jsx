@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { to: '/finance', label: 'Finance' },
   { to: '/habits', label: 'Habits' },
   { to: '/health', label: 'Health' },
-  { to: '/deals', label: 'PE / Deals' },
+  { to: '/deals', label: 'Deals' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },
 ];

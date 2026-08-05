@@ -65,7 +65,7 @@ export default function DealDetail() {
   if (!deal) {
     return (
       <div className="max-w-4xl mx-auto">
-        <EmptyState>Deal not found. <Link to="/deals" className="text-accent">Back to PE / Deals</Link></EmptyState>
+        <EmptyState>Deal not found. <Link to="/deals" className="text-accent">Back to Deals</Link></EmptyState>
       </div>
     );
   }
