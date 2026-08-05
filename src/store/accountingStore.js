@@ -9,7 +9,7 @@ import {
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
-import { calculateGoalXP, badgeForGoal } from '../utils/goals';
+import { calculateGoalXP, badgeForGoal, budgetSeverity } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
 import { useSkillStore } from './skillStore';
 import { useTradingStore } from './tradingStore';
@@ -34,6 +34,7 @@ export const useAccountingStore = create(
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
       echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
+      budgetAlerts: { enabled: false, lastShown: {} }, // idem pour les dépassements de budget (charges)
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -189,6 +190,25 @@ export const useAccountingStore = create(
         }
       },
       deleteBudget: (id) => set({ budgets: get().budgets.filter((b) => b.id !== id) }),
+
+      // Budgets de CHARGES du mois en cours dont le réalisé dépasse le budgété
+      // de plus de 10% (orange) ou 25% (rouge) — budgetSeverity (utils/goals.js),
+      // même seuil déjà utilisé côté financeStore historique. Un budget de
+      // produit "manqué" n'est pas un dépassement au même sens, donc exclu ici.
+      getBudgetAlerts: () => {
+        const mk = monthKey(new Date().toISOString().slice(0, 10));
+        return get()
+          .getBudgetVariance(mk)
+          .filter((v) => v.cls === 6)
+          .map((v) => ({ ...v, severity: budgetSeverity(v.reel, v.amount) }))
+          .filter((v) => v.severity)
+          .sort((a, b) => b.severity.over - a.severity.over);
+      },
+
+      // ─────────── Rappels navigateur pour dépassements de budget ───────────
+      setBudgetAlertsEnabled: (enabled) => set({ budgetAlerts: { ...get().budgetAlerts, enabled } }),
+      markBudgetAlertShown: (key, dateKey) =>
+        set({ budgetAlerts: { ...get().budgetAlerts, lastShown: { ...get().budgetAlerts.lastShown, [key]: dateKey } } }),
 
       // ─────────── Échéances (produits & charges programmés) ───────────
       // Différence avec les budgets : un budget est une ENVELOPPE mensuelle
@@ -439,7 +459,11 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [], echeanceAlerts: { enabled: false, lastShown: {} } }),
+      resetAll: () =>
+        set({
+          journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [],
+          echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} },
+        }),
     }),
     { name: 'audax-accounting' }
   )

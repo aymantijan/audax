@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Bell, BellOff } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
 import { monthKey } from '../../utils/accounting-engine';
@@ -10,10 +10,18 @@ import AccountSelect from '../../components/common/AccountSelect';
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function Budget() {
-  const { budgets, setBudget, deleteBudget, getBudgetVariance } = useAccountingStore();
+  const { budgets, setBudget, deleteBudget, getBudgetVariance, getBudgetAlerts, budgetAlerts, setBudgetAlertsEnabled } = useAccountingStore();
   const [mk, setMk] = useState(monthKey(new Date().toISOString().slice(0, 10)));
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ account: '621', amount: '' });
+  const overruns = getBudgetAlerts();
+
+  const toggleAlerts = async () => {
+    if (budgetAlerts.enabled) return setBudgetAlertsEnabled(false);
+    if (typeof Notification === 'undefined') return;
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') setBudgetAlertsEnabled(true);
+  };
 
   const variance = useMemo(() => getBudgetVariance(mk), [getBudgetVariance, mk, budgets]);
   const charges = variance.filter((v) => v.cls === 6);
@@ -92,10 +100,33 @@ export default function Budget() {
         <Field label="Mois analysé">
           <Input type="month" value={mk} onChange={(e) => setMk(e.target.value)} className="w-44" />
         </Field>
-        <Button onClick={() => setModal(true)}>
-          <span className="flex items-center gap-2"><Plus size={16} /> Définir un budget</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleAlerts}>
+            <span className="flex items-center gap-2">
+              {budgetAlerts.enabled ? <Bell size={13} /> : <BellOff size={13} />}
+              {budgetAlerts.enabled ? 'Rappels activés' : 'Activer les rappels'}
+            </span>
+          </Button>
+          <Button onClick={() => setModal(true)}>
+            <span className="flex items-center gap-2"><Plus size={16} /> Définir un budget</span>
+          </Button>
+        </div>
       </div>
+
+      {overruns.length > 0 && (
+        <Card title={`Dépassement de budget (${overruns.length})`} action={<AlertTriangle size={16} className="text-bad" />}>
+          <ul className="space-y-1.5">
+            {overruns.map((v) => (
+              <li key={v.id} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm flex-wrap border ${v.severity.level === 'red' ? 'bg-bad/10 border-bad/40' : 'bg-warn/10 border-warn/40'}`}>
+                <AlertTriangle size={14} className={v.severity.level === 'red' ? 'text-bad shrink-0' : 'text-warn shrink-0'} />
+                <span className="flex-1 min-w-[10rem]">{v.label}</span>
+                <span className="font-medium">{fmtMAD(v.reel)} / {fmtMAD(v.amount)}</span>
+                <Badge color={v.severity.level === 'red' ? 'var(--error)' : 'var(--warning)'}>+{Math.round(v.severity.over)}%</Badge>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Produits — budget vs réel" value={fmtMAD(totReelProduits)} sub={`Budget : ${fmtMAD(totBudgetProduits)}`} color="var(--success)" />
