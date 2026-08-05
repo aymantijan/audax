@@ -33,6 +33,7 @@ export const useAccountingStore = create(
       legacyImported: false,
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
+      echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -267,6 +268,27 @@ export const useAccountingStore = create(
           .sort((a, b) => (a.occurrenceDate < b.occurrenceDate ? -1 : 1));
       },
 
+      // Occurrences dont la date est déjà passée sans avoir été marquées payées
+      // (fenêtre : depuis la date de création de chaque échéance jusqu'à hier) —
+      // pour la bannière "en retard" et les rappels navigateur.
+      getOverdueEcheances: () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yKey = yesterday.toISOString().slice(0, 10);
+        return get()
+          .echeances.filter((e) => e.active)
+          .flatMap((e) => echeanceOccurrences(e, e.dueDate, yKey).map((occurrenceDate) => ({ ...e, occurrenceDate })))
+          .sort((a, b) => (a.occurrenceDate < b.occurrenceDate ? -1 : 1));
+      },
+
+      // ─────────── Rappels navigateur pour échéances en retard ───────────
+      // Même mécanisme que tradingStore.alerts / healthStore.reminders : local
+      // uniquement (pas de push serveur), ne se déclenche que si l'onglet AUDAX
+      // est ouvert — voir hooks/useEcheanceAlerts.js.
+      setEcheanceAlertsEnabled: (enabled) => set({ echeanceAlerts: { ...get().echeanceAlerts, enabled } }),
+      markEcheanceAlertShown: (key, dateKey) =>
+        set({ echeanceAlerts: { ...get().echeanceAlerts, lastShown: { ...get().echeanceAlerts.lastShown, [key]: dateKey } } }),
+
       // Estimation des payouts trading à venir : Σ P&L des 30 derniers jours des
       // comptes Broker/Prop Firm (le compte Demo ne génère jamais de vrai retrait),
       // × payoutPct (défaut 80%, taux de reversement typique des prop firms), en
@@ -417,7 +439,7 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [] }),
+      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [], echeanceAlerts: { enabled: false, lastShown: {} } }),
     }),
     { name: 'audax-accounting' }
   )

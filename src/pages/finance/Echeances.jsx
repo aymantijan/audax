@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, Plus, Pencil, Trash2, CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react';
+import { CalendarClock, Plus, Pencil, Trash2, CheckCircle2, PauseCircle, PlayCircle, AlertTriangle, Bell, BellOff } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { ENTRY_TEMPLATES } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
@@ -26,7 +26,10 @@ const blank = () => {
 };
 
 export default function Echeances() {
-  const { echeances, addEcheance, editEcheance, deleteEcheance, toggleEcheanceActive, markEcheancePaid, getUpcomingEcheances } = useAccountingStore();
+  const {
+    echeances, addEcheance, editEcheance, deleteEcheance, toggleEcheanceActive, markEcheancePaid,
+    getUpcomingEcheances, getOverdueEcheances, echeanceAlerts, setEcheanceAlertsEnabled,
+  } = useAccountingStore();
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(blank());
@@ -34,6 +37,14 @@ export default function Echeances() {
 
   const tpl = ECHEANCE_TEMPLATES.find((t) => t.id === form.templateId) || ECHEANCE_TEMPLATES[0];
   const upcoming = getUpcomingEcheances(60);
+  const overdue = getOverdueEcheances();
+
+  const toggleAlerts = async () => {
+    if (echeanceAlerts.enabled) return setEcheanceAlertsEnabled(false);
+    if (typeof Notification === 'undefined') return;
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') setEcheanceAlertsEnabled(true);
+  };
 
   const openAdd = (templateId) => {
     setEditing(null);
@@ -72,11 +83,41 @@ export default function Echeances() {
 
   const templateOf = (e) => ECHEANCE_TEMPLATES.find((t) => t.id === e.templateId) || ECHEANCE_TEMPLATES.find((t) => t.id === (e.type === 'produit' ? 'income' : 'expense'));
 
+  const OccurrenceRow = ({ row, overdue: isOverdue }) => {
+    const t = templateOf(row);
+    return (
+      <li className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm flex-wrap ${isOverdue ? 'bg-bad/10 border border-bad/40' : 'bg-surface border border-line'}`}>
+        {isOverdue && <AlertTriangle size={14} className="text-bad shrink-0" />}
+        <Badge>{t?.label}</Badge>
+        <span className="flex-1 min-w-[10rem]">{row.label}</span>
+        <span className={`text-xs ${isOverdue ? 'text-bad' : 'text-mute'}`}>{fmtDate(row.occurrenceDate)}</span>
+        <span className="font-medium">{fmtMAD(row.amount)}</span>
+        <Input
+          type="date"
+          value={payDate[payKey(row)] || row.occurrenceDate}
+          onChange={(e) => setPayDate({ ...payDate, [payKey(row)]: e.target.value })}
+          className="!py-1 !px-2 text-xs w-36"
+        />
+        <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => submitPay(row)}>
+          <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Marquer payé</span>
+        </Button>
+      </li>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      <p className="text-xs text-mute -mt-2">
-        Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif. Un virement entre vos propres comptes (ex : épargne automatique) est neutre à la fois sur le patrimoine et sur le total trésorerie. Seul un produit/charge fait vraiment bouger l'un ou l'autre.
-      </p>
+      <div className="flex items-start justify-between gap-3 -mt-2">
+        <p className="text-xs text-mute">
+          Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif. Un virement entre vos propres comptes (ex : épargne automatique) est neutre à la fois sur le patrimoine et sur le total trésorerie. Seul un produit/charge fait vraiment bouger l'un ou l'autre.
+        </p>
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs shrink-0" onClick={toggleAlerts}>
+          <span className="flex items-center gap-2">
+            {echeanceAlerts.enabled ? <Bell size={13} /> : <BellOff size={13} />}
+            {echeanceAlerts.enabled ? 'Rappels activés' : 'Activer les rappels'}
+          </span>
+        </Button>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {ECHEANCE_TEMPLATES.map((t) => (
@@ -86,29 +127,22 @@ export default function Echeances() {
         ))}
       </div>
 
+      {overdue.length > 0 && (
+        <Card title={`En retard (${overdue.length})`} action={<AlertTriangle size={16} className="text-bad" />}>
+          <ul className="space-y-1.5">
+            {overdue.map((row) => (
+              <OccurrenceRow key={payKey(row)} row={row} overdue />
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <Card title="À venir (60 jours)" action={<CalendarClock size={16} className="text-mute" />}>
         {upcoming.length ? (
           <ul className="space-y-1.5">
-            {upcoming.map((row) => {
-              const t = templateOf(row);
-              return (
-                <li key={payKey(row)} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2.5 text-sm flex-wrap">
-                  <Badge>{t?.label}</Badge>
-                  <span className="flex-1 min-w-[10rem]">{row.label}</span>
-                  <span className="text-mute text-xs">{fmtDate(row.occurrenceDate)}</span>
-                  <span className="font-medium">{fmtMAD(row.amount)}</span>
-                  <Input
-                    type="date"
-                    value={payDate[payKey(row)] || row.occurrenceDate}
-                    onChange={(e) => setPayDate({ ...payDate, [payKey(row)]: e.target.value })}
-                    className="!py-1 !px-2 text-xs w-36"
-                  />
-                  <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => submitPay(row)}>
-                    <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Marquer payé</span>
-                  </Button>
-                </li>
-              );
-            })}
+            {upcoming.map((row) => (
+              <OccurrenceRow key={payKey(row)} row={row} />
+            ))}
           </ul>
         ) : (
           <EmptyState>Aucune échéance à venir dans les 60 prochains jours.</EmptyState>

@@ -10,6 +10,7 @@ import { preloadGoogleCalendar } from './services/google-calendar';
 import { toast } from './store/uiStore';
 import { useHealthReminders } from './hooks/useHealthReminders';
 import { useTradingAlerts } from './hooks/useTradingAlerts';
+import { useEcheanceAlerts } from './hooks/useEcheanceAlerts';
 import MainLayout from './components/layout/MainLayout';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
@@ -67,6 +68,7 @@ export default function App() {
 
   useHealthReminders(); // local-only browser-notification reminders (see hook for scope/limits)
   useTradingAlerts(); // local-only browser-notification alerts for rule breaches/tilt/deadlines
+  useEcheanceAlerts(); // local-only browser-notification alerts for overdue échéances
 
   // Cloud sync: only active when Supabase is configured AND the user has a
   // real Supabase session (not just a local profile). Starts/stops on login/logout
