@@ -379,3 +379,103 @@ export function treasuryForecast(journal, budgets, monthsAhead = 6) {
   }
   return { soldeActuel, budgetNet, series: out };
 }
+
+// ─── Échéances & prévision de trésorerie v2 (jour par jour) ───
+// Échéance : { id, label, type:'produit'|'charge', natureAccount (classe 6/7),
+//   treasuryAccount (classe 5/4), amount, dueDate, recurrence:'once'|'monthly'|
+//   'quarterly'|'yearly', endDate, active, paidDates:[] }
+
+// Étale une échéance récurrente en occurrences concrètes dans [fromDate, toDate]
+// (bornes incluses, chaînes 'YYYY-MM-DD'), en excluant les occurrences déjà
+// réglées (paidDates). Approximation calendaire simple : avance de N mois via
+// Date(y, m+N, d) — une échéance fixée au 31 peut glisser sur un mois plus
+// court (Date le normalise), acceptable pour une prévision, pas un relevé.
+export function echeanceOccurrences(ech, fromDate, toDate) {
+  if (!ech.active) return [];
+  const from = new Date(fromDate + 'T00:00:00');
+  const to = new Date(toDate + 'T00:00:00');
+  const end = ech.endDate ? new Date(ech.endDate + 'T00:00:00') : null;
+  const paid = new Set(ech.paidDates || []);
+  const out = [];
+  if (ech.recurrence === 'once') {
+    const d = new Date(ech.dueDate + 'T00:00:00');
+    if (d >= from && d <= to && !paid.has(ech.dueDate)) out.push(ech.dueDate);
+    return out;
+  }
+  const stepMonths = { monthly: 1, quarterly: 3, yearly: 12 }[ech.recurrence] || 1;
+  let d = new Date(ech.dueDate + 'T00:00:00');
+  let guard = 0; // filet de sécurité anti-boucle-infinie, jamais censé être atteint
+  while (d <= to && guard < 600) {
+    guard++;
+    if (end && d > end) break;
+    const key = d.toISOString().slice(0, 10);
+    if (d >= from && !paid.has(key)) out.push(key);
+    d = new Date(d.getFullYear(), d.getMonth() + stepMonths, d.getDate());
+  }
+  return out;
+}
+
+// Rythme mensuel moyen réel par compte (classes 6 & 7), sur les `months`
+// derniers mois du journal — la détection "d'habitudes" qui remplace le
+// lissage purement budgétaire. Signe unifié : credit − debit sur la ligne
+// classe 6/7 = impact trésorerie de sa contrepartie classe 5 (un produit
+// crédité = encaissement futur ; une charge débitée = décaissement futur).
+function monthlyAverageByAccount(journal, months = 3) {
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - months);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  const byAccount = {};
+  for (const e of journal) {
+    if (e.date < cutoffKey) continue;
+    for (const l of e.lines) {
+      const cls = classOf(l.account);
+      if (cls !== 6 && cls !== 7) continue;
+      byAccount[l.account] = (byAccount[l.account] || 0) + (l.credit - l.debit);
+    }
+  }
+  return Object.fromEntries(Object.entries(byAccount).map(([k, v]) => [k, v / months]));
+}
+
+// Prévision de trésorerie v2, jour par jour sur `days` jours : solde actuel +
+// habitudes réelles détectées sur les comptes SANS échéance active qui les
+// couvre (pour ne pas compter deux fois le même flux) + échéances (montants
+// et dates exacts) + estimation optionnelle de payout trading. Les habitudes
+// et le payout sont lissés en quote-part quotidienne (simplification assumée :
+// on ne prétend pas connaître le jour exact d'un flux non-échéancé).
+export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
+  const soldeActuel = treasuryBalance(journal);
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+  const endDate = new Date(today);
+  endDate.setDate(endDate.getDate() + days);
+  const endKey = endDate.toISOString().slice(0, 10);
+
+  const activeEch = (echeances || []).filter((e) => e.active);
+  const coveredAccounts = new Set(activeEch.map((e) => e.natureAccount));
+  const habitAvg = monthlyAverageByAccount(journal, 3);
+  const freeHabitMonthly = r2(
+    Object.entries(habitAvg).filter(([acct]) => !coveredAccounts.has(acct)).reduce((a, [, v]) => a + v, 0)
+  );
+  const dailyBaseline = (freeHabitMonthly + tradingMonthlyPayout) / 30;
+
+  const echByDate = {};
+  for (const ech of activeEch) {
+    for (const occDate of echeanceOccurrences(ech, todayKey, endKey)) {
+      const signed = ech.type === 'produit' ? Number(ech.amount) : -Number(ech.amount);
+      echByDate[occDate] = r2((echByDate[occDate] || 0) + signed);
+    }
+  }
+
+  const series = [];
+  const alerts = [];
+  let solde = soldeActuel;
+  for (let i = 1; i <= days; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    solde = r2(solde + dailyBaseline + (echByDate[key] || 0));
+    if (solde < 0 && (!series.length || series[series.length - 1].solde >= 0)) alerts.push({ date: key, solde });
+    series.push({ date: key, label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }), solde, echeance: echByDate[key] || 0 });
+  }
+  return { soldeActuel, freeHabitMonthly, series, alerts, echeancesInWindow: Object.keys(echByDate).length };
+}

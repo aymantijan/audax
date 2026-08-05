@@ -1,16 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { uid } from '../utils/formatters';
+import { uid, usdToMad } from '../utils/formatters';
 import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
+  echeanceOccurrences, treasuryForecastV2,
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
 import { calculateGoalXP, badgeForGoal } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
 import { useSkillStore } from './skillStore';
+import { useTradingStore } from './tradingStore';
 import { toast } from './uiStore';
 
 // Comptabilité générale personnelle en partie double.
@@ -30,6 +32,7 @@ export const useAccountingStore = create(
       labelLimits: [], // [{ id, account, label, maxRatioToIncomePct, maxRatioToAccountSpendPct, createdAt }]
       legacyImported: false,
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
+      echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -186,6 +189,105 @@ export const useAccountingStore = create(
       },
       deleteBudget: (id) => set({ budgets: get().budgets.filter((b) => b.id !== id) }),
 
+      // ─────────── Échéances (produits & charges programmés) ───────────
+      // Différence avec les budgets : un budget est une ENVELOPPE mensuelle
+      // lissée pour contrôler un écart (dépensé vs prévu) ; une échéance est un
+      // MOUVEMENT concret daté (ponctuel ou récurrent) — c'est elle qui nourrit
+      // la prévision de trésorerie jour par jour (getTreasuryForecastV2), pas le
+      // budget. "Marquer payé" transforme l'échéance en véritable écriture.
+      addEcheance: (data) => {
+        if (!data.label?.trim() || !Number(data.amount) || !data.dueDate) {
+          return { ok: false, error: 'Libellé, montant et date sont requis.' };
+        }
+        const ech = {
+          id: uid(),
+          label: data.label.trim(),
+          type: data.type === 'produit' ? 'produit' : 'charge',
+          natureAccount: data.natureAccount,
+          treasuryAccount: data.treasuryAccount,
+          amount: Number(data.amount),
+          dueDate: data.dueDate,
+          recurrence: data.recurrence || 'once',
+          endDate: data.endDate || null,
+          active: true,
+          paidDates: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set({ echeances: [...get().echeances, ech] });
+        useSkillStore.getState().awardXP('budget-control-lv1', 2, `échéance créée : ${ech.label}`);
+        toast(`Échéance créée : ${ech.label}`, 'success');
+        return { ok: true, id: ech.id };
+      },
+      editEcheance: (id, updates) =>
+        set({ echeances: get().echeances.map((e) => (e.id === id ? stamp({ ...e, ...updates, amount: Number(updates.amount ?? e.amount) }) : e)) }),
+      deleteEcheance: (id) => set({ echeances: get().echeances.filter((e) => e.id !== id) }),
+      toggleEcheanceActive: (id) => set({ echeances: get().echeances.map((e) => (e.id === id ? stamp({ ...e, active: !e.active }) : e)) }),
+
+      // Transforme UNE occurrence d'échéance en véritable écriture de journal
+      // (partie double) et l'ajoute à paidDates pour qu'elle ne réapparaisse
+      // plus comme "à venir" ni ne soit comptée deux fois dans la prévision.
+      markEcheancePaid: (id, occurrenceDate) => {
+        const ech = get().echeances.find((e) => e.id === id);
+        if (!ech) return { ok: false, error: 'Échéance introuvable.' };
+        const amount = Number(ech.amount);
+        const lines = ech.type === 'produit'
+          ? [{ account: ech.treasuryAccount, debit: amount, credit: 0 }, { account: ech.natureAccount, debit: 0, credit: amount }]
+          : [{ account: ech.natureAccount, debit: amount, credit: 0 }, { account: ech.treasuryAccount, debit: 0, credit: amount }];
+        const res = get().addEntry({ date: occurrenceDate, label: ech.label, lines });
+        if (!res.ok) return res;
+        set({
+          echeances: get().echeances.map((e) =>
+            e.id === id
+              ? stamp({ ...e, paidDates: [...(e.paidDates || []), occurrenceDate], ...(e.recurrence === 'once' ? { active: false } : {}) })
+              : e
+          ),
+        });
+        return { ok: true };
+      },
+
+      // Occurrences à venir dans les `daysAhead` prochains jours, toutes échéances
+      // actives confondues, triées par date — pour la liste "à venir" et les rappels.
+      getUpcomingEcheances: (daysAhead = 30) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const end = new Date();
+        end.setDate(end.getDate() + daysAhead);
+        const endKey = end.toISOString().slice(0, 10);
+        return get()
+          .echeances.filter((e) => e.active)
+          .flatMap((e) => echeanceOccurrences(e, today, endKey).map((occurrenceDate) => ({ ...e, occurrenceDate })))
+          .sort((a, b) => (a.occurrenceDate < b.occurrenceDate ? -1 : 1));
+      },
+
+      // Estimation des payouts trading à venir : Σ P&L des 30 derniers jours des
+      // comptes Broker/Prop Firm (le compte Demo ne génère jamais de vrai retrait),
+      // × payoutPct (défaut 80%, taux de reversement typique des prop firms), en
+      // ne comptant qu'un P&L positif. Simplification assumée : tout est ramené en
+      // DH via le taux USD→DH fixe de l'app pour les comptes non-DH (la plupart des
+      // prop firms/brokers sont libellés en USD) — un compte déjà en 'MAD' passe
+      // tel quel, un autre devise non gérée est ignoré plutôt que mal converti.
+      getTradingPayoutEstimate: (payoutPct = 0.8) => {
+        const { accounts, getAccountTrades } = useTradingStore.getState();
+        const cutoff = Date.now() - 30 * 86400000;
+        let pnlMad = 0;
+        for (const acct of accounts.filter((a) => a.type === 'broker' || a.type === 'propfirm')) {
+          const currency = acct.currency || 'USD';
+          if (currency !== 'USD' && currency !== 'MAD') continue;
+          const pnl = getAccountTrades(acct.id)
+            .filter((t) => new Date(t.date).getTime() >= cutoff)
+            .reduce((a, t) => a + (Number(t.pnl) || 0), 0);
+          pnlMad += currency === 'USD' ? usdToMad(pnl) : pnl;
+        }
+        return Math.round(Math.max(0, pnlMad) * payoutPct);
+      },
+
+      // Prévision v2 jour par jour — voir treasuryForecastV2 (accounting-engine.js)
+      // pour la logique (habitudes + échéances + payout trading en option).
+      getTreasuryForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8 } = {}) => {
+        const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
+        return treasuryForecastV2(get().journal, get().echeances, { days, tradingMonthlyPayout });
+      },
+
       // ─────────── Corrections de valeur (ANC → ANCC) ───────────
       addCorrection: (data) => {
         const c = { ...data, id: uid(), amount: Number(data.amount), createdAt: Date.now(), updatedAt: Date.now() };
@@ -299,7 +401,7 @@ export const useAccountingStore = create(
         return { ok: true, count: entries.length };
       },
 
-      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [] }),
+      resetAll: () => set({ journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [] }),
     }),
     { name: 'audax-accounting' }
   )

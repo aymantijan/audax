@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
-import { Landmark, Plus, Pencil, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { Landmark, Plus, Pencil, Archive, ArchiveRestore, Trash2, AlertTriangle } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { accountsOfClass } from '../../utils/chart-of-accounts';
-import { fmtMAD } from '../../utils/formatters';
-import { Card, Stat, Button, Field, Input, Modal, Badge, EmptyState } from '../../components/common/ui';
+import { fmtMAD, fmtDate } from '../../utils/formatters';
+import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import { toast } from '../../store/uiStore';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
@@ -21,6 +21,10 @@ export default function TreasuryPure() {
   const [subModal, setSubModal] = useState(false);
   const [editingSub, setEditingSub] = useState(null);
   const [subForm, setSubForm] = useState(blankSubForm('511'));
+  const [horizonDays, setHorizonDays] = useState(90);
+  const [includeTradingPayout, setIncludeTradingPayout] = useState(false);
+  const forecastV2 = store.getTreasuryForecastV2(horizonDays, { includeTradingPayout });
+  const tradingPayoutEstimate = store.getTradingPayoutEstimate();
 
   // Chaque compte collectif de classe 5 (511, 512, 514...) affiche son solde
   // propre + celui de tous ses comptes auxiliaires réunis — un compte
@@ -170,6 +174,44 @@ export default function TreasuryPure() {
           </Card>
         </div>
       )}
+
+      <Card
+        title="Prévision détaillée (jour par jour)"
+        action={
+          <div className="flex items-center gap-2">
+            <Select value={horizonDays} onChange={(e) => setHorizonDays(Number(e.target.value))} className="!py-1 !px-2 text-xs w-32" options={[{ value: 30, label: '30 jours' }, { value: 60, label: '60 jours' }, { value: 90, label: '90 jours' }, { value: 180, label: '180 jours' }, { value: 365, label: '1 an' }]} />
+          </div>
+        }
+      >
+        <p className="text-[11px] text-mute mb-3">
+          Combine le solde actuel, les habitudes réelles détectées dans le journal (comptes non couverts par une échéance active), et les échéances programmées à leur date exacte.
+        </p>
+        <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer w-fit">
+          <input type="checkbox" checked={includeTradingPayout} onChange={(e) => setIncludeTradingPayout(e.target.checked)} />
+          Inclure une estimation de payout trading ({fmtMAD(tradingPayoutEstimate)}/mois, 80% du P&L réalisé sur 30j des comptes Broker/Prop Firm)
+        </label>
+
+        {forecastV2.alerts.length > 0 && (
+          <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-2.5 mb-3">
+            <AlertTriangle size={15} className="shrink-0" />
+            Risque de découvert : solde projeté négatif à partir du {fmtDate(forecastV2.alerts[0].date)} ({fmtMAD(forecastV2.alerts[0].solde)})
+          </div>
+        )}
+
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={forecastV2.series}>
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={Math.ceil(forecastV2.series.length / 12)} />
+            <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} domain={['auto', 'auto']} />
+            <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
+            <ReferenceLine y={0} stroke="var(--error)" strokeDasharray="4 4" />
+            <Line type="monotone" dataKey="solde" name="Solde projeté" stroke="#00d9ff" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+        <p className="text-[11px] text-mute mt-2">
+          {forecastV2.echeancesInWindow} occurrence{forecastV2.echeancesInWindow !== 1 ? 's' : ''} d'échéance dans la fenêtre · habitude libre estimée : {fmtMAD(forecastV2.freeHabitMonthly)}/mois
+        </p>
+      </Card>
 
       <Modal open={subModal} onClose={closeSubModal} title={editingSub ? 'Modifier le compte auxiliaire' : 'Nouveau compte auxiliaire de trésorerie'}>
         <form onSubmit={submitSub} className="space-y-3">

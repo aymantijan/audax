@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { todayKey } from '../utils/formatters';
 import AccountingOverview from './finance/AccountingOverview';
@@ -8,6 +8,7 @@ import Ledger from './finance/Ledger';
 import Statements from './finance/Statements';
 import Analysis from './finance/Analysis';
 import Budget from './finance/Budget';
+import Echeances from './finance/Echeances';
 import TreasuryPure from './finance/TreasuryPure';
 import Goals from './finance/Goals';
 import Labels from './finance/Labels';
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'statements', label: 'Bilan · CPC · ESG', icon: FileSpreadsheet, Component: Statements },
   { key: 'analysis', label: 'Analyse & Ratios', icon: LineChart, Component: Analysis },
   { key: 'budget', label: 'Budget', icon: PiggyBank, Component: Budget },
+  { key: 'echeances', label: 'Échéances', icon: CalendarClock, Component: Echeances },
   { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: TreasuryPure },
   { key: 'goals', label: 'Objectifs', icon: Target, Component: Goals },
 ];

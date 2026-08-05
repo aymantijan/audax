@@ -61,8 +61,9 @@ export default function Goals() {
   const [editing, setEditing] = useState(null);
 
   const rows = store.getGoalRows();
-  const treasuryGoals = rows.filter((g) => g.type === 'treasury');
-  const networthGoals = rows.filter((g) => g.type === 'networth');
+  const treasuryGoals = rows.filter((g) => g.type === 'treasury' && !g.achieved);
+  const networthGoals = rows.filter((g) => g.type === 'networth' && !g.achieved);
+  const trophies = rows.filter((g) => g.achieved).sort((a, b) => (a.achievedAt < b.achievedAt ? 1 : -1));
 
   useEffect(() => {
     for (const g of rows) if (!g.achieved && g.current >= g.targetAmount) checkGoalAchievement(g.id, g.current);
@@ -83,6 +84,16 @@ export default function Goals() {
 
   return (
     <div className="space-y-6">
+      {trophies.length > 0 && (
+        <Card title="🏆 Objectifs atteints">
+          <div className="grid md:grid-cols-2 gap-4">
+            {trophies.map((g) => (
+              <GoalCard key={g.id} g={g} onEdit={openEdit} onDelete={(gg) => { if (confirm(`Supprimer l'objectif "${gg.name}" ?`)) deleteGoal(gg.id); }} />
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card
         title="Objectifs de Trésorerie"
         action={
