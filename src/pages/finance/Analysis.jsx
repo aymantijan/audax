@@ -117,7 +117,7 @@ export default function Analysis() {
         }
       >
         <p className="text-[11px] text-mute mb-3">
-          Réutilise la prévision de trésorerie détaillée (onglet Trésorerie) et la recombine au reste du bilan. Simplification assumée : immobilisations, créances, dettes et corrections sont gelées à leur valeur actuelle sur tout l'horizon — les échéances ne modélisent pour l'instant que les flux de trésorerie, pas les mouvements d'emprunt ou d'investissement.
+          Réutilise la prévision de trésorerie détaillée (onglet Trésorerie) : un produit/charge fait bouger le patrimoine, un emprunt/investissement (échéance "Achat d'immobilisation", "Réception/Remboursement d'emprunt") est neutre — il convertit juste de la trésorerie en dette ou en actif. Simplification assumée : seuls les mouvements programmés en échéance sont anticipés — le reste du bilan (immobilisé, créances, dettes hors échéances, corrections) est gelé à sa valeur actuelle sur l'horizon.
         </p>
         {nwForecast.alerts.length > 0 && (
           <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-2.5 mb-3">

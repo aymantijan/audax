@@ -380,10 +380,55 @@ export function treasuryForecast(journal, budgets, monthsAhead = 6) {
   return { soldeActuel, budgetNet, series: out };
 }
 
-// ─── Échéances & prévision de trésorerie v2 (jour par jour) ───
-// Échéance : { id, label, type:'produit'|'charge', natureAccount (classe 6/7),
-//   treasuryAccount (classe 5/4), amount, dueDate, recurrence:'once'|'monthly'|
+// ─── Échéances & prévisions v2 (jour par jour) ───
+// Échéance : { id, label, templateId (income|expense|invest|borrow|repay),
+//   debitAccount, creditAccount, amount, dueDate, recurrence:'once'|'monthly'|
 //   'quarterly'|'yearly', endDate, active, paidDates:[] }
+// templateId reprend les modèles de ENTRY_TEMPLATES (chart-of-accounts.js) :
+// income (produit↔trésorerie), expense (charge↔trésorerie/dette CT),
+// invest (immobilisation↔trésorerie), borrow (emprunt reçu), repay (remboursement).
+// Rétro-compatibilité : les échéances créées avant cette généralisation portent
+// encore type:'produit'|'charge' + natureAccount + treasuryAccount — resolveEcheanceLines
+// les retraduit à la volée, aucune migration de données nécessaire.
+export function resolveEcheanceLines(ech) {
+  if (ech.debitAccount && ech.creditAccount) return { debitAccount: ech.debitAccount, creditAccount: ech.creditAccount };
+  return ech.type === 'produit'
+    ? { debitAccount: ech.treasuryAccount, creditAccount: ech.natureAccount }
+    : { debitAccount: ech.natureAccount, creditAccount: ech.treasuryAccount };
+}
+
+// Impact sur la trésorerie (classe 5) d'un mouvement débit(X)/crédit(X) :
+// +X si le débit est en classe 5, −X si le crédit l'est, 0 sinon (ex : une
+// charge payée par carte de crédit — classe 4 — ne touche pas la trésorerie
+// tout de suite, seule la dette augmente).
+function treasuryDelta(debitAccount, creditAccount, amount) {
+  let d = 0;
+  if (classOf(debitAccount) === 5) d += amount;
+  if (classOf(creditAccount) === 5) d -= amount;
+  return r2(d);
+}
+
+// Impact sur l'ANC (Actif − Dettes) d'un mouvement débit(X)/crédit(X), général
+// à TOUTE écriture en partie double : un débit sur un compte d'actif (2/3/5)
+// l'augmente (+X) ; un débit sur une dette (1/4) la réduit, donc ANC += X ; un
+// crédit sur une dette l'augmente, ANC -= X ; un crédit sur un actif le réduit,
+// ANC -= X. Les comptes 6/7 (résultat) ne contribuent jamais directement ici —
+// leur effet est déjà entièrement capté par la ligne 5 en face (une charge
+// payée cash réduit l'actif ; une charge à crédit augmente la dette — les deux
+// cas sont couverts par les règles ci-dessus sans traiter 6/7 à part). C'est
+// ce qui rend un emprunt/investissement "neutre en patrimoine" automatiquement :
+// invest (actif+X, trésorerie−X) et repay (dette−X via débit, trésorerie−X)
+// se compensent à 0, exactement comme il se doit économiquement.
+function ancDelta(debitAccount, creditAccount, amount) {
+  let d = 0;
+  const dc = classOf(debitAccount);
+  const cc = classOf(creditAccount);
+  if (dc === 2 || dc === 3 || dc === 5) d += amount;
+  if (dc === 1 || dc === 4) d += amount;
+  if (cc === 1 || cc === 4) d -= amount;
+  if (cc === 2 || cc === 3 || cc === 5) d -= amount;
+  return r2(d);
+}
 
 // Étale une échéance récurrente en occurrences concrètes dans [fromDate, toDate]
 // (bornes incluses, chaînes 'YYYY-MM-DD'), en excluant les occurrences déjà
@@ -439,9 +484,13 @@ function monthlyAverageByAccount(journal, months = 3) {
 // Prévision de trésorerie v2, jour par jour sur `days` jours : solde actuel +
 // habitudes réelles détectées sur les comptes SANS échéance active qui les
 // couvre (pour ne pas compter deux fois le même flux) + échéances (montants
-// et dates exacts) + estimation optionnelle de payout trading. Les habitudes
-// et le payout sont lissés en quote-part quotidienne (simplification assumée :
-// on ne prétend pas connaître le jour exact d'un flux non-échéancé).
+// et dates exacts, tous types confondus — produit/charge/emprunt/investissement)
+// + estimation optionnelle de payout trading. Les habitudes et le payout sont
+// lissés en quote-part quotidienne (simplification assumée : on ne prétend pas
+// connaître le jour exact d'un flux non-échéancé). Chaque point de la série
+// porte aussi `ancEcheance`, l'impact patrimoine (ANC) de ce même jour — voir
+// ancDelta : nul pour un emprunt/investissement (juste une conversion actif↔dette
+// ou actif↔trésorerie), égal à l'impact trésorerie pour un produit/charge.
 export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
   const soldeActuel = treasuryBalance(journal);
   const today = new Date();
@@ -451,7 +500,16 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
   const endKey = endDate.toISOString().slice(0, 10);
 
   const activeEch = (echeances || []).filter((e) => e.active);
-  const coveredAccounts = new Set(activeEch.map((e) => e.natureAccount));
+  // Seules les échéances dont une des deux jambes touche une classe 6/7
+  // "couvrent" ce compte pour l'exclusion de l'habitude détectée — un emprunt/
+  // investissement (classes 1/2/4/5 uniquement) ne recoupe jamais les habitudes,
+  // qui ne portent que sur les comptes de résultat.
+  const coveredAccounts = new Set(
+    activeEch.flatMap((e) => {
+      const { debitAccount, creditAccount } = resolveEcheanceLines(e);
+      return [debitAccount, creditAccount].filter((a) => classOf(a) === 6 || classOf(a) === 7);
+    })
+  );
   const habitAvg = monthlyAverageByAccount(journal, 3);
   const freeHabitMonthly = r2(
     Object.entries(habitAvg).filter(([acct]) => !coveredAccounts.has(acct)).reduce((a, [, v]) => a + v, 0)
@@ -459,10 +517,13 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
   const dailyBaseline = (freeHabitMonthly + tradingMonthlyPayout) / 30;
 
   const echByDate = {};
+  const ancByDate = {};
   for (const ech of activeEch) {
+    const { debitAccount, creditAccount } = resolveEcheanceLines(ech);
+    const amount = Number(ech.amount);
     for (const occDate of echeanceOccurrences(ech, todayKey, endKey)) {
-      const signed = ech.type === 'produit' ? Number(ech.amount) : -Number(ech.amount);
-      echByDate[occDate] = r2((echByDate[occDate] || 0) + signed);
+      echByDate[occDate] = r2((echByDate[occDate] || 0) + treasuryDelta(debitAccount, creditAccount, amount));
+      ancByDate[occDate] = r2((ancByDate[occDate] || 0) + ancDelta(debitAccount, creditAccount, amount));
     }
   }
 
@@ -475,26 +536,33 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
     const key = d.toISOString().slice(0, 10);
     solde = r2(solde + dailyBaseline + (echByDate[key] || 0));
     if (solde < 0 && (!series.length || series[series.length - 1].solde >= 0)) alerts.push({ date: key, solde });
-    series.push({ date: key, label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }), solde, echeance: echByDate[key] || 0 });
+    series.push({ date: key, label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }), solde, echeance: echByDate[key] || 0, ancEcheance: ancByDate[key] || 0 });
   }
-  return { soldeActuel, freeHabitMonthly, series, alerts, echeancesInWindow: Object.keys(echByDate).length };
+  return { soldeActuel, freeHabitMonthly, dailyBaseline, series, alerts, echeancesInWindow: Object.keys(echByDate).length };
 }
 
 // Prévision de patrimoine (ANCC) jour par jour : réutilise la trajectoire de
-// trésorerie de treasuryForecastV2 (habitudes + échéances + payout trading en
-// option) et la recombine avec le reste du bilan (immobilisations, créances,
-// dettes, emprunts, corrections manuelles) — simplification assumée : ces
-// autres postes sont gelés à leur valeur actuelle sur tout l'horizon, car les
-// échéances ne modélisent aujourd'hui que les flux classe 5 ↔ 6/7, pas les
-// mouvements d'immobilisations/emprunts (achat, remboursement de principal...).
-// Documenté dans l'UI plutôt que caché.
+// trésorerie de treasuryForecastV2 — même habitude quotidienne (elle est
+// toujours de nature "résultat", donc son impact ANC = son impact trésorerie,
+// 1 pour 1) + l'impact ANC propre de chaque échéance (ancEcheance, voir plus
+// haut — nul pour emprunt/investissement, égal à la trésorerie pour produit/
+// charge). Le reste du bilan (immobilisé, créances, dettes existantes, hors
+// mouvements échéancés) reste gelé à sa valeur actuelle : on ne prétend pas
+// anticiper une acquisition ou un remboursement qui n'a pas été programmé en
+// échéance — documenté dans l'UI plutôt que caché.
 export function netWorthForecastV2(journal, corrections, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
   const treso = treasuryForecastV2(journal, echeances, { days, tradingMonthlyPayout });
   const analysis = financialAnalysis(journal);
-  // ANC hors trésorerie (immobilisé + créances − dettes totales), gelé sur l'horizon.
-  const fixedBase = r2(analysis.anc - treso.soldeActuel);
   const anccActuel = correctedNetWorth(analysis.anc, corrections).ancc;
-  const series = treso.series.map((pt) => ({ date: pt.date, label: pt.label, ancc: correctedNetWorth(r2(fixedBase + pt.solde), corrections).ancc }));
-  const alerts = treso.alerts.map((a) => ({ date: a.date, ancc: correctedNetWorth(r2(fixedBase + a.solde), corrections).ancc }));
-  return { anccActuel, fixedBase, series, alerts };
+
+  let anc = analysis.anc;
+  const series = [];
+  const alerts = [];
+  for (const pt of treso.series) {
+    anc = r2(anc + treso.dailyBaseline + pt.ancEcheance);
+    const ancc = correctedNetWorth(anc, corrections).ancc;
+    if (ancc < 0 && (!series.length || series[series.length - 1].ancc >= 0)) alerts.push({ date: pt.date, ancc });
+    series.push({ date: pt.date, label: pt.label, ancc });
+  }
+  return { anccActuel, series, alerts };
 }

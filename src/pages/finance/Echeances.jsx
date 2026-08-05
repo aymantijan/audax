@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { CalendarClock, Plus, Pencil, Trash2, CheckCircle2, PauseCircle, PlayCircle } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
+import { ENTRY_TEMPLATES } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
+
+// Seuls les modèles pertinents pour un mouvement RÉCURRENT/PROGRAMMÉ (pas les
+// virements internes ni les soldes d'ouverture, ponctuels par nature).
+const ECHEANCE_TEMPLATES = ENTRY_TEMPLATES.filter((t) => ['income', 'expense', 'invest', 'borrow', 'repay'].includes(t.id));
 
 const RECURRENCE_OPTIONS = [
   { value: 'once', label: 'Ponctuelle' },
@@ -12,7 +17,10 @@ const RECURRENCE_OPTIONS = [
   { value: 'yearly', label: 'Annuelle' },
 ];
 
-const blank = () => ({ label: '', type: 'charge', natureAccount: '621', treasuryAccount: '511', amount: '', dueDate: todayKey(), recurrence: 'monthly', endDate: '' });
+const blank = () => {
+  const t = ECHEANCE_TEMPLATES.find((x) => x.id === 'expense');
+  return { label: '', templateId: 'expense', debitAccount: t.debit.default, creditAccount: t.credit.default, amount: '', dueDate: todayKey(), recurrence: 'monthly', endDate: '' };
+};
 
 export default function Echeances() {
   const { echeances, addEcheance, editEcheance, deleteEcheance, toggleEcheanceActive, markEcheancePaid, getUpcomingEcheances } = useAccountingStore();
@@ -21,12 +29,28 @@ export default function Echeances() {
   const [form, setForm] = useState(blank());
   const [payDate, setPayDate] = useState({}); // { [echId+occurrenceDate]: 'YYYY-MM-DD' } — date de règlement éditable
 
+  const tpl = ECHEANCE_TEMPLATES.find((t) => t.id === form.templateId) || ECHEANCE_TEMPLATES[0];
   const upcoming = getUpcomingEcheances(60);
-  const charges = echeances.filter((e) => e.type === 'charge');
-  const produits = echeances.filter((e) => e.type === 'produit');
 
-  const openAdd = (type) => { setEditing(null); setForm({ ...blank(), type, natureAccount: type === 'produit' ? '711' : '621' }); setModal(true); };
-  const openEdit = (e) => { setEditing(e); setForm({ label: e.label, type: e.type, natureAccount: e.natureAccount, treasuryAccount: e.treasuryAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, endDate: e.endDate || '' }); setModal(true); };
+  const openAdd = (templateId) => {
+    setEditing(null);
+    const t = ECHEANCE_TEMPLATES.find((x) => x.id === templateId);
+    setForm({ ...blank(), templateId, debitAccount: t.debit.default, creditAccount: t.credit.default });
+    setModal(true);
+  };
+  const openEdit = (e) => {
+    setEditing(e);
+    // Rétro-compatibilité : une échéance créée avant la généralisation porte encore type+natureAccount+treasuryAccount.
+    const debitAccount = e.debitAccount ?? (e.type === 'produit' ? e.treasuryAccount : e.natureAccount);
+    const creditAccount = e.creditAccount ?? (e.type === 'produit' ? e.natureAccount : e.treasuryAccount);
+    setForm({ label: e.label, templateId: e.templateId || (e.type === 'produit' ? 'income' : 'expense'), debitAccount, creditAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, endDate: e.endDate || '' });
+    setModal(true);
+  };
+
+  const pickTemplate = (templateId) => {
+    const t = ECHEANCE_TEMPLATES.find((x) => x.id === templateId);
+    setForm((f) => ({ ...f, templateId, debitAccount: t.debit.default, creditAccount: t.credit.default }));
+  };
 
   const submit = (ev) => {
     ev.preventDefault();
@@ -43,68 +67,114 @@ export default function Echeances() {
     if (!res.ok) alert(res.error);
   };
 
+  const templateOf = (e) => ECHEANCE_TEMPLATES.find((t) => t.id === e.templateId) || ECHEANCE_TEMPLATES.find((t) => t.id === (e.type === 'produit' ? 'income' : 'expense'));
+
   return (
     <div className="space-y-6">
       <p className="text-xs text-mute -mt-2">
-        Une échéance est un mouvement de trésorerie <strong>concret et daté</strong> (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente la prévision de trésorerie jour par jour dans l'onglet Trésorerie.
+        Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif — alors qu'un produit/charge le fait bouger.
       </p>
+
+      <div className="flex flex-wrap gap-2">
+        {ECHEANCE_TEMPLATES.map((t) => (
+          <Button key={t.id} variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAdd(t.id)}>
+            <span className="flex items-center gap-2"><Plus size={13} /> {t.label}</span>
+          </Button>
+        ))}
+      </div>
 
       <Card title="À venir (60 jours)" action={<CalendarClock size={16} className="text-mute" />}>
         {upcoming.length ? (
           <ul className="space-y-1.5">
-            {upcoming.map((row) => (
-              <li key={payKey(row)} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2.5 text-sm flex-wrap">
-                <Badge color={row.type === 'produit' ? 'var(--success)' : 'var(--error)'}>{row.type === 'produit' ? 'Produit' : 'Charge'}</Badge>
-                <span className="flex-1 min-w-[10rem]">{row.label}</span>
-                <span className="text-mute text-xs">{fmtDate(row.occurrenceDate)}</span>
-                <span className="font-medium">{fmtMAD(row.amount)}</span>
-                <Input
-                  type="date"
-                  value={payDate[payKey(row)] || row.occurrenceDate}
-                  onChange={(e) => setPayDate({ ...payDate, [payKey(row)]: e.target.value })}
-                  className="!py-1 !px-2 text-xs w-36"
-                />
-                <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => submitPay(row)}>
-                  <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Marquer payé</span>
-                </Button>
-              </li>
-            ))}
+            {upcoming.map((row) => {
+              const t = templateOf(row);
+              return (
+                <li key={payKey(row)} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2.5 text-sm flex-wrap">
+                  <Badge>{t?.label}</Badge>
+                  <span className="flex-1 min-w-[10rem]">{row.label}</span>
+                  <span className="text-mute text-xs">{fmtDate(row.occurrenceDate)}</span>
+                  <span className="font-medium">{fmtMAD(row.amount)}</span>
+                  <Input
+                    type="date"
+                    value={payDate[payKey(row)] || row.occurrenceDate}
+                    onChange={(e) => setPayDate({ ...payDate, [payKey(row)]: e.target.value })}
+                    className="!py-1 !px-2 text-xs w-36"
+                  />
+                  <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => submitPay(row)}>
+                    <span className="flex items-center gap-1"><CheckCircle2 size={13} /> Marquer payé</span>
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <EmptyState>Aucune échéance à venir dans les 60 prochains jours.</EmptyState>
         )}
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
-        <EcheanceList title="Charges programmées" rows={charges} onAdd={() => openAdd('charge')} onEdit={openEdit} onDelete={deleteEcheance} onToggle={toggleEcheanceActive} />
-        <EcheanceList title="Produits programmés" rows={produits} onAdd={() => openAdd('produit')} onEdit={openEdit} onDelete={deleteEcheance} onToggle={toggleEcheanceActive} />
-      </div>
+      <Card title="Toutes les échéances">
+        {echeances.length ? (
+          <ul className="space-y-1.5">
+            {echeances.map((e) => {
+              const t = templateOf(e);
+              return (
+                <li key={e.id} className={`flex items-center gap-2 text-sm bg-surface border border-line rounded-lg px-3 py-2 flex-wrap ${!e.active ? 'opacity-50' : ''}`}>
+                  <Badge>{t?.label}</Badge>
+                  <span className="flex-1 min-w-[8rem] truncate">{e.label}</span>
+                  <span className="text-mute text-xs">{RECURRENCE_OPTIONS.find((r) => r.value === e.recurrence)?.label}</span>
+                  <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
+                  {!e.active && <Badge color="var(--text-secondary)">Inactive</Badge>}
+                  <button className="text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
+                    {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
+                  </button>
+                  <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEdit(e)} title="Modifier"><Pencil size={13} /></button>
+                  <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer l'échéance "${e.label}" ?`)) deleteEcheance(e.id); }} title="Supprimer"><Trash2 size={13} /></button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState>Aucune échéance programmée.</EmptyState>
+        )}
+      </Card>
 
       <Modal open={modal} onClose={() => { setModal(false); setEditing(null); }} title={editing ? "Modifier l'échéance" : 'Nouvelle échéance'}>
         <form onSubmit={submit} className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {ECHEANCE_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => pickTemplate(t.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs border transition-colors cursor-pointer ${
+                  t.id === form.templateId ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-mute">{tpl.hint}</p>
           <Field label="Libellé">
-            <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={form.type === 'produit' ? 'ex : Salaire' : 'ex : Loyer'} autoFocus />
+            <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={tpl.label} autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Type">
-              <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, natureAccount: e.target.value === 'produit' ? '711' : '621' })} options={[{ value: 'charge', label: 'Charge (sortie)' }, { value: 'produit', label: 'Produit (entrée)' }]} />
-            </Field>
             <Field label="Montant (DH)">
               <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Nature">
-              <AccountSelect classes={[form.type === 'produit' ? 7 : 6]} value={form.natureAccount} onChange={(e) => setForm({ ...form, natureAccount: e.target.value })} />
-            </Field>
-            <Field label="Compte de trésorerie">
-              <AccountSelect classes={[5, 4]} value={form.treasuryAccount} onChange={(e) => setForm({ ...form, treasuryAccount: e.target.value })} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
             <Field label="Date (1ère échéance)">
               <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
             </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`Débit — ${tpl.debit.role}`}>
+              <AccountSelect classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
+            </Field>
+            <Field label={`Crédit — ${tpl.credit.role}`}>
+              <AccountSelect classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Récurrence">
               <Select value={form.recurrence} onChange={(e) => setForm({ ...form, recurrence: e.target.value })} options={RECURRENCE_OPTIONS} />
             </Field>
@@ -126,31 +196,5 @@ export default function Echeances() {
         </form>
       </Modal>
     </div>
-  );
-}
-
-function EcheanceList({ title, rows, onAdd, onEdit, onDelete, onToggle }) {
-  return (
-    <Card title={title} action={<Button variant="ghost" onClick={onAdd}><Plus size={15} /></Button>}>
-      {rows.length ? (
-        <ul className="space-y-1.5">
-          {rows.map((e) => (
-            <li key={e.id} className={`flex items-center gap-2 text-sm bg-surface border border-line rounded-lg px-3 py-2 ${!e.active ? 'opacity-50' : ''}`}>
-              <span className="flex-1 truncate">{e.label}</span>
-              <span className="text-mute text-xs">{RECURRENCE_OPTIONS.find((r) => r.value === e.recurrence)?.label}</span>
-              <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
-              {!e.active && <Badge color="var(--text-secondary)">Inactive</Badge>}
-              <button className="text-mute hover:text-accent cursor-pointer" onClick={() => onToggle(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
-                {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
-              </button>
-              <button className="text-mute hover:text-accent cursor-pointer" onClick={() => onEdit(e)} title="Modifier"><Pencil size={13} /></button>
-              <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer l'échéance "${e.label}" ?`)) onDelete(e.id); }} title="Supprimer"><Trash2 size={13} /></button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <EmptyState>Aucune échéance {title.toLowerCase()}.</EmptyState>
-      )}
-    </Card>
   );
 }

@@ -5,7 +5,7 @@ import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
-  echeanceOccurrences, treasuryForecastV2, netWorthForecastV2,
+  echeanceOccurrences, treasuryForecastV2, netWorthForecastV2, resolveEcheanceLines,
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
@@ -195,16 +195,25 @@ export const useAccountingStore = create(
       // MOUVEMENT concret daté (ponctuel ou récurrent) — c'est elle qui nourrit
       // la prévision de trésorerie jour par jour (getTreasuryForecastV2), pas le
       // budget. "Marquer payé" transforme l'échéance en véritable écriture.
+      // `templateId` reprend un modèle de ENTRY_TEMPLATES (chart-of-accounts.js) —
+      // income/expense (comme avant) mais aussi invest/borrow/repay pour modéliser
+      // un achat d'immobilisation, la réception ou le remboursement d'un emprunt
+      // (classes 1/2/4) : debitAccount/creditAccount remplacent l'ancien couple
+      // type+natureAccount/treasuryAccount, qui reste lu en rétro-compatibilité
+      // par resolveEcheanceLines (accounting-engine.js) pour les échéances existantes.
       addEcheance: (data) => {
         if (!data.label?.trim() || !Number(data.amount) || !data.dueDate) {
           return { ok: false, error: 'Libellé, montant et date sont requis.' };
         }
+        if (!data.debitAccount || !data.creditAccount) {
+          return { ok: false, error: 'Comptes débit/crédit requis.' };
+        }
         const ech = {
           id: uid(),
           label: data.label.trim(),
-          type: data.type === 'produit' ? 'produit' : 'charge',
-          natureAccount: data.natureAccount,
-          treasuryAccount: data.treasuryAccount,
+          templateId: data.templateId || 'expense',
+          debitAccount: data.debitAccount,
+          creditAccount: data.creditAccount,
           amount: Number(data.amount),
           dueDate: data.dueDate,
           recurrence: data.recurrence || 'once',
@@ -231,9 +240,8 @@ export const useAccountingStore = create(
         const ech = get().echeances.find((e) => e.id === id);
         if (!ech) return { ok: false, error: 'Échéance introuvable.' };
         const amount = Number(ech.amount);
-        const lines = ech.type === 'produit'
-          ? [{ account: ech.treasuryAccount, debit: amount, credit: 0 }, { account: ech.natureAccount, debit: 0, credit: amount }]
-          : [{ account: ech.natureAccount, debit: amount, credit: 0 }, { account: ech.treasuryAccount, debit: 0, credit: amount }];
+        const { debitAccount, creditAccount } = resolveEcheanceLines(ech);
+        const lines = [{ account: debitAccount, debit: amount, credit: 0 }, { account: creditAccount, debit: 0, credit: amount }];
         const res = get().addEntry({ date: occurrenceDate, label: ech.label, lines });
         if (!res.ok) return res;
         set({
