@@ -13,12 +13,13 @@ import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
+import { useHealthStore } from '../store/healthStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-health', 'audax-synergy-history'];
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -94,6 +95,7 @@ export default function SettingsPage() {
     useDealsStore.getState().resetAll();
     useReadingsStore.getState().resetAll();
     useAccountingStore.getState().resetAll();
+    useHealthStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
     toast('All data reset', 'warning');
   };
