@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
 import { financialAnalysis, correctedNetWorth } from '../../utils/accounting-engine';
-import { fmtMAD, fmtPct } from '../../utils/formatters';
-import { Card, Stat, EmptyState } from '../../components/common/ui';
+import { fmtMAD, fmtPct, fmtDate } from '../../utils/formatters';
+import { Card, Stat, Select, EmptyState } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -14,6 +15,8 @@ export default function Analysis() {
   const a = store.getAnalysis();
   const netWorth = store.getNetWorth();
   const series = store.getMonthlySeries(12);
+  const [nwHorizonDays, setNwHorizonDays] = useState(90);
+  const nwForecast = store.getNetWorthForecastV2(nwHorizonDays);
 
   // Progression du patrimoine : ANC (bilanciel) et ANCC (+ corrections actives à date) à la fin de chaque mois.
   const patrimoineSeries = useMemo(() => {
@@ -106,6 +109,34 @@ export default function Analysis() {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      <Card
+        title="Prévision de patrimoine (ANCC, jour par jour)"
+        action={
+          <Select value={nwHorizonDays} onChange={(e) => setNwHorizonDays(Number(e.target.value))} className="!py-1 !px-2 text-xs w-32" options={[{ value: 30, label: '30 jours' }, { value: 60, label: '60 jours' }, { value: 90, label: '90 jours' }, { value: 180, label: '180 jours' }, { value: 365, label: '1 an' }]} />
+        }
+      >
+        <p className="text-[11px] text-mute mb-3">
+          Réutilise la prévision de trésorerie détaillée (onglet Trésorerie) et la recombine au reste du bilan. Simplification assumée : immobilisations, créances, dettes et corrections sont gelées à leur valeur actuelle sur tout l'horizon — les échéances ne modélisent pour l'instant que les flux de trésorerie, pas les mouvements d'emprunt ou d'investissement.
+        </p>
+        {nwForecast.alerts.length > 0 && (
+          <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-2.5 mb-3">
+            <AlertTriangle size={15} className="shrink-0" />
+            ANCC projeté négatif à partir du {fmtDate(nwForecast.alerts[0].date)} ({fmtMAD(nwForecast.alerts[0].ancc)})
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={nwForecast.series}>
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={Math.ceil(nwForecast.series.length / 12)} />
+            <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} domain={['auto', 'auto']} />
+            <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
+            <ReferenceLine y={0} stroke="var(--error)" strokeDasharray="4 4" />
+            <Line type="monotone" dataKey="ancc" name="ANCC projeté" stroke="#b366ff" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+        <p className="text-[11px] text-mute mt-2">ANCC actuel : {fmtMAD(nwForecast.anccActuel)}</p>
+      </Card>
 
       <Card title="Résultat mensuel (produits − charges) — 12 mois">
         <ResponsiveContainer width="100%" height={220}>

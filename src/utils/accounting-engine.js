@@ -479,3 +479,22 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
   }
   return { soldeActuel, freeHabitMonthly, series, alerts, echeancesInWindow: Object.keys(echByDate).length };
 }
+
+// Prévision de patrimoine (ANCC) jour par jour : réutilise la trajectoire de
+// trésorerie de treasuryForecastV2 (habitudes + échéances + payout trading en
+// option) et la recombine avec le reste du bilan (immobilisations, créances,
+// dettes, emprunts, corrections manuelles) — simplification assumée : ces
+// autres postes sont gelés à leur valeur actuelle sur tout l'horizon, car les
+// échéances ne modélisent aujourd'hui que les flux classe 5 ↔ 6/7, pas les
+// mouvements d'immobilisations/emprunts (achat, remboursement de principal...).
+// Documenté dans l'UI plutôt que caché.
+export function netWorthForecastV2(journal, corrections, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
+  const treso = treasuryForecastV2(journal, echeances, { days, tradingMonthlyPayout });
+  const analysis = financialAnalysis(journal);
+  // ANC hors trésorerie (immobilisé + créances − dettes totales), gelé sur l'horizon.
+  const fixedBase = r2(analysis.anc - treso.soldeActuel);
+  const anccActuel = correctedNetWorth(analysis.anc, corrections).ancc;
+  const series = treso.series.map((pt) => ({ date: pt.date, label: pt.label, ancc: correctedNetWorth(r2(fixedBase + pt.solde), corrections).ancc }));
+  const alerts = treso.alerts.map((a) => ({ date: a.date, ancc: correctedNetWorth(r2(fixedBase + a.solde), corrections).ancc }));
+  return { anccActuel, fixedBase, series, alerts };
+}

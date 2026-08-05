@@ -5,7 +5,7 @@ import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
-  echeanceOccurrences, treasuryForecastV2,
+  echeanceOccurrences, treasuryForecastV2, netWorthForecastV2,
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
@@ -286,6 +286,14 @@ export const useAccountingStore = create(
       getTreasuryForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8 } = {}) => {
         const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
         return treasuryForecastV2(get().journal, get().echeances, { days, tradingMonthlyPayout });
+      },
+
+      // Prévision de patrimoine (ANCC) jour par jour — voir netWorthForecastV2
+      // (accounting-engine.js) : réutilise la trajectoire de trésorerie v2 et
+      // gèle le reste du bilan (immobilisé, créances, dettes, corrections).
+      getNetWorthForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8 } = {}) => {
+        const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
+        return netWorthForecastV2(get().journal, get().corrections, get().echeances, { days, tradingMonthlyPayout });
       },
 
       // ─────────── Corrections de valeur (ANC → ANCC) ───────────
