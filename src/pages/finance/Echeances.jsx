@@ -15,14 +15,27 @@ const ECHEANCE_TEMPLATES = ENTRY_TEMPLATES.filter((t) => ['income', 'expense', '
 
 const RECURRENCE_OPTIONS = [
   { value: 'once', label: 'Ponctuelle' },
+  { value: 'weekly', label: 'Hebdomadaire' },
   { value: 'monthly', label: 'Mensuelle' },
   { value: 'quarterly', label: 'Trimestrielle' },
   { value: 'yearly', label: 'Annuelle' },
 ];
 
+// Mêmes valeurs 'mon'..'sun' que utils/constants.js#WEEKDAYS (habitudes),
+// libellés en français pour cette page (le reste de Finance est en français).
+const WEEKDAY_OPTIONS = [
+  { value: 'mon', label: 'Lundi' },
+  { value: 'tue', label: 'Mardi' },
+  { value: 'wed', label: 'Mercredi' },
+  { value: 'thu', label: 'Jeudi' },
+  { value: 'fri', label: 'Vendredi' },
+  { value: 'sat', label: 'Samedi' },
+  { value: 'sun', label: 'Dimanche' },
+];
+
 const blank = () => {
   const t = ECHEANCE_TEMPLATES.find((x) => x.id === 'expense');
-  return { label: '', templateId: 'expense', debitAccount: t.debit.default, creditAccount: t.credit.default, amount: '', dueDate: todayKey(), recurrence: 'monthly', endDate: '' };
+  return { label: '', templateId: 'expense', debitAccount: t.debit.default, creditAccount: t.credit.default, amount: '', dueDate: todayKey(), recurrence: 'monthly', weekday: 'mon', endDate: '' };
 };
 
 export default function Echeances() {
@@ -57,7 +70,7 @@ export default function Echeances() {
     // Rétro-compatibilité : une échéance créée avant la généralisation porte encore type+natureAccount+treasuryAccount.
     const debitAccount = e.debitAccount ?? (e.type === 'produit' ? e.treasuryAccount : e.natureAccount);
     const creditAccount = e.creditAccount ?? (e.type === 'produit' ? e.natureAccount : e.treasuryAccount);
-    setForm({ label: e.label, templateId: e.templateId || (e.type === 'produit' ? 'income' : 'expense'), debitAccount, creditAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, endDate: e.endDate || '' });
+    setForm({ label: e.label, templateId: e.templateId || (e.type === 'produit' ? 'income' : 'expense'), debitAccount, creditAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, weekday: e.weekday || 'mon', endDate: e.endDate || '' });
     setModal(true);
   };
 
@@ -158,7 +171,10 @@ export default function Echeances() {
                 <li key={e.id} className={`flex items-center gap-2 text-sm bg-surface border border-line rounded-lg px-3 py-2 flex-wrap ${!e.active ? 'opacity-50' : ''}`}>
                   <Badge>{t?.label}</Badge>
                   <span className="flex-1 min-w-[8rem] truncate">{e.label}</span>
-                  <span className="text-mute text-xs">{RECURRENCE_OPTIONS.find((r) => r.value === e.recurrence)?.label}</span>
+                  <span className="text-mute text-xs">
+                    {RECURRENCE_OPTIONS.find((r) => r.value === e.recurrence)?.label}
+                    {e.recurrence === 'weekly' && e.weekday ? ` (${WEEKDAY_OPTIONS.find((w) => w.value === e.weekday)?.label})` : ''}
+                  </span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
                   {!e.active && <Badge color="var(--text-secondary)">Inactive</Badge>}
                   <button className="text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
@@ -211,10 +227,15 @@ export default function Echeances() {
               <AccountSelect classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${form.recurrence === 'weekly' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <Field label="Récurrence">
               <Select value={form.recurrence} onChange={(e) => setForm({ ...form, recurrence: e.target.value })} options={RECURRENCE_OPTIONS} />
             </Field>
+            {form.recurrence === 'weekly' && (
+              <Field label="Jour de la semaine">
+                <Select value={form.weekday} onChange={(e) => setForm({ ...form, weekday: e.target.value })} options={WEEKDAY_OPTIONS} />
+              </Field>
+            )}
             <Field label="Fin (optionnel)">
               <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} disabled={form.recurrence === 'once'} />
             </Field>

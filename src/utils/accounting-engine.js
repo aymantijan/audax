@@ -430,11 +430,18 @@ function ancDelta(debitAccount, creditAccount, amount) {
   return r2(d);
 }
 
+// mon=1..sun=0, convention Date.getDay() — même valeurs 'mon'..'sun' que
+// utils/constants.js#WEEKDAYS (habitudes), sans en dépendre (fichier autonome).
+const WEEKDAY_JS_DAY = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
 // Étale une échéance récurrente en occurrences concrètes dans [fromDate, toDate]
 // (bornes incluses, chaînes 'YYYY-MM-DD'), en excluant les occurrences déjà
-// réglées (paidDates). Approximation calendaire simple : avance de N mois via
-// Date(y, m+N, d) — une échéance fixée au 31 peut glisser sur un mois plus
-// court (Date le normalise), acceptable pour une prévision, pas un relevé.
+// réglées (paidDates). Approximation calendaire simple pour monthly/quarterly/
+// yearly : avance de N mois via Date(y, m+N, d) — une échéance fixée au 31 peut
+// glisser sur un mois plus court (Date le normalise), acceptable pour une
+// prévision, pas un relevé. weekly avance de 7 jours pile, sans cette dérive —
+// la 1ère occurrence est calée sur ech.weekday à partir de dueDate (le jour de
+// la semaine choisi prime sur le jour du mois de dueDate).
 export function echeanceOccurrences(ech, fromDate, toDate) {
   if (!ech.active) return [];
   const from = new Date(fromDate + 'T00:00:00');
@@ -447,51 +454,97 @@ export function echeanceOccurrences(ech, fromDate, toDate) {
     if (d >= from && d <= to && !paid.has(ech.dueDate)) out.push(ech.dueDate);
     return out;
   }
-  const stepMonths = { monthly: 1, quarterly: 3, yearly: 12 }[ech.recurrence] || 1;
   let d = new Date(ech.dueDate + 'T00:00:00');
+  const isWeekly = ech.recurrence === 'weekly';
+  if (isWeekly && ech.weekday && WEEKDAY_JS_DAY[ech.weekday] != null) {
+    const targetDay = WEEKDAY_JS_DAY[ech.weekday];
+    while (d.getDay() !== targetDay) d.setDate(d.getDate() + 1);
+  }
+  const stepMonths = isWeekly ? null : { monthly: 1, quarterly: 3, yearly: 12 }[ech.recurrence] || 1;
   let guard = 0; // filet de sécurité anti-boucle-infinie, jamais censé être atteint
   while (d <= to && guard < 600) {
     guard++;
     if (end && d > end) break;
     const key = d.toISOString().slice(0, 10);
     if (d >= from && !paid.has(key)) out.push(key);
-    d = new Date(d.getFullYear(), d.getMonth() + stepMonths, d.getDate());
+    d = isWeekly ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7) : new Date(d.getFullYear(), d.getMonth() + stepMonths, d.getDate());
   }
   return out;
 }
 
-// Rythme mensuel moyen réel par compte (classes 6 & 7), sur les `months`
-// derniers mois du journal — la détection "d'habitudes" qui remplace le
-// lissage purement budgétaire. Signe unifié : credit − debit sur la ligne
-// classe 6/7 = impact trésorerie de sa contrepartie classe 5 (un produit
-// crédité = encaissement futur ; une charge débitée = décaissement futur).
-function monthlyAverageByAccount(journal, months = 3) {
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - months);
-  const cutoffKey = cutoff.toISOString().slice(0, 10);
+// Série des `months` derniers soldes mensuels réels, par compte (classes 6 &
+// 7) — brique commune aux méthodes SMA/EMA ci-dessous. Signe unifié : credit −
+// debit sur la ligne classe 6/7 = impact trésorerie de sa contrepartie classe
+// 5 (un produit crédité = encaissement ; une charge débitée = décaissement).
+function monthlyBucketsByAccount(journal, months = 3) {
+  const now = new Date();
+  const keys = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
   const byAccount = {};
   for (const e of journal) {
-    if (e.date < cutoffKey) continue;
+    const mk = e.date.slice(0, 7);
+    if (!keys.includes(mk)) continue;
     for (const l of e.lines) {
       const cls = classOf(l.account);
       if (cls !== 6 && cls !== 7) continue;
-      byAccount[l.account] = (byAccount[l.account] || 0) + (l.credit - l.debit);
+      const acc = (byAccount[l.account] ??= Object.fromEntries(keys.map((k) => [k, 0])));
+      acc[mk] += l.credit - l.debit;
     }
   }
-  return Object.fromEntries(Object.entries(byAccount).map(([k, v]) => [k, v / months]));
+  return { keys, byAccount };
 }
 
+// Méthode 1 · Moyenne mobile (SMA) : moyenne simple des `months` derniers mois
+// — chaque mois pèse pareil, réagit lentement à un changement d'habitude.
+function smaByAccount(journal, months = 3) {
+  const { keys, byAccount } = monthlyBucketsByAccount(journal, months);
+  return Object.fromEntries(Object.entries(byAccount).map(([acct, series]) => [acct, keys.reduce((a, k) => a + series[k], 0) / months]));
+}
+
+// Méthode 2 · Moyenne mobile exponentielle (EMA) : pondère les mois récents
+// plus fort (lissage standard α = 2/(N+1)) — plus réactive à une habitude qui
+// change, quitte à être plus sensible à un mois atypique isolé.
+function emaByAccount(journal, months = 3) {
+  const { keys, byAccount } = monthlyBucketsByAccount(journal, months);
+  const alpha = 2 / (months + 1);
+  return Object.fromEntries(
+    Object.entries(byAccount).map(([acct, series]) => {
+      let ema = series[keys[0]];
+      for (let i = 1; i < keys.length; i++) ema = alpha * series[keys[i]] + (1 - alpha) * ema;
+      return [acct, ema];
+    })
+  );
+}
+
+// Méthode 3 · Budget (perspectives déclarées) : ne regarde PAS l'historique
+// réel, mais ce que l'utilisateur a lui-même planifié pour chaque compte dans
+// l'onglet Budget — "se capitalise sur les perspectives futures" plutôt que
+// sur le passé. Un compte sans budget défini contribue 0 (ni optimiste ni
+// pessimiste par défaut).
+function budgetByAccount(budgets) {
+  return Object.fromEntries((budgets || []).map((b) => [b.account, classOf(b.account) === 7 ? Number(b.amount) : -Number(b.amount)]));
+}
+
+const HABIT_METHODS = { sma: smaByAccount, ema: emaByAccount };
+
 // Prévision de trésorerie v2, jour par jour sur `days` jours : solde actuel +
-// habitudes réelles détectées sur les comptes SANS échéance active qui les
-// couvre (pour ne pas compter deux fois le même flux) + échéances (montants
-// et dates exacts, tous types confondus — produit/charge/emprunt/investissement)
-// + estimation optionnelle de payout trading. Les habitudes et le payout sont
-// lissés en quote-part quotidienne (simplification assumée : on ne prétend pas
-// connaître le jour exact d'un flux non-échéancé). Chaque point de la série
-// porte aussi `ancEcheance`, l'impact patrimoine (ANC) de ce même jour — voir
-// ancDelta : nul pour un emprunt/investissement (juste une conversion actif↔dette
-// ou actif↔trésorerie), égal à l'impact trésorerie pour un produit/charge.
-export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
+// une base mensuelle sur les comptes SANS échéance active qui les couvre (pour
+// ne pas compter deux fois le même flux), calculée selon `method` — 'sma'
+// (moyenne mobile, défaut), 'ema' (moyenne mobile exponentielle, réagit plus
+// vite à un changement d'habitude), ou 'budget' (perspectives déclarées : ce
+// que l'utilisateur a planifié dans l'onglet Budget, pas l'historique réel) —
+// + échéances (montants et dates exacts, tous types confondus — produit/
+// charge/emprunt/investissement/virement) + estimation optionnelle de payout
+// trading. La base mensuelle et le payout sont lissés en quote-part
+// quotidienne (simplification assumée : on ne prétend pas connaître le jour
+// exact d'un flux non-échéancé). Chaque point de la série porte aussi
+// `ancEcheance`, l'impact patrimoine (ANC) de ce même jour — voir ancDelta :
+// nul pour un emprunt/investissement/virement (juste une conversion actif↔
+// dette ou actif↔trésorerie), égal à l'impact trésorerie pour un produit/charge.
+export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonthlyPayout = 0, method = 'sma', budgets = [] } = {}) {
   const soldeActuel = treasuryBalance(journal);
   const today = new Date();
   const todayKey = today.toISOString().slice(0, 10);
@@ -510,7 +563,7 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
       return [debitAccount, creditAccount].filter((a) => classOf(a) === 6 || classOf(a) === 7);
     })
   );
-  const habitAvg = monthlyAverageByAccount(journal, 3);
+  const habitAvg = method === 'budget' ? budgetByAccount(budgets) : (HABIT_METHODS[method] || smaByAccount)(journal, 3);
   const freeHabitMonthly = r2(
     Object.entries(habitAvg).filter(([acct]) => !coveredAccounts.has(acct)).reduce((a, [, v]) => a + v, 0)
   );
@@ -550,8 +603,8 @@ export function treasuryForecastV2(journal, echeances, { days = 90, tradingMonth
 // mouvements échéancés) reste gelé à sa valeur actuelle : on ne prétend pas
 // anticiper une acquisition ou un remboursement qui n'a pas été programmé en
 // échéance — documenté dans l'UI plutôt que caché.
-export function netWorthForecastV2(journal, corrections, echeances, { days = 90, tradingMonthlyPayout = 0 } = {}) {
-  const treso = treasuryForecastV2(journal, echeances, { days, tradingMonthlyPayout });
+export function netWorthForecastV2(journal, corrections, echeances, { days = 90, tradingMonthlyPayout = 0, method = 'sma', budgets = [] } = {}) {
+  const treso = treasuryForecastV2(journal, echeances, { days, tradingMonthlyPayout, method, budgets });
   const analysis = financialAnalysis(journal);
   const anccActuel = correctedNetWorth(analysis.anc, corrections).ancc;
 

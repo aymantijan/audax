@@ -238,6 +238,7 @@ export const useAccountingStore = create(
           amount: Number(data.amount),
           dueDate: data.dueDate,
           recurrence: data.recurrence || 'once',
+          weekday: data.recurrence === 'weekly' ? data.weekday || 'mon' : null,
           endDate: data.endDate || null,
           active: true,
           paidDates: [],
@@ -333,17 +334,18 @@ export const useAccountingStore = create(
 
       // Prévision v2 jour par jour — voir treasuryForecastV2 (accounting-engine.js)
       // pour la logique (habitudes + échéances + payout trading en option).
-      getTreasuryForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8 } = {}) => {
+      // `method`: 'sma' (défaut) | 'ema' | 'budget' — voir accounting-engine.js.
+      getTreasuryForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8, method = 'sma' } = {}) => {
         const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
-        return treasuryForecastV2(get().journal, get().echeances, { days, tradingMonthlyPayout });
+        return treasuryForecastV2(get().journal, get().echeances, { days, tradingMonthlyPayout, method, budgets: get().budgets });
       },
 
       // Prévision de patrimoine (ANCC) jour par jour — voir netWorthForecastV2
       // (accounting-engine.js) : réutilise la trajectoire de trésorerie v2 et
       // gèle le reste du bilan (immobilisé, créances, dettes, corrections).
-      getNetWorthForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8 } = {}) => {
+      getNetWorthForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8, method = 'sma' } = {}) => {
         const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
-        return netWorthForecastV2(get().journal, get().corrections, get().echeances, { days, tradingMonthlyPayout });
+        return netWorthForecastV2(get().journal, get().corrections, get().echeances, { days, tradingMonthlyPayout, method, budgets: get().budgets });
       },
 
       // ─────────── Corrections de valeur (ANC → ANCC) ───────────

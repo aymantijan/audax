@@ -8,6 +8,14 @@ import { Card, Stat, Select, EmptyState } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
+// Trois méthodes pour la base mensuelle des comptes non couverts par une
+// échéance — voir accounting-engine.js (smaByAccount/emaByAccount/budgetByAccount).
+const METHOD_OPTIONS = [
+  { value: 'sma', label: 'Moyenne mobile' },
+  { value: 'ema', label: 'Moyenne mobile exponentielle' },
+  { value: 'budget', label: 'Perspectives budgétaires' },
+];
+
 export default function Analysis() {
   const store = useAccountingStore();
   const journal = store.journal;
@@ -16,7 +24,8 @@ export default function Analysis() {
   const netWorth = store.getNetWorth();
   const series = store.getMonthlySeries(12);
   const [nwHorizonDays, setNwHorizonDays] = useState(90);
-  const nwForecast = store.getNetWorthForecastV2(nwHorizonDays);
+  const [nwMethod, setNwMethod] = useState('sma');
+  const nwForecast = store.getNetWorthForecastV2(nwHorizonDays, { method: nwMethod });
 
   // Progression du patrimoine : ANC (bilanciel) et ANCC (+ corrections actives à date) à la fin de chaque mois.
   const patrimoineSeries = useMemo(() => {
@@ -113,7 +122,10 @@ export default function Analysis() {
       <Card
         title="Prévision de patrimoine (ANCC, jour par jour)"
         action={
-          <Select value={nwHorizonDays} onChange={(e) => setNwHorizonDays(Number(e.target.value))} className="!py-1 !px-2 text-xs w-32" options={[{ value: 30, label: '30 jours' }, { value: 60, label: '60 jours' }, { value: 90, label: '90 jours' }, { value: 180, label: '180 jours' }, { value: 365, label: '1 an' }]} />
+          <div className="flex items-center gap-2">
+            <Select value={nwMethod} onChange={(e) => setNwMethod(e.target.value)} className="!py-1 !px-2 text-xs w-56" options={METHOD_OPTIONS} />
+            <Select value={nwHorizonDays} onChange={(e) => setNwHorizonDays(Number(e.target.value))} className="!py-1 !px-2 text-xs w-32" options={[{ value: 30, label: '30 jours' }, { value: 60, label: '60 jours' }, { value: 90, label: '90 jours' }, { value: 180, label: '180 jours' }, { value: 365, label: '1 an' }]} />
+          </div>
         }
       >
         <p className="text-[11px] text-mute mb-3">
