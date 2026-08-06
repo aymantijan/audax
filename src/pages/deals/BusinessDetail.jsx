@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Trash2, Pencil, Lightbulb, CheckCircle2, Target, Landmark,
-  LayoutList, TrendingUp, BookOpen,
+  LayoutList, TrendingUp, BookOpen, GanttChartSquare,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useBusinessStore } from '../../store/businessStore';
+import GanttTab from './GanttChart';
 import { BUSINESS_CHART_OF_ACCOUNTS, BUSINESS_ACCOUNT_CLASSES, BUSINESS_ENTRY_TEMPLATES } from '../../utils/business-accounts';
 import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
@@ -200,6 +201,7 @@ export default function BusinessDetail() {
   const TABS = [
     { key: 'overview', label: 'Vue d\'ensemble', icon: LayoutList },
     { key: 'phases', label: 'Phases', icon: Target },
+    { key: 'gantt', label: 'Gantt', icon: GanttChartSquare },
     { key: 'events', label: 'Idées & Faits', icon: Lightbulb },
     { key: 'kpis', label: 'KPIs', icon: TrendingUp },
     { key: 'accounting', label: 'Comptabilité', icon: Landmark },
@@ -239,6 +241,7 @@ export default function BusinessDetail() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Stat label="Phases" value={`${business.phases.filter((p) => p.status === 'done').length}/${business.phases.length}`} sub="franchies" />
+            <Stat label="Tâches" value={`${(business.tasks || []).filter((t) => t.status === 'done').length}/${(business.tasks || []).length}`} sub="terminées" />
             <Stat label="Événements" value={business.events.length} sub={`${business.events.filter((e) => e.type === 'idea').length} idées · ${business.events.filter((e) => e.type === 'fact').length} faits`} />
             <Stat label="Trésorerie" value={fmtMAD(treso)} color={treso >= 0 ? undefined : 'var(--error)'} />
             <Stat label="KPIs suivis" value={business.kpis.length} />
@@ -269,6 +272,8 @@ export default function BusinessDetail() {
           )}
         </Card>
       )}
+
+      {tab === 'gantt' && <GanttTab business={business} store={store} />}
 
       {tab === 'events' && (
         <div className="space-y-6">

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { uid } from '../utils/formatters';
 import { validateEntry, accountBalances, balanceSheet, cpc, financialAnalysis, treasuryBalance } from '../utils/accounting-engine';
 import { BUSINESS_ACCOUNT_MAP } from '../utils/business-accounts';
+import { cascadeSchedule, pruneDependencies } from '../utils/gantt';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 
@@ -17,7 +18,7 @@ const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
 export const useBusinessStore = create(
   persist(
     (set, get) => ({
-      businesses: [], // [{ id, name, sector, description, status, createdAt, updatedAt, phases:[], events:[], kpis:[], kpiLogs:[], journal:[] }]
+      businesses: [], // [{ id, name, sector, description, status, createdAt, updatedAt, phases:[], tasks:[], events:[], kpis:[], kpiLogs:[], journal:[] }]
 
       // ─────────── Businesses ───────────
       addBusiness: (data) => {
@@ -35,6 +36,7 @@ export const useBusinessStore = create(
           kpis: [],
           kpiLogs: [],
           journal: [],
+          tasks: [],
         };
         set({ businesses: [...get().businesses, biz] });
         useSkillStore.getState().awardXP('pe-deal-sourcing', 5, `business créé : ${biz.name}`);
@@ -80,7 +82,73 @@ export const useBusinessStore = create(
         }
       },
       deletePhase: (bizId, phaseId) =>
-        set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, phases: b.phases.filter((p) => p.id !== phaseId) }) : b)) }),
+        set({
+          businesses: get().businesses.map((b) =>
+            b.id === bizId
+              ? stamp({
+                  ...b,
+                  phases: b.phases.filter((p) => p.id !== phaseId),
+                  tasks: pruneDependencies((b.tasks || []).filter((t) => t.phaseId !== phaseId)),
+                })
+              : b
+          ),
+        }),
+
+      // ─────────── Tâches (par phase, avec dépendances — un vrai Gantt planifié) ───────────
+      // Toute écriture qui touche aux dates ou aux dépendances repasse par
+      // cascadeSchedule : un prédécesseur qu'on déplace repousse automatiquement
+      // ses successeurs (planification finish-to-start), comme dans un vrai
+      // outil de gestion de projet — pas juste des barres colorées indépendantes.
+      addTask: (bizId, data) => {
+        if (!data.name?.trim()) return { ok: false, error: 'Le nom de la tâche est requis.' };
+        if (!data.phaseId) return { ok: false, error: 'La phase est requise.' };
+        const biz = get().getBusiness(bizId);
+        if (!biz) return { ok: false, error: 'Business introuvable.' };
+        const start = data.startDate || new Date().toISOString().slice(0, 10);
+        const milestone = !!data.milestone;
+        const end = milestone ? start : data.endDate && data.endDate >= start ? data.endDate : start;
+        const deps = Array.isArray(data.dependencies) ? data.dependencies.filter((d) => (biz.tasks || []).some((t) => t.id === d)) : [];
+        const task = {
+          id: uid(),
+          phaseId: data.phaseId,
+          name: data.name.trim(),
+          startDate: start,
+          endDate: end,
+          milestone,
+          dependencies: deps,
+          progress: Math.max(0, Math.min(100, Number(data.progress) || 0)),
+          status: data.status || 'todo', // 'todo' | 'in_progress' | 'done'
+          order: (biz.tasks || []).length,
+          createdAt: Date.now(),
+        };
+        const next = cascadeSchedule([...(biz.tasks || []), task]);
+        set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: next }) : b)) });
+        return { ok: true, id: task.id };
+      },
+      editTask: (bizId, taskId, updates) => {
+        const biz = get().getBusiness(bizId);
+        const task = (biz?.tasks || []).find((t) => t.id === taskId);
+        if (!biz || !task) return;
+        const wasDone = task.status === 'done';
+        const clean = { ...updates };
+        if (clean.progress != null) clean.progress = Math.max(0, Math.min(100, Number(clean.progress) || 0));
+        if (clean.dependencies) clean.dependencies = clean.dependencies.filter((d) => d !== taskId && (biz.tasks || []).some((t) => t.id === d));
+        const merged = { ...task, ...clean };
+        if (merged.milestone) merged.endDate = merged.startDate;
+        else if (merged.endDate < merged.startDate) merged.endDate = merged.startDate;
+        const next = cascadeSchedule((biz.tasks || []).map((t) => (t.id === taskId ? merged : t)));
+        set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: next }) : b)) });
+        if (clean.status === 'done' && !wasDone) {
+          useSkillStore.getState().awardXP('pe-deal-sourcing', 5, `tâche terminée : ${task.name} (${biz.name})`);
+          toast(`Tâche terminée : ${task.name} · +5 XP`, 'success');
+        }
+      },
+      deleteTask: (bizId, taskId) =>
+        set({
+          businesses: get().businesses.map((b) =>
+            b.id === bizId ? stamp({ ...b, tasks: pruneDependencies((b.tasks || []).filter((t) => t.id !== taskId)) }) : b
+          ),
+        }),
 
       // ─────────── Événements (idées & faits — matière de la timeline) ───────────
       addEvent: (bizId, data) => {
