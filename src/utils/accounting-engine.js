@@ -308,24 +308,258 @@ export function monthlySeries(journal, months = 6) {
   });
 }
 
+// Résultat (produits − charges) JOUR PAR JOUR sur [from, to] — brique du
+// calendrier P&L Finance : contrairement à monthlySeries (agrégé au mois),
+// chaque jour ayant au moins un mouvement de résultat (classe 6 ou 7) obtient
+// sa propre entrée. Clé de retour = date 'YYYY-MM-DD'. Un jour sans mouvement
+// n'apparaît pas dans la map (comme dailyMap côté PnLCalendar trading).
+export function dailyResults(journal, from, to) {
+  const map = {};
+  for (const e of journal) {
+    if (!inPeriod(e.date, { from, to })) continue;
+    for (const l of e.lines) {
+      const cls = classOf(l.account);
+      if (cls !== 6 && cls !== 7) continue;
+      const row = (map[e.date] ??= { produits: 0, charges: 0 });
+      if (cls === 7) row.produits += (Number(l.credit) || 0) - (Number(l.debit) || 0);
+      else row.charges += (Number(l.debit) || 0) - (Number(l.credit) || 0);
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(map).map(([d, v]) => [d, { produits: r2(v.produits), charges: r2(v.charges), resultat: r2(v.produits - v.charges) }])
+  );
+}
+
 // ─────────────────────────── Gestion budgétaire ───────────────────────────
 
-// Écarts budget/réel pour un mois donné. budgets: [{ account, amount }] (mensuel).
-// Convention gestion budgétaire : écart = réel − budget ;
-//   compte de charges  → écart > 0 défavorable ;
-//   compte de produits → écart > 0 favorable.
-export function budgetVariance(journal, budgets, mk, accountMap = ACCOUNT_MAP) {
-  const period = { from: `${mk}-01`, to: `${mk}-31` };
-  const balances = accountBalances(journal, period);
+// Un budget peut être défini sur 3 familles de période :
+//  - 'calendar' : n mois calendaires (1=mensuel, 3=trimestriel, 6=semestriel,
+//    12=annuel, ou tout n personnalisé) ancrés sur les cycles calendaires
+//    standards — pas glissant : un trimestre est toujours Jan-Mar / Avr-Juin /
+//    Juil-Sep / Oct-Déc, jamais "les 3 derniers mois depuis aujourd'hui".
+//  - 'weekly' : semaine civile, toujours lundi → dimanche.
+//  - 'custom' : dates de début/fin choisies par l'utilisateur. `recurring`
+//    fait boucler la même durée en continu (ex: du 15 au 14 du mois suivant,
+//    indéfiniment) ; sinon période unique et fixe, toujours la même quelle
+//    que soit la date de référence.
+// Un budget sans `.period` (créé avant cette généralisation) est traité comme
+// mensuel — rétro-compatible sans migration de données, même principe que
+// resolveEcheanceLines pour les échéances.
+export const DEFAULT_BUDGET_PERIOD = { type: 'calendar', months: 1 };
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const dateKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const addDays = (d, n) => {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+};
+
+// Bornes { from, to } (inclusives, 'YYYY-MM-DD') de la période EN COURS à
+// `refDate` pour une config de période donnée.
+export function getPeriodBounds(period, refDate) {
+  const p = period || DEFAULT_BUDGET_PERIOD;
+  const ref = new Date(`${refDate || new Date().toISOString().slice(0, 10)}T00:00:00`);
+
+  if (p.type === 'weekly') {
+    const day = ref.getDay(); // 0=dim..6=sam
+    const monday = addDays(ref, day === 0 ? -6 : 1 - day);
+    return { from: dateKey(monday), to: dateKey(addDays(monday, 6)) };
+  }
+
+  if (p.type === 'custom') {
+    if (!p.startDate || !p.endDate) return { from: refDate, to: refDate };
+    if (!p.recurring) return { from: p.startDate, to: p.endDate };
+    const start = new Date(`${p.startDate}T00:00:00`);
+    const end = new Date(`${p.endDate}T00:00:00`);
+    const lengthDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
+    if (ref < start) return { from: p.startDate, to: p.endDate };
+    const cycleIndex = Math.floor((ref - start) / 86400000 / lengthDays);
+    const cycleStart = addDays(start, cycleIndex * lengthDays);
+    return { from: dateKey(cycleStart), to: dateKey(addDays(cycleStart, lengthDays - 1)) };
+  }
+
+  // 'calendar' (défaut) : n mois ancrés sur les cycles calendaires standards
+  // (ex: n=3 → trimestres civils, indépendamment du jour où on regarde).
+  const months = Math.max(1, Number(p.months) || 1);
+  const monthsSinceEpoch = ref.getFullYear() * 12 + ref.getMonth();
+  const cycleStartMonths = Math.floor(monthsSinceEpoch / months) * months;
+  const y = Math.floor(cycleStartMonths / 12);
+  const m = cycleStartMonths % 12;
+  const start = new Date(y, m, 1);
+  const end = new Date(y, m + months, 0); // dernier jour du cycle
+  return { from: dateKey(start), to: dateKey(end) };
+}
+
+// Libellé humain de la période (pour l'UI) à partir de ses bornes déjà calculées.
+export function periodLabel(period, bounds) {
+  const p = period || DEFAULT_BUDGET_PERIOD;
+  const fmt = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (p.type === 'weekly') return `Semaine du ${fmt(bounds.from)} au ${fmt(bounds.to)}`;
+  if (p.type === 'custom') return `${fmt(bounds.from)} → ${fmt(bounds.to)}${p.recurring ? ' (récurrent)' : ''}`;
+  const months = Math.max(1, Number(p.months) || 1);
+  if (months === 1) return new Date(`${bounds.from}T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  if (months === 12) return `Année ${new Date(`${bounds.from}T00:00:00`).getFullYear()}`;
+  return `${fmt(bounds.from)} → ${fmt(bounds.to)}`;
+}
+
+// Équivalent mensuel d'un budget, quelle que soit sa période — sert à
+// normaliser les budgets non-mensuels partout où le moteur raisonne en
+// rythme mensuel (treasuryForecast, méthode 'budget' de treasuryForecastV2).
+// Un custom non-récurrent est un événement ponctuel, pas un rythme qui se
+// répète chaque mois : il contribue 0 ici (il reste visible tel quel dans
+// budgetVariance, seule sa projection mensuelle est neutre).
+export function budgetMonthlyEquivalent(budget) {
+  const p = budget.period || DEFAULT_BUDGET_PERIOD;
+  const amount = Number(budget.amount) || 0;
+  const DAYS_PER_MONTH = 365.25 / 12;
+  if (p.type === 'weekly') return r2((amount / 7) * DAYS_PER_MONTH);
+  if (p.type === 'custom') {
+    if (!p.recurring || !p.startDate || !p.endDate) return 0;
+    const start = new Date(`${p.startDate}T00:00:00`);
+    const end = new Date(`${p.endDate}T00:00:00`);
+    const lengthDays = Math.max(1, Math.round((end - start) / 86400000) + 1);
+    return r2((amount / lengthDays) * DAYS_PER_MONTH);
+  }
+  const months = Math.max(1, Number(p.months) || 1);
+  return r2(amount / months);
+}
+
+// Écarts budget/réel à une date de référence donnée. Chaque budget porte sa
+// PROPRE période (voir getPeriodBounds) — un budget hebdomadaire et un budget
+// annuel évalués le même jour n'analysent donc pas la même fenêtre de dates.
+// budgets: [{ account, amount, period }]. Convention gestion budgétaire :
+// écart = réel − budget ; compte de charges → écart > 0 défavorable ;
+// compte de produits → écart > 0 favorable.
+export function budgetVariance(journal, budgets, refDate, accountMap = ACCOUNT_MAP) {
+  const ref = refDate || new Date().toISOString().slice(0, 10);
   return budgets.map((b) => {
+    const period = getPeriodBounds(b.period, ref);
+    const balances = accountBalances(journal, period);
     const cls = classOf(b.account);
     const bal = balances[b.account];
     const reel = r2(cls === 7 ? -(bal?.balance || 0) : bal?.balance || 0);
     const ecart = r2(reel - b.amount);
     const favorable = cls === 7 ? ecart >= 0 : ecart <= 0;
     const realisation = b.amount > 0 ? r2((reel / b.amount) * 100) : null;
-    return { ...b, cls, label: accountMap[b.account]?.label || b.account, reel, ecart, favorable, realisation };
+    return { ...b, cls, label: accountMap[b.account]?.label || b.account, reel, ecart, favorable, realisation, bounds: period, periodLabel: periodLabel(b.period, period) };
   });
+}
+
+// ─────────────────────────── Raisonnement budgétaire ───────────────────────────
+// Va plus loin que l'écart budget/réel : regarde CE QUI a été acheté/encaissé
+// dans la période (par tiers), compare au comportement passé, projette la fin
+// de période au rythme actuel, et signale les mouvements inhabituels.
+
+// Mouvements d'un compte sur une période, groupés par libellé (tiers/motif) —
+// répond à "qu'est-ce que j'ai acheté ?", pas juste "combien au total ?".
+// Signe unifié : positif = impact réel (charge payée ou produit encaissé),
+// même convention que budgetVariance. Triés du plus gros au plus petit.
+export function labelBreakdown(journal, account, period) {
+  const cls = classOf(account);
+  const byLabel = {};
+  for (const e of journal) {
+    if (!inPeriod(e.date, period)) continue;
+    for (const l of e.lines) {
+      if (l.account !== account) continue;
+      const amount = cls === 7 ? (Number(l.credit) || 0) - (Number(l.debit) || 0) : (Number(l.debit) || 0) - (Number(l.credit) || 0);
+      if (!amount) continue;
+      const key = e.label || '(sans libellé)';
+      const row = (byLabel[key] ??= { label: key, amount: 0, count: 0 });
+      row.amount = r2(row.amount + amount);
+      row.count += 1;
+    }
+  }
+  return Object.values(byLabel).sort((a, b) => b.amount - a.amount);
+}
+
+// Les `n` périodes précédant celle en cours à `refDate`, même config de
+// période — base de comparaison "vs mon comportement habituel", pas juste
+// "vs mon plafond déclaré". Un custom non-récurrent est un événement ponctuel
+// sans période précédente comparable → historique vide.
+export function budgetHistory(journal, budget, refDate, n = 4) {
+  const period = budget.period || DEFAULT_BUDGET_PERIOD;
+  if (period.type === 'custom' && !period.recurring) return [];
+  const cls = classOf(budget.account);
+  const out = [];
+  let boundaryDate = getPeriodBounds(period, refDate).from; // début de la période en cours
+  for (let i = 0; i < n; i++) {
+    const prevDay = new Date(`${boundaryDate}T00:00:00`);
+    prevDay.setDate(prevDay.getDate() - 1);
+    const bounds = getPeriodBounds(period, dateKey(prevDay));
+    const balances = accountBalances(journal, bounds);
+    const bal = balances[budget.account];
+    const reel = r2(cls === 7 ? -(bal?.balance || 0) : bal?.balance || 0);
+    out.unshift({ bounds, label: periodLabel(period, bounds), amount: reel });
+    boundaryDate = bounds.from;
+  }
+  return out;
+}
+
+// Où on en est dans la période EN COURS (celle qui contient `today`) et
+// projection linéaire du total en fin de période au rythme actuel. `null` si
+// `today` tombe hors de cette période (période passée ou future — la
+// projection n'a de sens qu'en cours de route).
+export function budgetPace(reel, bounds, today) {
+  const start = new Date(`${bounds.from}T00:00:00`);
+  const end = new Date(`${bounds.to}T00:00:00`);
+  const t = new Date(`${today}T00:00:00`);
+  if (t < start || t > end) return null;
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  const elapsedDays = Math.round((t - start) / 86400000) + 1;
+  const projected = r2((reel / elapsedDays) * totalDays);
+  return { elapsedDays, totalDays, elapsedPct: r2((elapsedDays / totalDays) * 100), projected };
+}
+
+// Mouvements de la période dont le montant dépasse nettement la taille
+// moyenne des transactions HISTORIQUES de ce compte (× `threshold`, défaut
+// 2×) — signale une dépense/encaissement inhabituel, distinct d'un simple
+// dépassement de plafond. La moyenne se calcule hors période analysée pour ne
+// pas être biaisée par la transaction qu'on est en train de juger ; si le
+// compte a moins de 3 mouvements d'historique, aucun jugement n'est rendu.
+export function budgetAnomalies(journal, account, period, threshold = 2) {
+  const cls = classOf(account);
+  const history = [];
+  const inWindow = [];
+  for (const e of journal) {
+    for (const l of e.lines) {
+      if (l.account !== account) continue;
+      const amount = cls === 7 ? (Number(l.credit) || 0) - (Number(l.debit) || 0) : (Number(l.debit) || 0) - (Number(l.credit) || 0);
+      if (amount <= 0) continue;
+      const row = { date: e.date, label: e.label, amount: r2(amount) };
+      if (inPeriod(e.date, period)) inWindow.push(row);
+      else history.push(amount);
+    }
+  }
+  if (history.length < 3) return [];
+  const avg = history.reduce((a, x) => a + x, 0) / history.length;
+  return inWindow.filter((x) => x.amount > avg * threshold).sort((a, b) => b.amount - a.amount);
+}
+
+// Vue d'ensemble "raisonnée" d'un budget à une date de référence : combine
+// répartition par tiers, comparaison historique, rythme/projection et
+// anomalies — ce qui alimente le panneau de détails dans l'UI Budget.
+export function budgetInsights(journal, budget, refDate, accountMap = ACCOUNT_MAP) {
+  const period = budget.period || DEFAULT_BUDGET_PERIOD;
+  const ref = refDate || new Date().toISOString().slice(0, 10);
+  const bounds = getPeriodBounds(period, ref);
+  const cls = classOf(budget.account);
+  const balances = accountBalances(journal, bounds);
+  const bal = balances[budget.account];
+  const reel = r2(cls === 7 ? -(bal?.balance || 0) : bal?.balance || 0);
+
+  const topLabels = labelBreakdown(journal, budget.account, bounds).filter((x) => x.amount > 0);
+  const history = budgetHistory(journal, budget, ref, 4);
+  const historyAvg = history.length ? r2(history.reduce((a, x) => a + x.amount, 0) / history.length) : null;
+  const vsHistoryPct = historyAvg ? r2(((reel - historyAvg) / Math.abs(historyAvg)) * 100) : null;
+  const pace = budgetPace(reel, bounds, new Date().toISOString().slice(0, 10));
+  const anomalies = budgetAnomalies(journal, budget.account, bounds);
+
+  return {
+    bounds, periodLabel: periodLabel(period, bounds), reel,
+    topLabels, history, historyAvg, vsHistoryPct, pace, anomalies,
+    label: accountMap[budget.account]?.label || budget.account,
+  };
 }
 
 // Solde de trésorerie (classe 5) à une date donnée — brique de base des objectifs de trésorerie.
@@ -362,12 +596,15 @@ export function projectValue(current, monthlyPace, targetDate) {
 }
 
 // Budget de trésorerie prévisionnel : à partir du solde actuel (classe 5) et
-// du solde budgété mensuel (Σ budgets produits − Σ budgets charges).
+// du solde budgété mensuel (Σ budgets produits − Σ budgets charges), chaque
+// budget étant ramené à son équivalent mensuel quelle que soit sa période
+// (voir budgetMonthlyEquivalent) pour que hebdomadaire/trimestriel/annuel se
+// comparent sur la même base.
 export function treasuryForecast(journal, budgets, monthsAhead = 6) {
   const balances = accountBalances(journal);
   const soldeActuel = sumClass(balances, 5);
   const budgetNet = r2(
-    budgets.reduce((a, b) => a + (classOf(b.account) === 7 ? b.amount : -b.amount), 0)
+    budgets.reduce((a, b) => a + (classOf(b.account) === 7 ? budgetMonthlyEquivalent(b) : -budgetMonthlyEquivalent(b)), 0)
   );
   const out = [];
   let solde = soldeActuel;
@@ -523,9 +760,10 @@ function emaByAccount(journal, months = 3) {
 // réel, mais ce que l'utilisateur a lui-même planifié pour chaque compte dans
 // l'onglet Budget — "se capitalise sur les perspectives futures" plutôt que
 // sur le passé. Un compte sans budget défini contribue 0 (ni optimiste ni
-// pessimiste par défaut).
+// pessimiste par défaut). Chaque budget est ramené à son équivalent mensuel
+// (voir budgetMonthlyEquivalent), quelle que soit sa période propre.
 function budgetByAccount(budgets) {
-  return Object.fromEntries((budgets || []).map((b) => [b.account, classOf(b.account) === 7 ? Number(b.amount) : -Number(b.amount)]));
+  return Object.fromEntries((budgets || []).map((b) => [b.account, classOf(b.account) === 7 ? budgetMonthlyEquivalent(b) : -budgetMonthlyEquivalent(b)]));
 }
 
 const HABIT_METHODS = { sma: smaByAccount, ema: emaByAccount };

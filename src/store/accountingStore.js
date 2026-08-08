@@ -6,6 +6,7 @@ import {
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
   budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
   echeanceOccurrences, treasuryForecastV2, netWorthForecastV2, resolveEcheanceLines,
+  DEFAULT_BUDGET_PERIOD, budgetInsights, dailyResults,
 } from '../utils/accounting-engine';
 import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
@@ -180,25 +181,38 @@ export const useAccountingStore = create(
       },
 
       // ─────────── Budgets ───────────
-      setBudget: (account, amount) => {
-        const existing = get().budgets.find((b) => b.account === account);
-        if (existing) {
-          set({ budgets: get().budgets.map((b) => (b.account === account ? stamp({ ...b, amount: Number(amount) }) : b)) });
-        } else {
-          set({ budgets: [...get().budgets, { id: uid(), account, amount: Number(amount), createdAt: Date.now(), updatedAt: Date.now() }] });
-          useSkillStore.getState().awardXP('budget-control-lv1', 3, `budget set: ${account}`);
-        }
+      // `period` : { type:'calendar', months } | { type:'weekly' } |
+      // { type:'custom', startDate, endDate, recurring } — voir getPeriodBounds
+      // (accounting-engine.js). Plusieurs budgets peuvent coexister sur le MÊME
+      // compte (ex : un plafond hebdomadaire ET un plafond annuel sur "Loisirs")
+      // — chacun est une enveloppe indépendante, identifiée par son `id`, pas
+      // par son compte. budgetByAccount/treasuryForecast (accounting-engine.js)
+      // les additionnent (équivalent mensuel de chacune) : deux enveloppes sur
+      // un même compte sont deux engagements financiers distincts, pas deux vues
+      // du même chiffre.
+      addBudget: (account, amount, period) => {
+        const budget = { id: uid(), account, amount: Number(amount), period: period || DEFAULT_BUDGET_PERIOD, createdAt: Date.now(), updatedAt: Date.now() };
+        set({ budgets: [...get().budgets, budget] });
+        useSkillStore.getState().awardXP('budget-control-lv1', 3, `budget set: ${account}`);
+        return budget.id;
       },
+      editBudget: (id, { account, amount, period }) =>
+        set({
+          budgets: get().budgets.map((b) =>
+            b.id === id ? stamp({ ...b, account, amount: Number(amount), period: period || DEFAULT_BUDGET_PERIOD }) : b
+          ),
+        }),
       deleteBudget: (id) => set({ budgets: get().budgets.filter((b) => b.id !== id) }),
 
-      // Budgets de CHARGES du mois en cours dont le réalisé dépasse le budgété
-      // de plus de 10% (orange) ou 25% (rouge) — budgetSeverity (utils/goals.js),
-      // même seuil déjà utilisé côté financeStore historique. Un budget de
-      // produit "manqué" n'est pas un dépassement au même sens, donc exclu ici.
+      // Budgets de CHARGES dont le réalisé, sur LEUR propre période en cours
+      // aujourd'hui, dépasse le budgété de plus de 10% (orange) ou 25% (rouge) —
+      // budgetSeverity (utils/goals.js), même seuil déjà utilisé côté
+      // financeStore historique. Un budget de produit "manqué" n'est pas un
+      // dépassement au même sens, donc exclu ici.
       getBudgetAlerts: () => {
-        const mk = monthKey(new Date().toISOString().slice(0, 10));
+        const today = new Date().toISOString().slice(0, 10);
         return get()
-          .getBudgetVariance(mk)
+          .getBudgetVariance(today)
           .filter((v) => v.cls === 6)
           .map((v) => ({ ...v, severity: budgetSeverity(v.reel, v.amount) }))
           .filter((v) => v.severity)
@@ -421,8 +435,20 @@ export const useAccountingStore = create(
         return { anc: a.anc, ...cv };
       },
       getMonthlySeries: (months = 6) => monthlySeries(get().journal, months),
-      getBudgetVariance: (mk) => budgetVariance(get().journal, get().budgets, mk || monthKey(new Date().toISOString()), get().getAccountMap()),
+      // Résultat (produits − charges) jour par jour sur [from, to] — voir dailyResults (accounting-engine.js).
+      getDailyResults: (from, to) => dailyResults(get().journal, from, to),
+      // refDate : 'YYYY-MM-DD' — chaque budget calcule sa propre période à
+      // partir de cette date de référence (voir getPeriodBounds). Défaut : aujourd'hui.
+      getBudgetVariance: (refDate) => budgetVariance(get().journal, get().budgets, refDate || new Date().toISOString().slice(0, 10), get().getAccountMap()),
       getTreasuryForecast: (months = 6) => treasuryForecast(get().journal, get().budgets, months),
+
+      // Panneau "raisonné" d'un budget : répartition par tiers, comparaison
+      // historique, rythme/projection, anomalies — voir budgetInsights (accounting-engine.js).
+      getBudgetInsights: (budgetId, refDate) => {
+        const budget = get().budgets.find((b) => b.id === budgetId);
+        if (!budget) return null;
+        return budgetInsights(get().journal, budget, refDate || new Date().toISOString().slice(0, 10), get().getAccountMap());
+      },
 
       // Période du mois courant : { from, to }
       currentMonthPeriod: () => {

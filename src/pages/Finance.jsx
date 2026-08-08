@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock, CalendarDays } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { todayKey } from '../utils/formatters';
 import AccountingOverview from './finance/AccountingOverview';
@@ -12,6 +12,7 @@ import Echeances from './finance/Echeances';
 import TreasuryPure from './finance/TreasuryPure';
 import Goals from './finance/Goals';
 import Labels from './finance/Labels';
+import PnLCalendar from './finance/PnLCalendar';
 
 // Système financier personnel interconnecté, fondé sur la comptabilité générale
 // en partie double (inspiration : plan comptable marocain adapté à une personne
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'ledger', label: 'Grand Livre & Balance', icon: Library, Component: Ledger },
   { key: 'statements', label: 'Bilan · CPC · ESG', icon: FileSpreadsheet, Component: Statements },
   { key: 'analysis', label: 'Analyse & Ratios', icon: LineChart, Component: Analysis },
+  { key: 'pnlCalendar', label: 'Calendrier P&L', icon: CalendarDays, Component: PnLCalendar },
   { key: 'budget', label: 'Budget', icon: PiggyBank, Component: Budget },
   { key: 'echeances', label: 'Échéances', icon: CalendarClock, Component: Echeances },
   { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: TreasuryPure },
