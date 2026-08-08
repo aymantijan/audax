@@ -1,7 +1,7 @@
 import { useMemo, useEffect } from 'react';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
-import { useFinanceStore } from '../store/financeStore';
+import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useHealthStore } from '../store/healthStore';
 import { useSkillStore } from '../store/skillStore';
@@ -25,8 +25,13 @@ function loadHistory() {
 export function useSynergy() {
   const trades = useTradingStore((s) => s.trades);
   const courses = useLearningStore((s) => s.courses);
-  const transactions = useFinanceStore((s) => s.transactions);
-  const budgets = useFinanceStore((s) => s.budgets);
+  // Raw slices from the double-entry accounting store (not a getter — see the
+  // useSyncExternalStore infinite-loop note in project memory) — feeds the
+  // real finance score instead of the legacy financeStore transactions/budgets.
+  const journal = useAccountingStore((s) => s.journal);
+  const accountingBudgets = useAccountingStore((s) => s.budgets);
+  const corrections = useAccountingStore((s) => s.corrections);
+  const echeances = useAccountingStore((s) => s.echeances);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const energyLogs = useHabitStore((s) => s.energyLogs);
@@ -66,8 +71,10 @@ export function useSynergy() {
       calculateSynergies({
         trades,
         courses,
-        transactions,
-        budgets,
+        journal,
+        accountingBudgets,
+        corrections,
+        echeances,
         energyLogs,
         habits,
         habitLogs,
@@ -76,7 +83,7 @@ export function useSynergy() {
         today: todayKey(),
         healthExtras,
       }),
-    [trades, courses, transactions, budgets, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras]
+    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras]
   );
 
   // Persist today's snapshot so we can show day-over-day trend

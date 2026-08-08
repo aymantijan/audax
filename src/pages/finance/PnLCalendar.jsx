@@ -14,6 +14,15 @@ const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const pad2 = (n) => String(n).padStart(2, '0');
 const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
 
+// Format compact pour tenir dans une cellule de calendrier (ex : "+2.6k",
+// "-150") — fmtSignedMAD complet est réservé au résumé et au tooltip.
+function fmtCellAmount(n) {
+  const sign = n > 0 ? '+' : n < 0 ? '−' : '';
+  const abs = Math.abs(n);
+  const val = abs >= 1000 ? `${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k` : Math.round(abs).toLocaleString('en-US');
+  return `${sign}${val}`;
+}
+
 export default function PnLCalendar() {
   const { journal, getDailyResults, getAccountMap } = useAccountingStore();
   const [cursor, setCursor] = useState(() => new Date());
@@ -124,6 +133,9 @@ export default function PnLCalendar() {
                     title={c.resultat != null ? `${fmtSignedMAD(c.resultat)} · produits ${fmtMAD(c.produits)} · charges ${fmtMAD(c.charges)}` : undefined}
                   >
                     <span>{c.day}</span>
+                    {c.resultat != null && (
+                      <span className="text-[9px] font-semibold leading-none mt-0.5">{fmtCellAmount(c.resultat)}</span>
+                    )}
                   </button>
                 )
               )}

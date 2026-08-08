@@ -23,7 +23,6 @@ import { fmtMoney, fmtSignedMoney, fmtMAD, fmtPct, fmtDate, todayKey } from '../
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import AccountSwitcher from '../components/common/AccountSwitcher';
-import PnLCalendar from './finance/PnLCalendar';
 import { startOfMonth } from 'date-fns';
 
 export default function Dashboard() {
@@ -323,8 +322,6 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
-
-      {hasJournal && <PnLCalendar />}
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card title="Synergy Score">
