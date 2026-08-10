@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
+import { toast } from '../store/uiStore';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useFinanceStore } from '../store/financeStore';
@@ -56,16 +57,20 @@ async function pushStore(userId, name, data) {
   if (error) console.error(`[cloud-sync] push ${name} failed:`, error.message);
 }
 
-// Fetch every synced store's cloud data for this user. Returns a map keyed by
-// store name; a store absent from the map has no cloud row yet (first login).
+// Fetch every synced store's cloud data for this user. `data` is a map keyed
+// by store name; a store absent from the map has no cloud row yet (first
+// login for that store). `ok: false` means the fetch itself failed (network/DB
+// error) — callers MUST NOT treat that as "no cloud rows exist", or a transient
+// blip looks identical to a genuinely empty account and local (possibly
+// default/empty) state gets pushed up over real cloud data. See startCloudSync.
 export async function fetchCloudState(userId) {
-  if (!isSupabaseConfigured) return {};
+  if (!isSupabaseConfigured) return { ok: true, data: {} };
   const { data, error } = await supabase.from(TABLE).select('store_name, data').eq('user_id', userId);
   if (error) {
     console.error('[cloud-sync] fetch failed:', error.message);
-    return {};
+    return { ok: false, data: {} };
   }
-  return Object.fromEntries((data || []).map((row) => [row.store_name, row.data]));
+  return { ok: true, data: Object.fromEntries((data || []).map((row) => [row.store_name, row.data])) };
 }
 
 let activeSubscription = null;
@@ -101,15 +106,34 @@ export async function startCloudSync(userId) {
   const myGeneration = ++generation;
   teardown();
 
-  const cloud = await fetchCloudState(userId);
+  let cloud = await fetchCloudState(userId);
   if (myGeneration !== generation) return;
 
+  // A failed fetch is NOT the same as "this account has no cloud data yet" —
+  // treating it that way is exactly how a flaky connection used to cause data
+  // loss (a real cloud row silently overwritten by empty/default local state,
+  // see project memory). Ride out one transient blip with a short retry, then
+  // refuse to sync at all this session rather than guess.
+  if (!cloud.ok) {
+    await new Promise((r) => setTimeout(r, 3000));
+    if (myGeneration !== generation) return;
+    cloud = await fetchCloudState(userId);
+    if (myGeneration !== generation) return;
+  }
+  if (!cloud.ok) {
+    console.error('[cloud-sync] could not confirm cloud state after retry — refusing to sync this session (local data is safe, but this device stays unsynced until the next successful login).');
+    toast('Cloud sync unavailable right now — working offline this session', 'warning');
+    return;
+  }
+
   for (const { name, store } of REGISTRY) {
-    if (cloud[name]) {
+    if (cloud.data[name]) {
       applyingRemote = true;
-      store.setState(cloud[name]);
+      store.setState(cloud.data[name]);
       applyingRemote = false;
     } else {
+      // Confirmed absent (the fetch succeeded and simply returned no row for
+      // this store) — safe to seed the cloud from local.
       await pushStore(userId, name, serializableState(store.getState()));
       if (myGeneration !== generation) return;
     }

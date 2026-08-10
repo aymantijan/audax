@@ -13,6 +13,7 @@ import { useTradingAlerts } from './hooks/useTradingAlerts';
 import { useEcheanceAlerts } from './hooks/useEcheanceAlerts';
 import { useBudgetAlerts } from './hooks/useBudgetAlerts';
 import MainLayout from './components/layout/MainLayout';
+import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
 
@@ -20,6 +21,7 @@ import { lazyWithRetry } from './utils/lazyRetry';
 // downloads on first visit instead of bloating the initial bundle.
 // lazyWithRetry: if a tab stays open across a new deploy, its old chunk hashes
 // 404 — one automatic reload fetches the current build instead of crashing.
+const Today = lazy(lazyWithRetry(() => import('./pages/Today'), 'Today'));
 const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
 const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
 const TradingAccounts = lazy(lazyWithRetry(() => import('./pages/TradingAccounts'), 'TradingAccounts'));
@@ -104,7 +106,9 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
+    <>
+      <PwaUpdatePrompt />
+      <Routes>
       <Route path="/welcome" element={user ? <Navigate to="/" replace /> : <Welcome />} />
       <Route
         element={
@@ -113,7 +117,9 @@ export default function App() {
           </AuthGuard>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<Navigate to="/today" replace />} />
+        <Route path="/today" element={<Today />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trading" element={<Trading />} />
         <Route path="/trading/accounts" element={<TradingAccounts />} />
         <Route path="/trading/account/:id" element={<TradingAccountDetail />} />
@@ -132,6 +138,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
