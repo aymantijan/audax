@@ -6,7 +6,6 @@ import { gradeFor } from '../utils/grades';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
-import { useFinanceStore } from '../store/financeStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
@@ -31,8 +30,6 @@ export default function Dashboard() {
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
-  const financeStore = useFinanceStore();
-  const goals = useFinanceStore((s) => s.goals);
   const skills = useSkillStore((s) => s.skills);
   const deals = useDealsStore((s) => s.deals);
   const readingsStore = useReadingsStore();
@@ -72,6 +69,12 @@ export default function Dashboard() {
   const accountingStore = useAccountingStore();
   const hasJournal = accountingStore.journal.length > 0;
   const netWorth = hasJournal ? accountingStore.getNetWorth().ancc : null;
+  // Real goals (treasury/net-worth targets), not the legacy financeStore ones —
+  // Finance > Goals writes to accountingStore.goals exclusively, so reading the
+  // old store here would show stale/dead goals instead of what the user actually set.
+  // Not gated on hasJournal: a goal can be created before any journal entry exists
+  // (getGoalRows() handles an empty journal fine, just with current=0/no pace yet).
+  const goals = accountingStore.getGoalRows();
   const todayEnergy = energyLogs.find((l) => l.date === today);
 
   // Grade (game rank) from lifetime XP + synergy score, and the account equity curve.

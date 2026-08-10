@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', end: true },
+  { to: '/today', label: 'Aujourd’hui', end: true },
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/trading', label: 'Trading' },
   { to: '/learning', label: 'Learning' },
   { to: '/finance', label: 'Finance' },
