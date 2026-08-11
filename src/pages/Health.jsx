@@ -30,7 +30,10 @@ const TABS = [
 const TAB_FOR_LINK = { cardio: 'workout', strength: 'workout', recovery: 'recovery', mindfulness: 'recovery', nutrition: 'nutrition', sleep: 'sleep', reflection: 'dashboard' };
 
 export default function Health() {
-  const [tab, setTab] = useState('dashboard');
+  // QuickAdd FAB deep-links here as /health?quickadd=workout — the workout
+  // log form is inline at the top of that tab (no modal to auto-open, unlike
+  // Trading/Finance), so landing on the tab is the whole job.
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('quickadd') === 'workout' ? 'workout' : 'dashboard'));
   const { pendingPrompts, dismissPrompt } = useHealthStore();
   const gender = useAuthStore((s) => s.user?.gender);
   const [activePrompt, setActivePrompt] = useState(null);

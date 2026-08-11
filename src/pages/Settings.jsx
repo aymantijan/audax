@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff } from 'lucide-react';
+import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff } from 'lucide-react';
+import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { isSupabaseConfigured } from '../services/supabase';
 import { getSession } from '../services/auth-supabase';
 import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
@@ -45,6 +46,46 @@ export default function SettingsPage() {
       toast(`Google Calendar connect failed: ${err.message}`, 'error');
     } finally {
       setGcalBusy(false);
+    }
+  };
+
+  // Push notifications: null = still checking, false = not subscribed on this
+  // device, true = subscribed. Checked fresh on mount since it's real browser
+  // state (PushManager), not app state — a subscription made on another
+  // device/browser wouldn't show here, which is correct (Push is per-device).
+  const [pushSubscribed, setPushSubscribed] = useState(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if (!isPushSupported()) return setPushSubscribed(false);
+    getPushSubscription().then((sub) => setPushSubscribed(!!sub));
+  }, []);
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushSubscribed) {
+        await unsubscribeFromPush();
+        setPushSubscribed(false);
+        toast('Push notifications disabled', 'info');
+      } else {
+        await subscribeToPush();
+        setPushSubscribed(true);
+        toast('Push notifications enabled', 'success');
+      }
+    } catch (err) {
+      toast(`Push notifications: ${err.message}`, 'error');
+    } finally {
+      setPushBusy(false);
+    }
+  };
+  const testPush = async () => {
+    setPushBusy(true);
+    try {
+      const r = await sendTestPush();
+      toast(`Test push sent to ${r.sent} device(s)${r.failed ? `, ${r.failed} failed` : ''}`, r.sent ? 'success' : 'warning');
+    } catch (err) {
+      toast(`Test push failed: ${err.message}`, 'error');
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -209,6 +250,44 @@ export default function SettingsPage() {
                 <span className="font-medium text-mute">Not connected</span>
                 <p className="text-mute mt-1">Connect to schedule tasks, courses, habits, or workouts straight into your calendar.</p>
                 <Button className="mt-3" onClick={connectGcal} disabled={gcalBusy}>{gcalBusy ? '…' : 'Connect Google Calendar'}</Button>
+              </>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Notifications">
+        <div className="flex items-start gap-3">
+          {pushSubscribed ? (
+            <Bell size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
+          ) : (
+            <BellOff size={20} className="text-mute shrink-0 mt-0.5" />
+          )}
+          <div className="text-sm flex-1">
+            {!isPushSupported() && (
+              <>
+                <span className="font-medium text-mute">Not supported</span>
+                <p className="text-mute mt-1">This browser doesn't support push notifications.</p>
+              </>
+            )}
+            {isPushSupported() && pushSubscribed === null && <span className="text-mute">Checking…</span>}
+            {isPushSupported() && pushSubscribed === true && (
+              <>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Enabled on this device</span>
+                <p className="text-mute mt-1">
+                  This is per-device — reminders (habit check-ins, trading alerts, overdue échéances) still need the app to have decided to send one; there's no server-side scheduler yet, so use "Send a test" to confirm the pipeline works.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <Button variant="secondary" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Disable'}</Button>
+                  <Button onClick={testPush} disabled={pushBusy}>{pushBusy ? '…' : 'Send a test'}</Button>
+                </div>
+              </>
+            )}
+            {isPushSupported() && pushSubscribed === false && (
+              <>
+                <span className="font-medium text-mute">Not enabled</span>
+                <p className="text-mute mt-1">Get a real OS notification on this device instead of relying on a browser tab staying open.</p>
+                <Button className="mt-3" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Enable push notifications'}</Button>
               </>
             )}
           </div>
