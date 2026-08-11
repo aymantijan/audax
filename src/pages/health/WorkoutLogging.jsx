@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search } from 'lucide-react';
+import { Plus, Trash2, Pencil, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
@@ -14,7 +14,13 @@ const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 const CATEGORY_ICON = { cardio: HeartPulse, gym: Dumbbell, sport: Activity };
 
 export default function WorkoutLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, logGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
+  const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
+
+  // null | { kind: 'single', id } | { kind: 'session', sessionId } — 'single'
+  // only ever applies to cardio/sport (duration-based, one entry); every
+  // strength/gym entry is always part of a session (created via
+  // logGymSession — see its comment), so its edit path is always 'session'.
+  const [editing, setEditing] = useState(null);
 
   const promptCategory = pendingPrompt?.type === 'cardio' ? 'cardio' : pendingPrompt?.type === 'strength' ? 'gym' : 'cardio';
   const [category, setCategory] = useState(promptCategory);
@@ -85,37 +91,62 @@ export default function WorkoutLogging({ pendingPrompt }) {
     setQuality(7);
     setLogDate(todayKey());
     setNotes('');
+    setEditing(null);
   };
+
+  // Populates the form from an existing cardio/sport entry and switches to
+  // edit mode — submit() below then calls editWorkout instead of logWorkout.
+  const startEditWorkout = (w) => {
+    setCategory(w.type);
+    if (w.type === 'cardio') setCardioSubtype(w.sessionType || CARDIO_TYPES[1].value);
+    else setSportSubtype(w.sessionType || SPORT_TYPES[0].value);
+    setDurationMin(w.durationMin || 0);
+    setQuality(w.quality || 7);
+    setNotes(w.notes || '');
+    setLogDate(w.date);
+    setEditing({ kind: 'single', id: w.id });
+  };
+
+  // Populates the form from an existing gym session's exercises — weights are
+  // converted to the CURRENT display unit (dispW) since the Weight input shows
+  // whatever unit is active, and submit() converts back to kg via toKg.
+  const startEditSession = (item) => {
+    setCategory('gym');
+    setSessionType(item.sessionType || GYM_SESSION_TYPES[0].value);
+    setExtraMuscles(new Set());
+    setSessionExercises(item.exercises.map((ex) => ({ exercise: ex.exercise, sets: (ex.sets || []).map((s) => ({ ...s, weight: dispW(Number(s.weight) || 0) })) })));
+    setQuality(item.exercises[0]?.quality || 7);
+    setNotes(item.exercises[0]?.notes || '');
+    setLogDate(item.date);
+    setEditing({ kind: 'session', sessionId: item.sessionId });
+  };
+
+  const cancelEdit = () => resetForm();
 
   const submit = (e) => {
     e.preventDefault();
     if (category === 'gym') {
-      logGymSession(
-        {
-          date: logDate,
-          sessionType,
-          exercises: sessionExercises.map((ex) => ({ exercise: ex.exercise, sets: ex.sets.map((s) => ({ ...s, weight: toKg(s.weight) })) })),
-          quality,
-          notes,
-        },
-        pendingPrompt?.id
-      );
+      const exercises = sessionExercises.map((ex) => ({ exercise: ex.exercise, sets: ex.sets.map((s) => ({ ...s, weight: toKg(s.weight) })) }));
+      if (editing?.kind === 'session') {
+        editGymSession(editing.sessionId, { date: logDate, sessionType, exercises, quality, notes });
+      } else {
+        logGymSession({ date: logDate, sessionType, exercises, quality, notes }, pendingPrompt?.id);
+      }
     } else {
       const subtype = category === 'cardio' ? cardioSubtype : sportSubtype;
       const list = category === 'cardio' ? CARDIO_TYPES : SPORT_TYPES;
-      logWorkout(
-        {
-          date: logDate,
-          type: category, // 'cardio' | 'sport'
-          category,
-          sessionType: subtype,
-          exercise: labelFor(list, subtype),
-          durationMin,
-          quality,
-          notes,
-        },
-        pendingPrompt?.id
-      );
+      const payload = {
+        date: logDate,
+        type: category, // 'cardio' | 'sport'
+        category,
+        sessionType: subtype,
+        exercise: labelFor(list, subtype),
+        durationMin,
+        quality,
+        notes,
+      };
+      if (editing?.kind === 'single') editWorkout(editing.id, payload);
+      else logWorkout(payload, pendingPrompt?.id);
     }
     resetForm();
   };
@@ -166,7 +197,10 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
-      <Card title="Log a Workout" action={<Button variant="secondary" onClick={() => setScheduleModal(true)}><span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule a session</span></Button>}>
+      <Card
+        title={editing ? 'Edit Workout' : 'Log a Workout'}
+        action={<Button variant="secondary" onClick={() => setScheduleModal(true)}><span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule a session</span></Button>}
+      >
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             {[{ value: 'cardio', label: 'Cardio' }, { value: 'gym', label: 'Gym' }, { value: 'sport', label: 'Sport' }].map((c) => {
@@ -326,9 +360,16 @@ export default function WorkoutLogging({ pendingPrompt }) {
           <Field label="Notes (optional)">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
-          <Button type="submit" className="w-full" disabled={category === 'gym' && !sessionExercises.length}>
-            {category === 'gym' ? 'Finish session' : 'Log workout'}
-          </Button>
+          <div className="flex gap-2">
+            {editing && (
+              <Button type="button" variant="secondary" className="flex-1" onClick={cancelEdit}>
+                Cancel edit
+              </Button>
+            )}
+            <Button type="submit" className="flex-1" disabled={category === 'gym' && !sessionExercises.length}>
+              {editing ? 'Save changes' : category === 'gym' ? 'Finish session' : 'Log workout'}
+            </Button>
+          </div>
         </form>
       </Card>
 
@@ -337,9 +378,9 @@ export default function WorkoutLogging({ pendingPrompt }) {
           <ul className="space-y-2">
             {todayItems.map((item) =>
               item.kind === 'session' ? (
-                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} />
+                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} onEdit={() => startEditSession(item)} />
               ) : (
-                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} />
+                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} onEdit={item.w.type !== 'strength' ? () => startEditWorkout(item.w) : undefined} />
               )
             )}
           </ul>
@@ -441,9 +482,9 @@ export default function WorkoutLogging({ pendingPrompt }) {
           <ul className="space-y-2">
             {historyItems.map((item) =>
               item.kind === 'session' ? (
-                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} showDate />
+                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} onEdit={() => startEditSession(item)} showDate />
               ) : (
-                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} showDate />
+                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} onEdit={item.w.type !== 'strength' ? () => startEditWorkout(item.w) : undefined} showDate />
               )
             )}
           </ul>
@@ -463,7 +504,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
   );
 }
 
-function WorkoutRow({ w, onDelete, showDate }) {
+function WorkoutRow({ w, onDelete, onEdit, showDate }) {
   const totalVolume = w.sets?.reduce((a, s) => a + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0) || 0;
   const Icon = w.type === 'cardio' ? HeartPulse : w.type === 'sport' ? Activity : Dumbbell;
   return (
@@ -478,6 +519,11 @@ function WorkoutRow({ w, onDelete, showDate }) {
           {w.quality ? ` · quality ${w.quality}/10` : ''}
         </div>
       </div>
+      {onEdit && (
+        <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0">
+          <Pencil size={14} />
+        </button>
+      )}
       <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0">
         <Trash2 size={14} />
       </button>
@@ -485,7 +531,7 @@ function WorkoutRow({ w, onDelete, showDate }) {
   );
 }
 
-function SessionRow({ item, onDelete, showDate }) {
+function SessionRow({ item, onDelete, onEdit, showDate }) {
   const totalVolume = item.exercises.reduce((a, w) => a + (w.sets || []).reduce((s, set) => s + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0), 0);
   const totalSets = item.exercises.reduce((a, w) => a + (w.sets?.length || 0), 0);
   const label = labelFor(GYM_SESSION_TYPES, item.sessionType) || 'Gym session';
@@ -500,6 +546,11 @@ function SessionRow({ item, onDelete, showDate }) {
             {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''} · {totalSets} sets · {totalVolume}kg vol
           </div>
         </div>
+        {onEdit && (
+          <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0">
+            <Pencil size={14} />
+          </button>
+        )}
         <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0">
           <Trash2 size={14} />
         </button>
