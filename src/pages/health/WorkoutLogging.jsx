@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Plus, Trash2, Pencil, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
@@ -21,6 +21,12 @@ export default function WorkoutLogging({ pendingPrompt }) {
   // strength/gym entry is always part of a session (created via
   // logGymSession — see its comment), so its edit path is always 'session'.
   const [editing, setEditing] = useState(null);
+  // The edit buttons live on Today/History rows, which can be well below the
+  // fold (PRs/1RM/Progression/Library/Volume-chart cards sit between "Today"
+  // and "History") — without scrolling, populating the form off-screen looks
+  // exactly like the click did nothing. This ref + scrollIntoView is the fix.
+  const formCardRef = useRef(null);
+  const scrollToForm = () => formCardRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
 
   const promptCategory = pendingPrompt?.type === 'cardio' ? 'cardio' : pendingPrompt?.type === 'strength' ? 'gym' : 'cardio';
   const [category, setCategory] = useState(promptCategory);
@@ -105,6 +111,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
     setNotes(w.notes || '');
     setLogDate(w.date);
     setEditing({ kind: 'single', id: w.id });
+    scrollToForm();
   };
 
   // Populates the form from an existing gym session's exercises — weights are
@@ -119,6 +126,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
     setNotes(item.exercises[0]?.notes || '');
     setLogDate(item.date);
     setEditing({ kind: 'session', sessionId: item.sessionId });
+    scrollToForm();
   };
 
   const cancelEdit = () => resetForm();
@@ -197,6 +205,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
+      <div ref={formCardRef} style={{ scrollMarginTop: '5rem' }}>
       <Card
         title={editing ? 'Edit Workout' : 'Log a Workout'}
         action={<Button variant="secondary" onClick={() => setScheduleModal(true)}><span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule a session</span></Button>}
@@ -372,6 +381,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
           </div>
         </form>
       </Card>
+      </div>
 
       <Card title="Today" action={<Badge>{todayItems.length} logged</Badge>}>
         {todayItems.length ? (
