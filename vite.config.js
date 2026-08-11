@@ -26,7 +26,7 @@ export default defineConfig({
         // than a failed request, and the app already reads from localStorage
         // first (local-first architecture) so it works offline without SW help
         // for anything already loaded once.
-        globPatterns: ['**/*.{js,css,html,svg}'],
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
         navigateFallback: '/index.html',
         // Old chunk hashes from a previous deploy must not linger once a new
         // one is precached — avoids the exact stale-bundle problem lazyRetry
@@ -41,7 +41,12 @@ export default defineConfig({
         display: 'standalone',
         background_color: '#0b0e14',
         theme_color: '#0b0e14',
-        icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+        icons: [
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
     }),
   ],

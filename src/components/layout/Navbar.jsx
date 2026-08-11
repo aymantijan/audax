@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Moon, Sun, LogOut, Settings, Menu, X, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
+import GlobalSearch from './GlobalSearch';
 
 const NAV_ITEMS = [
   { to: '/today', label: 'Aujourd’hui', end: true },
@@ -62,6 +63,7 @@ export default function Navbar() {
 
         {/* Right: theme + settings + profile + logout */}
         <div className="flex items-center gap-2 shrink-0">
+          <GlobalSearch />
           <button onClick={toggleTheme} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Toggle theme">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>

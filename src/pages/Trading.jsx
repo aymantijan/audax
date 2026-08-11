@@ -36,7 +36,10 @@ export default function Trading() {
   // Subscribe to the whole store so any trade change (add/edit/delete) re-renders.
   const tradingStore = useTradingStore();
   const { deleteTrade, adjustAccountBalance, alerts, setAlertsEnabled } = tradingStore;
-  const [formOpen, setFormOpen] = useState(false);
+  // QuickAdd FAB deep-links here as /trading?quickadd=trade — read once on
+  // mount (not a live subscription) so it opens the form exactly once and a
+  // later state change never reopens it.
+  const [formOpen, setFormOpen] = useState(() => new URLSearchParams(window.location.search).get('quickadd') === 'trade');
   const [editing, setEditing] = useState(null);
   const [clearToTrade, setClearToTrade] = useState(false);
   const [filterInstrument, setFilterInstrument] = useState('all');

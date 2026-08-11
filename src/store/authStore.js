@@ -13,6 +13,10 @@ function withDefaults(user) {
   return {
     ...user,
     careerGoal: user.careerGoal || 'Hybrid',
+    // `??` (not `||`) so an explicit `false` (mid-onboarding) survives rehydration —
+    // only truly-missing (pre-onboarding-feature accounts) defaults to true, so
+    // existing users are never retroactively shown the wizard.
+    onboarded: user.onboarded ?? true,
   };
 }
 
@@ -35,10 +39,12 @@ export const useAuthStore = create(
             gender: profile.gender || null,
             theme: 'dark',
             createdAt: Date.now(),
+            onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
           },
         }),
 
       updateProfile: (updates) => set({ user: { ...get().user, ...updates } }),
+      completeOnboarding: () => set({ user: { ...get().user, onboarded: true } }),
 
       logout: () => set({ user: null }),
     }),

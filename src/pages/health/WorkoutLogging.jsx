@@ -1,21 +1,37 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { kgToLb, lbToKg } from '../../utils/health-science';
+import { CARDIO_TYPES, GYM_SESSION_TYPES, SPORT_TYPES, labelFor } from '../../utils/workout-types';
+import { searchExercises } from '../../utils/exercise-library';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
+const CATEGORY_ICON = { cardio: HeartPulse, gym: Dumbbell, sport: Activity };
 
 export default function WorkoutLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, deleteWorkout, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
-  const [type, setType] = useState(pendingPrompt?.type === 'cardio' ? 'cardio' : 'strength');
-  const [exercise, setExercise] = useState(pendingPrompt?.habitName || '');
+  const { workouts, logWorkout, logGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
+
+  const promptCategory = pendingPrompt?.type === 'cardio' ? 'cardio' : pendingPrompt?.type === 'strength' ? 'gym' : 'cardio';
+  const [category, setCategory] = useState(promptCategory);
+
+  // Cardio / Sport — duration-based, single entry
+  const [cardioSubtype, setCardioSubtype] = useState(CARDIO_TYPES[1].value);
+  const [sportSubtype, setSportSubtype] = useState(SPORT_TYPES[0].value);
   const [durationMin, setDurationMin] = useState(pendingPrompt?.duration || 30);
-  const [sets, setSets] = useState([blankSet()]);
+
+  // Gym — a session built from N exercises picked off the library
+  const [sessionType, setSessionType] = useState(GYM_SESSION_TYPES[0].value);
+  const [sessionExercises, setSessionExercises] = useState(
+    pendingPrompt?.habitName ? [{ exercise: pendingPrompt.habitName, sets: [blankSet()] }] : []
+  );
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [customExercise, setCustomExercise] = useState('');
+
   const [quality, setQuality] = useState(7);
   const [notes, setNotes] = useState('');
   const [progressExercise, setProgressExercise] = useState('');
@@ -26,38 +42,95 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const dispW = (kg) => (kg ? Math.round((isLb ? kgToLb(kg) : kg) * 10) / 10 : 0);
   const toKg = (v) => (isLb ? lbToKg(Number(v) || 0) : Number(v) || 0);
 
-  const addSet = () => setSets((s) => [...s, blankSet()]);
-  const updateSet = (i, patch) => setSets((s) => s.map((set, idx) => (idx === i ? { ...set, ...patch } : set)));
-  const removeSet = (i) => setSets((s) => s.filter((_, idx) => idx !== i));
+  const sessionMuscleGroups = GYM_SESSION_TYPES.find((s) => s.value === sessionType)?.muscleGroups || [];
+  const pickerResults = useMemo(
+    () => searchExercises(pickerQuery, pickerQuery.trim() ? null : sessionMuscleGroups).slice(0, 20),
+    [pickerQuery, sessionType]
+  );
 
-  const submit = (e) => {
-    e.preventDefault();
-    logWorkout(
-      {
-        date: logDate,
-        type,
-        exercise,
-        durationMin: type === 'cardio' ? durationMin : undefined,
-        sets: type === 'strength' ? sets.filter((s) => s.reps || s.weight).map((s) => ({ ...s, weight: toKg(s.weight) })) : [],
-        quality,
-        notes,
-      },
-      pendingPrompt?.id
+  const addExerciseToSession = (name) => {
+    if (!name?.trim()) return;
+    setSessionExercises((s) => [...s, { exercise: name.trim(), sets: [blankSet()] }]);
+    setPickerQuery('');
+    setCustomExercise('');
+  };
+  const removeExerciseFromSession = (i) => setSessionExercises((s) => s.filter((_, idx) => idx !== i));
+  const addSetToExercise = (exIdx) =>
+    setSessionExercises((s) => s.map((ex, idx) => (idx === exIdx ? { ...ex, sets: [...ex.sets, blankSet()] } : ex)));
+  const updateSetInExercise = (exIdx, setIdx, patch) =>
+    setSessionExercises((s) =>
+      s.map((ex, idx) => (idx === exIdx ? { ...ex, sets: ex.sets.map((set, si) => (si === setIdx ? { ...set, ...patch } : set)) } : ex))
     );
-    setExercise('');
-    setSets([blankSet()]);
+  const removeSetFromExercise = (exIdx, setIdx) =>
+    setSessionExercises((s) => s.map((ex, idx) => (idx === exIdx ? { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) } : ex)));
+
+  const resetForm = () => {
+    setSessionExercises([]);
     setQuality(7);
     setLogDate(todayKey());
     setNotes('');
   };
 
+  const submit = (e) => {
+    e.preventDefault();
+    if (category === 'gym') {
+      logGymSession(
+        {
+          date: logDate,
+          sessionType,
+          exercises: sessionExercises.map((ex) => ({ exercise: ex.exercise, sets: ex.sets.map((s) => ({ ...s, weight: toKg(s.weight) })) })),
+          quality,
+          notes,
+        },
+        pendingPrompt?.id
+      );
+    } else {
+      const subtype = category === 'cardio' ? cardioSubtype : sportSubtype;
+      const list = category === 'cardio' ? CARDIO_TYPES : SPORT_TYPES;
+      logWorkout(
+        {
+          date: logDate,
+          type: category, // 'cardio' | 'sport'
+          category,
+          sessionType: subtype,
+          exercise: labelFor(list, subtype),
+          durationMin,
+          quality,
+          notes,
+        },
+        pendingPrompt?.id
+      );
+    }
+    resetForm();
+  };
+
   const today = todayKey();
-  const todayWorkouts = workouts.filter((w) => w.date === today);
-  const history = [...workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 20);
   const prs = getPRs();
   const volumeSeries = getWorkoutVolumeSeries();
   const oneRMs = getEstimated1RMs();
   const library = getExerciseLibrary();
+
+  // Group entries sharing a sessionId into one display card; standalone
+  // entries (cardio/sport, or legacy pre-session-builder strength logs)
+  // render individually exactly as before.
+  const groupItems = (list) => {
+    const seen = new Set();
+    const items = [];
+    for (const w of list) {
+      if (w.sessionId) {
+        if (seen.has(w.sessionId)) continue;
+        seen.add(w.sessionId);
+        const group = list.filter((x) => x.sessionId === w.sessionId);
+        items.push({ kind: 'session', sessionId: w.sessionId, date: w.date, sessionType: w.sessionType, exercises: group, createdAt: w.createdAt });
+      } else {
+        items.push({ kind: 'single', w, createdAt: w.createdAt });
+      }
+    }
+    return items.sort((a, b) => b.createdAt - a.createdAt);
+  };
+
+  const todayItems = groupItems(workouts.filter((w) => w.date === today));
+  const historyItems = groupItems([...workouts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 60)).slice(0, 20);
 
   const strengthExercises = useMemo(
     () => [...new Set(workouts.filter((w) => w.type === 'strength' && w.exercise).map((w) => w.exercise))],
@@ -79,56 +152,135 @@ export default function WorkoutLogging({ pendingPrompt }) {
     <div className="space-y-6">
       <Card title="Log a Workout" action={<Button variant="secondary" onClick={() => setScheduleModal(true)}><span className="flex items-center gap-2"><CalendarPlus size={14} /> Schedule a session</span></Button>}>
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Type">
-              <Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: 'cardio', label: 'Cardio' }, { value: 'strength', label: 'Strength' }]} />
-            </Field>
-            <Field label="Exercise">
-              <Input value={exercise} onChange={(e) => setExercise(e.target.value)} placeholder={type === 'cardio' ? 'e.g. Zone-2 run' : 'e.g. Deadlift'} required />
-            </Field>
+          <div className="grid grid-cols-3 gap-2">
+            {[{ value: 'cardio', label: 'Cardio' }, { value: 'gym', label: 'Gym' }, { value: 'sport', label: 'Sport' }].map((c) => {
+              const Icon = CATEGORY_ICON[c.value];
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setCategory(c.value)}
+                  className={`flex items-center justify-center gap-2 rounded-lg border py-2 text-sm cursor-pointer transition-colors ${
+                    category === c.value ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
+                  }`}
+                >
+                  <Icon size={14} /> {c.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {category === 'cardio' && (
+              <Field label="Cardio type">
+                <Select value={cardioSubtype} onChange={(e) => setCardioSubtype(e.target.value)} options={CARDIO_TYPES} />
+              </Field>
+            )}
+            {category === 'sport' && (
+              <Field label="Sport">
+                <Select value={sportSubtype} onChange={(e) => setSportSubtype(e.target.value)} options={SPORT_TYPES} />
+              </Field>
+            )}
+            {category === 'gym' && (
+              <Field label="Session type">
+                <Select value={sessionType} onChange={(e) => setSessionType(e.target.value)} options={GYM_SESSION_TYPES} />
+              </Field>
+            )}
             <Field label="Date" hint="Backdate a missed session">
               <Input type="date" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} />
             </Field>
           </div>
 
-          {type === 'cardio' ? (
+          {(category === 'cardio' || category === 'sport') && (
             <Field label="Duration (min)">
               <Input type="number" min="1" value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} />
             </Field>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-mute uppercase tracking-wide">Sets</div>
-                <div className="flex gap-1">
-                  {['kg', 'lb'].map((u) => (
-                    <button
-                      key={u}
-                      type="button"
-                      onClick={() => setWeightUnit(u)}
-                      className={`px-2 py-0.5 rounded text-[10px] uppercase cursor-pointer border ${weightUnit === u ? 'border-accent text-accent' : 'border-line text-mute'}`}
-                    >
-                      {u}
-                    </button>
-                  ))}
+          )}
+
+          {category === 'gym' && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="text-xs text-mute uppercase tracking-wide">Add an exercise</div>
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-mute" />
+                  <Input
+                    className="!pl-8"
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder={sessionMuscleGroups.length ? `Search exercises (suggesting ${sessionMuscleGroups.join(', ')})…` : 'Search exercises…'}
+                  />
+                </div>
+                {pickerResults.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {pickerResults.map((ex) => (
+                      <button
+                        key={ex.id}
+                        type="button"
+                        onClick={() => addExerciseToSession(ex.name)}
+                        className="text-xs px-2.5 py-1 rounded-full border border-line hover:border-accent hover:text-accent cursor-pointer"
+                      >
+                        {ex.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input value={customExercise} onChange={(e) => setCustomExercise(e.target.value)} placeholder="Not in the list? Type a custom exercise" />
+                  <Button type="button" variant="secondary" onClick={() => addExerciseToSession(customExercise)}>
+                    <Plus size={14} />
+                  </Button>
                 </div>
               </div>
-              {sets.map((s, i) => (
-                <div key={i} className="grid grid-cols-5 gap-2 items-center">
-                  <Input type="number" placeholder="Reps" value={s.reps} onChange={(e) => updateSet(i, { reps: e.target.value })} />
-                  <Input type="number" placeholder={`Weight (${weightUnit})`} value={s.weight} onChange={(e) => updateSet(i, { weight: e.target.value })} />
-                  <div>
-                    <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSet(i, { rpe: Number(e.target.value) })} className="w-full" />
-                    <div className="text-[10px] text-mute text-center">RPE {s.rpe}</div>
-                  </div>
-                  <Select value={s.form} onChange={(e) => updateSet(i, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
-                  <button type="button" onClick={() => removeSet(i)} className="text-mute hover:text-bad cursor-pointer justify-self-center">
-                    <Trash2 size={14} />
-                  </button>
+
+              {sessionExercises.length ? (
+                <div className="space-y-3">
+                  {sessionExercises.map((ex, exIdx) => (
+                    <div key={exIdx} className="border border-line rounded-lg p-3 space-y-2 bg-surface">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium">{ex.exercise}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {['kg', 'lb'].map((u) => (
+                              <button
+                                key={u}
+                                type="button"
+                                onClick={() => setWeightUnit(u)}
+                                className={`px-1.5 py-0.5 rounded text-[10px] uppercase cursor-pointer border ${weightUnit === u ? 'border-accent text-accent' : 'border-line text-mute'}`}
+                              >
+                                {u}
+                              </button>
+                            ))}
+                          </div>
+                          <button type="button" onClick={() => removeExerciseFromSession(exIdx)} className="text-mute hover:text-bad cursor-pointer">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      {ex.sets.map((s, setIdx) => (
+                        <div key={setIdx} className="grid grid-cols-5 gap-2 items-center">
+                          <Input type="number" placeholder="Reps" value={s.reps} onChange={(e) => updateSetInExercise(exIdx, setIdx, { reps: e.target.value })} />
+                          <Input type="number" placeholder={`Weight (${weightUnit})`} value={s.weight} onChange={(e) => updateSetInExercise(exIdx, setIdx, { weight: e.target.value })} />
+                          <div>
+                            <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSetInExercise(exIdx, setIdx, { rpe: Number(e.target.value) })} className="w-full" />
+                            <div className="text-[10px] text-mute text-center">RPE {s.rpe}</div>
+                          </div>
+                          <Select value={s.form} onChange={(e) => updateSetInExercise(exIdx, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
+                          <button type="button" onClick={() => removeSetFromExercise(exIdx, setIdx)} className="text-mute hover:text-bad cursor-pointer justify-self-center">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <Button type="button" variant="secondary" className="!py-1 !text-xs" onClick={() => addSetToExercise(exIdx)}>
+                        <span className="flex items-center gap-1.5"><Plus size={12} /> Add set</span>
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <Button type="button" variant="secondary" onClick={addSet}>
-                <span className="flex items-center gap-2"><Plus size={14} /> Add set</span>
-              </Button>
+              ) : (
+                <div className="text-center text-mute text-sm py-4 border border-dashed border-line rounded-lg">
+                  Search or type an exercise above to start building this session.
+                </div>
+              )}
             </div>
           )}
 
@@ -138,16 +290,22 @@ export default function WorkoutLogging({ pendingPrompt }) {
           <Field label="Notes (optional)">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
-          <Button type="submit" className="w-full">Log workout</Button>
+          <Button type="submit" className="w-full" disabled={category === 'gym' && !sessionExercises.length}>
+            {category === 'gym' ? 'Finish session' : 'Log workout'}
+          </Button>
         </form>
       </Card>
 
-      <Card title="Today" action={<Badge>{todayWorkouts.length} logged</Badge>}>
-        {todayWorkouts.length ? (
+      <Card title="Today" action={<Badge>{todayItems.length} logged</Badge>}>
+        {todayItems.length ? (
           <ul className="space-y-2">
-            {todayWorkouts.map((w) => (
-              <WorkoutRow key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} />
-            ))}
+            {todayItems.map((item) =>
+              item.kind === 'session' ? (
+                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} />
+              ) : (
+                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} />
+              )
+            )}
           </ul>
         ) : (
           <EmptyState>Nothing logged today yet.</EmptyState>
@@ -213,7 +371,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
                 onClick={() => ex.type === 'strength' && setProgressExercise(ex.exercise)}
                 className={`flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm ${ex.type === 'strength' ? 'cursor-pointer hover:border-accent' : ''}`}
               >
-                {ex.type === 'cardio' ? <HeartPulse size={14} className="text-accent shrink-0" /> : <Dumbbell size={14} className="text-accent shrink-0" />}
+                {ex.type === 'strength' ? <Dumbbell size={14} className="text-accent shrink-0" /> : ex.type === 'sport' ? <Activity size={14} className="text-accent shrink-0" /> : <HeartPulse size={14} className="text-accent shrink-0" />}
                 <span className="flex-1">{ex.exercise}</span>
                 <span className="text-mute text-xs">{ex.sessions} session{ex.sessions !== 1 ? 's' : ''}</span>
                 {ex.type === 'strength' ? (
@@ -243,11 +401,15 @@ export default function WorkoutLogging({ pendingPrompt }) {
       )}
 
       <Card title="History">
-        {history.length ? (
+        {historyItems.length ? (
           <ul className="space-y-2">
-            {history.map((w) => (
-              <WorkoutRow key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} showDate />
-            ))}
+            {historyItems.map((item) =>
+              item.kind === 'session' ? (
+                <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} showDate />
+              ) : (
+                <WorkoutRow key={item.w.id} w={item.w} onDelete={() => deleteWorkout(item.w.id)} showDate />
+              )
+            )}
           </ul>
         ) : (
           <EmptyState>No workouts logged yet.</EmptyState>
@@ -267,14 +429,15 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
 function WorkoutRow({ w, onDelete, showDate }) {
   const totalVolume = w.sets?.reduce((a, s) => a + (Number(s.reps) || 0) * (Number(s.weight) || 0), 0) || 0;
+  const Icon = w.type === 'cardio' ? HeartPulse : w.type === 'sport' ? Activity : Dumbbell;
   return (
     <li className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-      {w.type === 'cardio' ? <HeartPulse size={16} className="text-accent shrink-0" /> : <Dumbbell size={16} className="text-accent shrink-0" />}
+      <Icon size={16} className="text-accent shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-sm">{w.exercise || w.type}</div>
         <div className="text-[11px] text-mute">
           {showDate ? `${w.date} · ` : ''}
-          {w.type === 'cardio' ? `${w.durationMin}min` : `${w.sets?.length || 0} sets · ${totalVolume}kg vol`}
+          {w.type === 'strength' ? `${w.sets?.length || 0} sets · ${totalVolume}kg vol` : `${w.durationMin}min`}
           {w.avgRpe ? ` · RPE ${w.avgRpe}` : ''}
           {w.quality ? ` · quality ${w.quality}/10` : ''}
         </div>
@@ -282,6 +445,34 @@ function WorkoutRow({ w, onDelete, showDate }) {
       <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0">
         <Trash2 size={14} />
       </button>
+    </li>
+  );
+}
+
+function SessionRow({ item, onDelete, showDate }) {
+  const totalVolume = item.exercises.reduce((a, w) => a + (w.sets || []).reduce((s, set) => s + (Number(set.reps) || 0) * (Number(set.weight) || 0), 0), 0);
+  const totalSets = item.exercises.reduce((a, w) => a + (w.sets?.length || 0), 0);
+  const label = labelFor(GYM_SESSION_TYPES, item.sessionType) || 'Gym session';
+  return (
+    <li className="bg-surface border border-line rounded-lg px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <Dumbbell size={16} className="text-accent shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm">{label}</div>
+          <div className="text-[11px] text-mute">
+            {showDate ? `${item.date} · ` : ''}
+            {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''} · {totalSets} sets · {totalVolume}kg vol
+          </div>
+        </div>
+        <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0">
+          <Trash2 size={14} />
+        </button>
+      </div>
+      <div className="mt-1.5 pl-7 text-[11px] text-mute space-y-0.5">
+        {item.exercises.map((ex) => (
+          <div key={ex.id}>{ex.exercise} — {ex.sets?.length || 0} sets</div>
+        ))}
+      </div>
     </li>
   );
 }

@@ -77,11 +77,20 @@ export const useHealthStore = create(
       dismissPrompt: (id) => set({ pendingPrompts: get().pendingPrompts.filter((p) => p.id !== id) }),
 
       // ─────────── Workouts ───────────
+      // type: 'cardio' | 'strength' | 'sport'. `category`/`sessionType` are
+      // optional richer metadata (e.g. category:'cardio', sessionType:'zone2')
+      // layered on top of the original type/exercise/sets shape so every
+      // existing selector (getPRs, getEstimated1RMs, getWorkoutVolumeSeries,
+      // getExerciseLibrary, correlations — all keyed on `type`/`exercise`/`sets`)
+      // keeps working unchanged for cardio/strength entries logged either way.
       logWorkout: (data, fulfillsPromptId) => {
         const w = {
           id: uid(),
           date: data.date || todayKey(),
-          type: data.type, // 'cardio' | 'strength'
+          type: data.type, // 'cardio' | 'strength' | 'sport'
+          category: data.category || data.type,
+          sessionType: data.sessionType || null,
+          sessionId: data.sessionId || null,
           exercise: data.exercise || '',
           durationMin: Number(data.durationMin) || 0,
           sets: data.sets || [],
@@ -92,7 +101,7 @@ export const useHealthStore = create(
         };
         set({ workouts: [...get().workouts, w] });
         const award = useSkillStore.getState().awardXP;
-        const link = HEALTH_LINK_SKILLS[data.type === 'cardio' ? 'cardio' : 'strength'];
+        const link = HEALTH_LINK_SKILLS[data.type === 'strength' ? 'strength' : 'cardio']; // sport reuses the cardio/aerobic link
         award(link.skill, link.xp, `workout: ${w.exercise || w.type}`);
         award('health-discipline-lv1', 5, `workout logged: ${w.exercise || w.type}`);
         if (w.quality >= 8 && w.type === 'strength') award('form-mastery-lv1', 5, `great form: ${w.exercise}`);
@@ -100,7 +109,50 @@ export const useHealthStore = create(
         get().checkBadges();
         toast(`Workout logged: ${w.exercise || w.type}`, 'success');
       },
+
+      // A gym session = several exercises picked from the library, each with
+      // its own sets — logged as N individual `workouts` entries (so every
+      // per-exercise selector above keeps working exactly as if each had been
+      // logged separately) sharing one `sessionId` for grouped display, but
+      // XP is awarded ONCE for the whole session, not once per exercise —
+      // otherwise a 6-exercise session would be worth 6x a single-exercise log.
+      logGymSession: (data, fulfillsPromptId) => {
+        const sessionId = uid();
+        const date = data.date || todayKey();
+        const entries = (data.exercises || [])
+          .filter((ex) => ex.exercise && (ex.sets || []).some((s) => s.reps || s.weight))
+          .map((ex) => ({
+            id: uid(),
+            date,
+            type: 'strength',
+            category: 'gym',
+            sessionType: data.sessionType || null,
+            sessionId,
+            exercise: ex.exercise,
+            durationMin: 0,
+            sets: ex.sets.filter((s) => s.reps || s.weight),
+            avgRpe: ex.sets?.length ? Number((ex.sets.reduce((a, s) => a + (Number(s.rpe) || 0), 0) / ex.sets.length).toFixed(1)) : null,
+            quality: Number(data.quality) || null,
+            notes: data.notes || '',
+            createdAt: Date.now(),
+          }));
+        if (!entries.length) {
+          toast('Add at least one exercise with a set before finishing the session.', 'warning');
+          return;
+        }
+        set({ workouts: [...get().workouts, ...entries] });
+        const award = useSkillStore.getState().awardXP;
+        const link = HEALTH_LINK_SKILLS.strength;
+        award(link.skill, link.xp, `gym session: ${entries.length} exercises`);
+        award('health-discipline-lv1', 5, 'gym session logged');
+        if (data.quality >= 8) award('form-mastery-lv1', 5, 'great gym session form');
+        if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
+        get().checkBadges();
+        toast(`Session logged: ${entries.length} exercise${entries.length !== 1 ? 's' : ''}`, 'success');
+      },
+
       deleteWorkout: (id) => set({ workouts: get().workouts.filter((w) => w.id !== id) }),
+      deleteSession: (sessionId) => set({ workouts: get().workouts.filter((w) => w.sessionId !== sessionId) }),
 
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
@@ -742,12 +794,12 @@ export const useHealthStore = create(
       getExerciseLibrary: () => {
         const byExercise = {};
         for (const w of get().workouts) {
-          const key = (w.exercise?.trim() || (w.type === 'cardio' ? 'Cardio (unnamed)' : 'Strength (unnamed)'));
+          const key = (w.exercise?.trim() || (w.type === 'strength' ? 'Strength (unnamed)' : 'Cardio (unnamed)'));
           const entry = (byExercise[key] ||= { exercise: key, type: w.type, sessions: 0, lastDate: w.date, bestWeightKg: 0, totalMinutes: 0 });
           entry.sessions += 1;
           if (w.date > entry.lastDate) entry.lastDate = w.date;
-          if (w.type === 'cardio') entry.totalMinutes += Number(w.durationMin) || 0;
-          else entry.bestWeightKg = Math.max(entry.bestWeightKg, 0, ...(w.sets || []).map((s) => Number(s.weight) || 0));
+          if (w.type === 'strength') entry.bestWeightKg = Math.max(entry.bestWeightKg, 0, ...(w.sets || []).map((s) => Number(s.weight) || 0));
+          else entry.totalMinutes += Number(w.durationMin) || 0; // cardio + sport are both duration-based
         }
         return Object.values(byExercise).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
       },

@@ -193,7 +193,10 @@ export default function Journal() {
   const { journal, addEntry, editEntry, deleteEntry, importLegacyTransactions, legacyImported, getAccountMap } = useAccountingStore();
   const accountMap = getAccountMap();
   const legacyCount = useFinanceStore((s) => s.transactions.length);
-  const [modal, setModal] = useState(null); // 'template' | 'expert'
+  // QuickAdd FAB (via Finance.jsx defaulting the tab to 'journal') opens
+  // straight into the guided entry form — read once on mount, same one-shot
+  // pattern as Trading.jsx's quickadd handling.
+  const [modal, setModal] = useState(() => (new URLSearchParams(window.location.search).get('quickadd') === 'journal' ? 'template' : null)); // 'template' | 'expert'
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [monthFilter, setMonthFilter] = useState('');

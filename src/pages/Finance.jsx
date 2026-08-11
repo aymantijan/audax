@@ -33,7 +33,16 @@ const TABS = [
 ];
 
 export default function Finance() {
-  const [tab, setTab] = useState('overview');
+  // QuickAdd FAB deep-links here as /finance?quickadd=journal — jump straight
+  // to the Journal tab, which itself opens the entry form on mount (see Journal.jsx).
+  // GlobalSearch deep-links as /finance?tab=<key> to land on a specific tab
+  // without opening any form (e.g. a journal-entry search result).
+  const [tab, setTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('quickadd') === 'journal') return 'journal';
+    const requested = params.get('tab');
+    return TABS.some((t) => t.key === requested) ? requested : 'overview';
+  });
   const Active = TABS.find((t) => t.key === tab)?.Component || AccountingOverview;
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 

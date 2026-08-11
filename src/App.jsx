@@ -21,6 +21,7 @@ import { lazyWithRetry } from './utils/lazyRetry';
 // downloads on first visit instead of bloating the initial bundle.
 // lazyWithRetry: if a tab stays open across a new deploy, its old chunk hashes
 // 404 — one automatic reload fetches the current build instead of crashing.
+const Onboarding = lazy(lazyWithRetry(() => import('./pages/Onboarding'), 'Onboarding'));
 const Today = lazy(lazyWithRetry(() => import('./pages/Today'), 'Today'));
 const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
 const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
@@ -43,6 +44,11 @@ const SettingsPage = lazy(lazyWithRetry(() => import('./pages/Settings'), 'Setti
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
   if (!user) return <Navigate to="/welcome" replace />;
+  // New registrations (local or cloud, see authStore#register) start with
+  // onboarded:false — every real route stays gated behind the wizard until
+  // it calls completeOnboarding(), so nobody lands on an empty "Aujourd'hui"
+  // with zero context on what to do first.
+  if (!user.onboarded) return <Navigate to="/onboarding" replace />;
   return children;
 }
 
@@ -110,6 +116,10 @@ export default function App() {
       <PwaUpdatePrompt />
       <Routes>
       <Route path="/welcome" element={user ? <Navigate to="/" replace /> : <Welcome />} />
+      <Route
+        path="/onboarding"
+        element={!user ? <Navigate to="/welcome" replace /> : user.onboarded ? <Navigate to="/today" replace /> : <Onboarding />}
+      />
       <Route
         element={
           <AuthGuard>
