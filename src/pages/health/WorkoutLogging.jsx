@@ -4,8 +4,8 @@ import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scat
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { kgToLb, lbToKg } from '../../utils/health-science';
-import { CARDIO_TYPES, GYM_SESSION_TYPES, SPORT_TYPES, labelFor } from '../../utils/workout-types';
-import { searchExercises } from '../../utils/exercise-library';
+import { CARDIO_TYPES, GYM_SESSION_TYPES, SPORT_TYPES, SMALL_MUSCLE_OPTIONS, labelFor } from '../../utils/workout-types';
+import { searchExercises, suggestExercises } from '../../utils/exercise-library';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 
@@ -29,6 +29,15 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const [sessionExercises, setSessionExercises] = useState(
     pendingPrompt?.habitName ? [{ exercise: pendingPrompt.habitName, sets: [blankSet()] }] : []
   );
+  // Optional accessory muscles tacked onto today's session (e.g. Biceps after
+  // a Back day) — widens the picker's suggestions, doesn't change sessionType.
+  const [extraMuscles, setExtraMuscles] = useState(new Set());
+  const toggleExtraMuscle = (m) =>
+    setExtraMuscles((s) => {
+      const next = new Set(s);
+      next.has(m) ? next.delete(m) : next.add(m);
+      return next;
+    });
   const [pickerQuery, setPickerQuery] = useState('');
   const [customExercise, setCustomExercise] = useState('');
 
@@ -42,10 +51,16 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const dispW = (kg) => (kg ? Math.round((isLb ? kgToLb(kg) : kg) * 10) / 10 : 0);
   const toKg = (v) => (isLb ? lbToKg(Number(v) || 0) : Number(v) || 0);
 
-  const sessionMuscleGroups = GYM_SESSION_TYPES.find((s) => s.value === sessionType)?.muscleGroups || [];
+  const sessionMuscleGroups = [
+    ...(GYM_SESSION_TYPES.find((s) => s.value === sessionType)?.muscleGroups || []),
+    ...extraMuscles,
+  ];
   const pickerResults = useMemo(
-    () => searchExercises(pickerQuery, pickerQuery.trim() ? null : sessionMuscleGroups).slice(0, 20),
-    [pickerQuery, sessionType]
+    () =>
+      pickerQuery.trim()
+        ? searchExercises(pickerQuery, null).slice(0, 20)
+        : suggestExercises(sessionMuscleGroups, 24), // round-robin so a small accessory pick isn't crowded out by a big group like "back"
+    [pickerQuery, sessionType, extraMuscles]
   );
 
   const addExerciseToSession = (name) => {
@@ -66,6 +81,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
   const resetForm = () => {
     setSessionExercises([]);
+    setExtraMuscles(new Set());
     setQuality(7);
     setLogDate(todayKey());
     setNotes('');
@@ -199,6 +215,26 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
           {category === 'gym' && (
             <div className="space-y-3">
+              <div className="space-y-1.5">
+                <div className="text-xs text-mute uppercase tracking-wide">Also train a small muscle today? (optional)</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {SMALL_MUSCLE_OPTIONS.map((m) => {
+                    const on = extraMuscles.has(m.value);
+                    return (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => toggleExtraMuscle(m.value)}
+                        className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                          on ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="space-y-2">
                 <div className="text-xs text-mute uppercase tracking-wide">Add an exercise</div>
                 <div className="relative">
