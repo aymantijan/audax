@@ -154,6 +154,66 @@ export const useHealthStore = create(
       deleteWorkout: (id) => set({ workouts: get().workouts.filter((w) => w.id !== id) }),
       deleteSession: (sessionId) => set({ workouts: get().workouts.filter((w) => w.sessionId !== sessionId) }),
 
+      // Edits a standalone entry (cardio/sport, or a legacy pre-session-builder
+      // strength log with no sessionId) in place. Deliberately does NOT touch
+      // XP — that was already awarded at log time; re-awarding on every edit
+      // would let someone farm XP by repeatedly tweaking quality/notes.
+      editWorkout: (id, data) => {
+        set({
+          workouts: get().workouts.map((w) => {
+            if (w.id !== id) return w;
+            const sets = data.sets ?? w.sets;
+            return {
+              ...w,
+              date: data.date || w.date,
+              type: data.type || w.type,
+              category: data.category ?? w.category,
+              sessionType: data.sessionType ?? w.sessionType,
+              exercise: data.exercise ?? w.exercise,
+              durationMin: data.durationMin !== undefined ? Number(data.durationMin) || 0 : w.durationMin,
+              sets,
+              avgRpe: sets?.length ? Number((sets.reduce((a, s) => a + (Number(s.rpe) || 0), 0) / sets.length).toFixed(1)) : w.avgRpe,
+              quality: data.quality !== undefined ? Number(data.quality) || null : w.quality,
+              notes: data.notes ?? w.notes,
+            };
+          }),
+        });
+        toast('Workout updated', 'success');
+      },
+
+      // Edits a gym session: replaces every `workouts` entry sharing this
+      // sessionId with the new exercise/set list (simplest correct way to
+      // reconcile exercises added/removed/reordered within the session,
+      // rather than diffing). Same no-XP-on-edit rule as editWorkout above.
+      editGymSession: (sessionId, data) => {
+        const date = data.date || todayKey();
+        const others = get().workouts.filter((w) => w.sessionId !== sessionId);
+        const original = get().workouts.find((w) => w.sessionId === sessionId);
+        const entries = (data.exercises || [])
+          .filter((ex) => ex.exercise && (ex.sets || []).some((s) => s.reps || s.weight))
+          .map((ex) => ({
+            id: uid(),
+            date,
+            type: 'strength',
+            category: 'gym',
+            sessionType: data.sessionType || null,
+            sessionId,
+            exercise: ex.exercise,
+            durationMin: 0,
+            sets: ex.sets.filter((s) => s.reps || s.weight),
+            avgRpe: ex.sets?.length ? Number((ex.sets.reduce((a, s) => a + (Number(s.rpe) || 0), 0) / ex.sets.length).toFixed(1)) : null,
+            quality: data.quality !== undefined ? Number(data.quality) || null : original?.quality ?? null,
+            notes: data.notes ?? original?.notes ?? '',
+            createdAt: original?.createdAt ?? Date.now(),
+          }));
+        if (!entries.length) {
+          toast('A session needs at least one exercise with a set.', 'warning');
+          return;
+        }
+        set({ workouts: [...others, ...entries] });
+        toast('Session updated', 'success');
+      },
+
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
       // natural servings (e.g. amount=2, unit='egg') — see nutrition-db.js.
