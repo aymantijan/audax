@@ -46,6 +46,19 @@ export const GYM_SESSION_TYPES = [
   { value: 'custom_gym', label: 'Custom', muscleGroups: [] },
 ];
 
+// Small accessory muscles commonly tacked onto a bigger session (e.g. biceps
+// after a Back day, abs after almost anything) — offered as an optional
+// multi-select alongside the session type, not a separate session of their
+// own. Selecting one just widens the exercise picker's default suggestions
+// (see WorkoutLogging.jsx) to include that muscle's movements too.
+export const SMALL_MUSCLE_OPTIONS = [
+  { value: 'biceps', label: 'Biceps' },
+  { value: 'triceps', label: 'Triceps' },
+  { value: 'core', label: 'Abs' },
+  { value: 'calves', label: 'Calves' },
+  { value: 'forearms', label: 'Forearm' },
+];
+
 export const SPORT_TYPES = [
   { value: 'football', label: 'Football (Soccer)' },
   { value: 'basketball', label: 'Basketball' },
