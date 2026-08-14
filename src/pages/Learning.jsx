@@ -47,6 +47,16 @@ export default function Learning() {
   const [readingDrafts, setReadingDrafts] = useState({});
   const [readingTypes, setReadingTypes] = useState({});
   const [template, setTemplate] = useState('');
+  // Deletion goes through an in-app modal, never window.confirm() — a native
+  // confirm() dialog fired repeatedly (e.g. cleaning up several courses in a
+  // row, such as duplicates from a bad CSV import) gets Chrome to silently
+  // auto-suppress every subsequent one ("prevent this page from creating
+  // additional dialogs"), so deletes past the first few looked like they did
+  // nothing. `deleting` holds the course id(s) pending confirmation — an array
+  // so the same modal covers both a single delete and the bulk-select below.
+  const [deleting, setDeleting] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const toggleSelected = (id) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const gpa = weightedGPA(courses, GRADE_POINTS);
   const active = courses.filter((c) => c.status === 'active');
@@ -138,6 +148,11 @@ export default function Learning() {
           <p className="text-mute text-sm mt-1">Courses, readings, and GPA.</p>
         </div>
         <div className="flex gap-2">
+          {selected.size > 0 && (
+            <Button variant="danger" onClick={() => setDeleting([...selected])}>
+              <span className="flex items-center gap-2"><Trash2 size={15} /> Delete {selected.size} selected</span>
+            </Button>
+          )}
           <Link to="/learning/readings">
             <Button variant="secondary">
               <span className="flex items-center gap-2"><BookOpen size={15} /> Readings</span>
@@ -222,10 +237,13 @@ export default function Learning() {
         {active.map((c) => (
           <Card key={c.id}>
             <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="font-semibold">{c.name}</h3>
-                <div className="text-xs text-mute mt-0.5">
-                  {c.institution}{c.professor ? ` · ${c.professor}` : ''} · {c.credits} credits
+              <div className="flex items-start gap-2">
+                <input type="checkbox" className="mt-1" checked={selected.has(c.id)} onChange={() => toggleSelected(c.id)} title="Select for bulk delete" />
+                <div>
+                  <h3 className="font-semibold">{c.name}</h3>
+                  <div className="text-xs text-mute mt-0.5">
+                    {c.institution}{c.professor ? ` · ${c.professor}` : ''} · {c.credits} credits
+                  </div>
                 </div>
               </div>
               <Badge
@@ -354,7 +372,7 @@ export default function Learning() {
                   <Button variant="ghost" onClick={() => dropCourse(c.id)}>Drop</Button>
                 </>
               )}
-              <Button variant="ghost" className="ml-auto" onClick={() => { if (confirm('Delete this course?')) deleteCourse(c.id); }}>
+              <Button variant="ghost" className="ml-auto" onClick={() => setDeleting([c.id])}>
                 <Trash2 size={14} />
               </Button>
             </div>
@@ -377,6 +395,7 @@ export default function Learning() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-mute border-b border-line bg-surface/40">
+                    <th className="py-2.5 pl-5 pr-1 w-6" />
                     <th className="py-2.5 px-5">Course</th>
                     <th className="py-2.5 px-3 hidden sm:table-cell">Institution</th>
                     <th className="py-2.5 px-3 text-center">Grade</th>
@@ -388,6 +407,9 @@ export default function Learning() {
                 <tbody>
                   {[...completed].sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).map((c) => (
                     <tr key={c.id} className="border-b border-line/40">
+                      <td className="py-2.5 pl-5 pr-1">
+                        <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelected(c.id)} title="Select for bulk delete" />
+                      </td>
                       <td className="py-2.5 px-5">
                         <div className="font-medium">{c.name}</div>
                         {c.professor && <div className="text-[11px] text-mute">{c.professor}</div>}
@@ -400,7 +422,7 @@ export default function Learning() {
                       <td className="py-2.5 px-3 hidden lg:table-cell text-mute text-xs">{c.completedAt ? fmtDate(c.completedAt) : '—'}</td>
                       <td className="py-2.5 px-3 text-right whitespace-nowrap">
                         <Link to={`/learning/course/${c.id}`} className="text-mute hover:text-accent text-xs mr-3">Open</Link>
-                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Delete this course?')) deleteCourse(c.id); }}>
+                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => setDeleting([c.id])}>
                           <Trash2 size={13} className="inline" />
                         </button>
                       </td>
@@ -522,6 +544,29 @@ export default function Learning() {
               }}
             >
               Complete course
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title={deleting?.length > 1 ? `Delete ${deleting.length} courses?` : 'Delete course?'}>
+        <div className="space-y-4">
+          <p className="text-sm text-mute">
+            {deleting?.length > 1
+              ? `This permanently deletes ${deleting.length} selected courses, including their chapters and progress. This can't be undone.`
+              : 'This permanently deletes the course, including its chapters and progress. This can\'t be undone.'}
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                deleting.forEach((id) => deleteCourse(id));
+                setSelected((s) => { const n = new Set(s); deleting.forEach((id) => n.delete(id)); return n; });
+                setDeleting(null);
+              }}
+            >
+              Delete
             </Button>
           </div>
         </div>
