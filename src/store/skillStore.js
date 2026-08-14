@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SKILL_TREE, SKILL_MAP, LEGACY_SKILL_MAP, XP_TO_NEXT } from '../utils/constants';
 import { advance, preview, freshMomentumState, CONSISTENCY_CONFIG } from '../utils/momentum';
+import { domainXpBreakdown, balancedGradeXp } from '../utils/xp-domains';
 import { todayKey } from '../utils/formatters';
 import { toast } from './uiStore';
 
@@ -165,12 +166,25 @@ export const useSkillStore = create(
         if (changed) set({ skills });
       },
 
-      // Total positive XP ever earned across all skills — powers grades & the leaderboard.
+      // Total positive XP ever earned across all skills — the literal, raw
+      // total shown on the Leaderboard ("Lifetime XP" stat, ranking position
+      // vs. personalities). NOT what grade progression uses — see below.
       getLifetimeXP: () =>
         Object.values(get().skills)
           .flatMap((s) => s.xpLog || [])
           .filter((e) => e.amount > 0)
           .reduce((a, e) => a + e.amount, 0),
+
+      // Raw positive XP split across the 5 synergy domains (trading/finance/
+      // health/learning/growth) — powers the "Domain balance" breakdown UI.
+      getDomainXP: () => domainXpBreakdown(get().skills),
+
+      // Domain-balanced XP figure — THIS is what gradeFor() should be called
+      // with, not getLifetimeXP(). Diminishing returns per domain (see
+      // utils/xp-domains.js) so grade progression actually rewards breadth
+      // across all 5 domains, not just raw volume in whichever one is
+      // easiest to farm (trading, in practice — no daily cap on trade count).
+      getBalancedGradeXP: () => balancedGradeXp(get().skills),
 
       // Live consistency multiplier (0.7–1.25) + current cross-app streak.
       getConsistencyState: () => preview(get().consistency, todayKey(), CONSISTENCY_CONFIG),

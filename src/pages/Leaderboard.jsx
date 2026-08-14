@@ -6,6 +6,7 @@ import { useSynergy } from '../hooks/useSynergy';
 import { LEADERBOARD, PERSONALITY_DOMAINS, PERSONALITY_COUNTRIES } from '../utils/personalities';
 import { gradeFor, gradeForXpOnly, GRADES_LADDER, GRADE_ERAS } from '../utils/grades';
 import { preview, CONSISTENCY_CONFIG } from '../utils/momentum';
+import { XP_DOMAINS, XP_DOMAIN_LABELS, domainXpBreakdown } from '../utils/xp-domains';
 import { todayKey } from '../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
 
@@ -45,6 +46,50 @@ function YourGradeCard({ grade, consistency }) {
           <div className="text-[10px] text-mute">{consistency.streak > 0 ? `${consistency.streak}d streak` : consistency.missedDays > 0 ? `${consistency.missedDays}d missed` : 'start today'}</div>
         </div>
       </div>
+    </Card>
+  );
+}
+
+// Shows the raw XP split across the 5 domains that grade progression is
+// actually balanced across (see utils/xp-domains.js) — makes the diminishing-
+// returns mechanic legible instead of a black box: without this, a heavy
+// trader would just see their grade climbing slower than raw XP would
+// suggest with no visible explanation why.
+function DomainBalanceCard({ domainXP }) {
+  const total = XP_DOMAINS.reduce((a, d) => a + domainXP[d], 0);
+  const max = Math.max(1, ...XP_DOMAINS.map((d) => domainXP[d]));
+  return (
+    <Card
+      title="Domain Balance"
+      action={<span className="text-[10px] text-mute normal-case">grade rewards breadth — see below</span>}
+    >
+      {total === 0 ? (
+        <EmptyState>Earn some XP anywhere to see your domain balance.</EmptyState>
+      ) : (
+        <div className="space-y-2.5">
+          {XP_DOMAINS.map((d) => {
+            const xp = domainXP[d];
+            const pct = total > 0 ? Math.round((xp / total) * 100) : 0;
+            return (
+              <div key={d}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-medium">{XP_DOMAIN_LABELS[d]}</span>
+                  <span className="text-mute">{xp.toLocaleString()} XP · {pct}%</span>
+                </div>
+                <div className="w-full bg-surface rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${max > 0 ? (xp / max) * 100 : 0}%`, background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-mute pt-1">
+            Grade progression applies diminishing returns per domain — the same total XP climbs the ladder faster when spread across all 5 than when piled into one.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
@@ -306,6 +351,16 @@ function MilestonesView({ currentLevel }) {
 
 export default function Leaderboard() {
   const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
+  // Grade uses domain-balanced XP (see utils/xp-domains.js), not the raw
+  // total above — "Lifetime XP" stays a literal bragging-rights figure for
+  // ranking against personalities, but grade progression rewards breadth
+  // across all 5 domains instead of volume in whichever one is easiest to farm.
+  const balancedGradeXP = useSkillStore((s) => s.getBalancedGradeXP());
+  // Raw stable slice (not a getter that builds a fresh object every call —
+  // see the useSyncExternalStore infinite-loop note in project memory),
+  // derived value computed in a useMemo instead.
+  const skillsRaw = useSkillStore((s) => s.skills);
+  const domainXP = useMemo(() => domainXpBreakdown(skillsRaw), [skillsRaw]);
   // Same fix as Learning.jsx: select the raw persisted state (stable reference)
   // and compute the live preview with useMemo, instead of calling a store
   // method that builds a fresh object inside the zustand selector itself.
@@ -314,7 +369,7 @@ export default function Leaderboard() {
   const synergy = useSynergy();
   const [tab, setTab] = useState('ranking');
 
-  const grade = gradeFor(lifetimeXP, synergy.weighted);
+  const grade = gradeFor(balancedGradeXP, synergy.weighted);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -329,6 +384,8 @@ export default function Leaderboard() {
         <YourGradeCard grade={grade} consistency={consistency} />
         <Stat label="Lifetime XP" value={lifetimeXP.toLocaleString()} sub={`synergy ${synergy.weighted}`} />
       </div>
+
+      <DomainBalanceCard domainXP={domainXP} />
 
       <div className="flex gap-1 border-b border-line">
         <button
