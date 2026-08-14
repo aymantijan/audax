@@ -14,6 +14,7 @@ import { courseSchema, validate } from '../utils/validators';
 import { fmtDate, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, ProgressBar, Badge, EmptyState } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
+import CourseCsvTools from '../components/learning/CourseCsvTools';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const courseProgressOf = (c) => (c.status === 'completed' ? 100 : c.chapters?.length ? calculateCourseProgress(c) : Number(c.progressPercent) || 0);
@@ -147,6 +148,8 @@ export default function Learning() {
           </Button>
         </div>
       </div>
+
+      <CourseCsvTools courses={courses} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Overall progress" value={`${generalProgress}%`} sub="courses + reading combined" color="var(--accent-primary)" />
