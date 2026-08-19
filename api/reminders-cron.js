@@ -12,11 +12,13 @@
 // (SUPABASE_SERVICE_ROLE_KEY) instead of a caller's own JWT. That key must
 // only ever be set as a server-side Vercel env var, never a VITE_ one.
 //
-// ⚠️ Real limitation: Vercel Cron Jobs run at most once/day on the Hobby
-// (free) plan — the */15-minute schedule below is only honored on a paid
-// plan. On Hobby this degrades to one daily pass, which will only catch
-// whichever reminder happens to be due at that single moment — Tier 1
-// remains the realistic primary channel until/unless the Vercel plan changes.
+// ⚠️ Real limitation: Vercel Cron Jobs are capped at once/day on the Hobby
+// (free) plan — a sub-daily schedule isn't just "degraded", Vercel actively
+// REJECTS the deploy for it ("Hobby accounts are limited to daily cron
+// jobs"). vercel.json's schedule is therefore a single fixed daily run
+// (08:00 UTC), which only catches whichever reminder happens to fall in that
+// one ~15min window — Tier 1 remains the realistic primary channel until/
+// unless the Vercel plan changes to allow a tighter cadence.
 //
 // Protected by Vercel's own automatic Cron auth: Vercel calls this with
 // `Authorization: Bearer $CRON_SECRET` when a CRON_SECRET env var is set —
