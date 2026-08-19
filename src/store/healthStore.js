@@ -81,7 +81,10 @@ export const useHealthStore = create(
       coachCache: null, // { date, text, tone } — 1x/day
       cycleLogs: [], // [{ id, date, flow:'light'|'medium'|'heavy', symptoms:[...], notes }] — one per period start date
       goals: [], // [{ id, type:'weight'|'strength'|'sleep', targetKg?, exercise?, targetScore?, startWeightKg?, achieved, createdAt }]
-      reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
+      reminders: {
+        enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null,
+        lastWaterReminderAt: null, lastMealReminderKey: null, lastBedtimeReminderDate: null,
+      },
       weightUnit: 'kg', // 'kg' | 'lb' — display/input preference only; all workout/body-comp data is stored in kg
       setWeightUnit: (unit) => set({ weightUnit: unit === 'lb' ? 'lb' : 'kg' }),
 
@@ -777,6 +780,9 @@ export const useHealthStore = create(
       setRemindersEnabled: (enabled) => set({ reminders: { ...get().reminders, enabled } }),
       markMorningReminderShown: () => set({ reminders: { ...get().reminders, lastMorningReminderDate: todayKey() } }),
       markWorkoutReminderShown: () => set({ reminders: { ...get().reminders, lastWorkoutReminderDate: todayKey() } }),
+      markWaterReminderShown: () => set({ reminders: { ...get().reminders, lastWaterReminderAt: Date.now() } }),
+      markMealReminderShown: (key) => set({ reminders: { ...get().reminders, lastMealReminderKey: key } }),
+      markBedtimeReminderShown: () => set({ reminders: { ...get().reminders, lastBedtimeReminderDate: todayKey() } }),
 
       // ─────────── Badges ───────────
       checkBadges: () => {
@@ -1417,7 +1423,10 @@ export const useHealthStore = create(
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
-          reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
+          reminders: {
+        enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null,
+        lastWaterReminderAt: null, lastMealReminderKey: null, lastBedtimeReminderDate: null,
+      },
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
           activeCuratedProgramId: null, programVariants: [], programSchedule: null,
           healthProfile: {

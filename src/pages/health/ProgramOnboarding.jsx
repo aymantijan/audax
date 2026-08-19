@@ -180,6 +180,24 @@ export default function ProgramOnboarding({ program, onCancel, onDone }) {
       generatePlan();
     }
     const finalSchedule = schedule || buildSchedule(data);
+
+    // Feeds Tier 1 (foreground, useHealthReminders.js) + Tier 2 (cron,
+    // best-effort) of the notification scheduler — meals/water/bedtime are
+    // never Google Calendar events (see plan), just reminder preferences.
+    const firstDayWithMeals = Object.values(finalSchedule.days).find((d) => d.meals.length);
+    useHealthStore.getState().setHealthProfile({
+      reminderPrefs: {
+        ...useHealthStore.getState().healthProfile.reminderPrefs,
+        mealWindows: (firstDayWithMeals?.meals || []).map((m) => m.time),
+        bedtimeTarget: finalSchedule.sleepWindow.bedtime,
+        weighInTime: finalSchedule.sleepWindow.wakeTime,
+        // Captured so the server-side cron (api/reminders-cron.js, which has
+        // no browser context of its own) can convert its UTC "now" into each
+        // user's local time before comparing against these HH:MM targets.
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    });
+
     setPushing(true);
     saveProgramSchedule({
       curatedProgramId: program.id, generatedAt: Date.now(), phaseKey: finalSchedule.phaseKey,
