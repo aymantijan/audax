@@ -45,10 +45,12 @@ export default function Health() {
   const [activePrompt, setActivePrompt] = useState(null);
 
   // Cycle/Performance visibility: an explicit opt-in/out in healthProfile
-  // wins; otherwise falls back to gender the same way Cycle always has
-  // (unset/legacy accounts keep seeing it — never a breaking default).
-  const showCycle = healthProfile.cycleTrackingEnabled ?? gender !== 'male';
-  const showPerformance = healthProfile.maleTrackingEnabled ?? gender !== 'female';
+  // wins; otherwise strictly gated by gender (Cycle = female, Performance =
+  // male) — gender is required at signup going forward, so unset only
+  // happens for pre-existing local accounts, which see neither until they
+  // complete their profile in Settings.
+  const showCycle = healthProfile.cycleTrackingEnabled ?? gender === 'female';
+  const showPerformance = healthProfile.maleTrackingEnabled ?? gender === 'male';
   const visibleTabs = useMemo(
     () => TABS.filter((t) => (t.key !== 'cycle' || showCycle) && (t.key !== 'performance' || showPerformance)),
     [showCycle, showPerformance]

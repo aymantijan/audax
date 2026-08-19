@@ -10,6 +10,7 @@ import {
   estimateVO2max, cyclePhaseCoachingNote,
 } from '../utils/health-science';
 import { useSkillStore } from './skillStore';
+import { useAuthStore } from './authStore';
 import { useHabitStore } from './habitStore';
 import { useTradingStore } from './tradingStore';
 import { detectTiltSequences, detectRevengeTrades } from '../utils/trading-psychology';
@@ -78,7 +79,8 @@ export const useHealthStore = create(
       // ─────────── Health profile (questionnaire-driven) ───────────
       healthProfile: {
         version: 1,
-        sex: null, dobYear: null, heightCm: null,
+        // sex/dobYear/heightCm moved to authStore.user (global profile, reused
+        // across the whole app) — read via useAuthStore.getState().user.*.
         experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
         equipmentAccess: [], injuries: [],
         activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
@@ -94,7 +96,7 @@ export const useHealthStore = create(
       },
       resetHealthProfile: () => set({
         healthProfile: {
-          version: 1, sex: null, dobYear: null, heightCm: null,
+          version: 1,
           experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
           equipmentAccess: [], injuries: [],
           activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
@@ -107,7 +109,8 @@ export const useHealthStore = create(
       // ─────────── Training programs (generated) ───────────
       trainingPrograms: [], // history of generated programs; one active:true at a time
       generateProgram: (overrides) => {
-        const profile = { ...get().healthProfile, ...overrides };
+        const globalUser = useAuthStore.getState().user;
+        const profile = { ...get().healthProfile, sex: globalUser?.gender ?? null, ...overrides };
         const program = generateTrainingProgram(profile);
         set({ trainingPrograms: [...get().trainingPrograms.map((p) => ({ ...p, active: false })), program], activeCuratedProgramId: null });
         toast('Programme d\'entraînement généré', 'success');
@@ -261,17 +264,18 @@ export const useHealthStore = create(
       generatePlan: (overrides) => {
         const latestBodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
         const profile = get().healthProfile;
-        const age = profile.dobYear ? new Date().getFullYear() - profile.dobYear : null;
+        const globalUser = useAuthStore.getState().user;
+        const age = globalUser?.dobYear ? new Date().getFullYear() - globalUser.dobYear : null;
         const plan = generateNutritionPlan({
           weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
-          heightCm: profile.heightCm ?? overrides?.heightCm,
-          age, sex: profile.sex,
+          heightCm: globalUser?.heightCm ?? overrides?.heightCm,
+          age, sex: globalUser?.gender ?? null,
           activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
           budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
           mealsPerDay: profile.mealsPerDay,
           ...overrides,
         });
-        if (plan.error) { toast('Complète ton profil (poids, taille, âge) pour générer un plan nutritionnel.', 'warning'); return plan; }
+        if (plan.error) { toast('Complète ton profil (poids, taille, année de naissance dans Réglages) pour générer un plan nutritionnel.', 'warning'); return plan; }
         set({ nutritionPlans: [...get().nutritionPlans.map((p) => ({ ...p, active: false })), plan], proteinTargetG: plan.targetMacros.proteinG });
         toast('Plan nutritionnel généré', 'success');
         return plan;
@@ -659,7 +663,8 @@ export const useHealthStore = create(
       // logged resting HR + derived age — a fitness proxy, not a lab measurement.
       getVO2maxEstimate: () => {
         const latest = [...get().performanceLogs].filter((p) => p.restingHr).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-        const age = get().healthProfile.dobYear ? new Date().getFullYear() - get().healthProfile.dobYear : null;
+        const dobYear = useAuthStore.getState().user?.dobYear;
+        const age = dobYear ? new Date().getFullYear() - dobYear : null;
         if (!latest || !age) return null;
         return { value: estimateVO2max({ age, restingHr: latest.restingHr }), date: latest.date, restingHr: latest.restingHr };
       },
@@ -1374,7 +1379,7 @@ export const useHealthStore = create(
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
           activeCuratedProgramId: null, programVariants: [],
           healthProfile: {
-            version: 1, sex: null, dobYear: null, heightCm: null,
+            version: 1,
             experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
             equipmentAccess: [], injuries: [],
             activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,

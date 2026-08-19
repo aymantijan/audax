@@ -25,6 +25,7 @@ export default function Welcome() {
   const submit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return setError('Enter your name to continue.');
+    if (!form.gender) return setError('Select a gender to continue.');
     register(form);
   };
 
@@ -71,11 +72,11 @@ export default function Welcome() {
                 options={CAREER_GOALS.map((g) => ({ value: g, label: CAREER_LABELS[g] }))}
               />
             </Field>
-            <Field label="Gender" hint="Only used to show/hide the Cycle tab in Health.">
+            <Field label="Gender" hint="Used across the app (e.g. the Cycle/Performance tabs in Health).">
               <Select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+                options={[{ value: '', label: 'Select…' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
               />
             </Field>
             {error && <p className="text-bad text-sm">{error}</p>}

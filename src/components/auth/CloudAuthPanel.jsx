@@ -22,7 +22,9 @@ export default function CloudAuthPanel() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setErr(null); setMsg(null); setBusy(true);
+    setErr(null); setMsg(null);
+    if (mode === 'register' && !form.gender) return setErr('Select a gender to continue.');
+    setBusy(true);
     try {
       if (mode === 'register') {
         const r = await register({ email: form.email, password: form.password, fullName: form.fullName, careerGoal: form.careerGoal, gender: form.gender || null });
@@ -64,11 +66,11 @@ export default function CloudAuthPanel() {
           <Field label="Career goal">
             <Select value={form.careerGoal} onChange={(e) => setForm({ ...form, careerGoal: e.target.value })} options={CAREER_GOALS} />
           </Field>
-          <Field label="Gender" hint="Only used to show/hide the Cycle tab in Health.">
+          <Field label="Gender" hint="Used across the app (e.g. the Cycle/Performance tabs in Health).">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+              options={[{ value: '', label: 'Select…' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
             />
           </Field>
         </>

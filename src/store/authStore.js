@@ -17,6 +17,13 @@ function withDefaults(user) {
     // only truly-missing (pre-onboarding-feature accounts) defaults to true, so
     // existing users are never retroactively shown the wizard.
     onboarded: user.onboarded ?? true,
+    // Global profile fields (added for cross-domain reuse — Health used to ask
+    // for these itself). `dobYear`/`heightCm` default to null (unset, fillable
+    // later in Settings); `gender` is NOT defaulted here — it's required at
+    // signup going forward, but a pre-existing local account with none on file
+    // stays null rather than being silently assigned one.
+    dobYear: user.dobYear ?? null,
+    heightCm: user.heightCm ?? null,
   };
 }
 
@@ -33,10 +40,12 @@ export const useAuthStore = create(
             email: profile.email || '',
             primaryDomain: profile.primaryDomain || 'trading',
             careerGoal: profile.careerGoal || 'Hybrid',
-            // null = not set (legacy accounts from before this field existed,
-            // or a user who skipped it) — Health.jsx treats null the same as
-            // 'female' (shows Cycle) so this is never a breaking default.
+            // Gender is required at signup going forward (Welcome.jsx/
+            // CloudAuthPanel.jsx enforce a choice before submit) — still
+            // nullable here defensively for any caller that skips validation.
             gender: profile.gender || null,
+            dobYear: profile.dobYear || null,
+            heightCm: profile.heightCm || null,
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()

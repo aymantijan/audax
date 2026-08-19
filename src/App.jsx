@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useSkillStore } from './store/skillStore';
 import { useTradingStore } from './store/tradingStore';
+import { useHealthStore } from './store/healthStore';
 import { isSupabaseConfigured } from './services/supabase';
 import { getSession, onAuthChange } from './services/auth-supabase';
 import { startCloudSync, stopCloudSync } from './services/cloud-sync';
@@ -68,6 +69,25 @@ export default function App() {
   useEffect(() => {
     if (user) ensureAccounts(); // one-time migration/bootstrap of tradingStore.accounts[]
   }, [user, ensureAccounts]);
+
+  // One-time migration: sex/dobYear/heightCm used to live on healthStore's
+  // healthProfile (Health-scoped) — now they live on the global profile
+  // (authStore.user), reused across the app. Copies over once for anyone who
+  // already filled the old Health questionnaire, then never touches it again.
+  useEffect(() => {
+    if (!user) return;
+    const healthProfile = useHealthStore.getState().healthProfile;
+    const legacySex = healthProfile?.sex;
+    const legacyDobYear = healthProfile?.dobYear;
+    const legacyHeightCm = healthProfile?.heightCm;
+    if ((legacyDobYear || legacyHeightCm) && !user.dobYear && !user.heightCm) {
+      useAuthStore.getState().updateProfile({
+        gender: user.gender || legacySex || null,
+        dobYear: user.dobYear || legacyDobYear || null,
+        heightCm: user.heightCm || legacyHeightCm || null,
+      });
+    }
+  }, [user]);
 
   // Fetch the Google Identity Services script ahead of any click — see
   // preloadGoogleCalendar's comment for why this must happen before, not

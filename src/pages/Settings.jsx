@@ -25,7 +25,10 @@ const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-fina
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid', gender: user?.gender || '' });
+  const [form, setForm] = useState({
+    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid',
+    gender: user?.gender || '', dobYear: user?.dobYear || '', heightCm: user?.heightCm || '',
+  });
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
@@ -172,18 +175,29 @@ export default function SettingsPage() {
               options={CAREER_GOALS}
             />
           </Field>
-          <Field label="Gender" hint="Shows/hides the Cycle tab in Health.">
+          <Field label="Gender" hint="Shows/hides the Cycle (female) / Performance (male) tabs in Health.">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Prefer not to say' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+              options={[{ value: '', label: 'Select…' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
             />
+          </Field>
+          <Field label="Birth year" hint="Used for BMR/TDEE and age-based estimates in Health.">
+            <Input type="number" min="1920" max={new Date().getFullYear()} value={form.dobYear} onChange={(e) => setForm({ ...form, dobYear: e.target.value })} placeholder="e.g. 1998" />
+          </Field>
+          <Field label="Height (cm)" hint="Used for BMR/TDEE and body-composition estimates in Health.">
+            <Input type="number" min="100" max="250" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
         </div>
         <Button
           className="mt-4"
           onClick={() => {
-            updateProfile(form);
+            if (!form.gender) return toast('Select a gender before saving.', 'warning');
+            updateProfile({
+              ...form,
+              dobYear: form.dobYear ? Number(form.dobYear) : null,
+              heightCm: form.heightCm ? Number(form.heightCm) : null,
+            });
             toast('Profile saved', 'success');
           }}
         >

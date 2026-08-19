@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Moon, Zap, Scale, Droplet, Utensils, AlertTriangle, Info } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
+import { useAuthStore } from '../../store/authStore';
 import { useHabitStore } from '../../store/habitStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select } from '../../components/common/ui';
@@ -9,6 +10,7 @@ const nowHHMM = () => { const d = new Date(); return `${String(d.getHours()).pad
 
 export default function QuickCheckin() {
   const { logBodyComp, logCheckin, logWater, logMeal, mealTemplates, logMealTemplate, bodyComp, healthProfile, getChronoSummary } = useHealthStore();
+  const gender = useAuthStore((s) => s.user?.gender);
   const { energyLogs, saveEnergyLog, logNap } = useHabitStore();
   const [open, setOpen] = useState(false);
 
@@ -34,7 +36,7 @@ export default function QuickCheckin() {
 
   const saveWeight = () => {
     if (!weightKg) return;
-    logBodyComp({ ...latestBodyComp, weightKg, time: weightTime, sex: latestBodyComp?.sex || healthProfile.sex || 'male' });
+    logBodyComp({ ...latestBodyComp, weightKg, time: weightTime, sex: latestBodyComp?.sex || gender || 'male' });
   };
   const saveSleep = () => {
     saveEnergyLog({ date: today, sleepData: { sleepHours: Number(sleepHours), sleepQualityScore: Number(sleepQuality), sleepStartTime: bedTime, wakeTime }, energyStartLevel: todayEnergyLog?.energyStartLevel ?? energy, stressLevel: todayEnergyLog?.stressLevel ?? stress });

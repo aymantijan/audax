@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dumbbell, Salad, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
-import { Card, Button, Wizard, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
+import { Card, Button, Wizard, Field, Badge, EmptyState } from '../../components/common/ui';
 import { MUSCLE_GROUPS, EQUIPMENT_OPTIONS } from '../../utils/exercise-library';
 import { ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
 import { MOROCCO_BUDGET_TIERS } from '../../utils/morocco-food-budget';
@@ -138,19 +138,6 @@ const NUTRITION_STEPS = [
       </>
     ),
   },
-  {
-    key: 'biometrics', title: 'Tes données',
-    validate: (d) => (!d.heightCm || !d.dobYear ? 'Renseigne au moins la taille et l\'année de naissance.' : null),
-    render: (d, set) => (
-      <>
-        <Field label="Taille (cm)"><Input type="number" value={d.heightCm || ''} onChange={(e) => set({ heightCm: Number(e.target.value) })} /></Field>
-        <Field label="Année de naissance"><Input type="number" value={d.dobYear || ''} onChange={(e) => set({ dobYear: Number(e.target.value) })} placeholder="ex: 1998" /></Field>
-        <Field label="Sexe biologique (pour le calcul métabolique)">
-          <Chips multi={false} value={d.sex} onChange={(v) => set({ sex: v })} options={[{ value: 'male', label: 'Homme' }, { value: 'female', label: 'Femme' }]} />
-        </Field>
-      </>
-    ),
-  },
 ];
 
 function ProgramView({ program }) {
@@ -202,37 +189,50 @@ function PlanView({ plan }) {
 export default function PlanSetup() {
   const { healthProfile, setHealthProfile, completeHealthProfile, generateProgram, generatePlan, getActiveProgram, getActiveNutritionPlan, deleteProgram, deleteNutritionPlan, getActiveCuratedProgram } = useHealthStore();
   const curatedProgram = getActiveCuratedProgram();
-  const gender = useAuthStore((s) => s.user?.gender);
+  const user = useAuthStore((s) => s.user);
   const [activeWizard, setActiveWizard] = useState(null); // 'training' | 'nutrition' | null
 
   const program = getActiveProgram();
   const plan = getActiveNutritionPlan();
   const profileDirty = program && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > program.generatedAt;
   const planDirty = plan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > plan.generatedAt;
+  const profileComplete = !!(user?.gender && user?.heightCm && user?.dobYear);
 
   const finishTraining = (data) => {
-    completeHealthProfile({ ...data, sex: healthProfile.sex ?? gender ?? null });
+    completeHealthProfile(data);
     generateProgram({ ...healthProfile, ...data });
     setActiveWizard(null);
   };
   const finishNutrition = (data) => {
-    completeHealthProfile({ ...data, sex: data.sex ?? healthProfile.sex ?? gender ?? null });
+    completeHealthProfile(data);
     generatePlan();
     setActiveWizard(null);
+  };
+
+  const startWizard = (kind) => {
+    if (!profileComplete) return;
+    setActiveWizard(kind);
   };
 
   if (activeWizard === 'training') {
     return <Wizard steps={TRAINING_STEPS} initialData={healthProfile} onComplete={finishTraining} onCancel={() => setActiveWizard(null)} />;
   }
   if (activeWizard === 'nutrition') {
-    return <Wizard steps={NUTRITION_STEPS} initialData={{ ...healthProfile, sex: healthProfile.sex ?? gender ?? null }} onComplete={finishNutrition} onCancel={() => setActiveWizard(null)} />;
+    return <Wizard steps={NUTRITION_STEPS} initialData={healthProfile} onComplete={finishNutrition} onCancel={() => setActiveWizard(null)} />;
   }
 
-  const cycleOn = healthProfile.cycleTrackingEnabled ?? gender !== 'male';
-  const perfOn = healthProfile.maleTrackingEnabled ?? gender !== 'female';
+  const cycleOn = healthProfile.cycleTrackingEnabled ?? user?.gender === 'female';
+  const perfOn = healthProfile.maleTrackingEnabled ?? user?.gender === 'male';
 
   return (
     <div className="space-y-6">
+      {!profileComplete && (
+        <div className="flex items-center gap-2 text-sm text-warning bg-warning/10 border border-warning/30 rounded-lg px-4 py-3">
+          <AlertTriangle size={14} className="shrink-0" />
+          Complète ton profil (genre, taille, année de naissance) dans <a href="/settings" className="underline font-medium">Réglages</a> pour générer un programme ou un plan nutritionnel.
+        </div>
+      )}
+
       <Card title="Onglets de suivi">
         <div className="flex flex-wrap gap-3">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -262,7 +262,7 @@ export default function PlanSetup() {
                 </div>
               )}
               <div className="flex gap-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setActiveWizard('training')}><span className="flex items-center gap-2 justify-center"><RefreshCw size={13} /> Régénérer</span></Button>
+                <Button variant="secondary" className="flex-1" onClick={() => startWizard('training')} disabled={!profileComplete}><span className="flex items-center gap-2 justify-center"><RefreshCw size={13} /> Régénérer</span></Button>
                 <Button variant="danger" onClick={() => deleteProgram(program.id)}><Trash2 size={13} /></Button>
               </div>
             </div>
@@ -270,7 +270,7 @@ export default function PlanSetup() {
             <EmptyState>
               <Dumbbell size={24} className="mx-auto mb-2 opacity-50" />
               Pas encore de programme personnalisé.
-              <div className="mt-3"><Button onClick={() => setActiveWizard('training')}>Créer mon programme</Button></div>
+              <div className="mt-3"><Button onClick={() => startWizard('training')} disabled={!profileComplete}>Créer mon programme</Button></div>
             </EmptyState>
           )}
         </Card>
@@ -283,7 +283,7 @@ export default function PlanSetup() {
                 </div>
               )}
               <div className="flex gap-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setActiveWizard('nutrition')}><span className="flex items-center gap-2 justify-center"><RefreshCw size={13} /> Régénérer</span></Button>
+                <Button variant="secondary" className="flex-1" onClick={() => startWizard('nutrition')} disabled={!profileComplete}><span className="flex items-center gap-2 justify-center"><RefreshCw size={13} /> Régénérer</span></Button>
                 <Button variant="danger" onClick={() => deleteNutritionPlan(plan.id)}><Trash2 size={13} /></Button>
               </div>
             </div>
@@ -291,7 +291,7 @@ export default function PlanSetup() {
             <EmptyState>
               <Salad size={24} className="mx-auto mb-2 opacity-50" />
               Pas encore de plan nutritionnel.
-              <div className="mt-3"><Button onClick={() => setActiveWizard('nutrition')}>Créer mon plan</Button></div>
+              <div className="mt-3"><Button onClick={() => startWizard('nutrition')} disabled={!profileComplete}>Créer mon plan</Button></div>
             </EmptyState>
           )}
         </Card>
