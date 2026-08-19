@@ -16,6 +16,7 @@ import { detectTiltSequences, detectRevengeTrades } from '../utils/trading-psych
 import { useAccountingStore } from './accountingStore';
 import { toast } from './uiStore';
 import { generateTrainingProgram } from '../utils/training-program-generator';
+import { getCuratedProgram, todayWeekdayKey } from '../utils/curated-programs';
 import { generateNutritionPlan } from '../utils/nutrition-plan-generator';
 import {
   predictStrengthTrajectory, detectPlateau, checkAggressiveDeficit,
@@ -108,11 +109,11 @@ export const useHealthStore = create(
       generateProgram: (overrides) => {
         const profile = { ...get().healthProfile, ...overrides };
         const program = generateTrainingProgram(profile);
-        set({ trainingPrograms: [...get().trainingPrograms.map((p) => ({ ...p, active: false })), program] });
+        set({ trainingPrograms: [...get().trainingPrograms.map((p) => ({ ...p, active: false })), program], activeCuratedProgramId: null });
         toast('Programme d\'entraînement généré', 'success');
         return program;
       },
-      setActiveProgram: (id) => set({ trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: p.id === id })) }),
+      setActiveProgram: (id) => set({ trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: p.id === id })), activeCuratedProgramId: null }),
       deleteProgram: (id) => set({ trainingPrograms: get().trainingPrograms.filter((p) => p.id !== id) }),
       getActiveProgram: () => get().trainingPrograms.find((p) => p.active) || null,
 
@@ -150,6 +151,109 @@ export const useHealthStore = create(
             .map((w) => w.sessionId || w.id)
         ).size;
         return program.weeklyPlan[sessionsLogged % program.weeklyPlan.length];
+      },
+
+      // ─────────── Curated programs (given, read-only) + user variants ───────────
+      // Curated programs (see utils/curated-programs/) are hand-authored/
+      // imported content, never mutated at runtime — activating one just
+      // records its id here. A user who wants to change an exercise saves a
+      // *variant* (below) instead of editing the curated data itself.
+      activeCuratedProgramId: null,
+      setActiveCuratedProgram: (id) => {
+        set({ activeCuratedProgramId: id, trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: false })) });
+        toast(id ? 'Programme activé' : 'Programme désactivé', 'success');
+      },
+      getActiveCuratedProgram: () => (get().activeCuratedProgramId ? getCuratedProgram(get().activeCuratedProgramId) : null),
+
+      // [{id, curatedProgramId, sessionKey, label, exercises:[{name,setsReps,rest,note}], active, createdAt}]
+      // One active variant at most per (curatedProgramId, sessionKey) pair —
+      // saving a new one deactivates any prior variant for that same session.
+      programVariants: [],
+      saveProgramVariant: (curatedProgramId, sessionKey, exercises, label) => {
+        const variant = {
+          id: uid(), curatedProgramId, sessionKey,
+          label: label || `Variante — ${todayKey()}`,
+          exercises, active: true, createdAt: Date.now(),
+        };
+        set({
+          programVariants: [
+            ...get().programVariants.map((v) => (v.curatedProgramId === curatedProgramId && v.sessionKey === sessionKey ? { ...v, active: false } : v)),
+            variant,
+          ],
+        });
+        toast('Variante enregistrée et activée', 'success');
+        return variant;
+      },
+      setVariantActive: (id, isActive) => {
+        const target = get().programVariants.find((v) => v.id === id);
+        if (!target) return;
+        set({
+          programVariants: get().programVariants.map((v) => {
+            if (v.id === id) return { ...v, active: isActive };
+            if (isActive && v.curatedProgramId === target.curatedProgramId && v.sessionKey === target.sessionKey) return { ...v, active: false };
+            return v;
+          }),
+        });
+      },
+      deleteVariant: (id) => set({ programVariants: get().programVariants.filter((v) => v.id !== id) }),
+
+      // The exercises actually to be performed for a session: the active
+      // variant's if one exists, otherwise the curated original — the
+      // original is NEVER mutated, so "revert to original" is just
+      // deactivating the variant.
+      getEffectiveExercises: (curatedProgramId, sessionKey) => {
+        const program = getCuratedProgram(curatedProgramId);
+        const original = program?.sessions?.[sessionKey];
+        if (!original) return null;
+        const variant = get().programVariants.find((v) => v.curatedProgramId === curatedProgramId && v.sessionKey === sessionKey && v.active);
+        return { label: original.label, exercises: variant?.exercises || original.exercises, isVariant: !!variant, variantId: variant?.id || null };
+      },
+
+      // Picks phaseA/phaseB (by phaseSwitchDate) or `main` automatically, and
+      // returns today's weeklyStructure entry + its effective session — the
+      // single source WorkoutLogging's "planned session" banner reads from
+      // when a curated program (rather than a generated one) is active.
+      getTodayCuratedSession: () => {
+        const program = get().getActiveCuratedProgram();
+        if (!program) return null;
+        const ws = program.weeklyStructure;
+        let phaseKey = 'main';
+        if (ws.phaseA && ws.phaseB) {
+          phaseKey = ws.phaseSwitchDate && todayKey() >= ws.phaseSwitchDate ? 'phaseB' : 'phaseA';
+        } else {
+          phaseKey = Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main';
+        }
+        const days = ws[phaseKey];
+        if (!days) return null;
+        const dayEntry = days.find((d) => d.day === todayWeekdayKey());
+        if (!dayEntry?.session) return { dayEntry, session: null, phaseKey };
+        const effective = get().getEffectiveExercises(program.id, dayEntry.session);
+        return { dayEntry, session: effective, phaseKey };
+      },
+
+      // % of the active curated program's weekly planned exercises (across
+      // every session in the current phase) logged in the last 7 days — same
+      // spirit as getProgramAdherence but scoped to a repeating weekly cycle
+      // instead of a fixed program start date, since curated sessions repeat
+      // every week rather than progressing through numbered weeks.
+      getCuratedProgramAdherence: () => {
+        const program = get().getActiveCuratedProgram();
+        if (!program) return null;
+        const ws = program.weeklyStructure;
+        const days = ws.phaseA && ws.phaseB
+          ? (ws.phaseSwitchDate && todayKey() >= ws.phaseSwitchDate ? ws.phaseB : ws.phaseA)
+          : ws[Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main'];
+        const sessionKeys = [...new Set((days || []).map((d) => d.session).filter(Boolean))];
+        const plannedNames = new Set();
+        for (const key of sessionKeys) {
+          const eff = get().getEffectiveExercises(program.id, key);
+          eff?.exercises.forEach((e) => plannedNames.add(e.name.toLowerCase()));
+        }
+        const weekAgo = Date.now() - 7 * dayMs;
+        const loggedNames = new Set(get().workouts.filter((w) => w.createdAt >= weekAgo).map((w) => w.exercise?.trim().toLowerCase()).filter(Boolean));
+        let matched = 0;
+        for (const n of plannedNames) if (loggedNames.has(n)) matched++;
+        return { plannedCount: plannedNames.size, matchedCount: matched, percent: plannedNames.size ? r1((matched / plannedNames.size) * 100) : null };
       },
 
       // ─────────── Nutrition plans (generated) ───────────
@@ -1268,6 +1372,7 @@ export const useHealthStore = create(
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
+          activeCuratedProgramId: null, programVariants: [],
           healthProfile: {
             version: 1, sex: null, dobYear: null, heightCm: null,
             experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,

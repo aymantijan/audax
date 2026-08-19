@@ -200,7 +200,8 @@ function PlanView({ plan }) {
 }
 
 export default function PlanSetup() {
-  const { healthProfile, setHealthProfile, completeHealthProfile, generateProgram, generatePlan, getActiveProgram, getActiveNutritionPlan, deleteProgram, deleteNutritionPlan } = useHealthStore();
+  const { healthProfile, setHealthProfile, completeHealthProfile, generateProgram, generatePlan, getActiveProgram, getActiveNutritionPlan, deleteProgram, deleteNutritionPlan, getActiveCuratedProgram } = useHealthStore();
+  const curatedProgram = getActiveCuratedProgram();
   const gender = useAuthStore((s) => s.user?.gender);
   const [activeWizard, setActiveWizard] = useState(null); // 'training' | 'nutrition' | null
 
@@ -248,7 +249,12 @@ export default function PlanSetup() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Card title="Programme d'entraînement">
-          {program ? (
+          {curatedProgram ? (
+            <div className="space-y-2">
+              <div className="text-sm">Programme actif : <span className="font-medium">{curatedProgram.name}</span></div>
+              <p className="text-xs text-mute">Programme donné (non modifiable) — voir et personnaliser via l'onglet <span className="font-medium">Programmes</span> (les modifications s'enregistrent comme variantes).</p>
+            </div>
+          ) : program ? (
             <div className="space-y-3">
               {profileDirty && (
                 <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2">

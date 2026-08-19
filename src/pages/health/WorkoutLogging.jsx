@@ -15,8 +15,16 @@ const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 const CATEGORY_ICON = { cardio: HeartPulse, gym: Dumbbell, sport: Activity };
 
 export default function WorkoutLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, getNextPlannedDay, healthProfile, getStrengthPredictions } = useHealthStore();
-  const plannedDay = getNextPlannedDay();
+  const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, getNextPlannedDay, healthProfile, getStrengthPredictions, getActiveCuratedProgram, getTodayCuratedSession } = useHealthStore();
+  const curatedProgram = getActiveCuratedProgram();
+  const curatedToday = curatedProgram ? getTodayCuratedSession() : null;
+  // A curated program (given, read-only) takes priority over the generated
+  // one's rotation-based "next up" guess when both could apply — a curated
+  // program's sessions are tied to real weekdays, so "today's session" is
+  // known exactly rather than inferred from a logging-count rotation.
+  const plannedDay = curatedProgram
+    ? (curatedToday?.session ? { label: curatedToday.session.label, exercises: curatedToday.session.exercises } : null)
+    : getNextPlannedDay();
   const injuredAreas = (healthProfile.injuries || []).map((i) => i.area).filter((a) => INJURY_EXCLUSION_MAP[a]);
   const isCautionExercise = (name) => injuredAreas.some((area) => INJURY_EXCLUSION_MAP[area].excludeNameMatch.some((re) => re.test(name)));
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target, ClipboardList, Activity } from 'lucide-react';
+import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target, ClipboardList, Activity, BookOpen } from 'lucide-react';
 import { useHealthStore } from '../store/healthStore';
 import { useAuthStore } from '../store/authStore';
 import { Modal, Button } from '../components/common/ui';
@@ -15,10 +15,12 @@ import Performance from './health/Performance';
 import Goals from './health/Goals';
 import Analytics from './health/Analytics';
 import PlanSetup from './health/PlanSetup';
+import Programs from './health/Programs';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, Component: HealthDashboard },
   { key: 'setup', label: 'My Plan', icon: ClipboardList, Component: PlanSetup },
+  { key: 'programs', label: 'Programmes', icon: BookOpen, Component: Programs },
   { key: 'sleep', label: 'Sleep', icon: Moon, Component: SleepTracker },
   { key: 'workout', label: 'Workout', icon: Dumbbell, Component: WorkoutLogging },
   { key: 'nutrition', label: 'Nutrition', icon: Salad, Component: NutritionTracker },
