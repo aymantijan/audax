@@ -92,7 +92,7 @@ const TRAINING_STEPS = [
   },
 ];
 
-const NUTRITION_STEPS = [
+export const NUTRITION_STEPS = [
   {
     key: 'activity', title: 'Ton niveau d\'activité',
     validate: (d) => (!d.activityLevel ? 'Choisis un niveau.' : null),

@@ -33,6 +33,15 @@ const dayMs = 86400000;
 const r1 = (n) => Math.round(n * 10) / 10;
 const nowHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
+// Which weeklyStructure key is "active" today — phaseA/phaseB switched by
+// date, or the single `main` phase for a simpler curated program. Shared by
+// every selector that needs "this week's real schedule" for a program.
+function resolvePhaseKey(program) {
+  const ws = program.weeklyStructure;
+  if (ws.phaseA && ws.phaseB) return ws.phaseSwitchDate && todayKey() >= ws.phaseSwitchDate ? 'phaseB' : 'phaseA';
+  return Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main';
+}
+
 // Habit → Health activity link types (see utils/constants.js#HEALTH_LINK_TYPES).
 // Each maps to the skill(s) awarded when the resulting Health entry is logged.
 const HEALTH_LINK_SKILLS = {
@@ -219,14 +228,8 @@ export const useHealthStore = create(
       getTodayCuratedSession: () => {
         const program = get().getActiveCuratedProgram();
         if (!program) return null;
-        const ws = program.weeklyStructure;
-        let phaseKey = 'main';
-        if (ws.phaseA && ws.phaseB) {
-          phaseKey = ws.phaseSwitchDate && todayKey() >= ws.phaseSwitchDate ? 'phaseB' : 'phaseA';
-        } else {
-          phaseKey = Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main';
-        }
-        const days = ws[phaseKey];
+        const phaseKey = resolvePhaseKey(program);
+        const days = program.weeklyStructure[phaseKey];
         if (!days) return null;
         const dayEntry = days.find((d) => d.day === todayWeekdayKey());
         if (!dayEntry?.session) return { dayEntry, session: null, phaseKey };
@@ -242,10 +245,7 @@ export const useHealthStore = create(
       getCuratedProgramAdherence: () => {
         const program = get().getActiveCuratedProgram();
         if (!program) return null;
-        const ws = program.weeklyStructure;
-        const days = ws.phaseA && ws.phaseB
-          ? (ws.phaseSwitchDate && todayKey() >= ws.phaseSwitchDate ? ws.phaseB : ws.phaseA)
-          : ws[Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main'];
+        const days = program.weeklyStructure[resolvePhaseKey(program)];
         const sessionKeys = [...new Set((days || []).map((d) => d.session).filter(Boolean))];
         const plannedNames = new Set();
         for (const key of sessionKeys) {
@@ -257,6 +257,48 @@ export const useHealthStore = create(
         let matched = 0;
         for (const n of plannedNames) if (loggedNames.has(n)) matched++;
         return { plannedCount: plannedNames.size, matchedCount: matched, percent: plannedNames.size ? r1((matched / plannedNames.size) * 100) : null };
+      },
+
+      // ─────────── Program schedule (onboarding-generated, per active curated program) ───────────
+      // {curatedProgramId, generatedAt, phaseKey, freeWindows, sleepWindow,
+      //  mealsPerDay, days: {...program-schedule-generator.js output...},
+      //  calendarEventIds: {'lundi-training': {eventId,htmlLink}, ...}}
+      programSchedule: null,
+      saveProgramSchedule: (schedule) => set({ programSchedule: schedule }),
+      // Merges one calendar-push result into the existing schedule — called
+      // incrementally (per event, not once at the end) so a token expiry or
+      // network blip mid-push never loses an already-created event's id.
+      mergeScheduleCalendarResult: (result) => {
+        const current = get().programSchedule;
+        if (!current) return;
+        const key = `${result.day}-${result.blockType}`;
+        set({ programSchedule: { ...current, calendarEventIds: { ...current.calendarEventIds, [key]: result } } });
+      },
+      updateScheduleDayBlock: (day, blockType, patch) => {
+        const current = get().programSchedule;
+        if (!current) return;
+        set({
+          programSchedule: {
+            ...current,
+            days: { ...current.days, [day]: { ...current.days[day], [blockType]: { ...current.days[day][blockType], ...patch } } },
+          },
+        });
+      },
+      clearProgramSchedule: () => set({ programSchedule: null }),
+
+      // Read-only recap for onboarding Step "Où tu en es" — reuses data
+      // already tracked, never re-asks what's already known.
+      getOnboardingRecap: () => {
+        const latestBodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        const prs = get().getPRs();
+        const readiness = get().getReadiness();
+        return {
+          weightKg: latestBodyComp?.weightKg ?? null,
+          weightDate: latestBodyComp?.date ?? null,
+          topPRs: prs.slice(0, 3),
+          readinessScore: readiness.score,
+          readinessBreakdown: readiness.breakdown,
+        };
       },
 
       // ─────────── Nutrition plans (generated) ───────────
@@ -1377,7 +1419,7 @@ export const useHealthStore = create(
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
-          activeCuratedProgramId: null, programVariants: [],
+          activeCuratedProgramId: null, programVariants: [], programSchedule: null,
           healthProfile: {
             version: 1,
             experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,

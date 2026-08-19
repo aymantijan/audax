@@ -20,6 +20,27 @@ import { PROGRAMME_DEBUTANT } from './programme-debutant';
 
 export const CURATED_PROGRAMS = [PROGRAMME_EXTREME, PROGRAMME_DEBUTANT];
 
+// Dev-time guard rail: every `blocks[].sessionKey` referenced in a training
+// block must exist in that same program's `sessions{}` — catches a typo or a
+// drifted edit in a hand-authored program file immediately, at import time,
+// rather than as a silent `undefined` deep in the schedule generator.
+if (import.meta.env?.DEV) {
+  for (const program of CURATED_PROGRAMS) {
+    const ws = program.weeklyStructure || {};
+    for (const key of Object.keys(ws)) {
+      const days = ws[key];
+      if (!Array.isArray(days) || !days[0]?.day) continue;
+      for (const day of days) {
+        for (const block of day.blocks || []) {
+          if (block.type === 'training' && block.sessionKey) {
+            console.assert(!!program.sessions?.[block.sessionKey], `[curated-programs] "${program.id}" weeklyStructure.${key} day "${day.day}" references unknown sessionKey "${block.sessionKey}"`);
+          }
+        }
+      }
+    }
+  }
+}
+
 export const getCuratedProgram = (id) => CURATED_PROGRAMS.find((p) => p.id === id) || null;
 
 // Weekday keys used throughout (French, matches weeklyStructure[].day).

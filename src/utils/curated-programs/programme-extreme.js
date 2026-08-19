@@ -12,6 +12,14 @@ export const PROGRAMME_EXTREME = {
   tags: ['force', 'hypertrophie', 'avancé', 'cardio', 'agilité', '5j/semaine'],
   designedFor: 'Homme, 25 ans — Casablanca, Maroc — Master 1 ISCAE',
   objective: 'Dépasser les standards naturels · maintenir 15% bodyfat · protéger le système nerveux',
+  // Machine-readable timing rules — drives the generic schedule generator
+  // (program-schedule-generator.js), which reasons about these fields for
+  // ANY curated program, not just this one.
+  schedulingRules: {
+    fastedCardioMorning: true,
+    minGapHoursCardioToTraining: 5,
+    qualityCardioMinGapBeforeLegsHours: 48,
+  },
   sources: [
     'Schoenfeld et al. 2016 (volume/fréquence hypertrophie)',
     'Helms et al. 2014 (nutrition physique)',
@@ -74,22 +82,22 @@ export const PROGRAMME_EXTREME = {
     // like programme-debutant.js just omits this and uses `main`).
     phaseSwitchDate: '2026-10-01',
     phaseA: [
-      { day: 'lundi', label: 'Lundi', morning: '6h45 Course Zone 2 — 30-35 min à jeun + Mobilité 10 min', midday: 'Petit-déj 7h30 → Stage télétravail', session: 'push1', sessionTime: '13h-14h30' },
-      { day: 'mardi', label: 'Mardi', morning: "6h45 Course Zone 2 + Échelle d'agilité 15 min", midday: 'Petit-déj → Stage télétravail', session: 'pull1', sessionTime: '13h-14h30' },
-      { day: 'mercredi', label: 'Mercredi', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: 'Étirements légers si besoin (optionnel)' },
-      { day: 'jeudi', label: 'Jeudi', morning: '6h45 Course Zone 2 + Mobilité 10 min', midday: 'Petit-déj → Stage télétravail', session: 'legs', sessionTime: '13h-14h30' },
-      { day: 'vendredi', label: 'Vendredi', morning: "6h45 Course Zone 2 + Échelle d'agilité 15 min", midday: 'Petit-déj → Stage télétravail', session: 'push2', sessionTime: '13h-14h30' },
-      { day: 'samedi', label: 'Samedi', morning: '7h00 Vélo Zone 2 — 30-35 min + Mobilité', midday: 'Libre', session: 'pullLegs2', sessionTime: '12h-13h30' },
-      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—' },
+      { day: 'lundi', label: 'Lundi', morning: '6h45 Course Zone 2 — 30-35 min à jeun + Mobilité 10 min', midday: 'Petit-déj 7h30 → Stage télétravail', session: 'push1', sessionTime: '13h-14h30', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'push1' }] },
+      { day: 'mardi', label: 'Mardi', morning: "6h45 Course Zone 2 + Échelle d'agilité 15 min", midday: 'Petit-déj → Stage télétravail', session: 'pull1', sessionTime: '13h-14h30', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'pull1' }] },
+      { day: 'mercredi', label: 'Mercredi', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: 'Étirements légers si besoin (optionnel)', blocks: [] },
+      { day: 'jeudi', label: 'Jeudi', morning: '6h45 Course Zone 2 + Mobilité 10 min', midday: 'Petit-déj → Stage télétravail', session: 'legs', sessionTime: '13h-14h30', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'legs' }] },
+      { day: 'vendredi', label: 'Vendredi', morning: "6h45 Course Zone 2 + Échelle d'agilité 15 min", midday: 'Petit-déj → Stage télétravail', session: 'push2', sessionTime: '13h-14h30', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'push2' }] },
+      { day: 'samedi', label: 'Samedi', morning: '7h00 Vélo Zone 2 — 30-35 min + Mobilité', midday: 'Libre', session: 'pullLegs2', sessionTime: '12h-13h30', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'pullLegs2' }] },
+      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—', blocks: [] },
     ],
     phaseB: [
-      { day: 'lundi', label: 'Lundi', morning: '6h40 Course Zone 2 — 25-30 min à jeun (léger, rapide)', midday: 'Cours (+ 30 min trajet chaque sens)', session: 'push1', sessionTime: '18h00-19h15 (jour court)' },
-      { day: 'mardi', label: 'Mardi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'pull1', sessionTime: '18h00-19h15' },
-      { day: 'mercredi', label: 'Mercredi', morning: 'REPOS COMPLET', midday: 'Cours ou libre', session: null, sessionTime: 'REPOS COMPLET' },
-      { day: 'jeudi', label: 'Jeudi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'legs', sessionTime: '18h00-19h15' },
-      { day: 'vendredi', label: 'Vendredi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'push2', sessionTime: '18h00-19h15' },
-      { day: 'samedi', label: 'Samedi', morning: '7h00 Vélo Zone 2 — 30 min', midday: 'Libre', session: 'pullLegs2', sessionTime: 'Horaire libre' },
-      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—' },
+      { day: 'lundi', label: 'Lundi', morning: '6h40 Course Zone 2 — 25-30 min à jeun (léger, rapide)', midday: 'Cours (+ 30 min trajet chaque sens)', session: 'push1', sessionTime: '18h00-19h15 (jour court)', blocks: [{ type: 'cardio', durationMin: 25, fastedRecommended: true }, { type: 'training', sessionKey: 'push1' }] },
+      { day: 'mardi', label: 'Mardi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'pull1', sessionTime: '18h00-19h15', blocks: [{ type: 'cardio', durationMin: 25, fastedRecommended: true }, { type: 'training', sessionKey: 'pull1' }] },
+      { day: 'mercredi', label: 'Mercredi', morning: 'REPOS COMPLET', midday: 'Cours ou libre', session: null, sessionTime: 'REPOS COMPLET', blocks: [] },
+      { day: 'jeudi', label: 'Jeudi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'legs', sessionTime: '18h00-19h15', blocks: [{ type: 'cardio', durationMin: 25, fastedRecommended: true }, { type: 'training', sessionKey: 'legs' }] },
+      { day: 'vendredi', label: 'Vendredi', morning: '6h40 Course Zone 2 — 25-30 min', midday: 'Cours', session: 'push2', sessionTime: '18h00-19h15', blocks: [{ type: 'cardio', durationMin: 25, fastedRecommended: true }, { type: 'training', sessionKey: 'push2' }] },
+      { day: 'samedi', label: 'Samedi', morning: '7h00 Vélo Zone 2 — 30 min', midday: 'Libre', session: 'pullLegs2', sessionTime: 'Horaire libre', blocks: [{ type: 'cardio', durationMin: 30, fastedRecommended: true }, { type: 'training', sessionKey: 'pullLegs2' }] },
+      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—', blocks: [] },
     ],
     notes: [
       "Pourquoi ne pas coller la musculation juste après le cardio à 7h30 : le corps a besoin d'environ 5h pour reconstituer le glycogène après une course à jeun — recharger avant de soulever lourd donne une meilleure performance et une meilleure prise de muscle. La salle ouvre à 7h30 : possible d'y aller directement après le réveil certains jours si l'emploi du temps l'exige, en gardant alors le cardio très léger ce jour-là (marche 15 min).",
@@ -108,19 +116,19 @@ export const PROGRAMME_EXTREME = {
       exercises: [
         { name: 'Développé couché barre', setsReps: '4 × 6-8', rest: '2-3 min', note: 'Base force' },
         { name: 'Développé incliné haltères', setsReps: '4 × 8-10', rest: '2 min', note: '' },
-        { name: 'Dips lestés', setsReps: '3 × 8-12', rest: '2 min', note: '' },
+        { name: 'Dips lestés', setsReps: '3 × 8-12', rest: '2 min', note: '', bodyweightExercise: true },
         { name: 'Écarté câble (poulie basse→haute)', setsReps: '3 × 12-15', rest: '60-90s', note: 'Étirement pec' },
         { name: 'Développé militaire barre', setsReps: '4 × 6-8', rest: '2-3 min', note: '' },
         { name: 'Élévations latérales', setsReps: '4 × 12-15', rest: '60s', note: 'Deltoïde moyen' },
         { name: 'Extension triceps poulie haute', setsReps: '3 × 12-15', rest: '60s', note: '' },
-        { name: 'Dips triceps (buste droit)', setsReps: '3 × 10-12', rest: '60-90s', note: '' },
+        { name: 'Dips triceps (buste droit)', setsReps: '3 × 10-12', rest: '60-90s', note: '', bodyweightExercise: true },
       ],
     },
     pull1: {
       label: 'PULL 1 (Dos / Biceps / Avant-bras / Nuque)',
       day: 'mardi',
       exercises: [
-        { name: 'Tractions lestées (ou assistées)', setsReps: '4 × 6-10', rest: '2-3 min', note: 'Largeur dorsale' },
+        { name: 'Tractions lestées (ou assistées)', setsReps: '4 × 6-10', rest: '2-3 min', note: 'Largeur dorsale', bodyweightExercise: true },
         { name: 'Rowing barre buste penché', setsReps: '4 × 8-10', rest: '2 min', note: 'Épaisseur dos' },
         { name: 'Tirage horizontal câble', setsReps: '3 × 10-12', rest: '90s', note: '' },
         { name: 'Rowing unilatéral haltère', setsReps: '3 × 10-12/côté', rest: '90s', note: '' },

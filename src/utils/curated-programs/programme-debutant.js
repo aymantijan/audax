@@ -41,19 +41,22 @@ export const PROGRAMME_DEBUTANT = {
 
   weeklyStructure: {
     main: [
-      { day: 'lundi', label: 'Lundi', morning: '', midday: '', session: 'fullBodyA', sessionTime: 'Séance libre dans la journée' },
-      { day: 'mardi', label: 'Mardi', morning: '20-30 min cardio Zone 2 (optionnel)', midday: '', session: null, sessionTime: 'Repos musculation' },
-      { day: 'mercredi', label: 'Mercredi', morning: '', midday: '', session: 'fullBodyB', sessionTime: 'Séance libre dans la journée' },
-      { day: 'jeudi', label: 'Jeudi', morning: '20-30 min cardio Zone 2 (optionnel)', midday: '', session: null, sessionTime: 'Repos musculation' },
-      { day: 'vendredi', label: 'Vendredi', morning: '', midday: '', session: 'fullBodyC', sessionTime: 'Séance libre dans la journée' },
-      { day: 'samedi', label: 'Samedi', morning: '', midday: '', session: null, sessionTime: 'Repos ou activité légère au choix' },
-      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—' },
+      { day: 'lundi', label: 'Lundi', morning: '', midday: '', session: 'fullBodyA', sessionTime: 'Séance libre dans la journée', blocks: [{ type: 'training', sessionKey: 'fullBodyA' }] },
+      { day: 'mardi', label: 'Mardi', morning: '20-30 min cardio Zone 2 (optionnel)', midday: '', session: null, sessionTime: 'Repos musculation', blocks: [{ type: 'cardio', durationMin: 25, optional: true }] },
+      { day: 'mercredi', label: 'Mercredi', morning: '', midday: '', session: 'fullBodyB', sessionTime: 'Séance libre dans la journée', blocks: [{ type: 'training', sessionKey: 'fullBodyB' }] },
+      { day: 'jeudi', label: 'Jeudi', morning: '20-30 min cardio Zone 2 (optionnel)', midday: '', session: null, sessionTime: 'Repos musculation', blocks: [{ type: 'cardio', durationMin: 25, optional: true }] },
+      { day: 'vendredi', label: 'Vendredi', morning: '', midday: '', session: 'fullBodyC', sessionTime: 'Séance libre dans la journée', blocks: [{ type: 'training', sessionKey: 'fullBodyC' }] },
+      { day: 'samedi', label: 'Samedi', morning: '', midday: '', session: null, sessionTime: 'Repos ou activité légère au choix', blocks: [] },
+      { day: 'dimanche', label: 'Dimanche', morning: 'REPOS COMPLET', midday: 'REPOS COMPLET', session: null, sessionTime: '—', blocks: [] },
     ],
     notes: [
       "48h minimum entre deux séances full body pour laisser récupérer les mêmes groupes musculaires.",
       "Le cardio Zone 2 (mardi/jeudi) est optionnel les 4 premières semaines si la récupération est difficile — priorité à la musculation pendant l'apprentissage technique.",
     ],
   },
+
+  // Full body → no fasted-cardio requirement, mild gap recommendation only.
+  schedulingRules: { fastedCardioMorning: false, minGapHoursCardioToTraining: 3, qualityCardioMinGapBeforeLegsHours: null },
 
   sessions: {
     fullBodyA: {
@@ -86,7 +89,7 @@ export const PROGRAMME_DEBUTANT = {
       exercises: [
         { name: 'Presse à cuisses', setsReps: '3 × 10-12', rest: '2 min', note: '' },
         { name: 'Rowing unilatéral haltère', setsReps: '3 × 10-12/côté', rest: '90s', note: '' },
-        { name: 'Dips assistés ou pompes lestées', setsReps: '3 × 8-12', rest: '90s', note: '' },
+        { name: 'Dips assistés ou pompes lestées', setsReps: '3 × 8-12', rest: '90s', note: '', bodyweightExercise: true },
         { name: 'Élévations latérales', setsReps: '2 × 12-15', rest: '60s', note: '' },
         { name: 'Curl marteau', setsReps: '2 × 10-15', rest: '60s', note: '' },
         { name: 'Mollets debout', setsReps: '3 × 15-20', rest: '60s', note: '' },

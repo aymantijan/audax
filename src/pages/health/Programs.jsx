@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { CheckCircle2, Pencil, RotateCcw, Save, X, Plus, Trash2, BookOpen } from 'lucide-react';
+import { CheckCircle2, Pencil, RotateCcw, Save, X, Plus, Trash2, BookOpen, Calendar } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { CURATED_PROGRAMS } from '../../utils/curated-programs';
 import { Card, Button, Badge, Input, EmptyState } from '../../components/common/ui';
+import ProgramOnboarding from './ProgramOnboarding';
 
 function SectionCard({ title, action, children }) {
   return <Card title={title} action={action}>{children}</Card>;
@@ -109,10 +110,26 @@ function SessionBlock({ programId, sessionKey }) {
 }
 
 export default function Programs() {
-  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getCuratedProgramAdherence } = useHealthStore();
+  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getCuratedProgramAdherence, programSchedule } = useHealthStore();
   const [viewingId, setViewingId] = useState(activeCuratedProgramId);
+  const [onboardingFor, setOnboardingFor] = useState(null); // curated program object, or null
   const viewing = viewingId ? CURATED_PROGRAMS.find((p) => p.id === viewingId) : null;
   const adherence = getCuratedProgramAdherence();
+
+  const startOnboarding = (program) => {
+    setActiveCuratedProgram(program.id);
+    setOnboardingFor(program);
+  };
+
+  if (onboardingFor) {
+    return (
+      <ProgramOnboarding
+        program={onboardingFor}
+        onCancel={() => setOnboardingFor(null)}
+        onDone={() => { setOnboardingFor(null); setViewingId(onboardingFor.id); }}
+      />
+    );
+  }
 
   if (!viewing) {
     return (
@@ -133,7 +150,7 @@ export default function Programs() {
                 <div className="mt-auto flex gap-2">
                   <Button variant="secondary" className="flex-1 !py-1.5 text-xs" onClick={() => setViewingId(p.id)}>Voir le détail</Button>
                   {activeCuratedProgramId !== p.id && (
-                    <Button className="!py-1.5 text-xs" onClick={() => setActiveCuratedProgram(p.id)}>Activer</Button>
+                    <Button className="!py-1.5 text-xs" onClick={() => startOnboarding(p)}>Activer</Button>
                   )}
                 </div>
               </div>
@@ -156,9 +173,14 @@ export default function Programs() {
       <div className="flex items-center justify-between">
         <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => setViewingId(null)}>← Tous les programmes</Button>
         {isActive ? (
-          <Badge color="var(--success)"><span className="flex items-center gap-1"><CheckCircle2 size={11} /> Programme actif</span></Badge>
+          <div className="flex items-center gap-2">
+            <Badge color="var(--success)"><span className="flex items-center gap-1"><CheckCircle2 size={11} /> Programme actif</span></Badge>
+            <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => startOnboarding(viewing)}>
+              <span className="flex items-center gap-1"><Calendar size={12} /> {programSchedule?.curatedProgramId === viewing.id ? 'Reconfigurer le planning' : 'Configurer mon planning'}</span>
+            </Button>
+          </div>
         ) : (
-          <Button className="!px-3 !py-1.5 text-xs" onClick={() => setActiveCuratedProgram(viewing.id)}>Activer ce programme</Button>
+          <Button className="!px-3 !py-1.5 text-xs" onClick={() => startOnboarding(viewing)}>Activer ce programme</Button>
         )}
       </div>
 
