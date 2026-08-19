@@ -9,6 +9,7 @@ import { searchExercises, suggestExercises } from '../../utils/exercise-library'
 import { INJURY_EXCLUSION_MAP } from '../../utils/training-program-generator';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
+import CuratedSessionLogger from './CuratedSessionLogger';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
@@ -226,6 +227,8 @@ export default function WorkoutLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
+      {curatedProgram && <CuratedSessionLogger />}
+
       {plannedDay && category === 'gym' && !editing && (
         <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
           <ClipboardList size={16} className="text-accent shrink-0 mt-0.5" />
