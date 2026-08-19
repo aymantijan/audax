@@ -31,13 +31,36 @@ function applyRestrictions(foods, restrictions) {
   return foods.filter((f) => !excluded.has(f.name));
 }
 
-// Portions a category's food list to hit a target gram-equivalent of macros,
-// splitting evenly across however many items are picked for that slot.
-function portionCategory(foods, targetGrams, count) {
-  const picks = foods.slice(0, count);
-  if (!picks.length) return [];
-  const perItemGrams = Math.round(targetGrams / picks.length);
-  return picks.map((f) => ({ name: f.name, grams: perItemGrams, unit: 'g' }));
+// A single food beyond this many grams in one meal reads as an unrealistic
+// portion (e.g. 300g of eggs — ~5-6 eggs in one sitting) — real people don't
+// eat a whole macro target from one item, they combine 2 lighter sources.
+const REALISTIC_MAX_G = 220;
+
+// Grams of `food` needed to hit `targetG` of `macroKey`, clamped to a
+// realistic single-portion range.
+function gramsForMacroTarget(food, targetG, macroKey) {
+  const per100 = estimateMacros(food.name, 100, 'g');
+  const needed = per100?.[macroKey] ? (targetG / per100[macroKey]) * 100 : 120;
+  return Math.max(30, Math.min(REALISTIC_MAX_G, Math.round(needed)));
+}
+
+// Builds 1-2 protein items for a meal slot: a single source normally, but
+// split across two sources (half the target each) when one food alone would
+// need more than REALISTIC_MAX_G to hit the slot's protein target.
+function buildProteinItems(foods, slotIndex, targetG) {
+  if (!foods.length) return [];
+  const primary = foods[slotIndex % foods.length];
+  const per100 = estimateMacros(primary.name, 100, 'g');
+  const neededGrams = per100?.protein ? (targetG / per100.protein) * 100 : 120;
+  if (neededGrams <= REALISTIC_MAX_G || foods.length < 2) {
+    return [{ name: primary.name, grams: gramsForMacroTarget(primary, targetG, 'protein'), unit: 'g', category: 'protein' }];
+  }
+  const secondary = foods[(slotIndex + 1) % foods.length];
+  const half = targetG / 2;
+  return [
+    { name: primary.name, grams: gramsForMacroTarget(primary, half, 'protein'), unit: 'g', category: 'protein' },
+    { name: secondary.name, grams: gramsForMacroTarget(secondary, half, 'protein'), unit: 'g', category: 'protein' },
+  ];
 }
 
 export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate', dietaryRestrictions = [], mealsPerDay = 3 } = {}) {
@@ -76,16 +99,9 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
   const slots = Math.max(3, Math.min(6, mealsPerDay));
   const sampleMeals = Array.from({ length: slots }, (_, i) => {
     const slotProteinG = Math.round(proteinG / slots);
-    const slotCarbsG = Math.round((carbsG / slots) * 4); // rough gram estimate via estimateMacros lookup below (not exact, illustrative)
-    const proteinItem = proteinFoods[i % proteinFoods.length];
     const carbItem = carbFoods[i % carbFoods.length];
     const vegItem = vegFoods[i % vegFoods.length];
-    const items = [];
-    if (proteinItem) {
-      const est = estimateMacros(proteinItem.name, 100, 'g');
-      const grams = est?.protein ? Math.round((slotProteinG / est.protein) * 100) : 120;
-      items.push({ name: proteinItem.name, grams: Math.max(30, Math.min(400, grams)), unit: 'g', category: 'protein' });
-    }
+    const items = [...buildProteinItems(proteinFoods, i, slotProteinG)];
     if (carbItem) items.push({ name: carbItem.name, grams: 150, unit: 'g', category: 'carb' });
     if (vegItem) items.push({ name: vegItem.name, grams: 100, unit: 'g', category: 'veg' });
     if (i === 0 && fatFoods[0]) items.push({ name: fatFoods[0].name, grams: 15, unit: 'g', category: 'fat' });

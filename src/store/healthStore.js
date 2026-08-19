@@ -360,7 +360,9 @@ export const useHealthStore = create(
           const original = estimateMacros(item.name, item.grams, item.unit || 'g');
           const per100 = estimateMacros(newFoodName, 100, 'g');
           if (original?.[macroKey] && per100?.[macroKey]) {
-            newGrams = Math.max(20, Math.min(500, Math.round((original[macroKey] / per100[macroKey]) * 100)));
+            // 220g caps a single-item portion at something a person would
+            // actually eat — mirrors REALISTIC_MAX_G in nutrition-plan-generator.js.
+            newGrams = Math.max(20, Math.min(220, Math.round((original[macroKey] / per100[macroKey]) * 100)));
           }
         }
         set({

@@ -19,6 +19,13 @@ export default function WorkoutLogging({ pendingPrompt }) {
   const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, getNextPlannedDay, healthProfile, getStrengthPredictions, getActiveCuratedProgram, getTodayCuratedSession } = useHealthStore();
   const curatedProgram = getActiveCuratedProgram();
   const curatedToday = curatedProgram ? getTodayCuratedSession() : null;
+  // Whether the checkbox logger above already covers today (training and/or
+  // cardio scheduled) — mirrors CuratedSessionLogger's own render condition.
+  // When true, the manual exercise-by-exercise form is redundant with what
+  // Programme already gave the user, so it's hidden by default behind
+  // "Mode libre" instead of always showing underneath it.
+  const hasCuratedToday = !!(curatedProgram && curatedToday?.dayEntry?.blocks?.some((b) => b.type === 'training' || b.type === 'cardio'));
+  const [freeMode, setFreeMode] = useState(false);
   // A curated program (given, read-only) takes priority over the generated
   // one's rotation-based "next up" guess when both could apply — a curated
   // program's sessions are tied to real weekdays, so "today's session" is
@@ -34,6 +41,8 @@ export default function WorkoutLogging({ pendingPrompt }) {
   // strength/gym entry is always part of a session (created via
   // logGymSession — see its comment), so its edit path is always 'session'.
   const [editing, setEditing] = useState(null);
+  // Editing an existing entry always needs the form, regardless of freeMode.
+  const showManualForm = !hasCuratedToday || freeMode || !!editing;
   // The edit buttons live on Today/History rows, which can be well below the
   // fold (PRs/1RM/Progression/Library/Volume-chart cards sit between "Today"
   // and "History") — without scrolling, populating the form off-screen looks
@@ -229,7 +238,17 @@ export default function WorkoutLogging({ pendingPrompt }) {
     <div className="space-y-6">
       {curatedProgram && <CuratedSessionLogger />}
 
-      {plannedDay && category === 'gym' && !editing && (
+      {hasCuratedToday && !editing && (
+        <button
+          type="button"
+          onClick={() => setFreeMode((v) => !v)}
+          className="text-xs text-mute hover:text-ink underline cursor-pointer"
+        >
+          {freeMode ? 'Masquer le formulaire libre' : "Autre chose à logger en plus du programme ? Mode libre"}
+        </button>
+      )}
+
+      {plannedDay && category === 'gym' && !editing && showManualForm && (
         <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
           <ClipboardList size={16} className="text-accent shrink-0 mt-0.5" />
           <div className="text-sm">
@@ -239,6 +258,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
         </div>
       )}
 
+      {showManualForm && (
       <div ref={formCardRef} style={{ scrollMarginTop: '5rem' }}>
       <Card
         title={editing ? 'Edit Workout' : 'Log a Workout'}
@@ -421,6 +441,7 @@ export default function WorkoutLogging({ pendingPrompt }) {
         </form>
       </Card>
       </div>
+      )}
 
       <Card title="Today" action={<Badge>{todayItems.length} logged</Badge>}>
         {todayItems.length ? (
