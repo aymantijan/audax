@@ -1,9 +1,36 @@
 import { useMemo, useState } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, ScanBarcode, Repeat } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
+import { useAuthStore } from '../../store/authStore';
 import { FOOD_DB, getServingOptions } from '../../utils/nutrition-db';
 import { todayKey } from '../../utils/formatters';
+import { MICRONUTRIENT_LABELS, getMicronutrientRDA, convertMicroValue } from '../../utils/micronutrients';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge } from '../../components/common/ui';
+import BarcodeScanner from '../../components/health/BarcodeScanner';
+
+// Scales a per-100g micros map to an actual logged portion.
+function scaleMicros(micros, grams) {
+  if (!micros) return null;
+  const factor = grams / 100;
+  return Object.fromEntries(Object.entries(micros).map(([k, v]) => [k, { value: Math.round(v.value * factor * 100) / 100, unit: v.unit }]));
+}
+
+// Sums today's logged micros across entries that have them (barcode-scanned
+// only), converting each entry's unit to the RDA table's unit for that
+// nutrient first — sources (OpenFoodFacts included) don't always report a
+// given nutrient in the same unit the RDA table uses.
+function sumMicros(entries, rda) {
+  const totals = {};
+  for (const e of entries) {
+    if (!e.micros) continue;
+    for (const [k, v] of Object.entries(e.micros)) {
+      const targetUnit = rda[k]?.unit || v.unit;
+      if (!totals[k]) totals[k] = { value: 0, unit: targetUnit };
+      totals[k].value += convertMicroValue(v.value, v.unit, targetUnit);
+    }
+  }
+  return totals;
+}
 
 // Rough daily macro targets derived from the protein target (spec: progress bars
 // for Protein/Carbs/Fats/Calories) — carbs/fat/kcal are simple ratios, not a full
@@ -15,15 +42,22 @@ function macroTargets(proteinTargetG) {
 }
 
 export default function NutritionTracker({ pendingPrompt }) {
-  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal } = useHealthStore();
+  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem } = useHealthStore();
+  const gender = useAuthStore((s) => s.user?.gender);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState(100);
   const [unit, setUnit] = useState('g');
   const [templateName, setTemplateName] = useState('');
   const [logDate, setLogDate] = useState(todayKey());
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState(null);
+  const [scanQty, setScanQty] = useState(100);
+  const [swapFor, setSwapFor] = useState(null); // { mealSlot, itemIndex } | null
 
   const { entries, totals, quality } = getTodayNutrition();
   const activePlan = getActiveNutritionPlan();
+  const microRDA = useMemo(() => getMicronutrientRDA(gender), [gender]);
+  const microTotals = useMemo(() => sumMicros(entries, microRDA), [entries, microRDA]);
   // Prefer the generated plan's real TDEE-based targets over the rough
   // protein-ratio heuristic below, when one exists.
   const targets = activePlan
@@ -66,9 +100,31 @@ export default function NutritionTracker({ pendingPrompt }) {
     setTemplateName('');
   };
 
+  const onScannedProduct = (product) => {
+    setScannedProduct(product);
+    setScanQty(100);
+    setScanOpen(false);
+  };
+
+  const confirmScannedProduct = () => {
+    if (!scannedProduct) return;
+    const factor = scanQty / 100;
+    logMeal(scannedProduct.name, scanQty, 'g', pendingPrompt?.id, logDate, undefined, {
+      grams: scanQty,
+      protein: Math.round(scannedProduct.protein * factor * 10) / 10,
+      carbs: Math.round(scannedProduct.carbs * factor * 10) / 10,
+      fat: Math.round(scannedProduct.fat * factor * 10) / 10,
+      kcal: Math.round(scannedProduct.kcal * factor),
+      whole: false,
+      micros: scaleMicros(scannedProduct.micros, scanQty),
+      barcode: scannedProduct.barcode,
+    });
+    setScannedProduct(null);
+  };
+
   return (
     <div className="space-y-6">
-      <Card title="Quick Log">
+      <Card title="Quick Log" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setScanOpen(true)}><span className="flex items-center gap-1.5"><ScanBarcode size={13} /> Scanner un code-barres</span></Button>}>
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end">
           <Field label="Food">
             <Input list="food-db" value={name} onChange={(e) => changeName(e.target.value)} placeholder="e.g. Chicken breast, egg, banana…" />
@@ -89,19 +145,97 @@ export default function NutritionTracker({ pendingPrompt }) {
         </form>
       </Card>
 
+      <BarcodeScanner open={scanOpen} onClose={() => setScanOpen(false)} onProduct={onScannedProduct} />
+
+      {scannedProduct && (
+        <Card title="Produit scanné">
+          <div className="flex items-start gap-3">
+            {scannedProduct.imageUrl && <img src={scannedProduct.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">{scannedProduct.name}</div>
+              <div className="text-xs text-mute mt-0.5">
+                Pour 100g — {scannedProduct.kcal} kcal · {scannedProduct.protein}g P · {scannedProduct.carbs}g G · {scannedProduct.fat}g L
+              </div>
+              {Object.keys(scannedProduct.micros || {}).length > 0 && (
+                <div className="text-[11px] text-mute mt-1">
+                  {Object.entries(scannedProduct.micros).slice(0, 6).map(([k, v]) => `${MICRONUTRIENT_LABELS[k] || k}: ${v.value}${v.unit}`).join(' · ')}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-end gap-3 mt-3">
+            <Field label="Quantité (g)">
+              <Input type="number" min="1" value={scanQty} onChange={(e) => setScanQty(Number(e.target.value) || 0)} className="w-28" />
+            </Field>
+            <Button onClick={confirmScannedProduct}>Logger ce produit</Button>
+            <Button variant="secondary" onClick={() => setScannedProduct(null)}>Annuler</Button>
+          </div>
+        </Card>
+      )}
+
       {activePlan && (
         <Card title="Plan nutritionnel actif" action={<Badge>{activePlan.targetKcal} kcal/j</Badge>}>
-          <div className="space-y-1.5">
-            {activePlan.sampleMeals.map((m, i) => (
-              <div key={i} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>
-                  <span className="font-medium">{m.mealSlot}:</span>{' '}
-                  <span className="text-mute">{m.items.map((it) => `${it.name} (${it.grams}g)`).join(', ')}</span>
-                </span>
-                <Button variant="secondary" className="!px-2 !py-1 text-xs shrink-0" onClick={() => logPlanMeal(m.mealSlot, logDate)}>Logger</Button>
+          <div className="space-y-2">
+            {activePlan.sampleMeals.map((m) => (
+              <div key={m.mealSlot} className="bg-surface border border-line rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{m.mealSlot}</span>
+                  <Button variant="secondary" className="!px-2 !py-1 text-xs shrink-0" onClick={() => logPlanMeal(m.mealSlot, logDate)}>Logger</Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {m.items.map((it, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 text-xs text-mute bg-panel border border-line rounded-full pl-2 pr-1 py-0.5">
+                      {it.name} ({it.grams}g)
+                      {it.category && (
+                        <button
+                          title="Remplacer"
+                          onClick={() => setSwapFor((s) => (s?.mealSlot === m.mealSlot && s?.itemIndex === i ? null : { mealSlot: m.mealSlot, itemIndex: i }))}
+                          className="text-mute hover:text-ink cursor-pointer"
+                        >
+                          <Repeat size={11} />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+                {swapFor?.mealSlot === m.mealSlot && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {getSwapOptionsForItem(m.items[swapFor.itemIndex]).map((alt) => (
+                      <button
+                        key={alt.name}
+                        onClick={() => { swapPlanMealItem(activePlan.id, m.mealSlot, swapFor.itemIndex, alt.name); setSwapFor(null); }}
+                        className="text-xs px-2 py-1 rounded-full bg-panel border border-line hover:border-accent-primary cursor-pointer"
+                      >
+                        {alt.name}
+                      </button>
+                    ))}
+                    {!getSwapOptionsForItem(m.items[swapFor.itemIndex]).length && <span className="text-xs text-mute">Aucune alternative pour ce budget.</span>}
+                  </div>
+                )}
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {Object.keys(microTotals).length > 0 && (
+        <Card title="Micronutriments du jour">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {Object.entries(microRDA).map(([key, rda]) => {
+              const logged = microTotals[key]?.value ?? 0;
+              if (!logged) return null;
+              return (
+                <div key={key}>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span>{MICRONUTRIENT_LABELS[key] || key}</span>
+                    <span className="text-mute">{Math.round(logged * 100) / 100}{rda.unit} / {rda.value}{rda.unit}</span>
+                  </div>
+                  <ProgressBar value={logged} max={rda.value} color={logged >= rda.value ? 'var(--success)' : 'var(--accent-primary)'} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-mute mt-3">Basé uniquement sur les aliments scannés (code-barres) — les entrées saisies manuellement n'ont pas de données vitamines/minéraux.</p>
         </Card>
       )}
 

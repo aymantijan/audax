@@ -84,11 +84,11 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
     if (proteinItem) {
       const est = estimateMacros(proteinItem.name, 100, 'g');
       const grams = est?.protein ? Math.round((slotProteinG / est.protein) * 100) : 120;
-      items.push({ name: proteinItem.name, grams: Math.max(30, Math.min(400, grams)), unit: 'g' });
+      items.push({ name: proteinItem.name, grams: Math.max(30, Math.min(400, grams)), unit: 'g', category: 'protein' });
     }
-    if (carbItem) items.push({ name: carbItem.name, grams: 150, unit: 'g' });
-    if (vegItem) items.push({ name: vegItem.name, grams: 100, unit: 'g' });
-    if (i === 0 && fatFoods[0]) items.push({ name: fatFoods[0].name, grams: 15, unit: 'g' });
+    if (carbItem) items.push({ name: carbItem.name, grams: 150, unit: 'g', category: 'carb' });
+    if (vegItem) items.push({ name: vegItem.name, grams: 100, unit: 'g', category: 'veg' });
+    if (i === 0 && fatFoods[0]) items.push({ name: fatFoods[0].name, grams: 15, unit: 'g', category: 'fat' });
     return { mealSlot: `Repas ${i + 1}`, items };
   });
 

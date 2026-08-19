@@ -19,6 +19,7 @@ import { toast } from './uiStore';
 import { generateTrainingProgram } from '../utils/training-program-generator';
 import { getCuratedProgram, todayWeekdayKey } from '../utils/curated-programs';
 import { generateNutritionPlan } from '../utils/nutrition-plan-generator';
+import { foodsForBudget } from '../utils/morocco-food-budget';
 import {
   predictStrengthTrajectory, detectPlateau, checkAggressiveDeficit,
   checkTrendingOvertrainingRisk, explainPlateau,
@@ -334,6 +335,44 @@ export const useHealthStore = create(
         if (!meal) return;
         for (const item of meal.items) get().logMeal(item.name, item.grams, item.unit || 'g', undefined, date);
       },
+      // Alternatives for a plan item, filtered to the user's budget tier and
+      // never above it (cheaper tiers always allowed) — for the "remplacer"
+      // button when a proposed food isn't available to the user.
+      getSwapOptionsForItem: (item) => {
+        if (!item?.category) return [];
+        const budgetTier = get().healthProfile.budgetTier || 'moderate';
+        return foodsForBudget(budgetTier, item.category).filter((f) => f.name !== item.name);
+      },
+      // Replaces a plan item's food, re-portioning grams so the new food hits
+      // the same macro target (protein g for protein items, etc.) the
+      // original portion was providing — reuses estimateMacros(), no new
+      // macro-calc logic.
+      swapPlanMealItem: (planId, mealSlot, itemIndex, newFoodName) => {
+        const plans = get().nutritionPlans;
+        const plan = plans.find((p) => p.id === planId);
+        const meal = plan?.sampleMeals.find((m) => m.mealSlot === mealSlot);
+        const item = meal?.items[itemIndex];
+        if (!item) return;
+        const MACRO_BY_CATEGORY = { protein: 'protein', carb: 'carbs', fat: 'fat' };
+        const macroKey = MACRO_BY_CATEGORY[item.category];
+        let newGrams = item.grams;
+        if (macroKey) {
+          const original = estimateMacros(item.name, item.grams, item.unit || 'g');
+          const per100 = estimateMacros(newFoodName, 100, 'g');
+          if (original?.[macroKey] && per100?.[macroKey]) {
+            newGrams = Math.max(20, Math.min(500, Math.round((original[macroKey] / per100[macroKey]) * 100)));
+          }
+        }
+        set({
+          nutritionPlans: plans.map((p) => p.id !== planId ? p : {
+            ...p,
+            sampleMeals: p.sampleMeals.map((m) => m.mealSlot !== mealSlot ? m : {
+              ...m,
+              items: m.items.map((it, i) => i !== itemIndex ? it : { ...it, name: newFoodName, grams: newGrams }),
+            }),
+          }),
+        });
+      },
 
       // ─────────── Habit → Health integration ───────────
       // Called by habitStore.toggleHabit when a habit with a `healthLink` is
@@ -517,8 +556,13 @@ export const useHealthStore = create(
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
       // natural servings (e.g. amount=2, unit='egg') — see nutrition-db.js.
-      logMeal: (name, amount, unit = 'g', fulfillsPromptId, date, time) => {
-        const est = estimateMacros(name, amount, unit);
+      // `override` (optional): a pre-computed macro/micro object from a
+      // source outside FOOD_DB — e.g. an OpenFoodFacts barcode scan, already
+      // portioned to the logged amount by the caller. Same shape estimateMacros()
+      // returns (grams/protein/carbs/fat/kcal/whole), plus an optional `micros`
+      // and `barcode`. When present, estimateMacros() (FOOD_DB lookup) is skipped.
+      logMeal: (name, amount, unit = 'g', fulfillsPromptId, date, time, override) => {
+        const est = override || estimateMacros(name, amount, unit);
         const entryDate = date || todayKey();
         const entry = {
           id: uid(),
@@ -534,6 +578,8 @@ export const useHealthStore = create(
           kcal: est?.kcal ?? 0,
           whole: est?.whole ?? null,
           matched: !!est,
+          micros: est?.micros || null,
+          barcode: est?.barcode || null,
           createdAt: Date.now(),
         };
         // Backfill whether today's cumulative protein now meets the target.
