@@ -91,7 +91,15 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
 
   // Sample day: distribute macros across mealsPerDay slots, each slot picking
   // 1-2 items per macro category from the budget-filtered food list.
-  const proteinFoods = applyRestrictions(foodsForBudget(budgetTier, 'protein'), dietaryRestrictions);
+  // Legumes (lentils/chickpeas/beans) are excluded from the default protein
+  // pool — a plan for someone who eats meat/fish/chicken shouldn't lean on
+  // legumes just because they happen to be cheap and sit early in the food
+  // list; they're the primary pool only for an explicit vegetarian/vegan
+  // profile (where animal sources are excluded by applyRestrictions anyway).
+  const wantsPlantOnly = (dietaryRestrictions || []).some((r) => r === 'vegetarian' || r === 'vegan');
+  const allProteinFoods = applyRestrictions(foodsForBudget(budgetTier, 'protein'), dietaryRestrictions);
+  const animalProteinFoods = allProteinFoods.filter((f) => f.fromType !== 'legume');
+  const proteinFoods = wantsPlantOnly || !animalProteinFoods.length ? allProteinFoods : animalProteinFoods;
   const carbFoods = applyRestrictions(foodsForBudget(budgetTier, 'carb'), dietaryRestrictions);
   const fatFoods = applyRestrictions(foodsForBudget(budgetTier, 'fat'), dietaryRestrictions);
   const vegFoods = applyRestrictions(foodsForBudget(budgetTier, 'veg'), dietaryRestrictions);

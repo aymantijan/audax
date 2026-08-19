@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Trash2, Plus, ScanBarcode, Repeat } from 'lucide-react';
+import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
 import { FOOD_DB, getServingOptions } from '../../utils/nutrition-db';
 import { todayKey } from '../../utils/formatters';
 import { MICRONUTRIENT_LABELS, getMicronutrientRDA, convertMicroValue } from '../../utils/micronutrients';
-import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge } from '../../components/common/ui';
+import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge, Wizard } from '../../components/common/ui';
 import BarcodeScanner from '../../components/health/BarcodeScanner';
+import { NUTRITION_STEPS } from './nutrition-wizard-steps';
 
 // Scales a per-100g micros map to an actual logged portion.
 function scaleMicros(micros, grams) {
@@ -42,8 +43,11 @@ function macroTargets(proteinTargetG) {
 }
 
 export default function NutritionTracker({ pendingPrompt }) {
-  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem } = useHealthStore();
-  const gender = useAuthStore((s) => s.user?.gender);
+  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem, healthProfile, completeHealthProfile, generatePlan, deleteNutritionPlan } = useHealthStore();
+  const user = useAuthStore((s) => s.user);
+  const gender = user?.gender;
+  const profileComplete = !!(user?.gender && user?.heightCm && user?.dobYear);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState(100);
   const [unit, setUnit] = useState('g');
@@ -56,6 +60,7 @@ export default function NutritionTracker({ pendingPrompt }) {
 
   const { entries, totals, quality } = getTodayNutrition();
   const activePlan = getActiveNutritionPlan();
+  const planDirty = activePlan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > activePlan.generatedAt;
   const microRDA = useMemo(() => getMicronutrientRDA(gender), [gender]);
   const microTotals = useMemo(() => sumMicros(entries, microRDA), [entries, microRDA]);
   // Prefer the generated plan's real TDEE-based targets over the rough
@@ -100,6 +105,12 @@ export default function NutritionTracker({ pendingPrompt }) {
     setTemplateName('');
   };
 
+  const finishNutrition = (data) => {
+    completeHealthProfile(data);
+    generatePlan();
+    setWizardOpen(false);
+  };
+
   const onScannedProduct = (product) => {
     setScannedProduct(product);
     setScanQty(100);
@@ -122,8 +133,33 @@ export default function NutritionTracker({ pendingPrompt }) {
     setScannedProduct(null);
   };
 
+  if (wizardOpen) {
+    return <Wizard steps={NUTRITION_STEPS} initialData={healthProfile} onComplete={finishNutrition} onCancel={() => setWizardOpen(false)} />;
+  }
+
   return (
     <div className="space-y-6">
+      {!profileComplete && (
+        <div className="flex items-center gap-2 text-sm text-warning bg-warning/10 border border-warning/30 rounded-lg px-4 py-3">
+          <AlertTriangle size={14} className="shrink-0" />
+          Complète ton profil (genre, taille, année de naissance) dans <a href="/settings" className="underline font-medium">Réglages</a> pour générer un plan nutritionnel.
+        </div>
+      )}
+
+      {!activePlan ? (
+        <Card title="Plan nutritionnel">
+          <EmptyState>
+            <Salad size={24} className="mx-auto mb-2 opacity-50" />
+            Pas encore de plan nutritionnel.
+            <div className="mt-3"><Button onClick={() => setWizardOpen(true)} disabled={!profileComplete}>Créer mon plan</Button></div>
+          </EmptyState>
+        </Card>
+      ) : planDirty ? (
+        <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2">
+          <AlertTriangle size={13} /> Ton profil a changé depuis la génération — régénère si besoin.
+        </div>
+      ) : null}
+
       <Card title="Quick Log" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setScanOpen(true)}><span className="flex items-center gap-1.5"><ScanBarcode size={13} /> Scanner un code-barres</span></Button>}>
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end">
           <Field label="Food">
@@ -173,8 +209,23 @@ export default function NutritionTracker({ pendingPrompt }) {
         </Card>
       )}
 
+      {healthProfile.reminderPrefs?.mealWindows?.length > 0 && (
+        <Card title="Timing recommandé">
+          <p className="text-sm text-mute">
+            Basé sur ton planning de programme : {healthProfile.reminderPrefs.mealWindows.join(' · ')}.
+            Répartir les repas sur ces créneaux (plutôt que tout en 1-2 gros repas) aide à la fois la digestion pendant l'entraînement et l'apport régulier en protéines/micronutriments dans la journée.
+          </p>
+        </Card>
+      )}
+
       {activePlan && (
-        <Card title="Plan nutritionnel actif" action={<Badge>{activePlan.targetKcal} kcal/j</Badge>}>
+        <Card title="Plan nutritionnel actif" action={
+          <div className="flex items-center gap-2">
+            <Badge>{activePlan.targetKcal} kcal/j</Badge>
+            <button title="Régénérer" onClick={() => setWizardOpen(true)} className="text-mute hover:text-accent cursor-pointer"><RefreshCw size={13} /></button>
+            <button title="Supprimer le plan" onClick={() => deleteNutritionPlan(activePlan.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+          </div>
+        }>
           <div className="space-y-2">
             {activePlan.sampleMeals.map((m) => (
               <div key={m.mealSlot} className="bg-surface border border-line rounded-lg px-3 py-2">

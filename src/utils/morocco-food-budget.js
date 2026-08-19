@@ -15,26 +15,31 @@ export const MOROCCO_BUDGET_TIERS = {
 
 // category: 'protein' | 'carb' | 'fat' | 'veg' | 'fruit' | 'dairy'
 export const MOROCCO_FOOD_COST_TIERS = [
-  // ── Protéines ──
-  { name: 'Eggs', category: 'protein', tier: 'tight', costNote: 'protéine complète la moins chère au Maroc' },
-  { name: 'Lentils (cooked)', category: 'protein', tier: 'tight', costNote: 'légumineuse — protéine + glucides en un seul aliment' },
-  { name: 'Chickpeas (cooked)', category: 'protein', tier: 'tight' },
-  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', costNote: 'oméga-3 bon marché, très courant au Maroc' },
-  { name: 'Black beans (cooked)', category: 'protein', tier: 'tight' },
-  { name: 'Greek yogurt (plain)', category: 'protein', tier: 'moderate' },
-  { name: 'Cottage cheese', category: 'protein', tier: 'moderate' },
-  { name: 'Tuna (canned)', category: 'protein', tier: 'moderate' },
-  { name: 'Chicken thigh', category: 'protein', tier: 'moderate' },
-  { name: 'Chicken breast', category: 'protein', tier: 'moderate' },
-  { name: 'Whey protein (scoop, 30g)', category: 'protein', tier: 'moderate', costNote: 'pratique mais plus cher au kg de protéine que les sources entières' },
-  { name: 'Beef (ground, 90/10)', category: 'protein', tier: 'comfortable' },
-  { name: 'Beef (lean)', category: 'protein', tier: 'comfortable' },
-  { name: 'Salmon', category: 'protein', tier: 'comfortable', costNote: 'importé, cher au Maroc' },
-  { name: 'Shrimp', category: 'protein', tier: 'comfortable' },
+  // ── Protéines ── animales d'abord (poulet/viande/poisson/oeufs — ce que la
+  // majorité mange au quotidien) ; les légumineuses (fromType: 'legume') sont
+  // classées à part et ne servent de source PRINCIPALE que si l'utilisateur a
+  // explicitement choisi un régime végétarien/végan — voir buildProteinItems
+  // dans nutrition-plan-generator.js.
+  { name: 'Eggs', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'protéine complète la moins chère au Maroc' },
+  { name: 'Chicken thigh', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'avec os/peau — une des viandes les moins chères au Maroc' },
+  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'oméga-3 bon marché, très courant au Maroc' },
+  { name: 'Lentils (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', costNote: 'légumineuse — protéine + glucides en un seul aliment' },
+  { name: 'Chickpeas (cooked)', category: 'protein', tier: 'tight', fromType: 'legume' },
+  { name: 'Black beans (cooked)', category: 'protein', tier: 'tight', fromType: 'legume' },
+  { name: 'Chicken breast', category: 'protein', tier: 'moderate', fromType: 'animal' },
+  { name: 'Tuna (canned)', category: 'protein', tier: 'moderate', fromType: 'animal' },
+  { name: 'Greek yogurt (plain)', category: 'protein', tier: 'moderate', fromType: 'animal' },
+  { name: 'Cottage cheese', category: 'protein', tier: 'moderate', fromType: 'animal' },
+  { name: 'Whey protein (scoop, 30g)', category: 'protein', tier: 'moderate', fromType: 'animal', costNote: 'pratique mais plus cher au kg de protéine que les sources entières' },
+  { name: 'Beef (ground, 90/10)', category: 'protein', tier: 'comfortable', fromType: 'animal' },
+  { name: 'Beef (lean)', category: 'protein', tier: 'comfortable', fromType: 'animal' },
+  { name: 'Salmon', category: 'protein', tier: 'comfortable', fromType: 'animal', costNote: 'importé, cher au Maroc' },
+  { name: 'Shrimp', category: 'protein', tier: 'comfortable', fromType: 'animal' },
 
-  // ── Glucides ──
+  // ── Glucides ── (couscous délibérément absent : plat traditionnel du
+  // vendredi, pas un aliment quotidien — le proposer chaque jour dans un plan
+  // "repas type" ne correspond à aucun usage réel)
   { name: 'Khobz (Moroccan bread)', category: 'carb', tier: 'tight' },
-  { name: 'Couscous (cooked)', category: 'carb', tier: 'tight' },
   { name: 'White rice (cooked)', category: 'carb', tier: 'tight' },
   { name: 'Potato', category: 'carb', tier: 'tight' },
   { name: 'Bulgur (cooked)', category: 'carb', tier: 'tight' },

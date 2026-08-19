@@ -11,7 +11,7 @@ const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'B
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
@@ -22,7 +22,7 @@ export default function CycleTracking() {
 
   const phase = getCyclePhase();
   const coaching = getCyclePhaseCoaching();
-  const activeProgram = getActiveProgram();
+  const activeProgram = getActiveProgram() || getActiveCuratedProgram();
   const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
 
   // Symptom "severity" proxied by count of symptoms logged per entry — a

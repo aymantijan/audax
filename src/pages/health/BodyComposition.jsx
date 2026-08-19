@@ -109,7 +109,7 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 }
 
 export default function BodyComposition() {
-  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveNutritionPlan, getProgramAdherence } = useHealthStore();
+  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence } = useHealthStore();
   const latest = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
   const precision = getBodyCompPrecision();
   const smoothed = getSmoothedBodyCompTrend();
@@ -310,7 +310,7 @@ export default function BodyComposition() {
         </Card>
       )}
 
-      <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: getActiveProgram(), plan: getActiveNutritionPlan(), adherence: getProgramAdherence() })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
+      <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: getActiveProgram() || getActiveCuratedProgram(), plan: getActiveNutritionPlan(), adherence: getProgramAdherence() })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
         <div className="text-xs text-mute mb-3">Confidence: {prediction.confidence}% (based on days logged) · Efficiency multiplier: {prediction.efficiency}%</div>
         <div className="grid grid-cols-3 gap-3 text-center mb-3">
           {['conservative', 'realistic', 'optimistic'].map((k) => (

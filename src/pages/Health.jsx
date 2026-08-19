@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target, ClipboardList, Activity, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target, Activity, BookOpen } from 'lucide-react';
 import { useHealthStore } from '../store/healthStore';
 import { useAuthStore } from '../store/authStore';
 import { Modal, Button } from '../components/common/ui';
 import HealthDashboard from './health/Dashboard';
 import SleepTracker from './health/SleepTracker';
-import WorkoutLogging from './health/WorkoutLogging';
 import NutritionTracker from './health/NutritionTracker';
 import RecoveryTracker from './health/RecoveryTracker';
 import BodyComposition from './health/BodyComposition';
@@ -14,15 +13,18 @@ import CycleTracking from './health/CycleTracking';
 import Performance from './health/Performance';
 import Goals from './health/Goals';
 import Analytics from './health/Analytics';
-import PlanSetup from './health/PlanSetup';
 import Programs from './health/Programs';
+import CardioLogging from './health/CardioLogging';
+import GymLogging from './health/GymLogging';
+import SportLogging from './health/SportLogging';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, Component: HealthDashboard },
-  { key: 'setup', label: 'My Plan', icon: ClipboardList, Component: PlanSetup },
   { key: 'programs', label: 'Programmes', icon: BookOpen, Component: Programs },
   { key: 'sleep', label: 'Sleep', icon: Moon, Component: SleepTracker },
-  { key: 'workout', label: 'Workout', icon: Dumbbell, Component: WorkoutLogging },
+  { key: 'cardio', label: 'Cardio', icon: HeartPulse, Component: CardioLogging },
+  { key: 'gym', label: 'Gym', icon: Dumbbell, Component: GymLogging },
+  { key: 'sport', label: 'Autres sports', icon: Activity, Component: SportLogging },
   { key: 'nutrition', label: 'Nutrition', icon: Salad, Component: NutritionTracker },
   { key: 'recovery', label: 'Recovery', icon: HeartPulse, Component: RecoveryTracker },
   { key: 'body', label: 'Body Comp', icon: Scale, Component: BodyComposition },
@@ -33,27 +35,27 @@ const TABS = [
   { key: 'analytics', label: 'Analytics', icon: LineChart, Component: Analytics },
 ];
 
-const TAB_FOR_LINK = { cardio: 'workout', strength: 'workout', recovery: 'recovery', mindfulness: 'recovery', nutrition: 'nutrition', sleep: 'sleep', reflection: 'dashboard' };
+const TAB_FOR_LINK = { cardio: 'cardio', strength: 'gym', recovery: 'recovery', mindfulness: 'recovery', nutrition: 'nutrition', sleep: 'sleep', reflection: 'dashboard' };
 
 export default function Health() {
   // QuickAdd FAB deep-links here as /health?quickadd=workout — the workout
   // log form is inline at the top of that tab (no modal to auto-open, unlike
-  // Trading/Finance), so landing on the tab is the whole job.
-  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('quickadd') === 'workout' ? 'workout' : 'dashboard'));
-  const { pendingPrompts, dismissPrompt, healthProfile } = useHealthStore();
+  // Trading/Finance), so landing on the tab is the whole job. Defaults to
+  // Gym since that's the most common quick-add case (cardio/sport are one
+  // click away).
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('quickadd') === 'workout' ? 'gym' : 'dashboard'));
+  const { pendingPrompts, dismissPrompt } = useHealthStore();
   const gender = useAuthStore((s) => s.user?.gender);
   const [activePrompt, setActivePrompt] = useState(null);
 
-  // Cycle/Performance visibility: an explicit opt-in/out in healthProfile
-  // wins; otherwise strictly gated by gender (Cycle = female, Performance =
-  // male) — gender is required at signup going forward, so unset only
-  // happens for pre-existing local accounts, which see neither until they
-  // complete their profile in Settings.
-  const showCycle = healthProfile.cycleTrackingEnabled ?? gender === 'female';
-  const showPerformance = healthProfile.maleTrackingEnabled ?? gender === 'male';
+  // Cycle is strictly gender-gated (Femme uniquement) — no manual override,
+  // no checkbox anywhere: a male account should never even see a "cycle
+  // tracking" option to begin with. Performance always exists for everyone
+  // (strength/recovery tracking isn't sex-specific) — nothing to gate.
+  const showCycle = gender === 'female';
   const visibleTabs = useMemo(
-    () => TABS.filter((t) => (t.key !== 'cycle' || showCycle) && (t.key !== 'performance' || showPerformance)),
-    [showCycle, showPerformance]
+    () => TABS.filter((t) => t.key !== 'cycle' || showCycle),
+    [showCycle]
   );
   const effectiveTab = visibleTabs.some((t) => t.key === tab) ? tab : 'dashboard';
 

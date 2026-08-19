@@ -4,7 +4,7 @@ import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
 import { Card, Button, Wizard, Field, Input } from '../../components/common/ui';
 import FreeTimeBlockPicker from '../../components/health/FreeTimeBlockPicker';
-import { NUTRITION_STEPS } from './PlanSetup';
+import { NUTRITION_STEPS } from './nutrition-wizard-steps';
 import { generateProgramSchedule } from '../../utils/program-schedule-generator';
 import { pushScheduleToCalendar } from '../../services/program-schedule-calendar';
 import { bestSleepWindow } from '../../utils/health-science';
