@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, HeartPulse } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
-import { Card, Button, Input } from '../../components/common/ui';
+import { Card, Button, Input, Field, Select } from '../../components/common/ui';
 
 // Midpoint of a "4 × 6-8" style prescribed range, or the plain number in a
 // fixed-rep prescription like "2 × 10/jambe" — used to prefill the reps
@@ -29,7 +29,7 @@ function parseSetCount(setsReps) {
 }
 
 function makeSets(setsReps) {
-  return Array.from({ length: parseSetCount(setsReps) }, () => ({ reps: prefillReps(setsReps), weight: '' }));
+  return Array.from({ length: parseSetCount(setsReps) }, () => ({ reps: prefillReps(setsReps), weight: '', rpe: 7, form: 'Good' }));
 }
 
 // The fast-path structured logger for today's prescribed cardio block from
@@ -44,23 +44,34 @@ export function CuratedCardioLogger() {
 
   const [cardioDone, setCardioDone] = useState(false);
   const [cardioMin, setCardioMin] = useState(cardioBlock?.durationMin || 30);
+  // Rétroactif : par défaut aujourd'hui, mais rattrapable pour une séance
+  // faite (et non loggée) un autre jour.
+  const [logDate, setLogDate] = useState(todayKey());
+  const [quality, setQuality] = useState(7);
 
   const submitCardio = () => {
-    logWorkout({ type: 'cardio', category: 'cardio', exercise: `Cardio — ${program.name}`, durationMin: Number(cardioMin) || cardioBlock.durationMin, quality: null, notes: '' });
+    logWorkout({ date: logDate, type: 'cardio', category: 'cardio', exercise: `Cardio — ${program.name}`, durationMin: Number(cardioMin) || cardioBlock.durationMin, quality, notes: '' });
     setCardioDone(true);
+    setLogDate(todayKey());
+    setQuality(7);
   };
 
   if (!program || !cardioBlock) return null;
 
   return (
     <Card title="Cardio du jour">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={cardioDone} onChange={(e) => setCardioDone(e.target.checked)} />
           Cardio fait
         </label>
         <Input type="number" className="!py-1 !text-xs w-20" value={cardioMin} onChange={(e) => setCardioMin(e.target.value)} />
         <span className="text-xs text-mute">min</span>
+        <Input type="date" className="!py-1 !text-xs w-36" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} title="Rattraper une séance manquée" />
+        <div className="flex items-center gap-1.5">
+          <input type="range" min="1" max="10" value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-20" />
+          <span className="text-[10px] text-mute w-14">Ressenti {quality}/10</span>
+        </div>
         <Button className="!px-3 !py-1.5 text-xs ml-auto" disabled={!cardioDone} onClick={submitCardio}>
           <span className="flex items-center gap-1.5"><HeartPulse size={12} /> Logger le cardio</span>
         </Button>
@@ -85,10 +96,18 @@ export function CuratedGymLogger() {
   const exercises = next?.session?.exercises || [];
 
   const [checked, setChecked] = useState(() => new Set());
-  // Per exercise, an array of {reps, weight} — one entry per prescribed set,
-  // since each set is worked with its own weight (warm-up vs. working sets).
+  // Per exercise, an array of {reps, weight, rpe, form} — one entry per
+  // prescribed set, since each set is worked with its own weight (warm-up
+  // vs. working sets) and can feel harder/easier (RPE) or break down in form
+  // independently of the others.
   const [sets, setSets] = useState(() => Object.fromEntries(exercises.map((e) => [e.name, makeSets(e.setsReps)])));
   const [error, setError] = useState('');
+  // Session-level: rétroactif (par défaut aujourd'hui, backdatable pour une
+  // séance faite plus tôt et pas encore loggée), + ressenti global + notes —
+  // symétrique avec ce que le formulaire libre capture déjà.
+  const [logDate, setLogDate] = useState(todayKey());
+  const [sessionQuality, setSessionQuality] = useState(7);
+  const [notes, setNotes] = useState('');
 
   // getNextGymSession() advances after a submit (markCuratedSessionDone), but
   // this component doesn't remount — without this, `sets` would still be
@@ -98,6 +117,9 @@ export function CuratedGymLogger() {
     setChecked(new Set());
     setSets(Object.fromEntries(exercises.map((e) => [e.name, makeSets(e.setsReps)])));
     setError('');
+    setLogDate(todayKey());
+    setSessionQuality(7);
+    setNotes('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [next?.sessionKey]);
 
@@ -124,14 +146,14 @@ export function CuratedGymLogger() {
     const missingWeight = picked.some((e) => !e.bodyweightExercise && setsFor(e).some((s) => !s.weight));
     if (missingWeight) return setError('Indique le poids de chaque série (sauf poids du corps).');
     logGymSession({
-      date: todayKey(),
+      date: logDate,
       sessionType: null,
       exercises: picked.map((e) => ({
         exercise: e.name,
-        sets: setsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: null, form: null })),
+        sets: setsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
       })),
-      quality: null,
-      notes: next.session.isVariant ? '(variante)' : '',
+      quality: sessionQuality,
+      notes: [notes, next.session.isVariant ? '(variante)' : ''].filter(Boolean).join(' — '),
     });
     markCuratedSessionDone(program.id, next.sessionKey);
     setChecked(new Set());
@@ -161,18 +183,35 @@ export function CuratedGymLogger() {
               {setsFor(ex).map((s, setIdx) => (
                 <div key={setIdx} className="flex items-center gap-2">
                   <span className="text-[10px] text-mute w-10 shrink-0">Série {setIdx + 1}</span>
-                  <Input type="number" className="!py-1 !text-xs w-16" placeholder="reps" value={s.reps ?? ''} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
+                  <Input type="number" className="!py-1 !text-xs w-14" placeholder="reps" value={s.reps ?? ''} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
                   <Input
-                    type="number" className="!py-1 !text-xs w-24"
+                    type="number" className="!py-1 !text-xs w-20"
                     placeholder={ex.bodyweightExercise ? 'poids ajouté' : 'poids (kg)'}
                     value={s.weight ?? ''} onChange={(e) => updateSet(ex, setIdx, { weight: e.target.value })}
                   />
+                  <div className="flex items-center gap-1 w-24 shrink-0">
+                    <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSet(ex, setIdx, { rpe: Number(e.target.value) })} className="w-full" />
+                    <span className="text-[10px] text-mute w-11 shrink-0">RPE {s.rpe}</span>
+                  </div>
+                  <Select className="!py-1 !text-xs w-20" value={s.form} onChange={(e) => updateSet(ex, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
                 </div>
               ))}
             </div>
           </div>
         ))}
       </div>
+
+      <div className="grid sm:grid-cols-2 gap-3 mt-3">
+        <Field label="Date" hint="Rattraper une séance manquée">
+          <Input type="date" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} />
+        </Field>
+        <Field label={`Ressenti global de la séance : ${sessionQuality}/10`}>
+          <input type="range" min="1" max="10" value={sessionQuality} onChange={(e) => setSessionQuality(Number(e.target.value))} className="w-full" />
+        </Field>
+      </div>
+      <Field label="Notes (optionnel)">
+        <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
       {error && <p className="text-xs text-bad mt-2">{error}</p>}
       <Button className="mt-3" onClick={submitTraining} disabled={!canSubmit}>
         <span className="flex items-center gap-2">
