@@ -43,6 +43,20 @@ function resolvePhaseKey(program) {
   return Object.keys(ws).find((k) => Array.isArray(ws[k]) && ws[k][0]?.day) || 'main';
 }
 
+// Ordered list of distinct training sessionKeys across the phase's week (rest
+// days and cardio-only days excluded) — e.g. ['push1','pull1','legs1'] — the
+// rotation getNextGymSession() advances through. Order follows the week's
+// day order, not alphabetical, so "push before pull" stays intact.
+function getSessionRotation(program, phaseKey) {
+  const days = program.weeklyStructure[phaseKey] || [];
+  const seen = new Set();
+  const rotation = [];
+  for (const d of days) {
+    if (d.session && !seen.has(d.session)) { seen.add(d.session); rotation.push(d.session); }
+  }
+  return rotation;
+}
+
 // Habit → Health activity link types (see utils/constants.js#HEALTH_LINK_TYPES).
 // Each maps to the skill(s) awarded when the resulting Health entry is logged.
 const HEALTH_LINK_SKILLS = {
@@ -176,10 +190,46 @@ export const useHealthStore = create(
       // *variant* (below) instead of editing the curated data itself.
       activeCuratedProgramId: null,
       setActiveCuratedProgram: (id) => {
-        set({ activeCuratedProgramId: id, trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: false })) });
+        set({ activeCuratedProgramId: id, trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: false })), curatedSessionProgress: {} });
         toast(id ? 'Programme activé' : 'Programme désactivé', 'success');
       },
       getActiveCuratedProgram: () => (get().activeCuratedProgramId ? getCuratedProgram(get().activeCuratedProgramId) : null),
+
+      // { [curatedProgramId]: { lastSessionKey, lastCompletedAt } } — tracks
+      // rotation position independently of the calendar. A missed day
+      // shouldn't strand the user without a prescribed session: "next" means
+      // "the one after whatever I actually last did", not "whatever today's
+      // weekday happens to map to".
+      curatedSessionProgress: {},
+      markCuratedSessionDone: (programId, sessionKey) => {
+        set({ curatedSessionProgress: { ...get().curatedSessionProgress, [programId]: { lastSessionKey: sessionKey, lastCompletedAt: Date.now() } } });
+      },
+      // The next gym session to do in the active program's rotation — advances
+      // from the last COMPLETED session (see markCuratedSessionDone), not from
+      // today's calendar weekday, so skipping/rescheduling a day never leaves
+      // the user without a prescribed session or skips one in the rotation.
+      // Brand new activation (nothing completed yet) starts from today's
+      // calendar slot if one exists, else the first session in the rotation.
+      getNextGymSession: () => {
+        const program = get().getActiveCuratedProgram();
+        if (!program) return null;
+        const phaseKey = resolvePhaseKey(program);
+        const rotation = getSessionRotation(program, phaseKey);
+        if (!rotation.length) return null;
+        const progress = get().curatedSessionProgress[program.id];
+        let sessionKey;
+        if (!progress) {
+          const days = program.weeklyStructure[phaseKey] || [];
+          const todayEntry = days.find((d) => d.day === todayWeekdayKey());
+          sessionKey = todayEntry?.session || rotation[0];
+        } else {
+          const idx = rotation.indexOf(progress.lastSessionKey);
+          sessionKey = rotation[(idx + 1 + rotation.length) % rotation.length];
+        }
+        const effective = get().getEffectiveExercises(program.id, sessionKey);
+        if (!effective) return null;
+        return { sessionKey, session: effective, phaseKey };
+      },
 
       // [{id, curatedProgramId, sessionKey, label, exercises:[{name,setsReps,rest,note}], active, createdAt}]
       // One active variant at most per (curatedProgramId, sessionKey) pair —
@@ -1476,7 +1526,7 @@ export const useHealthStore = create(
         lastWaterReminderAt: null, lastMealReminderKey: null, lastBedtimeReminderDate: null,
       },
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
-          activeCuratedProgramId: null, programVariants: [], programSchedule: null,
+          activeCuratedProgramId: null, programVariants: [], programSchedule: null, curatedSessionProgress: {},
           healthProfile: {
             version: 1,
             experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,

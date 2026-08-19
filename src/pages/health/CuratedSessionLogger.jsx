@@ -4,14 +4,18 @@ import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Input } from '../../components/common/ui';
 
-// Midpoint of a "4 × 6-8" style prescribed range — used to prefill the reps
+// Midpoint of a "4 × 6-8" style prescribed range, or the plain number in a
+// fixed-rep prescription like "2 × 10/jambe" — used to prefill the reps
 // field so a bare checkbox-check still produces a valid, non-empty log entry
 // (logGymSession silently drops any exercise whose reps AND weight are both
-// empty — this prefill is what prevents that from ever happening here).
+// empty — this prefill is what prevents that from ever happening, and also
+// what stops the "coche tout" completion gate from silently staying blocked
+// on notations like "/jambe" that the range pattern alone doesn't cover).
 function prefillReps(setsReps) {
-  const match = /(\d+)-(\d+)$/.exec(setsReps || '');
-  if (!match) return '';
-  return Math.round((Number(match[1]) + Number(match[2])) / 2);
+  const range = /(\d+)-(\d+)/.exec(setsReps || '');
+  if (range) return Math.round((Number(range[1]) + Number(range[2])) / 2);
+  const single = /×\s*(\d+)/.exec(setsReps || '');
+  return single ? Number(single[1]) : '';
 }
 
 // The fast-path structured logger for today's prescribed cardio block from
@@ -57,12 +61,14 @@ export function CuratedCardioLogger() {
 // unless a weight is entered — the "weight" field is then added weight, not
 // a replacement.
 export function CuratedGymLogger() {
-  const { getActiveCuratedProgram, getTodayCuratedSession, logGymSession } = useHealthStore();
+  const { getActiveCuratedProgram, getNextGymSession, logGymSession, markCuratedSessionDone } = useHealthStore();
   const program = getActiveCuratedProgram();
-  const today = getTodayCuratedSession();
-
-  const trainingBlock = today?.dayEntry?.blocks?.find((b) => b.type === 'training');
-  const exercises = today?.session?.exercises || [];
+  // Rotation-based, not calendar-day-based — the next session is whatever
+  // comes after the last one actually completed, so missing/rescheduling a
+  // day (e.g. training Push a day late) never leaves nothing prescribed or
+  // skips a session in the rotation.
+  const next = getNextGymSession();
+  const exercises = next?.session?.exercises || [];
 
   const [checked, setChecked] = useState(() => new Set());
   const [reps, setReps] = useState(() => Object.fromEntries(exercises.map((e) => [e.name, prefillReps(e.setsReps)])));
@@ -77,6 +83,11 @@ export function CuratedGymLogger() {
     if (!picked.length) return setError('Coche au moins un exercice fait.');
     const missingReps = picked.some((e) => !reps[e.name]);
     if (missingReps) return setError('Indique les reps pour chaque exercice coché.');
+    // Weight is required for any loaded exercise (barbell/dumbbell/machine) —
+    // only bodyweight-flagged movements (pull-ups, dips…) can legitimately
+    // have an empty weight field, meaning "bodyweight only".
+    const missingWeight = picked.some((e) => !e.bodyweightExercise && !weight[e.name]);
+    if (missingWeight) return setError('Indique le poids utilisé pour chaque exercice coché (sauf poids du corps).');
     logGymSession({
       date: todayKey(),
       sessionType: null,
@@ -85,17 +96,22 @@ export function CuratedGymLogger() {
         sets: [{ reps: Number(reps[e.name]), weight: weight[e.name] ? Number(weight[e.name]) : 0, rpe: null, form: null }],
       })),
       quality: null,
-      notes: today.session.isVariant ? '(variante)' : '',
+      notes: next.session.isVariant ? '(variante)' : '',
     });
+    markCuratedSessionDone(program.id, next.sessionKey);
     setChecked(new Set());
   };
 
   const allChecked = exercises.length > 0 && exercises.every((e) => checked.has(e.name));
+  // Mirrors submitTraining's validation so the button is disabled (not just
+  // rejected after the click) until every checked exercise has reps, plus a
+  // weight unless it's a bodyweight movement.
+  const canSubmit = allChecked && exercises.every((e) => reps[e.name] && (e.bodyweightExercise || weight[e.name]));
 
-  if (!program || !trainingBlock || !exercises.length) return null;
+  if (!program || !exercises.length) return null;
 
   return (
-    <Card title={`Séance du jour — ${today.session.label}${today.session.isVariant ? ' (variante)' : ''}`}>
+    <Card title={`Prochaine séance — ${next.session.label}${next.session.isVariant ? ' (variante)' : ''}`}>
       <div className="space-y-2">
         {exercises.map((ex) => (
           <div key={ex.name} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2">
@@ -114,8 +130,11 @@ export function CuratedGymLogger() {
         ))}
       </div>
       {error && <p className="text-xs text-bad mt-2">{error}</p>}
-      <Button className="mt-3" onClick={submitTraining} disabled={!allChecked}>
-        <span className="flex items-center gap-2"><CheckCircle2 size={14} /> {allChecked ? 'Logger la séance' : `Coche les ${exercises.length} exercices pour terminer`}</span>
+      <Button className="mt-3" onClick={submitTraining} disabled={!canSubmit}>
+        <span className="flex items-center gap-2">
+          <CheckCircle2 size={14} />
+          {canSubmit ? 'Logger la séance' : !allChecked ? `Coche les ${exercises.length} exercices pour terminer` : 'Remplis reps et poids pour chaque exercice'}
+        </span>
       </Button>
       <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur un exercice au poids du corps = fait au poids du corps seul ; un nombre = poids ajouté en plus.</p>
     </Card>

@@ -15,14 +15,14 @@ const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function GymLogging({ pendingPrompt }) {
-  const { workouts, logGymSession, editGymSession, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, healthProfile, getStrengthPredictions, getActiveCuratedProgram, getTodayCuratedSession } = useHealthStore();
+  const { workouts, logGymSession, editGymSession, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, healthProfile, getStrengthPredictions, getActiveCuratedProgram, getNextGymSession } = useHealthStore();
   const curatedProgram = getActiveCuratedProgram();
-  const curatedToday = curatedProgram ? getTodayCuratedSession() : null;
-  // Whether the checkbox logger above already covers today (a training block
-  // scheduled) — when true, the manual exercise-by-exercise builder is
-  // redundant with what Programme already gave the user, so it's hidden by
-  // default behind "Mode libre" instead of always showing underneath it.
-  const hasCuratedToday = !!(curatedProgram && curatedToday?.dayEntry?.blocks?.some((b) => b.type === 'training') && curatedToday?.session?.exercises?.length);
+  // Whether the checkbox logger above already covers the next session (the
+  // program's rotation, not a specific calendar day — see getNextGymSession)
+  // — when true, the manual exercise-by-exercise builder is redundant with
+  // what Programme already gave the user, so it's hidden by default behind
+  // "Mode libre" instead of always showing underneath it.
+  const hasCuratedToday = !!(curatedProgram && getNextGymSession()?.session?.exercises?.length);
   const [freeMode, setFreeMode] = useState(false);
 
   const injuredAreas = (healthProfile.injuries || []).map((i) => i.area).filter((a) => INJURY_EXCLUSION_MAP[a]);
