@@ -145,6 +145,11 @@ export const FOOD_DB = [
   { name: 'Taco', protein: 9, carbs: 13, fat: 8, kcal: 150, whole: true, servings: [{ label: 'taco', grams: 102 }] },
   { name: 'Burrito', protein: 10, carbs: 20, fat: 8, kcal: 200, whole: true, servings: [{ label: 'burrito', grams: 300 }] },
   { name: 'Oatmeal with fruit', protein: 4, carbs: 20, fat: 2.5, kcal: 120, whole: true, servings: [{ label: 'bowl', grams: 280 }] },
+
+  // ── Staples marocains (additif — pour le générateur de plan nutritionnel Maroc) ──
+  { name: 'Khobz (Moroccan bread)', protein: 8.4, carbs: 50, fat: 1.4, kcal: 250, whole: true, servings: [{ label: 'loaf', grams: 250 }] },
+  { name: 'Sardines (canned)', protein: 21, carbs: 0, fat: 11, kcal: 190, whole: true, servings: [{ label: 'can', grams: 106 }] },
+  { name: 'Lben (Moroccan buttermilk)', protein: 3.1, carbs: 4.5, fat: 1.5, kcal: 45, whole: true, servings: [{ label: 'glass', grams: 250 }] },
 ];
 
 const norm = (s) => String(s || '').trim().toLowerCase();

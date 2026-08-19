@@ -56,12 +56,26 @@ function TargetFields({ form, setForm }) {
   );
 }
 
+function addDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function Goals() {
-  const { addGoal, editGoal, deleteGoal, getGoalsWithProgress } = useHealthStore();
+  const { addGoal, editGoal, deleteGoal, getGoalsWithProgress, bodyComp } = useHealthStore();
   const [form, setForm] = useState(blankGoal);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(blankGoal);
   const goals = getGoalsWithProgress();
+
+  const currentWeight = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0]?.weightKg;
+  const GOAL_TEMPLATES = [
+    currentWeight && { label: `Perdre 5kg en 12 sem.`, goal: { type: 'weight', targetKg: Math.round((currentWeight - 5) * 10) / 10, targetDate: addDays(84) } },
+    { label: 'Développé couché 100kg', goal: { type: 'strength', exercise: 'Barbell Bench Press', targetKg: 100 } },
+    { label: 'Sommeil moyen 8/10', goal: { type: 'sleep', targetScore: 8 } },
+    { label: "S'entraîner 4x/semaine", goal: { type: 'workoutFrequency', targetPerWeek: 4 } },
+  ].filter(Boolean);
 
   const submit = (e) => {
     e.preventDefault();
@@ -90,6 +104,18 @@ export default function Goals() {
   return (
     <div className="space-y-6">
       <Card title="New Goal">
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {GOAL_TEMPLATES.map((t) => (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => addGoal(t.goal)}
+              className="text-xs px-2.5 py-1.5 rounded-full border border-line text-mute hover:border-accent hover:text-accent cursor-pointer"
+            >
+              + {t.label}
+            </button>
+          ))}
+        </div>
         <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
           <Field label="Type">
             <Select value={form.type} onChange={(e) => setForm({ ...blankGoal, type: e.target.value })} options={GOAL_TYPES} />

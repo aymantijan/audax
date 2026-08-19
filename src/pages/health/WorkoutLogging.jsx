@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef } from 'react';
-import { Plus, Trash2, Pencil, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search } from 'lucide-react';
+import { Plus, Trash2, Pencil, Dumbbell, HeartPulse, Trophy, Library, CalendarPlus, Activity, X, Search, AlertTriangle, ClipboardList } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { kgToLb, lbToKg } from '../../utils/health-science';
 import { CARDIO_TYPES, GYM_SESSION_TYPES, SPORT_TYPES, SMALL_MUSCLE_OPTIONS, labelFor } from '../../utils/workout-types';
 import { searchExercises, suggestExercises } from '../../utils/exercise-library';
+import { INJURY_EXCLUSION_MAP } from '../../utils/training-program-generator';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 
@@ -14,7 +15,10 @@ const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 const CATEGORY_ICON = { cardio: HeartPulse, gym: Dumbbell, sport: Activity };
 
 export default function WorkoutLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit } = useHealthStore();
+  const { workouts, logWorkout, logGymSession, editWorkout, editGymSession, deleteWorkout, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, getNextPlannedDay, healthProfile, getStrengthPredictions } = useHealthStore();
+  const plannedDay = getNextPlannedDay();
+  const injuredAreas = (healthProfile.injuries || []).map((i) => i.area).filter((a) => INJURY_EXCLUSION_MAP[a]);
+  const isCautionExercise = (name) => injuredAreas.some((area) => INJURY_EXCLUSION_MAP[area].excludeNameMatch.some((re) => re.test(name)));
 
   // null | { kind: 'single', id } | { kind: 'session', sessionId } — 'single'
   // only ever applies to cardio/sport (duration-based, one entry); every
@@ -203,8 +207,27 @@ export default function WorkoutLogging({ pendingPrompt }) {
       }));
   }, [workouts, progressExercise, weightUnit]);
 
+  // Dashed projection points appended after the real history — a linear-
+  // regression trend extrapolation (health-predictions.js), not a guarantee.
+  const projectionData = useMemo(() => {
+    if (!progressExercise || progressData.length < 3) return [];
+    const pred = getStrengthPredictions().find((p) => p.exercise === progressExercise);
+    if (!pred) return [];
+    return Object.entries(pred.projections).map(([label, oneRm]) => ({ date: `+${label}`, projected: dispW(oneRm) }));
+  }, [progressExercise, progressData, weightUnit]);
+
   return (
     <div className="space-y-6">
+      {plannedDay && category === 'gym' && !editing && (
+        <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
+          <ClipboardList size={16} className="text-accent shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <span className="font-medium">Séance planifiée : {plannedDay.label}.</span>{' '}
+            <span className="text-mute">{plannedDay.exercises.map((e) => e.name).join(', ')}</span>
+          </div>
+        </div>
+      )}
+
       <div ref={formCardRef} style={{ scrollMarginTop: '5rem' }}>
       <Card
         title={editing ? 'Edit Workout' : 'Log a Workout'}
@@ -291,16 +314,21 @@ export default function WorkoutLogging({ pendingPrompt }) {
                 </div>
                 {pickerResults.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                    {pickerResults.map((ex) => (
-                      <button
-                        key={ex.id}
-                        type="button"
-                        onClick={() => addExerciseToSession(ex.name)}
-                        className="text-xs px-2.5 py-1 rounded-full border border-line hover:border-accent hover:text-accent cursor-pointer"
-                      >
-                        {ex.name}
-                      </button>
-                    ))}
+                    {pickerResults.map((ex) => {
+                      const caution = isCautionExercise(ex.name);
+                      return (
+                        <button
+                          key={ex.id}
+                          type="button"
+                          onClick={() => addExerciseToSession(ex.name)}
+                          title={caution ? 'Marqué comme précaution dans ton profil (blessure déclarée) — pas un avis médical' : undefined}
+                          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border cursor-pointer ${caution ? 'border-warning/50 text-warning' : 'border-line hover:border-accent hover:text-accent'}`}
+                        >
+                          {caution && <AlertTriangle size={10} />}
+                          {ex.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -435,12 +463,15 @@ export default function WorkoutLogging({ pendingPrompt }) {
           </Field>
           {progressData.length > 1 ? (
             <ResponsiveContainer width="100%" height={220} className="mt-3">
-              <LineChart data={progressData}>
+              <LineChart data={[...progressData, ...projectionData]}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} />
-                <Line type="monotone" dataKey="maxWeight" name={`Max weight (${weightUnit})`} stroke="#00d9ff" strokeWidth={2} dot />
+                <Line type="monotone" dataKey="maxWeight" name={`Max weight (${weightUnit})`} stroke="#00d9ff" strokeWidth={2} dot connectNulls />
+                {projectionData.length > 0 && (
+                  <Line type="monotone" dataKey="projected" name="Projection (1RM estimé)" stroke="#7c5cff" strokeWidth={2} strokeDasharray="5 4" dot connectNulls />
+                )}
               </LineChart>
             </ResponsiveContainer>
           ) : (

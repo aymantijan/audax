@@ -66,8 +66,24 @@ export const useHabitStore = create(
 
       saveEnergyLog: (log) => {
         const others = get().energyLogs.filter((l) => l.date !== log.date);
-        set({ energyLogs: [...others, { ...log, createdAt: Date.now() }] });
+        const existing = get().energyLogs.find((l) => l.date === log.date);
+        set({ energyLogs: [...others, { naps: existing?.naps || [], ...log, createdAt: Date.now() }] });
         toast('Energy check-in saved', 'success');
+      },
+
+      // Naps live on the same per-date energyLog entry as night sleep (used
+      // by health-chrono.js's computeNapImpact) — creates the day's entry if
+      // it doesn't exist yet so a nap can be logged before the main check-in.
+      logNap: (date, time, durationMin) => {
+        const target = date || todayKey();
+        const existing = get().energyLogs.find((l) => l.date === target);
+        const nap = { time, durationMin: Number(durationMin) || 0 };
+        if (existing) {
+          set({ energyLogs: get().energyLogs.map((l) => (l.date === target ? { ...l, naps: [...(l.naps || []), nap] } : l)) });
+        } else {
+          set({ energyLogs: [...get().energyLogs, { date: target, naps: [nap], createdAt: Date.now() }] });
+        }
+        toast('Sieste enregistrée', 'success');
       },
 
       resetAll: () => set({ habits: [], logs: [], energyLogs: [] }),

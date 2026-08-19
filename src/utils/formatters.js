@@ -35,7 +35,9 @@ export const fmtDate = (d) => (d ? format(new Date(d), 'MMM d, yyyy') : '—');
 
 export const fmtDateShort = (d) => (d ? format(new Date(d), 'MMM d') : '—');
 
-export const todayKey = () => format(new Date(), 'yyyy-MM-dd');
+// Optional `d` lets callers format an arbitrary date the same way (e.g. a
+// streak loop walking backwards day-by-day) — omitted, it's today's date.
+export const todayKey = (d) => format(d || new Date(), 'yyyy-MM-dd');
 
 export const dateKey = (d) => format(new Date(d), 'yyyy-MM-dd');
 

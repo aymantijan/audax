@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target } from 'lucide-react';
+import { LayoutDashboard, Moon, Dumbbell, Salad, HeartPulse, Scale, Zap, LineChart, CalendarHeart, Target, ClipboardList, Activity } from 'lucide-react';
 import { useHealthStore } from '../store/healthStore';
 import { useAuthStore } from '../store/authStore';
 import { Modal, Button } from '../components/common/ui';
@@ -11,11 +11,14 @@ import RecoveryTracker from './health/RecoveryTracker';
 import BodyComposition from './health/BodyComposition';
 import EnergyStress from './health/EnergyStress';
 import CycleTracking from './health/CycleTracking';
+import Performance from './health/Performance';
 import Goals from './health/Goals';
 import Analytics from './health/Analytics';
+import PlanSetup from './health/PlanSetup';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, Component: HealthDashboard },
+  { key: 'setup', label: 'My Plan', icon: ClipboardList, Component: PlanSetup },
   { key: 'sleep', label: 'Sleep', icon: Moon, Component: SleepTracker },
   { key: 'workout', label: 'Workout', icon: Dumbbell, Component: WorkoutLogging },
   { key: 'nutrition', label: 'Nutrition', icon: Salad, Component: NutritionTracker },
@@ -23,6 +26,7 @@ const TABS = [
   { key: 'body', label: 'Body Comp', icon: Scale, Component: BodyComposition },
   { key: 'energy', label: 'Energy & Stress', icon: Zap, Component: EnergyStress },
   { key: 'cycle', label: 'Cycle', icon: CalendarHeart, Component: CycleTracking },
+  { key: 'performance', label: 'Performance', icon: Activity, Component: Performance },
   { key: 'goals', label: 'Goals', icon: Target, Component: Goals },
   { key: 'analytics', label: 'Analytics', icon: LineChart, Component: Analytics },
 ];
@@ -34,13 +38,19 @@ export default function Health() {
   // log form is inline at the top of that tab (no modal to auto-open, unlike
   // Trading/Finance), so landing on the tab is the whole job.
   const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get('quickadd') === 'workout' ? 'workout' : 'dashboard'));
-  const { pendingPrompts, dismissPrompt } = useHealthStore();
+  const { pendingPrompts, dismissPrompt, healthProfile } = useHealthStore();
   const gender = useAuthStore((s) => s.user?.gender);
   const [activePrompt, setActivePrompt] = useState(null);
 
-  // Cycle only hides for an explicit 'male' — unset/legacy accounts (no
-  // gender on file yet) keep seeing it exactly as before this field existed.
-  const visibleTabs = useMemo(() => (gender === 'male' ? TABS.filter((t) => t.key !== 'cycle') : TABS), [gender]);
+  // Cycle/Performance visibility: an explicit opt-in/out in healthProfile
+  // wins; otherwise falls back to gender the same way Cycle always has
+  // (unset/legacy accounts keep seeing it — never a breaking default).
+  const showCycle = healthProfile.cycleTrackingEnabled ?? gender !== 'male';
+  const showPerformance = healthProfile.maleTrackingEnabled ?? gender !== 'female';
+  const visibleTabs = useMemo(
+    () => TABS.filter((t) => (t.key !== 'cycle' || showCycle) && (t.key !== 'performance' || showPerformance)),
+    [showCycle, showPerformance]
+  );
   const effectiveTab = visibleTabs.some((t) => t.key === tab) ? tab : 'dashboard';
 
   const Active = visibleTabs.find((t) => t.key === effectiveTab)?.Component || HealthDashboard;

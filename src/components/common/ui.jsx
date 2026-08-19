@@ -1,4 +1,5 @@
-import { X } from 'lucide-react';
+import { useState } from 'react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUiStore } from '../../store/uiStore';
 
 export function Card({ title, action, children, className = '' }) {
@@ -114,6 +115,55 @@ export function WeekdayPicker({ value = [], onChange, options }) {
         );
       })}
     </div>
+  );
+}
+
+// Generic multi-step wizard engine — reused for both the training and
+// nutrition questionnaires (and any future one) so only the `steps` config
+// differs per use. Each step: { key, title, render: (data, setData) => node,
+// validate?: (data) => string|null (returns an error to block Next) }.
+export function Wizard({ steps, onComplete, onCancel, initialData = {} }) {
+  const [index, setIndex] = useState(0);
+  const [data, setData] = useState(initialData);
+  const [error, setError] = useState('');
+  const step = steps[index];
+  const isLast = index === steps.length - 1;
+
+  const setField = (patch) => setData((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
+
+  const next = () => {
+    const err = step.validate?.(data);
+    if (err) { setError(err); return; }
+    setError('');
+    if (isLast) onComplete(data);
+    else setIndex((i) => i + 1);
+  };
+  const back = () => {
+    setError('');
+    if (index === 0) onCancel?.();
+    else setIndex((i) => i - 1);
+  };
+
+  return (
+    <Card>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-mute">Étape {index + 1}/{steps.length}</span>
+          <span className="text-sm font-semibold">{step.title}</span>
+        </div>
+        <ProgressBar value={index + 1} max={steps.length} />
+      </div>
+      <div className="space-y-4">{step.render(data, setField)}</div>
+      {error && <div className="text-xs text-bad mt-3">{error}</div>}
+      <div className="flex justify-between mt-6">
+        <Button variant="ghost" onClick={back}>
+          <span className="flex items-center gap-1"><ChevronLeft size={14} /> {index === 0 ? 'Annuler' : 'Précédent'}</span>
+        </Button>
+        <Button onClick={next}>
+          <span className="flex items-center gap-1">{isLast ? 'Terminer' : 'Suivant'} {!isLast && <ChevronRight size={14} />}</span>
+        </Button>
+      </div>
+    </Card>
   );
 }
 

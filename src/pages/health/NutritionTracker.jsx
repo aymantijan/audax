@@ -15,7 +15,7 @@ function macroTargets(proteinTargetG) {
 }
 
 export default function NutritionTracker({ pendingPrompt }) {
-  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition } = useHealthStore();
+  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal } = useHealthStore();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState(100);
   const [unit, setUnit] = useState('g');
@@ -23,7 +23,12 @@ export default function NutritionTracker({ pendingPrompt }) {
   const [logDate, setLogDate] = useState(todayKey());
 
   const { entries, totals, quality } = getTodayNutrition();
-  const targets = macroTargets(proteinTargetG);
+  const activePlan = getActiveNutritionPlan();
+  // Prefer the generated plan's real TDEE-based targets over the rough
+  // protein-ratio heuristic below, when one exists.
+  const targets = activePlan
+    ? { protein: activePlan.targetMacros.proteinG, carbs: activePlan.targetMacros.carbsG, fat: activePlan.targetMacros.fatG, kcal: activePlan.targetKcal }
+    : macroTargets(proteinTargetG);
 
   // Unit choices update as the food name changes — e.g. typing "egg" reveals
   // an "egg" option alongside the always-available "g", so 100g of guessing
@@ -83,6 +88,22 @@ export default function NutritionTracker({ pendingPrompt }) {
           <Button type="submit">Log meal</Button>
         </form>
       </Card>
+
+      {activePlan && (
+        <Card title="Plan nutritionnel actif" action={<Badge>{activePlan.targetKcal} kcal/j</Badge>}>
+          <div className="space-y-1.5">
+            {activePlan.sampleMeals.map((m, i) => (
+              <div key={i} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                <span>
+                  <span className="font-medium">{m.mealSlot}:</span>{' '}
+                  <span className="text-mute">{m.items.map((it) => `${it.name} (${it.grams}g)`).join(', ')}</span>
+                </span>
+                <Button variant="secondary" className="!px-2 !py-1 text-xs shrink-0" onClick={() => logPlanMeal(m.mealSlot, logDate)}>Logger</Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card title="Today's Macros" action={quality != null && <Badge color={quality >= 70 ? 'var(--success)' : quality >= 40 ? 'var(--warning)' : 'var(--error)'}>{quality}% whole foods</Badge>}>
         <div className="space-y-3">

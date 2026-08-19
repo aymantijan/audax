@@ -6,6 +6,8 @@ import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
   bestSleepWindow, computeCyclePhase, computeGoalProgress, estimate1RM,
+  bodyFatYMCA, bodyFatDeurenberg, estimateFFMI, estimateLeanMassKg, smoothedTrend,
+  estimateVO2max, cyclePhaseCoachingNote,
 } from '../utils/health-science';
 import { useSkillStore } from './skillStore';
 import { useHabitStore } from './habitStore';
@@ -13,10 +15,21 @@ import { useTradingStore } from './tradingStore';
 import { detectTiltSequences, detectRevengeTrades } from '../utils/trading-psychology';
 import { useAccountingStore } from './accountingStore';
 import { toast } from './uiStore';
+import { generateTrainingProgram } from '../utils/training-program-generator';
+import { generateNutritionPlan } from '../utils/nutrition-plan-generator';
+import {
+  predictStrengthTrajectory, detectPlateau, checkAggressiveDeficit,
+  checkTrendingOvertrainingRisk, explainPlateau,
+} from '../utils/health-predictions';
+import {
+  computeFastingWindows, computeHydrationGaps, computeMealTimingConsistency,
+  computeSleepConsistency, computeNapImpact, deriveChronoAlerts,
+} from '../utils/health-chrono';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
 const dayMs = 86400000;
 const r1 = (n) => Math.round(n * 10) / 10;
+const nowHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
 // Habit → Health activity link types (see utils/constants.js#HEALTH_LINK_TYPES).
 // Each maps to the skill(s) awarded when the resulting Health entry is logged.
@@ -61,6 +74,114 @@ export const useHealthStore = create(
       weightUnit: 'kg', // 'kg' | 'lb' — display/input preference only; all workout/body-comp data is stored in kg
       setWeightUnit: (unit) => set({ weightUnit: unit === 'lb' ? 'lb' : 'kg' }),
 
+      // ─────────── Health profile (questionnaire-driven) ───────────
+      healthProfile: {
+        version: 1,
+        sex: null, dobYear: null, heightCm: null,
+        experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
+        equipmentAccess: [], injuries: [],
+        activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
+        cycleTrackingEnabled: null, maleTrackingEnabled: null,
+        reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
+        completedAt: null, lastRecomputedAt: null,
+      },
+      setHealthProfile: (partial) => set({ healthProfile: { ...get().healthProfile, ...partial, lastRecomputedAt: Date.now() } }),
+      completeHealthProfile: (data) => {
+        set({ healthProfile: { ...get().healthProfile, ...data, completedAt: Date.now(), lastRecomputedAt: Date.now() } });
+        useSkillStore.getState().awardXP('health-discipline-lv1', 10, 'health profile completed');
+        toast('Profil santé enregistré', 'success');
+      },
+      resetHealthProfile: () => set({
+        healthProfile: {
+          version: 1, sex: null, dobYear: null, heightCm: null,
+          experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
+          equipmentAccess: [], injuries: [],
+          activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
+          cycleTrackingEnabled: null, maleTrackingEnabled: null,
+          reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
+          completedAt: null, lastRecomputedAt: null,
+        },
+      }),
+
+      // ─────────── Training programs (generated) ───────────
+      trainingPrograms: [], // history of generated programs; one active:true at a time
+      generateProgram: (overrides) => {
+        const profile = { ...get().healthProfile, ...overrides };
+        const program = generateTrainingProgram(profile);
+        set({ trainingPrograms: [...get().trainingPrograms.map((p) => ({ ...p, active: false })), program] });
+        toast('Programme d\'entraînement généré', 'success');
+        return program;
+      },
+      setActiveProgram: (id) => set({ trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: p.id === id })) }),
+      deleteProgram: (id) => set({ trainingPrograms: get().trainingPrograms.filter((p) => p.id !== id) }),
+      getActiveProgram: () => get().trainingPrograms.find((p) => p.active) || null,
+
+      // % of the active program's current-week planned exercises actually
+      // logged (matched by lowercased name, same technique as getPRs), over
+      // the program's elapsed weeks.
+      getProgramAdherence: () => {
+        const program = get().getActiveProgram();
+        if (!program) return null;
+        const startDate = new Date(program.generatedAt);
+        const weeksElapsed = Math.min(program.weeks, Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / (7 * dayMs))));
+        const plannedNames = new Set(program.weeklyPlan.flatMap((d) => d.exercises.map((e) => e.name.toLowerCase())));
+        const loggedNames = new Set(
+          get().workouts
+            .filter((w) => new Date(w.date).getTime() >= startDate.getTime())
+            .map((w) => w.exercise?.trim().toLowerCase())
+            .filter(Boolean)
+        );
+        let matched = 0;
+        for (const n of plannedNames) if (loggedNames.has(n)) matched++;
+        const pct = plannedNames.size ? r1((matched / plannedNames.size) * 100) : null;
+        return { weeksElapsed, totalWeeks: program.weeks, plannedCount: plannedNames.size, matchedCount: matched, percent: pct };
+      },
+
+      // Which weeklyPlan day is "next up" — cycles through the split by
+      // counting distinct strength sessions logged since the program was
+      // generated (not tied to calendar weekday, since a missed/extra day
+      // shouldn't permanently desync the rotation).
+      getNextPlannedDay: () => {
+        const program = get().getActiveProgram();
+        if (!program?.weeklyPlan?.length) return null;
+        const sessionsLogged = new Set(
+          get().workouts
+            .filter((w) => w.type === 'strength' && w.createdAt >= program.generatedAt)
+            .map((w) => w.sessionId || w.id)
+        ).size;
+        return program.weeklyPlan[sessionsLogged % program.weeklyPlan.length];
+      },
+
+      // ─────────── Nutrition plans (generated) ───────────
+      nutritionPlans: [],
+      generatePlan: (overrides) => {
+        const latestBodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        const profile = get().healthProfile;
+        const age = profile.dobYear ? new Date().getFullYear() - profile.dobYear : null;
+        const plan = generateNutritionPlan({
+          weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
+          heightCm: profile.heightCm ?? overrides?.heightCm,
+          age, sex: profile.sex,
+          activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
+          budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
+          mealsPerDay: profile.mealsPerDay,
+          ...overrides,
+        });
+        if (plan.error) { toast('Complète ton profil (poids, taille, âge) pour générer un plan nutritionnel.', 'warning'); return plan; }
+        set({ nutritionPlans: [...get().nutritionPlans.map((p) => ({ ...p, active: false })), plan], proteinTargetG: plan.targetMacros.proteinG });
+        toast('Plan nutritionnel généré', 'success');
+        return plan;
+      },
+      setActiveNutritionPlan: (id) => set({ nutritionPlans: get().nutritionPlans.map((p) => ({ ...p, active: p.id === id })) }),
+      deleteNutritionPlan: (id) => set({ nutritionPlans: get().nutritionPlans.filter((p) => p.id !== id) }),
+      getActiveNutritionPlan: () => get().nutritionPlans.find((p) => p.active) || null,
+      logPlanMeal: (mealSlot, date) => {
+        const plan = get().getActiveNutritionPlan();
+        const meal = plan?.sampleMeals.find((m) => m.mealSlot === mealSlot);
+        if (!meal) return;
+        for (const item of meal.items) get().logMeal(item.name, item.grams, item.unit || 'g', undefined, date);
+      },
+
       // ─────────── Habit → Health integration ───────────
       // Called by habitStore.toggleHabit when a habit with a `healthLink` is
       // marked complete. Queues a one-tap "log it in Health" prompt.
@@ -84,6 +205,13 @@ export const useHealthStore = create(
       // getExerciseLibrary, correlations — all keyed on `type`/`exercise`/`sets`)
       // keeps working unchanged for cardio/strength entries logged either way.
       logWorkout: (data, fulfillsPromptId) => {
+        let newPR = null;
+        if (data.type === 'strength' && data.exercise && data.sets?.length) {
+          const key = data.exercise.trim().toLowerCase();
+          const priorBest = Math.max(0, ...get().workouts.filter((w) => w.type === 'strength' && w.exercise?.trim().toLowerCase() === key).flatMap((w) => (w.sets || []).map((s) => Number(s.weight) || 0)));
+          const maxW = Math.max(0, ...data.sets.map((s) => Number(s.weight) || 0));
+          if (priorBest && maxW > priorBest) newPR = { exercise: data.exercise, weight: maxW };
+        }
         const w = {
           id: uid(),
           date: data.date || todayKey(),
@@ -108,6 +236,7 @@ export const useHealthStore = create(
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         get().checkBadges();
         toast(`Workout logged: ${w.exercise || w.type}`, 'success');
+        if (newPR) toast(`🏆 New PR: ${newPR.exercise} — ${newPR.weight}kg!`, 'success');
       },
 
       // A gym session = several exercises picked from the library, each with
@@ -140,6 +269,23 @@ export const useHealthStore = create(
           toast('Add at least one exercise with a set before finishing the session.', 'warning');
           return;
         }
+        // PR detection BEFORE inserting — only celebrates an exercise that
+        // already had a prior best on file (an exercise's very first-ever
+        // log isn't a "record", it's just a first log).
+        const priorBest = {};
+        for (const w of get().workouts.filter((w) => w.type === 'strength')) {
+          const key = w.exercise?.trim().toLowerCase();
+          if (!key) continue;
+          const maxW = Math.max(0, ...(w.sets || []).map((s) => Number(s.weight) || 0));
+          if (!priorBest[key] || maxW > priorBest[key]) priorBest[key] = maxW;
+        }
+        const newPRs = [];
+        for (const e of entries) {
+          const key = e.exercise?.trim().toLowerCase();
+          const maxW = Math.max(0, ...(e.sets || []).map((s) => Number(s.weight) || 0));
+          if (key && priorBest[key] && maxW > priorBest[key]) newPRs.push({ exercise: e.exercise, weight: maxW });
+        }
+
         set({ workouts: [...get().workouts, ...entries] });
         const award = useSkillStore.getState().awardXP;
         const link = HEALTH_LINK_SKILLS.strength;
@@ -149,6 +295,7 @@ export const useHealthStore = create(
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         get().checkBadges();
         toast(`Session logged: ${entries.length} exercise${entries.length !== 1 ? 's' : ''}`, 'success');
+        for (const pr of newPRs) toast(`🏆 New PR: ${pr.exercise} — ${pr.weight}kg!`, 'success');
       },
 
       deleteWorkout: (id) => set({ workouts: get().workouts.filter((w) => w.id !== id) }),
@@ -217,12 +364,13 @@ export const useHealthStore = create(
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
       // natural servings (e.g. amount=2, unit='egg') — see nutrition-db.js.
-      logMeal: (name, amount, unit = 'g', fulfillsPromptId, date) => {
+      logMeal: (name, amount, unit = 'g', fulfillsPromptId, date, time) => {
         const est = estimateMacros(name, amount, unit);
         const entryDate = date || todayKey();
         const entry = {
           id: uid(),
           date: entryDate,
+          time: time || nowHHMM(),
           name,
           amount: Number(amount) || (unit === 'g' ? 100 : 1),
           unit,
@@ -271,11 +419,16 @@ export const useHealthStore = create(
         const entry = {
           id: uid(),
           date: entryDate,
+          time: data.time || nowHHMM(),
           weightKg: Number(data.weightKg) || null,
           waistCm: Number(data.waistCm) || null,
           neckCm: Number(data.neckCm) || null,
           hipCm: Number(data.hipCm) || null,
           heightCm: Number(data.heightCm) || null,
+          chestCm: data.chestCm ? Number(data.chestCm) : null,
+          armCm: data.armCm ? Number(data.armCm) : null,
+          thighCm: data.thighCm ? Number(data.thighCm) : null,
+          calfCm: data.calfCm ? Number(data.calfCm) : null,
           ageYears: data.ageYears ? Number(data.ageYears) : null,
           sex: data.sex || 'male',
           absRating: data.absRating != null ? Number(data.absRating) : null,
@@ -317,6 +470,7 @@ export const useHealthStore = create(
 
       // ─────────── Water intake ───────────
       waterTargetMl: 2500,
+      waterLogs: [], // [{id, date, time, amountMl}] — timestamped events, for chrono-hydration gap analysis; recoveryLogs.waterMl stays the derived daily total for existing UI
       setWaterTarget: (ml) => set({ waterTargetMl: Number(ml) || 2500 }),
       logWater: (ml, date) => {
         const target = date || todayKey();
@@ -326,6 +480,12 @@ export const useHealthStore = create(
           set({ recoveryLogs: get().recoveryLogs.map((r) => (r.id === existing.id ? { ...r, waterMl: newTotal } : r)) });
         } else {
           set({ recoveryLogs: [...get().recoveryLogs, { id: uid(), date: target, activities: [], waterMl: newTotal, createdAt: Date.now() }] });
+        }
+        // Only positive intake amounts become a timestamped event — a
+        // negative adjustment (the Reset button) corrects the total, it
+        // isn't a real hydration event to include in gap analysis.
+        if (Number(ml) > 0) {
+          set({ waterLogs: [...get().waterLogs, { id: uid(), date: target, time: nowHHMM(), amountMl: Number(ml) }] });
         }
       },
       // date param lets the Recovery tab's day-stepper read a past day's total; defaults to today for existing callers.
@@ -361,6 +521,47 @@ export const useHealthStore = create(
         set({ cycleLogs: get().cycleLogs.map((c) => (c.id === id ? { ...c, endDate: endDate || todayKey() } : c)) }),
       deleteCycleLog: (id) => set({ cycleLogs: get().cycleLogs.filter((c) => c.id !== id) }),
       getCyclePhase: () => computeCyclePhase(get().cycleLogs.map((c) => c.date), null, todayKey()),
+
+      // Phase-aware coaching note + a training-load hint the active program
+      // (if any) can be read against — informational only, never auto-alters
+      // the stored program.
+      getCyclePhaseCoaching: () => {
+        const phase = get().getCyclePhase();
+        if (!phase) return null;
+        return { phase: phase.phase, ...cyclePhaseCoachingNote(phase.phase) };
+      },
+
+      // ─────────── Performance & Recovery (men's track — lifestyle/performance
+      // framing, explicitly non-medical: no hormonal/biomarker claims) ───────────
+      performanceLogs: [], // [{id, date, restingHr, vitality, mobility, notes}]
+      logPerformance: (data, date) => {
+        const target = date || todayKey();
+        const existing = get().performanceLogs.find((p) => p.date === target);
+        const entry = {
+          id: existing?.id || uid(), date: target,
+          restingHr: data.restingHr != null && data.restingHr !== '' ? Number(data.restingHr) : existing?.restingHr ?? null,
+          vitality: data.vitality != null && data.vitality !== '' ? Number(data.vitality) : existing?.vitality ?? null,
+          mobility: data.mobility != null && data.mobility !== '' ? Number(data.mobility) : existing?.mobility ?? null,
+          notes: data.notes ?? existing?.notes ?? '',
+          createdAt: existing?.createdAt || Date.now(),
+        };
+        set({ performanceLogs: [...get().performanceLogs.filter((p) => p.date !== target), entry] });
+        useSkillStore.getState().awardXP('health-discipline-lv1', 3, 'performance check-in logged');
+        toast(`Performance loggée${target === todayKey() ? '' : ` pour ${target}`}`, 'success');
+      },
+      deletePerformance: (id) => set({ performanceLogs: get().performanceLogs.filter((p) => p.id !== id) }),
+
+      // VO2max estimate (Uth–Sørensen–Overgaard–Pedersen) from the latest
+      // logged resting HR + derived age — a fitness proxy, not a lab measurement.
+      getVO2maxEstimate: () => {
+        const latest = [...get().performanceLogs].filter((p) => p.restingHr).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        const age = get().healthProfile.dobYear ? new Date().getFullYear() - get().healthProfile.dobYear : null;
+        if (!latest || !age) return null;
+        return { value: estimateVO2max({ age, restingHr: latest.restingHr }), date: latest.date, restingHr: latest.restingHr };
+      },
+
+      getPerformanceTrend: () =>
+        [...get().performanceLogs].sort((a, b) => (a.date < b.date ? -1 : 1)).map((p) => ({ date: p.date.slice(5), restingHr: p.restingHr, vitality: p.vitality, mobility: p.mobility })),
 
       // ─────────── Health goals ───────────
       addGoal: (goal) => {
@@ -605,7 +806,110 @@ export const useHealthStore = create(
         });
       },
 
-      // Cross-domain correlations (spec: sleep↔strength, stress↔spending, energy↔trading accuracy).
+      // ─────────── Body composition precision (multi-method BF%, FFMI, smoothing) ───────────
+      // Returns every BF% estimation method that has sufficient inputs on the
+      // latest bodyComp entry, so the UI can show a comparison row instead of
+      // trusting a single formula.
+      getBodyCompPrecision: () => {
+        const latest = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        if (!latest) return null;
+        const age = latest.ageYears;
+        const methods = {
+          navy: latest.bodyFatMethod === 'navy' ? latest.bodyFatPct : null,
+          ymca: bodyFatYMCA({ weightKg: latest.weightKg, waistCm: latest.waistCm, sex: latest.sex }),
+          deurenberg: age ? bodyFatDeurenberg({ weightKg: latest.weightKg, heightCm: latest.heightCm, age, sex: latest.sex }) : null,
+        };
+        const bestBf = methods.navy ?? methods.ymca ?? methods.deurenberg ?? latest.bodyFatPct;
+        const ffmi = bestBf != null ? estimateFFMI({ weightKg: latest.weightKg, heightCm: latest.heightCm, bodyFatPct: bestBf }) : null;
+        const leanMassKg = bestBf != null ? estimateLeanMassKg({ weightKg: latest.weightKg, bodyFatPct: bestBf }) : null;
+        return { methods, ffmi, leanMassKg, latestDate: latest.date };
+      },
+      // Smoothed (7-day moving average) trend for weight/bodyfat/waist, for
+      // overlaying on the existing trend LineChart alongside raw values.
+      getSmoothedBodyCompTrend: () => ({
+        weight: smoothedTrend(get().bodyComp, 'weightKg'),
+        bodyFat: smoothedTrend(get().bodyComp, 'bodyFatPct'),
+        waist: smoothedTrend(get().bodyComp, 'waistCm'),
+      }),
+
+      // ─────────── Real predictions + trend alerts (beyond today's snapshot) ───────────
+      getStrengthPredictions: () => {
+        const byExercise = {};
+        for (const w of get().workouts.filter((w) => w.type === 'strength')) {
+          for (const st of w.sets || []) {
+            const weight = Number(st.weight) || 0, reps = Number(st.reps) || 0;
+            if (!weight || !reps) continue;
+            const key = w.exercise?.trim();
+            if (!key) continue;
+            const oneRM = estimate1RM(weight, reps);
+            (byExercise[key] ||= []).push({ date: w.date, value: r1(oneRM) });
+          }
+        }
+        return Object.entries(byExercise)
+          .map(([exercise, history]) => {
+            const prediction = predictStrengthTrajectory(history);
+            return prediction ? { exercise, ...prediction, history } : null;
+          })
+          .filter(Boolean);
+      },
+
+      getTrendAlerts: () => {
+        const alerts = [];
+        const bodyComp = get().bodyComp;
+        const latest = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+
+        const weightSeries = bodyComp.filter((b) => b.weightKg).map((b) => ({ date: b.date, value: b.weightKg }));
+        const weightPlateau = detectPlateau(weightSeries);
+        const adherence = get().getProgramAdherence();
+        if (weightPlateau.plateaued) {
+          alerts.push({
+            id: 'weight-plateau', level: 'info',
+            message: `Ton poids est stable depuis ~2 semaines (variation < ${weightPlateau.weeklyPctChange}%/semaine).`,
+            explanation: explainPlateau({ plateauDetected: true, adherencePct: adherence?.percent }),
+          });
+        }
+        if (latest?.weightKg) {
+          const deficitAlert = checkAggressiveDeficit(bodyComp, latest.weightKg);
+          if (deficitAlert) alerts.push({ id: 'aggressive-deficit', ...deficitAlert });
+        }
+
+        // Strength plateaus, one per exercise with enough history.
+        for (const pred of get().getStrengthPredictions()) {
+          const plateau = detectPlateau(pred.history);
+          if (plateau.plateaued) {
+            alerts.push({
+              id: `strength-plateau-${pred.exercise}`, level: 'info',
+              message: `${pred.exercise} : stagnation depuis ~2 semaines (1RM estimé).`,
+              explanation: explainPlateau({ plateauDetected: true, adherencePct: adherence?.percent }),
+            });
+          }
+        }
+
+        // Trending overtraining risk over readiness history + volume history.
+        const readinessHistory = []; // no persisted daily readiness history — approximate via workouts volume trend only
+        const volumeHistory = get().getWorkoutVolumeSeries();
+        alerts.push(...checkTrendingOvertrainingRisk(readinessHistory, volumeHistory));
+
+        return alerts;
+      },
+
+      // ─────────── Chrono-Health (timing intelligence) ───────────
+      getChronoSummary: (date) => {
+        const target = date || todayKey();
+        const fastingWindows = computeFastingWindows(get().nutritionLogs, target);
+        const hydrationGaps = computeHydrationGaps(get().waterLogs, target);
+        const mealConsistency = computeMealTimingConsistency(get().nutritionLogs);
+        const sleepConsistency = computeSleepConsistency(useHabitStore.getState().energyLogs);
+        const todayLog = useHabitStore.getState().energyLogs.find((l) => l.date === target);
+        const napFlags = computeNapImpact(todayLog?.naps || []);
+        const alerts = deriveChronoAlerts({
+          fastingWindows, hydrationGaps, mealConsistency, sleepConsistency, napFlags,
+          waterReminderGapMin: get().healthProfile.reminderPrefs?.waterReminderGapMin ?? 180,
+        });
+        return { fastingWindows, hydrationGaps, mealConsistency, sleepConsistency, napFlags, alerts };
+      },
+
+      // ─────────── Cross-domain correlations (spec: sleep↔strength, stress↔spending, energy↔trading accuracy).
       getCorrelations: () => {
         const energyLogs = useHabitStore.getState().energyLogs;
         const byDate = (arr, keyFn) => Object.fromEntries(arr.map((x) => [x.date, keyFn(x)]));
@@ -914,12 +1218,65 @@ export const useHealthStore = create(
       getAnnualReport: () => get().getPeriodReport(365),
       getWeeklyDigest: () => get().getPeriodReport(7),
 
+      // This-week vs last-week deltas for the Dashboard's quick comparison
+      // chips — reuses getPeriodReport for "this week" and a manually offset
+      // 7-14-days-ago window for "last week" (getPeriodReport itself only
+      // supports a trailing-from-now window, not an offset one).
+      getWeekOverWeekDelta: () => {
+        const thisWeek = get().getWeeklyDigest();
+        const cutoffStart = Date.now() - 14 * dayMs;
+        const cutoffEnd = Date.now() - 7 * dayMs;
+        const inWindow = (d) => { const t = new Date(d).getTime(); return t >= cutoffStart && t < cutoffEnd; };
+        const energyLogs = useHabitStore.getState().energyLogs.filter((l) => inWindow(l.date));
+        const workouts = get().workouts.filter((w) => inWindow(w.date));
+        const avg = (arr, fn) => (arr.length ? r1(arr.reduce((a, x) => a + (fn(x) ?? 0), 0) / arr.length) : null);
+        const lastWeek = {
+          totalWorkouts: workouts.length,
+          avgSleepQuality: avg(energyLogs, (l) => l.sleepData?.sleepQualityScore),
+          avgEnergy: avg(energyLogs, (l) => l.energyStartLevel),
+        };
+        const delta = (a, b) => (a != null && b != null ? r1(a - b) : null);
+        return {
+          workouts: { current: thisWeek.totalWorkouts, delta: thisWeek.totalWorkouts - lastWeek.totalWorkouts },
+          avgSleepQuality: { current: thisWeek.avgSleepQuality, delta: delta(thisWeek.avgSleepQuality, lastWeek.avgSleepQuality) },
+          avgEnergy: { current: thisWeek.avgEnergy, delta: delta(thisWeek.avgEnergy, lastWeek.avgEnergy) },
+        };
+      },
+
+      // Trailing-N-day activity density (any Health log that day) — powers a
+      // GitHub-style contribution heatmap on the Dashboard.
+      getActivityHeatmap: (days = 90) => {
+        const counts = {};
+        const bump = (d) => { if (d) counts[d] = (counts[d] || 0) + 1; };
+        get().workouts.forEach((w) => bump(w.date));
+        get().nutritionLogs.forEach((n) => bump(n.date));
+        get().recoveryLogs.forEach((r) => bump(r.date));
+        get().checkins.forEach((c) => bump(c.date));
+        get().bodyComp.forEach((b) => bump(b.date));
+        const out = [];
+        for (let i = days - 1; i >= 0; i--) {
+          const d = todayKey(new Date(Date.now() - i * dayMs));
+          out.push({ date: d, count: counts[d] || 0 });
+        }
+        return out;
+      },
+
       resetAll: () =>
         set({
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: { enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null },
+          trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
+          healthProfile: {
+            version: 1, sex: null, dobYear: null, heightCm: null,
+            experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
+            equipmentAccess: [], injuries: [],
+            activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
+            cycleTrackingEnabled: null, maleTrackingEnabled: null,
+            reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
+            completedAt: null, lastRecomputedAt: null,
+          },
         }),
     }),
     { name: 'audax-health' }

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Plus, X } from 'lucide-react';
+import { Trash2, Plus, X, Sparkles, Dumbbell } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { CYCLE_PHASE_LABEL, CYCLE_PHASE_COLOR, estimateCycleLength } from '../../utils/health-science';
@@ -7,9 +8,10 @@ import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
 
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
+const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
@@ -19,7 +21,17 @@ export default function CycleTracking() {
   const [endDate, setEndDate] = useState(todayKey());
 
   const phase = getCyclePhase();
+  const coaching = getCyclePhaseCoaching();
+  const activeProgram = getActiveProgram();
   const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
+
+  // Symptom "severity" proxied by count of symptoms logged per entry — a
+  // simple, transparent trend without inventing a 1-10 severity scale nobody
+  // asked to fill in.
+  const symptomTrend = useMemo(
+    () => [...cycleLogs].sort((a, b) => (a.date < b.date ? -1 : 1)).map((c) => ({ date: c.date.slice(5), count: c.symptoms.length })),
+    [cycleLogs]
+  );
   const toggleSymptom = (s) => setSymptoms((arr) => (arr.includes(s) ? arr.filter((x) => x !== s) : [...arr, s]));
 
   const save = () => {
@@ -87,6 +99,23 @@ export default function CycleTracking() {
             {predictedNext && <span className="text-sm text-mute">· Next period expected ~{fmtDateShort(predictedNext)}</span>}
           </div>
         </Card>
+      )}
+
+      {coaching?.note && (
+        <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
+          <Sparkles size={16} className="text-accent shrink-0 mt-0.5" />
+          <div className="text-sm">
+            {coaching.note}
+            {activeProgram && coaching.trainingLoadHint && (
+              <div className="flex items-center gap-1.5 text-xs text-mute mt-1.5">
+                <Dumbbell size={12} />
+                {coaching.trainingLoadHint === 'push_ok' && "Ton programme actif peut être suivi tel quel — c'est une fenêtre souvent favorable."}
+                {coaching.trainingLoadHint === 'lighter_ok' && 'Si besoin, réduis légèrement charge/volume sur ton programme actif aujourd\'hui — ce n\'est pas une obligation.'}
+                {coaching.trainingLoadHint === 'moderate' && 'Ton programme actif reste adapté — reste simplement à l\'écoute si l\'énergie fluctue.'}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {openPeriod && (
@@ -159,6 +188,21 @@ export default function CycleTracking() {
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {symptomTrend.length > 1 && (
+        <Card title="Symptom Trend">
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={symptomTrend}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+              <Tooltip {...tooltipStyle} formatter={(v) => [`${v} symptôme(s)`, '']} />
+              <Bar dataKey="count" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="text-[11px] text-mute mt-2">Nombre de symptômes cochés par entrée — une tendance simple, pas une échelle de sévérité clinique.</p>
         </Card>
       )}
 

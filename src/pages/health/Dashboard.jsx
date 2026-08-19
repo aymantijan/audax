@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Award, Bell, BellOff, Sparkles, Send } from 'lucide-react';
+import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Award, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { readinessBand } from '../../utils/health-science';
 import { todayKey } from '../../utils/formatters';
 import { Card, Stat, Button, Input, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
+import QuickCheckin from './QuickCheckin';
 
 export default function Dashboard({ goTo }) {
-  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled } = useHealthStore();
+  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const today = todayKey();
   const todayLog = energyLogs.find((l) => l.date === today);
   const digest = getWeeklyDigest();
+  const trendAlerts = getTrendAlerts();
+  const weekDelta = getWeekOverWeekDelta();
+  const heatmap = getActivityHeatmap(90);
 
   const toggleReminders = async () => {
     if (reminders.enabled) return setRemindersEnabled(false);
@@ -67,6 +71,15 @@ export default function Dashboard({ goTo }) {
           </span>
         </Button>
       </div>
+
+      {!healthProfile.completedAt && (
+        <div className="flex items-center justify-between gap-3 border border-accent/40 bg-accent/10 rounded-lg px-4 py-3">
+          <span className="text-sm flex items-center gap-2"><ClipboardList size={16} /> Construis ton plan personnalisé (programme + nutrition) — 2 minutes.</span>
+          <Button className="!px-3 !py-1.5 text-xs shrink-0" onClick={() => goTo?.('setup')}>Commencer</Button>
+        </div>
+      )}
+
+      <QuickCheckin />
 
       <Card>
         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -129,6 +142,19 @@ export default function Dashboard({ goTo }) {
         </div>
       )}
 
+      {trendAlerts.length > 0 && (
+        <Card title="Alertes de tendance" action={<TrendingUp size={14} className="text-mute" />}>
+          <div className="space-y-2">
+            {trendAlerts.map((a) => (
+              <div key={a.id} className="text-sm">
+                <div className={a.level === 'warning' ? 'text-warning' : 'text-ink'}>{a.message}</div>
+                {a.explanation && <div className="text-xs text-mute mt-0.5">{a.explanation}</div>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Sleep" value={todayLog ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
         <Stat label="Energy" value={todayLog ? `${todayLog.energyStartLevel}/10` : '—'} />
@@ -156,11 +182,26 @@ export default function Dashboard({ goTo }) {
       <Card title="This Week" action={<Badge>Last 7 days</Badge>}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
           <div><div className="text-xs text-mute mb-1">Days logged</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
-          <div><div className="text-xs text-mute mb-1">Workouts</div><div className="text-lg font-semibold">{digest.totalWorkouts}</div></div>
-          <div><div className="text-xs text-mute mb-1">Avg sleep</div><div className="text-lg font-semibold">{digest.avgSleepQuality ?? '—'}/10</div></div>
-          <div><div className="text-xs text-mute mb-1">Avg energy</div><div className="text-lg font-semibold">{digest.avgEnergy ?? '—'}/10</div></div>
+          <div>
+            <div className="text-xs text-mute mb-1">Workouts</div>
+            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
+          </div>
+          <div>
+            <div className="text-xs text-mute mb-1">Avg sleep</div>
+            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
+          </div>
+          <div>
+            <div className="text-xs text-mute mb-1">Avg energy</div>
+            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
+          </div>
         </div>
       </Card>
+
+      {heatmap.some((h) => h.count > 0) && (
+        <Card title="Régularité — 90 derniers jours">
+          <ActivityHeatmap data={heatmap} />
+        </Card>
+      )}
 
       <Card title="Badges">
         <div className="flex flex-wrap gap-2">
@@ -171,6 +212,41 @@ export default function Dashboard({ goTo }) {
           ))}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function DeltaChip({ value }) {
+  if (value == null || value === 0) return null;
+  const up = value > 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${up ? 'text-good' : 'text-bad'}`}>
+      {up ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+      {Math.abs(value)}
+    </span>
+  );
+}
+
+// GitHub-style contribution heatmap over the trailing N days — cheap custom
+// grid (no chart lib needed), colored by log-density that day.
+function ActivityHeatmap({ data }) {
+  const weeks = [];
+  for (let i = 0; i < data.length; i += 7) weeks.push(data.slice(i, i + 7));
+  const max = Math.max(1, ...data.map((d) => d.count));
+  const colorFor = (count) => {
+    if (!count) return 'var(--border)';
+    const pct = Math.min(1, count / max);
+    return `color-mix(in srgb, var(--accent-primary) ${20 + pct * 80}%, transparent)`;
+  };
+  return (
+    <div className="flex gap-1 overflow-x-auto pb-1">
+      {weeks.map((week, wi) => (
+        <div key={wi} className="flex flex-col gap-1">
+          {week.map((d) => (
+            <div key={d.date} title={`${d.date}: ${d.count} log${d.count !== 1 ? 's' : ''}`} className="w-2.5 h-2.5 rounded-sm" style={{ background: colorFor(d.count) }} />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

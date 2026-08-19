@@ -29,7 +29,7 @@ const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border
 
 // jsPDF is loaded on demand (dynamic import) so its ~200KB (incl. html2canvas/
 // purify deps it pulls transitively) doesn't bloat the Health page's initial chunk.
-async function exportMonthlyReportPDF(bodyComp, prediction) {
+async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
   const { default: jsPDF } = await import('jspdf');
   const doc = new jsPDF();
   const monthAgo = Date.now() - 30 * 86400000;
@@ -39,7 +39,7 @@ async function exportMonthlyReportPDF(bodyComp, prediction) {
 
   let y = 20;
   doc.setFontSize(18);
-  doc.text('AUDAX — Monthly Body Composition Report', 14, y);
+  doc.text('AUDAX — Monthly Health Report', 14, y);
   y += 8;
   doc.setFontSize(10);
   doc.setTextColor(120);
@@ -64,6 +64,23 @@ async function exportMonthlyReportPDF(bodyComp, prediction) {
   for (const line of lines) {
     doc.text(line, 14, y);
     y += 6;
+  }
+
+  if (extra.program || extra.plan) {
+    y += 6;
+    doc.setFontSize(13);
+    doc.text('Training & Nutrition Plan', 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    const planLines = [];
+    if (extra.program) {
+      planLines.push(`Program: ${extra.program.splitType.replace('_', ' ')}, ${extra.program.daysPerWeek}x/week`);
+      if (extra.adherence?.percent != null) planLines.push(`Adherence: ${extra.adherence.percent}% of planned exercises logged (week ${extra.adherence.weeksElapsed}/${extra.adherence.totalWeeks})`);
+    }
+    if (extra.plan) {
+      planLines.push(`Nutrition target: ${extra.plan.targetKcal} kcal/day (${extra.plan.targetMacros.proteinG}P / ${extra.plan.targetMacros.carbsG}C / ${extra.plan.targetMacros.fatG}F)`);
+    }
+    for (const line of planLines) { doc.text(line, 14, y); y += 6; }
   }
 
   y += 6;
@@ -92,8 +109,10 @@ async function exportMonthlyReportPDF(bodyComp, prediction) {
 }
 
 export default function BodyComposition() {
-  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction } = useHealthStore();
+  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveNutritionPlan, getProgramAdherence } = useHealthStore();
   const latest = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+  const precision = getBodyCompPrecision();
+  const smoothed = getSmoothedBodyCompTrend();
 
   const [form, setForm] = useState({
     weightKg: latest?.weightKg || '',
@@ -101,6 +120,10 @@ export default function BodyComposition() {
     neckCm: latest?.neckCm || '',
     hipCm: latest?.hipCm || '',
     heightCm: latest?.heightCm || '',
+    chestCm: latest?.chestCm || '',
+    armCm: latest?.armCm || '',
+    thighCm: latest?.thighCm || '',
+    calfCm: latest?.calfCm || '',
     ageYears: latest?.ageYears || '',
     sex: latest?.sex || 'male',
     absRating: latest?.absRating || 5,
@@ -172,6 +195,18 @@ export default function BodyComposition() {
               <Input type="number" step="0.1" value={form.hipCm} onChange={(e) => setForm({ ...form, hipCm: e.target.value })} />
             </Field>
           )}
+          <Field label="Chest (cm, optional)">
+            <Input type="number" step="0.1" value={form.chestCm} onChange={(e) => setForm({ ...form, chestCm: e.target.value })} />
+          </Field>
+          <Field label="Arm (cm, optional)">
+            <Input type="number" step="0.1" value={form.armCm} onChange={(e) => setForm({ ...form, armCm: e.target.value })} />
+          </Field>
+          <Field label="Thigh (cm, optional)">
+            <Input type="number" step="0.1" value={form.thighCm} onChange={(e) => setForm({ ...form, thighCm: e.target.value })} />
+          </Field>
+          <Field label="Calf (cm, optional)">
+            <Input type="number" step="0.1" value={form.calfCm} onChange={(e) => setForm({ ...form, calfCm: e.target.value })} />
+          </Field>
           <Field label={`Visual abs rating: ${form.absRating}/10`}>
             <input type="range" min="1" max="10" value={form.absRating} onChange={(e) => setForm({ ...form, absRating: Number(e.target.value) })} className="w-full mt-2" />
           </Field>
@@ -209,6 +244,27 @@ export default function BodyComposition() {
               <div className="text-xl font-bold">{latest.waistCm ?? '—'} cm</div>
             </div>
           </div>
+        </Card>
+      )}
+
+      {precision && (Object.values(precision.methods).some((v) => v != null) || precision.ffmi) && (
+        <Card title="Précision — méthodes multiples">
+          <div className="grid grid-cols-3 gap-3 text-center mb-3">
+            {[['navy', 'Navy'], ['ymca', 'YMCA'], ['deurenberg', 'Deurenberg']].map(([key, label]) => (
+              <div key={key} className="bg-surface border border-line rounded-lg p-2.5">
+                <div className="text-[11px] text-mute mb-1">{label}</div>
+                <div className="text-sm font-semibold">{precision.methods[key] != null ? `${precision.methods[key]}%` : '—'}</div>
+              </div>
+            ))}
+          </div>
+          {precision.ffmi && (
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div><div className="text-xs text-mute mb-1">Masse maigre</div><div className="text-sm font-semibold">{precision.leanMassKg} kg</div></div>
+              <div><div className="text-xs text-mute mb-1">FFMI</div><div className="text-sm font-semibold">{precision.ffmi.ffmi}</div></div>
+              <div><div className="text-xs text-mute mb-1">FFMI normalisé</div><div className="text-sm font-semibold">{precision.ffmi.normalizedFfmi}</div></div>
+            </div>
+          )}
+          <p className="text-[11px] text-mute mt-3">Le FFMI (masse maigre normalisée par la taille) est l'indicateur le plus fiable pour suivre la construction musculaire dans le temps — un FFMI qui monte à BF% stable ou en baisse = vrai gain musculaire.</p>
         </Card>
       )}
 
@@ -254,7 +310,7 @@ export default function BodyComposition() {
         </Card>
       )}
 
-      <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction)}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
+      <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: getActiveProgram(), plan: getActiveNutritionPlan(), adherence: getProgramAdherence() })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
         <div className="text-xs text-mute mb-3">Confidence: {prediction.confidence}% (based on days logged) · Efficiency multiplier: {prediction.efficiency}%</div>
         <div className="grid grid-cols-3 gap-3 text-center mb-3">
           {['conservative', 'realistic', 'optimistic'].map((k) => (
@@ -297,15 +353,30 @@ export default function BodyComposition() {
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="weight" stroke="#00d9ff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="bodyFat" stroke="#ff6b6b" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="waist" stroke="#00d97f" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="weight" stroke="#00d9ff" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Weight (raw)" />
+              <Line type="monotone" dataKey="bodyFat" stroke="#ff6b6b" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Body fat (raw)" />
+              <Line type="monotone" dataKey="waist" stroke="#00d97f" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Waist (raw)" />
+              <Line type="monotone" data={smoothed.weight.map((e) => ({ date: e.date.slice(5), weightMA: e.weightKgMA }))} dataKey="weightMA" stroke="#00d9ff" strokeWidth={2.5} dot={false} name="Weight (7j MA)" />
+              <Line type="monotone" data={smoothed.bodyFat.map((e) => ({ date: e.date.slice(5), bodyFatMA: e.bodyFatPctMA }))} dataKey="bodyFatMA" stroke="#ff6b6b" strokeWidth={2.5} dot={false} name="Body fat (7j MA)" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
           <EmptyState>Log a few entries to see trends.</EmptyState>
         )}
       </Card>
+
+      {bodyComp.some((b) => b.photo) && (
+        <Card title="Photo Timeline">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+            {[...bodyComp].filter((b) => b.photo).sort((a, b) => (a.date < b.date ? -1 : 1)).map((b) => (
+              <div key={b.id} className="text-center">
+                <img src={b.photo} alt={b.date} className="w-full aspect-square rounded-lg object-cover border border-line" />
+                <div className="text-[10px] text-mute mt-1">{b.date.slice(5)}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {bodyComp.length > 0 && (
         <Card title="History">

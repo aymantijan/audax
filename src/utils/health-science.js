@@ -266,6 +266,23 @@ export function estimateCycleLength(sortedDates) {
 export const CYCLE_PHASE_LABEL = { menstrual: 'Menstrual', follicular: 'Follicular', ovulation: 'Ovulation', luteal: 'Luteal', unknown: 'Unknown' };
 export const CYCLE_PHASE_COLOR = { menstrual: 'var(--error)', follicular: 'var(--accent-primary)', ovulation: 'var(--success)', luteal: 'var(--warning)', unknown: 'var(--text-secondary)' };
 
+// ---- Cycle-phase-aware coaching notes ----
+// Informational framing only (Reed & Carr 2018 phase definitions, same as
+// computeCyclePhase above) — never prescriptive, never a claim about what any
+// individual "should" do. Training-load note is a suggestion to consider, not
+// an instruction to alter a program.
+export const CYCLE_PHASE_COACHING = {
+  menstrual: { note: "Phase menstruelle : l'énergie et la tolérance à l'effort peuvent être plus basses pour certaines personnes — ajuste l'intensité si tu en ressens le besoin, ce n'est pas un manque de discipline.", trainingLoadHint: 'lighter_ok' },
+  follicular: { note: "Phase folliculaire : l'énergie et la récupération tendent à être plus favorables — souvent une bonne fenêtre pour pousser l'intensité si le reste des signaux (sommeil, stress) est bon.", trainingLoadHint: 'push_ok' },
+  ovulation: { note: 'Phase ovulatoire : pic de performance rapporté chez certaines personnes — reste à l\'écoute de tes propres signaux plutôt que de la généralité.', trainingLoadHint: 'push_ok' },
+  luteal: { note: 'Phase lutéale : besoin calorique légèrement plus élevé et fluctuations d\'humeur/énergie sont normaux — ce n\'est pas un signal d\'échec si les performances varient.', trainingLoadHint: 'moderate' },
+  unknown: { note: null, trainingLoadHint: null },
+};
+
+export function cyclePhaseCoachingNote(phase) {
+  return CYCLE_PHASE_COACHING[phase] || CYCLE_PHASE_COACHING.unknown;
+}
+
 // ---- Health goal progress ----
 // Three goal types (weight, strength-PR, sleep-quality), each reusing data the
 // app already tracks rather than asking for anything new. `weeklyRateKg` (the
@@ -311,6 +328,80 @@ export function computeGoalProgress(goal, { startWeightKg, currentWeightKg, curr
     return { percent: r1(percent), current: r1(current), label: `${goal.targetPerWeek} workouts/week`, etaWeeks: null };
   }
   return { percent: 0, current: null, label: '', etaWeeks: null };
+}
+
+// ---- Additional body-fat % estimation methods (shown alongside Navy, not
+// instead of it — each has different required inputs, so the UI can show
+// whichever subset the user has actually measured) ----
+
+// YMCA method (weight + waist only, no tape-around-neck needed) — coarser
+// than Navy but useful as a quick cross-check or when neck wasn't measured.
+export function bodyFatYMCA({ weightKg, waistCm, sex }) {
+  if (!weightKg || !waistCm) return null;
+  const weightLb = weightKg / 0.453592;
+  const waistIn = waistCm / 2.54;
+  const bf = sex === 'female'
+    ? ((waistIn * 4.15) - (weightLb * 0.082) - 76.76) / weightLb * 100 // approximation for female, same family of formula
+    : ((waistIn * 4.15) - (weightLb * 0.082) - 98.42) / weightLb * 100;
+  if (!Number.isFinite(bf)) return null;
+  return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
+}
+
+// Deurenberg et al. 1991 — BMI-based estimate, needs only weight/height/age/
+// sex (no tape measure at all). Systematically less precise than circumference
+// methods but a useful "at least something" fallback when no measurements exist.
+export function bodyFatDeurenberg({ weightKg, heightCm, age, sex }) {
+  if (!weightKg || !heightCm || !age) return null;
+  const bmi = weightKg / ((heightCm / 100) ** 2);
+  const sexFactor = sex === 'female' ? 0 : 1;
+  const bf = 1.20 * bmi + 0.23 * age - 10.8 * sexFactor - 5.4;
+  return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
+}
+
+// Fat-Free Mass Index (Kouri et al. 1995) — height-normalized lean mass, the
+// standard natural-lifter muscularity index. A rising FFMI at stable/falling
+// body-fat % is the real "am I building muscle" signal — more meaningful than
+// watching total bodyweight alone, which conflates fat and muscle changes.
+export function estimateFFMI({ weightKg, heightCm, bodyFatPct }) {
+  if (!weightKg || !heightCm || bodyFatPct == null) return null;
+  const leanKg = weightKg * (1 - bodyFatPct / 100);
+  const heightM = heightCm / 100;
+  const ffmi = leanKg / (heightM * heightM);
+  // Normalized FFMI adjusts for height so a taller/shorter lifter compares fairly.
+  const normalizedFfmi = ffmi + 6.1 * (1.8 - heightM);
+  return { ffmi: r1(ffmi), normalizedFfmi: r1(normalizedFfmi), leanMassKg: r1(leanKg) };
+}
+
+export function estimateLeanMassKg({ weightKg, bodyFatPct }) {
+  if (!weightKg || bodyFatPct == null) return null;
+  return r1(weightKg * (1 - bodyFatPct / 100));
+}
+
+// Simple trailing moving average over a date-sorted array of {date, [key]}
+// entries — smooths day-to-day noise (water retention, gut content, timing)
+// out of weight/body-fat/waist trend lines so the underlying trend reads
+// clearly. Returns entries augmented with a `${key}MA` field; entries with
+// no value for `key` are skipped from the average (no synthetic zero-fill).
+export function smoothedTrend(entries, key, windowDays = 7) {
+  const sorted = [...entries]
+    .filter((e) => e[key] != null)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  return sorted.map((entry, i) => {
+    const window = sorted.slice(Math.max(0, i - windowDays + 1), i + 1);
+    const avg = window.reduce((a, e) => a + e[key], 0) / window.length;
+    return { ...entry, [`${key}MA`]: r1(avg) };
+  });
+}
+
+// ---- Cardiovascular fitness estimate from a logged cardio session ----
+// Uth–Sørensen–Overgaard–Pedersen (2004) non-exercise-test estimate:
+// VO2max ≈ 15.3 × (HRmax / HRrest). Needs a resting HR and either a known/
+// estimated max HR (220 - age is the standard field estimate, not clinical).
+export function estimateVO2max({ age, restingHr }) {
+  if (!age || !restingHr) return null;
+  const hrMax = 220 - age;
+  const vo2max = 15.3 * (hrMax / restingHr);
+  return Math.round(vo2max * 10) / 10;
 }
 
 export function correlationStrength(r) {
