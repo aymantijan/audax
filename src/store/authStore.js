@@ -24,6 +24,11 @@ function withDefaults(user) {
     // stays null rather than being silently assigned one.
     dobYear: user.dobYear ?? null,
     heightCm: user.heightCm ?? null,
+    // Which top-level sections show in the nav — asked once during
+    // Onboarding.jsx, editable later in Settings. Existing accounts default
+    // both to true (unchanged behavior) rather than being retroactively
+    // hidden from a section they were already using.
+    enabledModules: { trading: user.enabledModules?.trading ?? true, deals: user.enabledModules?.deals ?? true },
   };
 }
 
@@ -49,6 +54,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
+            enabledModules: { trading: true, deals: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

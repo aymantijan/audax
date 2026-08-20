@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles,
+  Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -33,9 +33,11 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const addHabit = useHabitStore((s) => s.addHabit);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(() => new Set(STARTER_HABITS.slice(0, 4).map((h) => h.name)));
+  const [modules, setModules] = useState(() => ({ trading: user?.enabledModules?.trading ?? true, deals: user?.enabledModules?.deals ?? true }));
 
   const toggle = (name) =>
     setSelected((s) => {
@@ -45,6 +47,7 @@ export default function Onboarding() {
     });
 
   const finish = () => {
+    updateProfile({ enabledModules: modules });
     for (const habit of STARTER_HABITS) {
       if (selected.has(habit.name)) addHabit(habit);
     }
@@ -88,6 +91,43 @@ export default function Onboarding() {
 
         {step === 1 && (
           <Card>
+            <h1 className="text-xl font-bold mb-1">Which sections do you want?</h1>
+            <p className="text-mute text-sm mb-5">Trading and Deals stay off your nav if you don't need them — you can turn them back on anytime in Settings.</p>
+            <div className="space-y-2">
+              {[
+                { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Multi-account journal, risk management, psychology tracking.' },
+                { key: 'deals', icon: Handshake, title: 'Deals', text: 'Pipeline/deal tracking for PE, GE, VC, RBF work.' },
+              ].map((m) => {
+                const on = modules[m.key];
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setModules((s) => ({ ...s, [m.key]: !s[m.key] }))}
+                    className={`w-full flex items-start gap-3 text-left border rounded-lg px-4 py-3 cursor-pointer transition-colors ${
+                      on ? 'border-accent bg-accent/10' : 'border-line hover:text-ink'
+                    }`}
+                  >
+                    <m.icon size={18} className={`shrink-0 mt-0.5 ${on ? 'text-accent' : 'text-mute'}`} />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium flex items-center gap-1.5">{m.title} {on && <Check size={13} className="text-accent" />}</div>
+                      <div className="text-xs text-mute">{m.text}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-5">
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(0)}>Back</Button>
+              <Button className="flex-1" onClick={() => setStep(2)}>
+                <span className="flex items-center justify-center gap-2">Next <ArrowRight size={15} /></span>
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {step === 2 && (
+          <Card>
             <h1 className="text-xl font-bold mb-1">Pick your starter habits</h1>
             <p className="text-mute text-sm mb-5">These log in one tap from "Aujourd'hui" every day. You can add more or edit these later in Habits.</p>
             <div className="flex flex-wrap gap-2">
@@ -108,15 +148,15 @@ export default function Onboarding() {
               })}
             </div>
             <div className="flex gap-2 mt-5">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(0)}>Back</Button>
-              <Button className="flex-1" onClick={() => setStep(2)}>
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Back</Button>
+              <Button className="flex-1" onClick={() => setStep(3)}>
                 <span className="flex items-center justify-center gap-2">Next ({selected.size} selected) <ArrowRight size={15} /></span>
               </Button>
             </div>
           </Card>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <Card>
             <div className="text-center py-4">
               <Sparkles size={32} className="text-accent mx-auto mb-3" />
@@ -131,7 +171,7 @@ export default function Onboarding() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Back</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(2)}>Back</Button>
               <Button className="flex-1" onClick={finish}>Go to Aujourd'hui</Button>
             </div>
           </Card>

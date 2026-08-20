@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, GitBranch, Trophy, Settings } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
 // links + hamburger stay the desktop/tablet pattern). Five most-opened
@@ -27,6 +28,11 @@ const MORE_ITEMS = [
 
 export default function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const tradingEnabled = user?.enabledModules?.trading ?? true;
+  const dealsEnabled = user?.enabledModules?.deals ?? true;
+  const primaryTabs = PRIMARY_TABS.filter((t) => t.to !== '/trading' || tradingEnabled);
+  const moreItems = MORE_ITEMS.filter((t) => t.to !== '/deals' || dealsEnabled);
 
   const tabClass = ({ isActive }) =>
     `flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-[10px] cursor-pointer ${
@@ -36,7 +42,7 @@ export default function MobileTabBar() {
   return (
     <>
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-line flex items-stretch" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {PRIMARY_TABS.map((t) => (
+        {primaryTabs.map((t) => (
           <NavLink key={t.to} to={t.to} end={t.end} className={tabClass}>
             <t.icon size={19} />
             {t.label}
@@ -63,7 +69,7 @@ export default function MobileTabBar() {
               </button>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              {MORE_ITEMS.map((item) => (
+              {moreItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}

@@ -23,6 +23,14 @@ export default function Navbar() {
   const { user, updateProfile, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = user?.theme || 'dark';
+  // Trading/Deals are the only two sections a user can opt out of (chosen at
+  // signup in Onboarding.jsx, editable in Settings) — `?? true` so accounts
+  // that predate this preference still see them.
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.to === '/trading') return user?.enabledModules?.trading ?? true;
+    if (item.to === '/deals') return user?.enabledModules?.deals ?? true;
+    return true;
+  });
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -54,7 +62,7 @@ export default function Navbar() {
 
         {/* Center: nav links */}
         <div className="hidden md:flex items-center gap-7">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
               {item.label}
             </NavLink>
@@ -93,7 +101,7 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden bg-surface border-b border-line">
           <div className="flex flex-col p-3 gap-1">
-            {[...NAV_ITEMS, { to: '/settings', label: 'Settings' }].map((item) => (
+            {[...navItems, { to: '/settings', label: 'Settings' }].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

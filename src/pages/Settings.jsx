@@ -300,6 +300,23 @@ export default function SettingsPage() {
         </Button>
       </Card>
 
+      <Card title="Sections visibles">
+        <p className="text-sm text-mute mb-3">Trading et Deals peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
+        <div className="flex flex-wrap gap-3">
+          {[{ key: 'trading', label: 'Trading' }, { key: 'deals', label: 'Deals' }].map((m) => (
+            <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={user?.enabledModules?.[m.key] ?? true}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, deals: true }), [m.key]: e.target.checked } })}
+                className="cursor-pointer"
+              />
+              {m.label}
+            </label>
+          ))}
+        </div>
+      </Card>
+
       <Card title="Mes aliments & prix">
         <p className="text-sm text-mute mb-4">
           Le prix réel que tu paies pour chaque aliment — propre à toi, pas une moyenne générique. Dès qu'un prix est renseigné, le générateur de plan nutritionnel privilégie tes aliments les moins chers en premier.
