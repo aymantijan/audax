@@ -86,7 +86,7 @@ export function CuratedCardioLogger() {
 // unless a weight is entered — the "weight" field is then added weight, not
 // a replacement.
 export function CuratedGymLogger() {
-  const { getActiveCuratedProgram, getNextGymSession, logGymSession, markCuratedSessionDone, getCyclePhaseCoaching } = useHealthStore();
+  const { getActiveCuratedProgram, getNextGymSession, getSessionOptions, getEffectiveExercises, logGymSession, markCuratedSessionDone, getCyclePhaseCoaching } = useHealthStore();
   const program = getActiveCuratedProgram();
   const cycleCoaching = getCyclePhaseCoaching();
   // Rotation-based, not calendar-day-based — the next session is whatever
@@ -94,7 +94,16 @@ export function CuratedGymLogger() {
   // day (e.g. training Push a day late) never leaves nothing prescribed or
   // skips a session in the rotation.
   const next = getNextGymSession();
-  const exercises = next?.session?.exercises || [];
+  const sessionOptions = getSessionOptions();
+  // Auto-prescribed by default, but the rotation is a GUESS, not a lock —
+  // real training doesn't always follow it (e.g. trained legs when the
+  // rotation assumed pull). Overriding here logs the session actually done
+  // AND advances the rotation from that key, so the next prescription stays
+  // sensible instead of repeating the same guess forever.
+  const [overrideSessionKey, setOverrideSessionKey] = useState('');
+  const activeSessionKey = overrideSessionKey || next?.sessionKey;
+  const activeSession = overrideSessionKey && program ? getEffectiveExercises(program.id, overrideSessionKey) : next?.session;
+  const exercises = activeSession?.exercises || [];
 
   const [checked, setChecked] = useState(() => new Set());
   // Per exercise, an array of {reps, weight, rpe, form} — one entry per
@@ -119,7 +128,9 @@ export function CuratedGymLogger() {
   // getNextGymSession() advances after a submit (markCuratedSessionDone), but
   // this component doesn't remount — without this, `sets` would still be
   // keyed by the PREVIOUS session's exercise names, and every new exercise
-  // would read as undefined (crash on .map/.every below).
+  // would read as undefined (crash on .map/.every below). Keyed on
+  // activeSessionKey (not just next?.sessionKey) so switching the "Changer
+  // de séance" override also resets to the newly-selected session's fields.
   useEffect(() => {
     setChecked(new Set());
     setSets(Object.fromEntries(exercises.map((e) => [e.name, makeSets(e.setsReps)])));
@@ -128,6 +139,14 @@ export function CuratedGymLogger() {
     setSessionQuality(7);
     setNotes('');
     setLighterMode(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSessionKey]);
+
+  // Once the rotation itself advances (after a submit), drop back to
+  // auto-prescribed for the NEXT session — the override was for that one
+  // out-of-sequence day, not a standing preference.
+  useEffect(() => {
+    setOverrideSessionKey('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [next?.sessionKey]);
 
@@ -170,9 +189,9 @@ export function CuratedGymLogger() {
         sets: effectiveSetsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
       })),
       quality: sessionQuality,
-      notes: [notes, next.session.isVariant ? '(variante)' : '', lighterMode ? '(séance allégée -1 série/exercice)' : ''].filter(Boolean).join(' — '),
+      notes: [notes, activeSession.isVariant ? '(variante)' : '', lighterMode ? '(séance allégée -1 série/exercice)' : ''].filter(Boolean).join(' — '),
     });
-    markCuratedSessionDone(program.id, next.sessionKey);
+    markCuratedSessionDone(program.id, activeSessionKey);
     setChecked(new Set());
   };
 
@@ -182,10 +201,25 @@ export function CuratedGymLogger() {
   // reps, plus a weight unless it's a bodyweight movement.
   const canSubmit = allChecked && exercises.every((e) => effectiveSetsFor(e).every((s) => s.reps && (e.bodyweightExercise || s.weight)));
 
-  if (!program || !exercises.length) return null;
+  if (!program || !next || !exercises.length) return null;
 
   return (
-    <Card title={`Prochaine séance — ${next.session.label}${next.session.isVariant ? ' (variante)' : ''}`}>
+    <Card
+      title={`${overrideSessionKey ? 'Séance' : 'Prochaine séance'} — ${activeSession.label}${activeSession.isVariant ? ' (variante)' : ''}`}
+      action={
+        sessionOptions.length > 1 && (
+          <Select
+            className="!py-1 !text-xs w-40"
+            value={overrideSessionKey || next.sessionKey}
+            onChange={(e) => setOverrideSessionKey(e.target.value === next.sessionKey ? '' : e.target.value)}
+            options={sessionOptions.map((o) => ({ value: o.sessionKey, label: o.label }))}
+          />
+        )
+      }
+    >
+      {overrideSessionKey && (
+        <p className="text-[11px] text-mute mb-2">Séance changée manuellement — la rotation avancera à partir de "{activeSession.label}" au lieu de la prescription automatique.</p>
+      )}
       {cycleCoaching?.trainingLoadHint === 'lighter_ok' && (
         <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer border border-line rounded-lg px-3 py-2 bg-surface">
           <input type="checkbox" checked={lighterMode} onChange={(e) => setLighterMode(e.target.checked)} />

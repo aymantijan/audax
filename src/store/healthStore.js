@@ -283,6 +283,21 @@ export const useHealthStore = create(
         return { sessionKey, session: effective, phaseKey };
       },
 
+      // Every session key in the active program's rotation, with its display
+      // label — lets the logger UI offer "log a different session than the
+      // one auto-prescribed" (e.g. training legs a day off-cycle from what
+      // the rotation assumed). markCuratedSessionDone then advances the
+      // rotation from whichever key was ACTUALLY logged, not from
+      // getNextGymSession()'s guess — so a one-off reorder doesn't leave the
+      // prescription stuck repeating the same session forever.
+      getSessionOptions: () => {
+        const program = get().getActiveCuratedProgram();
+        if (!program) return [];
+        const phaseKey = resolvePhaseKey(program);
+        const rotation = getSessionRotation(program, phaseKey);
+        return rotation.map((key) => ({ sessionKey: key, label: get().getEffectiveExercises(program.id, key)?.label || key }));
+      },
+
       // [{id, curatedProgramId, sessionKey, label, exercises:[{name,setsReps,rest,note}], active, createdAt}]
       // One active variant at most per (curatedProgramId, sessionKey) pair —
       // saving a new one deactivates any prior variant for that same session.
