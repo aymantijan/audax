@@ -110,11 +110,12 @@ function SessionBlock({ programId, sessionKey }) {
 }
 
 export default function Programs() {
-  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getCuratedProgramAdherence, programSchedule } = useHealthStore();
+  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getCuratedProgramAdherence, getProgramProgressionSummary, programSchedule } = useHealthStore();
   const [viewingId, setViewingId] = useState(activeCuratedProgramId);
   const [onboardingFor, setOnboardingFor] = useState(null); // curated program object, or null
   const viewing = viewingId ? CURATED_PROGRAMS.find((p) => p.id === viewingId) : null;
   const adherence = getCuratedProgramAdherence();
+  const progression = getProgramProgressionSummary();
 
   const startOnboarding = (program) => {
     setActiveCuratedProgram(program.id);
@@ -193,6 +194,35 @@ export default function Programs() {
       {isActive && adherence?.plannedCount > 0 && (
         <SectionCard title="Adhérence cette semaine">
           <div className="text-sm">{adherence.matchedCount}/{adherence.plannedCount} exercices planifiés loggés cette semaine ({adherence.percent}%)</div>
+        </SectionCard>
+      )}
+
+      {isActive && progression && (progression.nutritionAdherence || progression.weightTrend) && (
+        <SectionCard title="Progression vers l'objectif (14 derniers jours)">
+          <p className="text-xs text-mute mb-3 italic">"{progression.objective}"</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {progression.nutritionAdherence ? (
+              <div className="text-sm space-y-1">
+                <div className="text-xs text-mute uppercase tracking-wide mb-1">Nutrition</div>
+                <div>{progression.nutritionAdherence.proteinMetPercent}% des jours loggés avec objectif protéine atteint</div>
+                <div className="text-xs text-mute">
+                  Moyenne {progression.nutritionAdherence.avgKcal} kcal/j vs cible {progression.nutritionAdherence.targetKcal} kcal/j
+                  ({progression.nutritionAdherence.daysLogged} jour{progression.nutritionAdherence.daysLogged !== 1 ? 's' : ''} loggé{progression.nutritionAdherence.daysLogged !== 1 ? 's' : ''})
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-mute">Nutrition : pas assez de repas loggés sur la période pour évaluer l'adhérence.</div>
+            )}
+            {progression.weightTrend ? (
+              <div className="text-sm space-y-1">
+                <div className="text-xs text-mute uppercase tracking-wide mb-1">Poids</div>
+                <div>{progression.weightTrend.deltaKg > 0 ? '+' : ''}{progression.weightTrend.deltaKg}kg sur la période</div>
+                <div className="text-xs text-mute">{progression.weightTrend.entriesLogged} pesées loggées</div>
+              </div>
+            ) : (
+              <div className="text-xs text-mute">Poids : au moins 2 pesées sur 14 jours nécessaires pour voir une tendance.</div>
+            )}
+          </div>
         </SectionCard>
       )}
 

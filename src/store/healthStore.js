@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { estimateMacros, foodQualityScore } from '../utils/nutrition-db';
+import { getFoodMicros } from '../utils/food-micronutrients';
 import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
@@ -313,6 +314,48 @@ export const useHealthStore = create(
         return { plannedCount: plannedNames.size, matchedCount: matched, percent: plannedNames.size ? r1((matched / plannedNames.size) * 100) : null };
       },
 
+      // Connects the active program's stated objective (e.g. "maintenir 15%
+      // bodyfat") to what the user has actually been doing over the last 14
+      // days — nutrition-plan adherence (protein target hit rate, avg kcal
+      // vs. target) and body-comp trend — rather than the objective sitting
+      // as static text nothing else reads. Returns null pieces (not zeros)
+      // when there isn't enough data yet, so the UI can say "pas assez de
+      // données" instead of showing a misleading 0%.
+      getProgramProgressionSummary: () => {
+        const program = get().getActiveCuratedProgram();
+        if (!program) return null;
+        const cutoffKey = todayKey(new Date(Date.now() - 14 * dayMs));
+
+        const plan = get().getActiveNutritionPlan();
+        const recentNutrition = get().nutritionLogs.filter((n) => n.date >= cutoffKey);
+        const loggedDays = [...new Set(recentNutrition.map((n) => n.date))];
+        let nutritionAdherence = null;
+        if (plan && loggedDays.length) {
+          const kcalByDay = {};
+          const proteinMetDays = new Set();
+          for (const n of recentNutrition) {
+            kcalByDay[n.date] = (kcalByDay[n.date] || 0) + n.kcal;
+            if (n.proteinTargetMet) proteinMetDays.add(n.date);
+          }
+          const avgKcal = Object.values(kcalByDay).reduce((a, v) => a + v, 0) / loggedDays.length;
+          nutritionAdherence = {
+            daysLogged: loggedDays.length,
+            proteinMetPercent: r1((proteinMetDays.size / loggedDays.length) * 100),
+            avgKcal: Math.round(avgKcal),
+            targetKcal: plan.targetKcal,
+          };
+        }
+
+        const recentBodyComp = get().bodyComp.filter((b) => b.date >= cutoffKey).sort((a, b) => (a.date < b.date ? -1 : 1));
+        let weightTrend = null;
+        if (recentBodyComp.length >= 2) {
+          const deltaKg = recentBodyComp[recentBodyComp.length - 1].weightKg - recentBodyComp[0].weightKg;
+          weightTrend = { deltaKg: r1(deltaKg), entriesLogged: recentBodyComp.length };
+        }
+
+        return { objective: program.objective, nutritionAdherence, weightTrend };
+      },
+
       // ─────────── Program schedule (onboarding-generated, per active curated program) ───────────
       // {curatedProgramId, generatedAt, phaseKey, freeWindows, sleepWindow,
       //  mealsPerDay, days: {...program-schedule-generator.js output...},
@@ -362,13 +405,14 @@ export const useHealthStore = create(
         const profile = get().healthProfile;
         const globalUser = useAuthStore.getState().user;
         const age = globalUser?.dobYear ? new Date().getFullYear() - globalUser.dobYear : null;
+        const cyclePhase = globalUser?.gender === 'female' ? get().getCyclePhase()?.phase : null;
         const plan = generateNutritionPlan({
           weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
           heightCm: globalUser?.heightCm ?? overrides?.heightCm,
           age, sex: globalUser?.gender ?? null,
           activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
           budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
-          mealsPerDay: profile.mealsPerDay,
+          mealsPerDay: profile.mealsPerDay, cyclePhase, dislikedFoods: profile.dislikedFoods,
           ...overrides,
         });
         if (plan.error) { toast('Complète ton profil (poids, taille, année de naissance dans Réglages) pour générer un plan nutritionnel.', 'warning'); return plan; }
@@ -383,15 +427,24 @@ export const useHealthStore = create(
         const plan = get().getActiveNutritionPlan();
         const meal = plan?.sampleMeals.find((m) => m.mealSlot === mealSlot);
         if (!meal) return;
-        for (const item of meal.items) get().logMeal(item.name, item.grams, item.unit || 'g', undefined, date);
+        for (const item of meal.items) {
+          // Attach real micros for curated Morocco-list foods (food-micronutrients.js)
+          // on top of the normal FOOD_DB macro estimate — otherwise a plan-sourced
+          // meal would silently count toward macros but never toward the daily
+          // micronutrient summary, unlike a barcode-scanned one.
+          const micros = getFoodMicros(item.name, item.grams);
+          const est = micros ? { ...estimateMacros(item.name, item.grams, item.unit || 'g'), micros } : undefined;
+          get().logMeal(item.name, item.grams, item.unit || 'g', undefined, date, undefined, est);
+        }
       },
       // Alternatives for a plan item, filtered to the user's budget tier and
       // never above it (cheaper tiers always allowed) — for the "remplacer"
       // button when a proposed food isn't available to the user.
       getSwapOptionsForItem: (item) => {
         if (!item?.category) return [];
-        const budgetTier = get().healthProfile.budgetTier || 'moderate';
-        return foodsForBudget(budgetTier, item.category).filter((f) => f.name !== item.name);
+        const { budgetTier, dislikedFoods } = get().healthProfile;
+        const disliked = new Set(dislikedFoods || []);
+        return foodsForBudget(budgetTier || 'moderate', item.category).filter((f) => f.name !== item.name && !disliked.has(f.name));
       },
       // Replaces a plan item's food, re-portioning grams so the new food hits
       // the same macro target (protein g for protein items, etc.) the
@@ -1452,11 +1505,25 @@ export const useHealthStore = create(
       // getSleepLoadTarget's comment in health-science.js for the research
       // behind the ranges). Anchors the "sleep earlier, not later" bedtime
       // suggestion to the user's own known wake time when there's enough
-      // history for one.
+      // history for one. Combines two independent floor sources — the active
+      // program's own intensity (sleepFloor) and, when tracked, the cycle
+      // phase (menstrual/luteal are associated with more fragmented sleep —
+      // a soft heuristic bump, not a hard clinical number) — taking the max
+      // of each so either alone is enough to raise the target.
       getSleepTarget: () => {
         const window_ = get().getSleepWindow();
         const activeCurated = get().getActiveCuratedProgram();
-        return getSleepLoadTarget(get().workouts, todayKey(), window_?.wakeTime || null, activeCurated?.sleepFloor || null);
+        const cycleCoaching = get().getCyclePhaseCoaching();
+        const floorParts = [];
+        if (activeCurated?.sleepFloor) floorParts.push({ ...activeCurated.sleepFloor, reason: activeCurated.name });
+        if (cycleCoaching?.phase === 'menstrual' || cycleCoaching?.phase === 'luteal') {
+          floorParts.push({ min: 7, max: 9, reason: cycleCoaching.phase === 'menstrual' ? 'phase menstruelle' : 'phase lutéale' });
+        }
+        const combinedFloor = floorParts.length
+          ? { min: Math.max(...floorParts.map((f) => f.min)), max: Math.max(...floorParts.map((f) => f.max)) }
+          : null;
+        const target = getSleepLoadTarget(get().workouts, todayKey(), window_?.wakeTime || null, combinedFloor);
+        return { ...target, floorReasons: floorParts.map((f) => f.reason) };
       },
 
       // Auto-generated trailing-N-day summary — shared by the annual report and

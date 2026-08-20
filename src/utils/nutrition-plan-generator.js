@@ -16,6 +16,13 @@ const DIET_GOAL_ADJUST = {
   recomp: -0.08,      // mild deficit, protein-prioritized so lean mass is preserved
 };
 
+// Progesterone's thermogenic effect measurably raises resting metabolic rate
+// during the luteal phase — commonly cited in the range of ~2.5-11%; 5% is a
+// deliberately conservative middle estimate, not a precise clinical number.
+// Applied on top of the diet-goal adjustment, so a cut still cuts, just from
+// a slightly higher baseline that phase.
+const LUTEAL_KCAL_BUMP = 0.05;
+
 const RESTRICTION_EXCLUDES = {
   vegetarian: ['Chicken breast', 'Chicken thigh', 'Beef (lean)', 'Beef (ground, 90/10)', 'Sardines (canned)', 'Tuna (canned)', 'Shrimp'],
   vegan: ['Chicken breast', 'Chicken thigh', 'Beef (lean)', 'Beef (ground, 90/10)', 'Sardines (canned)', 'Tuna (canned)', 'Shrimp', 'Eggs', 'Greek yogurt (plain)', 'Cottage cheese', 'Milk (whole)', 'Lben (Moroccan buttermilk)', 'Cheese (cheddar)', 'Mozzarella'],
@@ -29,6 +36,16 @@ function applyRestrictions(foods, restrictions) {
   for (const r of restrictions || []) for (const name of RESTRICTION_EXCLUDES[r] || []) excluded.add(name);
   if ((restrictions || []).includes('halal_only')) ['Pork chop', 'Bacon', 'Ham'].forEach((n) => excluded.add(n));
   return foods.filter((f) => !excluded.has(f.name));
+}
+
+// Drops foods the user explicitly said they don't like/eat — but never lets
+// that exclusion empty a whole category (e.g. disliking every tracked
+// protein source): falls back to the unfiltered list rather than generating
+// a plan with a missing food group.
+function applyDislikes(foods, dislikedFoods) {
+  if (!dislikedFoods?.length) return foods;
+  const filtered = foods.filter((f) => !dislikedFoods.includes(f.name));
+  return filtered.length ? filtered : foods;
 }
 
 // A single food beyond this many grams in one meal reads as an unrealistic
@@ -63,7 +80,7 @@ function buildProteinItems(foods, slotIndex, targetG) {
   ];
 }
 
-export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate', dietaryRestrictions = [], mealsPerDay = 3 } = {}) {
+export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate', dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, dislikedFoods = [] } = {}) {
   const bmr = computeBMR({ weightKg, heightCm, age, sex });
   const tdee = bmr ? computeTDEE(bmr, activityLevel) : null;
   if (!tdee) {
@@ -71,7 +88,9 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
   }
 
   const adjust = DIET_GOAL_ADJUST[dietGoal] ?? 0;
-  const targetKcal = Math.round(tdee * (1 + adjust));
+  let targetKcal = Math.round(tdee * (1 + adjust));
+  const lutealBump = cyclePhase === 'luteal' ? Math.round(targetKcal * LUTEAL_KCAL_BUMP) : 0;
+  targetKcal += lutealBump;
 
   // Protein prioritized first (1.6-2.2 g/kg — higher end during a cut to
   // preserve lean mass, per Helms et al. 2014), fat floor ~0.6g/kg (hormonal
@@ -84,7 +103,8 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
 
   const explanationNotes = [
     `TDEE estimé à ${tdee} kcal/j (BMR ${bmr} × multiplicateur d'activité "${activityLevel}").`,
-    `Objectif "${dietGoal}" → ${targetKcal} kcal/j (${adjust === 0 ? 'maintenance' : `${adjust > 0 ? '+' : ''}${Math.round(adjust * 100)}%`}).`,
+    `Objectif "${dietGoal}" → ${Math.round(tdee * (1 + adjust))} kcal/j (${adjust === 0 ? 'maintenance' : `${adjust > 0 ? '+' : ''}${Math.round(adjust * 100)}%`}).`,
+    ...(lutealBump ? [`Phase lutéale : +${Math.round(LUTEAL_KCAL_BUMP * 100)}% (+${lutealBump} kcal) — le métabolisme de repos augmente légèrement sous l'effet thermogénique de la progestérone.`] : []),
     `Protéine à ${proteinGPerKg}g/kg (${proteinG}g) — priorité pour préserver la masse maigre.`,
     `Graisses au plancher ~0.7g/kg (${fatG}g) pour la santé hormonale, glucides (${carbsG}g) en complément.`,
   ];
@@ -97,12 +117,12 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
   // list; they're the primary pool only for an explicit vegetarian/vegan
   // profile (where animal sources are excluded by applyRestrictions anyway).
   const wantsPlantOnly = (dietaryRestrictions || []).some((r) => r === 'vegetarian' || r === 'vegan');
-  const allProteinFoods = applyRestrictions(foodsForBudget(budgetTier, 'protein'), dietaryRestrictions);
+  const allProteinFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'protein'), dietaryRestrictions), dislikedFoods);
   const animalProteinFoods = allProteinFoods.filter((f) => f.fromType !== 'legume');
   const proteinFoods = wantsPlantOnly || !animalProteinFoods.length ? allProteinFoods : animalProteinFoods;
-  const carbFoods = applyRestrictions(foodsForBudget(budgetTier, 'carb'), dietaryRestrictions);
-  const fatFoods = applyRestrictions(foodsForBudget(budgetTier, 'fat'), dietaryRestrictions);
-  const vegFoods = applyRestrictions(foodsForBudget(budgetTier, 'veg'), dietaryRestrictions);
+  const carbFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'carb'), dietaryRestrictions), dislikedFoods);
+  const fatFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'fat'), dietaryRestrictions), dislikedFoods);
+  const vegFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'veg'), dietaryRestrictions), dislikedFoods);
 
   const slots = Math.max(3, Math.min(6, mealsPerDay));
   const sampleMeals = Array.from({ length: slots }, (_, i) => {

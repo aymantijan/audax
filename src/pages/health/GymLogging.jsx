@@ -9,6 +9,7 @@ import { searchExercises, suggestExercises } from '../../utils/exercise-library'
 import { INJURY_EXCLUSION_MAP } from '../../utils/training-program-generator';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
+import CyclePhaseHint from '../../components/health/CyclePhaseHint';
 import { CuratedGymLogger } from './CuratedSessionLogger';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
@@ -176,6 +177,7 @@ export default function GymLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
+      <CyclePhaseHint />
       {curatedProgram && <CuratedGymLogger />}
 
       {hasCuratedToday && !editing && (

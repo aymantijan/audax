@@ -5,6 +5,7 @@ import { todayKey } from '../../utils/formatters';
 import { CARDIO_TYPES, labelFor } from '../../utils/workout-types';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
+import CyclePhaseHint from '../../components/health/CyclePhaseHint';
 import { CuratedCardioLogger } from './CuratedSessionLogger';
 
 export default function CardioLogging({ pendingPrompt }) {
@@ -65,6 +66,7 @@ export default function CardioLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
+      <CyclePhaseHint />
       {curatedProgram && <CuratedCardioLogger />}
 
       {hasCuratedToday && !editing && (

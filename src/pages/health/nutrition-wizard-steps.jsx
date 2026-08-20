@@ -5,7 +5,9 @@
 // PlanSetup.jsx ("My Plan" tab).
 import { Field } from '../../components/common/ui';
 import { ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
-import { MOROCCO_BUDGET_TIERS } from '../../utils/morocco-food-budget';
+import { MOROCCO_BUDGET_TIERS, MOROCCO_FOOD_COST_TIERS } from '../../utils/morocco-food-budget';
+
+const CATEGORY_LABEL = { protein: 'Protéines', carb: 'Glucides', fat: 'Lipides', veg: 'Légumes', fruit: 'Fruits', dairy: 'Laitier' };
 
 export function Chips({ options, value, onChange, multi = true }) {
   const toggle = (v) => {
@@ -73,6 +75,25 @@ export const NUTRITION_STEPS = [
           <Chips multi={false} value={d.mealsPerDay} onChange={(v) => set({ mealsPerDay: v })} options={[3, 4, 5, 6].map((n) => ({ value: n, label: `${n}` }))} />
         </Field>
       </>
+    ),
+  },
+  {
+    key: 'preferences', title: 'Tes préférences alimentaires',
+    render: (d, set) => (
+      <div className="space-y-4">
+        <p className="text-xs text-mute -mt-1">
+          Coche ce que tu n'aimes pas ou ne manges pas — le plan proposera d'autres aliments à la place (sans changer ton budget ni tes objectifs).
+        </p>
+        {Object.entries(CATEGORY_LABEL).map(([cat, label]) => {
+          const options = MOROCCO_FOOD_COST_TIERS.filter((f) => f.category === cat).map((f) => ({ value: f.name, label: f.name }));
+          if (!options.length) return null;
+          return (
+            <Field key={cat} label={label}>
+              <Chips value={d.dislikedFoods || []} onChange={(v) => set({ dislikedFoods: v })} options={options} />
+            </Field>
+          );
+        })}
+      </div>
     ),
   },
 ];

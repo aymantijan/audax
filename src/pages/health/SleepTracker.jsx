@@ -21,12 +21,11 @@ const TIER_COPY = {
 // and the synergy score already depend on that single entry point.
 export default function SleepTracker() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
-  const { getSleepWindow, getSleepTarget, getActiveCuratedProgram } = useHealthStore();
+  const { getSleepWindow, getSleepTarget } = useHealthStore();
   const navigate = useNavigate();
   const window_ = getSleepWindow();
   const target = getSleepTarget();
   const tierInfo = TIER_COPY[target.tier];
-  const activeCurated = getActiveCuratedProgram();
 
   const history = useMemo(
     () =>
@@ -68,7 +67,7 @@ export default function SleepTracker() {
         <p className="text-xs text-mute mt-3">{tierInfo.note}</p>
         {target.floorApplied && (
           <p className="text-xs text-mute mt-1">
-            Plancher relevé car <span className="font-medium">{activeCurated?.name}</span> est un programme exigeant — même une journée "normale" pour ce programme justifie plus de sommeil que la moyenne générale, pas seulement les pics au-dessus de ta propre moyenne.
+            Plancher relevé car <span className="font-medium">{target.floorReasons?.join(' + ')}</span> — même une journée "normale" justifie plus de sommeil que la moyenne générale, pas seulement les pics au-dessus de ta propre moyenne.
           </p>
         )}
         {target.avgLoad > 0 && (

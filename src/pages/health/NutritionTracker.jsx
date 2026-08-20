@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
-import { FOOD_DB, getServingOptions } from '../../utils/nutrition-db';
+import { FOOD_DB, getServingOptions, estimateMacros } from '../../utils/nutrition-db';
+import { getFoodMicros } from '../../utils/food-micronutrients';
 import { todayKey } from '../../utils/formatters';
 import { MICRONUTRIENT_LABELS, getMicronutrientRDA, convertMicroValue } from '../../utils/micronutrients';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge, Wizard } from '../../components/common/ui';
@@ -33,6 +34,17 @@ function sumMicros(entries, rda) {
   return totals;
 }
 
+// "63g" doesn't mean much on its own — shows the nearest natural unit too
+// ("≈0.4 cuisse") when the food has one defined (getServingOptions), so the
+// user can picture the actual portion instead of doing gram math.
+function naturalUnitHint(name, grams) {
+  const options = getServingOptions(name);
+  const serving = options[1]; // index 0 is always the plain "g" option
+  if (!serving) return null;
+  const count = grams / serving.grams;
+  return `≈${Math.round(count * 10) / 10} ${serving.label}${count >= 1.5 ? 's' : ''}`;
+}
+
 // Rough daily macro targets derived from the protein target (spec: progress bars
 // for Protein/Carbs/Fats/Calories) — carbs/fat/kcal are simple ratios, not a full
 // TDEE calculator, since no bodyweight/activity intake exists yet.
@@ -57,6 +69,7 @@ export default function NutritionTracker({ pendingPrompt }) {
   const [scannedProduct, setScannedProduct] = useState(null);
   const [scanQty, setScanQty] = useState(100);
   const [swapFor, setSwapFor] = useState(null); // { mealSlot, itemIndex } | null
+  const [microsFor, setMicrosFor] = useState(null); // { mealSlot, itemIndex } | null — which item's micro breakdown is expanded
 
   const { entries, totals, quality } = getTodayNutrition();
   const activePlan = getActiveNutritionPlan();
@@ -233,36 +246,61 @@ export default function NutritionTracker({ pendingPrompt }) {
                   <span className="font-medium text-sm">{m.mealSlot}</span>
                   <Button variant="secondary" className="!px-2 !py-1 text-xs shrink-0" onClick={() => logPlanMeal(m.mealSlot, logDate)}>Logger</Button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {m.items.map((it, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-xs text-mute bg-panel border border-line rounded-full pl-2 pr-1 py-0.5">
-                      {it.name} ({it.grams}g)
-                      {it.category && (
-                        <button
-                          title="Remplacer"
-                          onClick={() => setSwapFor((s) => (s?.mealSlot === m.mealSlot && s?.itemIndex === i ? null : { mealSlot: m.mealSlot, itemIndex: i }))}
-                          className="text-mute hover:text-ink cursor-pointer"
-                        >
-                          <Repeat size={11} />
-                        </button>
-                      )}
-                    </span>
-                  ))}
+                <div className="mt-1.5 space-y-1">
+                  {m.items.map((it, i) => {
+                    const est = estimateMacros(it.name, it.grams, 'g');
+                    const micros = getFoodMicros(it.name, it.grams);
+                    const unitHint = naturalUnitHint(it.name, it.grams);
+                    const isSwapping = swapFor?.mealSlot === m.mealSlot && swapFor?.itemIndex === i;
+                    const isShowingMicros = microsFor?.mealSlot === m.mealSlot && microsFor?.itemIndex === i;
+                    return (
+                      <div key={i} className="bg-panel border border-line rounded-lg px-2.5 py-1.5">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="min-w-0">
+                            <span className="font-medium">{it.name}</span>{' '}
+                            <span className="text-mute">{it.grams}g{unitHint ? ` (${unitHint})` : ''}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {micros && (
+                              <button title="Vitamines & minéraux" onClick={() => setMicrosFor((s) => (isShowingMicros ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="text-mute hover:text-ink cursor-pointer text-[10px] underline">
+                                micros
+                              </button>
+                            )}
+                            {it.category && (
+                              <button title="Remplacer" onClick={() => setSwapFor((s) => (isSwapping ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="text-mute hover:text-ink cursor-pointer">
+                                <Repeat size={11} />
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                        {est && (
+                          <div className="text-[10px] text-mute mt-0.5">{est.kcal} kcal · {est.protein}g P · {est.carbs}g G · {est.fat}g L</div>
+                        )}
+                        {isShowingMicros && micros && (
+                          <div className="text-[10px] text-mute mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 border-t border-line pt-1.5">
+                            {Object.entries(micros).filter(([, v]) => v.value > 0).map(([k, v]) => (
+                              <span key={k}>{MICRONUTRIENT_LABELS[k] || k}: {v.value}{v.unit}</span>
+                            ))}
+                          </div>
+                        )}
+                        {isSwapping && (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5 border-t border-line pt-1.5">
+                            {getSwapOptionsForItem(it).map((alt) => (
+                              <button
+                                key={alt.name}
+                                onClick={() => { swapPlanMealItem(activePlan.id, m.mealSlot, i, alt.name); setSwapFor(null); }}
+                                className="text-xs px-2 py-1 rounded-full bg-surface border border-line hover:border-accent-primary cursor-pointer"
+                              >
+                                {alt.name}
+                              </button>
+                            ))}
+                            {!getSwapOptionsForItem(it).length && <span className="text-xs text-mute">Aucune alternative pour ce budget.</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                {swapFor?.mealSlot === m.mealSlot && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {getSwapOptionsForItem(m.items[swapFor.itemIndex]).map((alt) => (
-                      <button
-                        key={alt.name}
-                        onClick={() => { swapPlanMealItem(activePlan.id, m.mealSlot, swapFor.itemIndex, alt.name); setSwapFor(null); }}
-                        className="text-xs px-2 py-1 rounded-full bg-panel border border-line hover:border-accent-primary cursor-pointer"
-                      >
-                        {alt.name}
-                      </button>
-                    ))}
-                    {!getSwapOptionsForItem(m.items[swapFor.itemIndex]).length && <span className="text-xs text-mute">Aucune alternative pour ce budget.</span>}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -286,7 +324,7 @@ export default function NutritionTracker({ pendingPrompt }) {
               );
             })}
           </div>
-          <p className="text-[11px] text-mute mt-3">Basé uniquement sur les aliments scannés (code-barres) — les entrées saisies manuellement n'ont pas de données vitamines/minéraux.</p>
+          <p className="text-[11px] text-mute mt-3">Basé sur les aliments scannés (code-barres) et les repas du plan nutritionnel loggés depuis "Plan nutritionnel actif" — un aliment tapé à la main dans Quick Log n'a pas de données vitamines/minéraux.</p>
         </Card>
       )}
 
