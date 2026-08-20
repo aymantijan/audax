@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, FolderKanban, Plus, Trash2, Pencil } from 'lucide-react';
+import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
@@ -11,6 +11,47 @@ import EntityFormModal from '../components/common/EntityFormModal';
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
+
+// jsPDF loaded on demand (dynamic import), same reasoning as
+// BodyComposition.jsx's exportMonthlyReportPDF — its ~200KB shouldn't bloat
+// this page's initial chunk for the vast majority of visits that never export.
+async function exportLabEntryPDF(entry) {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFontSize(16);
+  doc.text(entry.title || 'Rapport de laboratoire', 14, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`${entry.date}${entry.course ? ` · ${entry.course}` : ''}`, 14, y);
+  y += 10;
+  doc.setTextColor(0);
+
+  const section = (label, value) => {
+    if (!value) return;
+    doc.setFontSize(12);
+    doc.text(label, 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(String(value), 180);
+    for (const line of lines) {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(line, 14, y);
+      y += 6;
+    }
+    y += 4;
+  };
+
+  if (entry.yieldPercent !== '' && entry.yieldPercent != null) section('Rendement', `${entry.yieldPercent}%`);
+  section('Objectif', entry.objective);
+  section('Protocole', entry.protocol);
+  section('Réactifs / matériel', entry.reagents);
+  section('Observations', entry.observations);
+  section('Conclusion', entry.conclusion);
+
+  doc.save(`audax-lab-${(entry.title || 'entry').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${entry.date}.pdf`);
+}
 
 const blankEntry = () => ({
   date: todayKey(), title: '', course: '', objective: '', protocol: '', reagents: '', yieldPercent: '', observations: '', conclusion: '', tags: '',
@@ -93,6 +134,7 @@ function LabJournal() {
                     {e.tags && <div className="flex flex-wrap gap-1 mt-1.5">{e.tags.split(',').map((t) => t.trim()).filter(Boolean).map((t) => <span key={t} className="text-[11px] bg-panel border border-line rounded-full px-2 py-0.5">{t}</span>)}</div>}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <button className="text-mute hover:text-accent cursor-pointer" onClick={() => exportLabEntryPDF(e)} title="Exporter en PDF"><FileDown size={14} /></button>
                     <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setEditing(e)} title="Éditer"><Pencil size={14} /></button>
                     <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Supprimer cette entrée ?')) deleteLabEntry(e.id); }}><Trash2 size={14} /></button>
                   </div>
@@ -243,6 +285,12 @@ const TABS = [
 
 export default function Engineering() {
   const [tab, setTab] = useState('journal');
+  // Destructure from the whole store (not a scoped selector) so this
+  // re-renders on ANY engineeringStore change — a selector keyed to just
+  // `getBadges` would never re-fire since the function reference itself
+  // never changes, even though the awardedBadges array it reads does.
+  const { getBadges } = useEngineeringStore();
+  const badges = getBadges();
   const Active = TABS.find((t) => t.key === tab)?.Component || LabJournal;
 
   return (
@@ -271,6 +319,16 @@ export default function Engineering() {
       </div>
 
       <Active />
+
+      {badges.some((b) => b.earned) && (
+        <Card title="Badges obtenus">
+          <div className="flex flex-wrap gap-2">
+            {badges.filter((b) => b.earned).map((b) => (
+              <Badge key={b.id}>{b.name}</Badge>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

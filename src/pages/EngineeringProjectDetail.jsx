@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check, CalendarPlus, CalendarCheck } from 'lucide-react';
+import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check, CalendarPlus, CalendarCheck, FileDown } from 'lucide-react';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES, ENGINEERING_PROJECT_STATUS } from '../utils/constants';
 import { fmtDateShort } from '../utils/formatters';
@@ -11,6 +11,59 @@ import ScheduleEventModal from '../components/common/ScheduleEventModal';
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 const STAGE_STATUS_LABEL = { 'not-started': 'Pas commencé', 'in-progress': 'En cours', blocked: 'Bloqué', done: 'Terminé' };
 const blankTask = () => ({ title: '', stage: '' });
+
+// Same dynamic-import jsPDF pattern as Engineering.jsx's exportLabEntryPDF /
+// BodyComposition.jsx's exportMonthlyReportPDF.
+async function exportProjectPDF(project) {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFontSize(16);
+  doc.text(project.name, 14, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`${project.type}${project.deadline ? ` · échéance ${project.deadline}` : ''}`, 14, y);
+  y += 6;
+  doc.text(`Étape : ${ENGINEERING_PROJECT_STAGES[project.stageIndex]} (${project.stageIndex + 1}/${ENGINEERING_PROJECT_STAGES.length})`, 14, y);
+  y += 10;
+  doc.setTextColor(0);
+
+  const section = (label, value) => {
+    if (!value) return;
+    doc.setFontSize(12);
+    doc.text(label, 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(String(value), 180);
+    for (const line of lines) {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(line, 14, y);
+      y += 6;
+    }
+    y += 4;
+  };
+
+  section('Description', project.description);
+
+  const tasks = project.tasks || [];
+  if (tasks.length) {
+    doc.setFontSize(12);
+    doc.text(`Tâches (${tasks.filter((t) => t.status === 'done').length}/${tasks.length})`, 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    for (const t of tasks) {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(`${t.status === 'done' ? '[x]' : '[ ]'} ${t.title}${t.stage ? ` (${t.stage})` : ''}`, 14, y);
+      y += 6;
+    }
+    y += 4;
+  }
+
+  section('Notes', project.notes);
+
+  doc.save(`audax-projet-${project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`);
+}
 
 function StageStepper({ project, onJump }) {
   return (
@@ -104,6 +157,7 @@ export default function EngineeringProjectDetail() {
           {project.deadline && <p className="text-mute text-sm mt-1">Échéance : {fmtDateShort(project.deadline)}</p>}
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => exportProjectPDF(project)}><span className="flex items-center gap-2"><FileDown size={14} /> Exporter en PDF</span></Button>
           <Button variant="secondary" onClick={() => setEditModal(true)}><span className="flex items-center gap-2"><Pencil size={14} /> Éditer</span></Button>
           <Button variant="danger" onClick={removeProject}><span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span></Button>
         </div>
