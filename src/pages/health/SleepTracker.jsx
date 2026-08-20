@@ -21,11 +21,18 @@ const TIER_COPY = {
 // and the synergy score already depend on that single entry point.
 export default function SleepTracker() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
-  const { getSleepWindow, getSleepTarget } = useHealthStore();
+  const { getSleepWindow, getSleepTarget, healthProfile, getPregnancyInfo } = useHealthStore();
   const navigate = useNavigate();
   const window_ = getSleepWindow();
   const target = getSleepTarget();
   const tierInfo = TIER_COPY[target.tier];
+  const pregnancyInfo = getPregnancyInfo();
+  const lifeStageSleepNote =
+    pregnancyInfo?.trimester === 3
+      ? "3e trimestre : le sommeil continu est souvent plus difficile (inconfort physique, envies fréquentes) — la durée cible reste la même, mais des réveils fréquents ne sont pas un échec de discipline."
+      : healthProfile.lifeStage === 'perimenopause' || healthProfile.lifeStage === 'menopause'
+      ? "Les bouffées de chaleur nocturnes perturbent souvent la continuité du sommeil à cette période — si le score de qualité baisse sans changement d'habitudes, ce n'est probablement pas lié à ce que tu contrôles directement."
+      : null;
 
   const history = useMemo(
     () =>
@@ -73,6 +80,7 @@ export default function SleepTracker() {
         {target.avgLoad > 0 && (
           <p className="text-[11px] text-mute mt-1">Charge estimée aujourd'hui vs moyenne des 14 derniers jours : {target.todayLoad} vs {target.avgLoad}.</p>
         )}
+        {lifeStageSleepNote && <p className="text-xs text-mute mt-2 border-t border-line pt-2">{lifeStageSleepNote}</p>}
       </Card>
 
       {window_ && (

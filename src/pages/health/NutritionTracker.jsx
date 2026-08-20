@@ -8,6 +8,7 @@ import { todayKey } from '../../utils/formatters';
 import { MICRONUTRIENT_LABELS, getMicronutrientRDA, convertMicroValue } from '../../utils/micronutrients';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge, Wizard } from '../../components/common/ui';
 import BarcodeScanner from '../../components/health/BarcodeScanner';
+import IronTracking from '../../components/health/IronTracking';
 import { NUTRITION_STEPS } from './nutrition-wizard-steps';
 
 // Scales a per-100g micros map to an actual logged portion.
@@ -74,7 +75,7 @@ export default function NutritionTracker({ pendingPrompt }) {
   const { entries, totals, quality } = getTodayNutrition();
   const activePlan = getActiveNutritionPlan();
   const planDirty = activePlan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > activePlan.generatedAt;
-  const microRDA = useMemo(() => getMicronutrientRDA(gender), [gender]);
+  const microRDA = useMemo(() => getMicronutrientRDA(gender, healthProfile.lifeStage), [gender, healthProfile.lifeStage]);
   const microTotals = useMemo(() => sumMicros(entries, microRDA), [entries, microRDA]);
   // Prefer the generated plan's real TDEE-based targets over the rough
   // protein-ratio heuristic below, when one exists.
@@ -256,6 +257,8 @@ export default function NutritionTracker({ pendingPrompt }) {
           </div>
         </Card>
       )}
+
+      {gender === 'female' && <IronTracking />}
 
       {ironHighlights.length > 0 && (
         <Card title="Fer & phase menstruelle">

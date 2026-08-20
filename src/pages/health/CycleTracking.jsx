@@ -29,7 +29,9 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 }
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo } = useHealthStore();
+  const lifeStage = healthProfile.lifeStage || 'none';
+  const pregnancyInfo = getPregnancyInfo();
   const hormonallyReliable = isCyclePhaseHormonallyReliable();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
@@ -143,6 +145,49 @@ export default function CycleTracking() {
 
   return (
     <div className="space-y-6">
+      <Card title="Étape de vie">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Situation actuelle">
+            <Select
+              value={lifeStage}
+              onChange={(e) => setHealthProfile({ lifeStage: e.target.value })}
+              options={[
+                { value: 'none', label: 'Aucune de ces situations' },
+                { value: 'pregnant', label: 'Enceinte' },
+                { value: 'postpartum', label: 'Post-partum' },
+                { value: 'perimenopause', label: 'Périménopause' },
+                { value: 'menopause', label: 'Ménopause' },
+              ]}
+            />
+          </Field>
+          {lifeStage === 'pregnant' && (
+            <Field label="Date des dernières règles (référence médicale standard)">
+              <Input type="date" value={healthProfile.pregnancyStartDate || ''} max={todayKey()} onChange={(e) => setHealthProfile({ pregnancyStartDate: e.target.value || null })} />
+            </Field>
+          )}
+        </div>
+      </Card>
+
+      {lifeStage === 'pregnant' ? (
+        <Card title="Grossesse">
+          {pregnancyInfo ? (
+            <div className="text-sm space-y-2">
+              <div className="flex items-center gap-3">
+                <Badge color="var(--accent-primary)">Trimestre {pregnancyInfo.trimester}</Badge>
+                <span className="text-mute">Semaine {pregnancyInfo.weeks} d'aménorrhée</span>
+              </div>
+              <p className="text-xs text-mute">Le suivi de cycle, les phases folliculaire/ovulation/lutéale et leurs conseils associés sont désactivés — ton plan nutritionnel intègre déjà le supplément calorique du trimestre (voir Nutrition). Toute activité sportive doit rester validée par ta sage-femme/médecin, en particulier après le 1er trimestre (éviter les positions allongées sur le dos prolongées, les sports de contact et à risque de chute).</p>
+            </div>
+          ) : (
+            <p className="text-xs text-mute">Renseigne la date de tes dernières règles ci-dessus pour estimer ton trimestre.</p>
+          )}
+        </Card>
+      ) : lifeStage === 'menopause' ? (
+        <Card title="Ménopause">
+          <p className="text-sm text-mute">Le suivi de cycle est désactivé (plus de règles attendues). Deux points bien documentés à cet âge : le besoin en calcium/vitamine D augmente (déjà reflété dans tes cibles nutrition) et le travail en résistance (musculation) devient particulièrement important pour la densité osseuse — ton programme actif reste pertinent tel quel de ce point de vue.</p>
+        </Card>
+      ) : (
+        <>
       {phase && (
         <Card title="Current Phase">
           <div className="flex items-center gap-4 flex-wrap">
@@ -335,6 +380,8 @@ export default function CycleTracking() {
           <EmptyState>No cycle entries yet.</EmptyState>
         )}
       </Card>
+        </>
+      )}
     </div>
   );
 }

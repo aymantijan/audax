@@ -23,6 +23,12 @@ const DIET_GOAL_ADJUST = {
 // a slightly higher baseline that phase.
 const LUTEAL_KCAL_BUMP = 0.05;
 
+// IOM (Institute of Medicine) / ACOG pregnancy energy-requirement additions
+// above a non-pregnant baseline TDEE: no additional calories needed in the
+// first trimester (fetal energy demand is still minimal), then a step up
+// each trimester as fetal/placental growth accelerates.
+const PREGNANCY_KCAL_BUMP = { 1: 0, 2: 340, 3: 452 };
+
 const RESTRICTION_EXCLUDES = {
   vegetarian: ['Chicken breast', 'Chicken thigh', 'Beef (lean)', 'Beef (ground, 90/10)', 'Sardines (canned)', 'Tuna (canned)', 'Shrimp'],
   vegan: ['Chicken breast', 'Chicken thigh', 'Beef (lean)', 'Beef (ground, 90/10)', 'Sardines (canned)', 'Tuna (canned)', 'Shrimp', 'Eggs', 'Greek yogurt (plain)', 'Cottage cheese', 'Milk (whole)', 'Lben (Moroccan buttermilk)', 'Cheese (cheddar)', 'Mozzarella'],
@@ -128,7 +134,7 @@ function buildProteinItems(foods, slotIndex, targetG) {
 
 export function generateNutritionPlan({
   weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate',
-  dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, dislikedFoods = [], customFoods = [], foodPrices = {},
+  dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, pregnancyTrimester = null, dislikedFoods = [], customFoods = [], foodPrices = {},
 } = {}) {
   const bmr = computeBMR({ weightKg, heightCm, age, sex });
   const tdee = bmr ? computeTDEE(bmr, activityLevel) : null;
@@ -136,10 +142,15 @@ export function generateNutritionPlan({
     return { id: uid(), generatedAt: Date.now(), error: 'incomplete_profile', explanationNotes: ['Poids, taille et âge sont nécessaires pour calculer tes besoins caloriques.'] };
   }
 
-  const adjust = DIET_GOAL_ADJUST[dietGoal] ?? 0;
+  // A cut/bulk goal doesn't really apply during pregnancy — the diet-goal
+  // deficit/surplus is deliberately not applied on top of the pregnancy
+  // energy addition, only on the plain TDEE baseline (maintenance + the
+  // trimester's actual added need).
+  const adjust = pregnancyTrimester ? 0 : (DIET_GOAL_ADJUST[dietGoal] ?? 0);
   let targetKcal = Math.round(tdee * (1 + adjust));
-  const lutealBump = cyclePhase === 'luteal' ? Math.round(targetKcal * LUTEAL_KCAL_BUMP) : 0;
-  targetKcal += lutealBump;
+  const lutealBump = !pregnancyTrimester && cyclePhase === 'luteal' ? Math.round(targetKcal * LUTEAL_KCAL_BUMP) : 0;
+  const pregnancyBump = pregnancyTrimester ? (PREGNANCY_KCAL_BUMP[pregnancyTrimester] ?? 0) : 0;
+  targetKcal += lutealBump + pregnancyBump;
 
   // Protein prioritized first (1.6-2.2 g/kg — higher end during a cut to
   // preserve lean mass, per Helms et al. 2014), fat floor ~0.6g/kg (hormonal
@@ -154,6 +165,8 @@ export function generateNutritionPlan({
     `TDEE estimé à ${tdee} kcal/j (BMR ${bmr} × multiplicateur d'activité "${activityLevel}").`,
     `Objectif "${dietGoal}" → ${Math.round(tdee * (1 + adjust))} kcal/j (${adjust === 0 ? 'maintenance' : `${adjust > 0 ? '+' : ''}${Math.round(adjust * 100)}%`}).`,
     ...(lutealBump ? [`Phase lutéale : +${Math.round(LUTEAL_KCAL_BUMP * 100)}% (+${lutealBump} kcal) — le métabolisme de repos augmente légèrement sous l'effet thermogénique de la progestérone.`] : []),
+    ...(pregnancyBump ? [`Grossesse (T${pregnancyTrimester}) : +${pregnancyBump} kcal/j (IOM/ACOG) au-dessus de ta dépense de base — pas d'objectif "perte/prise de poids" appliqué par-dessus pendant la grossesse.`] : []),
+    ...(pregnancyTrimester ? ['Grossesse : évite poisson cru, fromages au lait cru/non pasteurisé, charcuterie non recuite et alcool — vérifie chaque nouvel aliment ajouté manuellement avec ta sage-femme/médecin, cette liste ne filtre pas automatiquement.'] : []),
     `Protéine à ${proteinGPerKg}g/kg (${proteinG}g) — priorité pour préserver la masse maigre. Sources triées par qualité protéique (score DIAAS — Herreman et al. 2020) : viande/poisson/œufs/laitier d'abord.`,
     `Graisses au plancher ~0.7g/kg (${fatG}g) pour la santé hormonale, glucides (${carbsG}g) en complément.`,
     `Repas 1 = petit-déjeuner (avec fruit), dernier repas = dîner plus léger en glucides — la tolérance au glucose est meilleure le matin et se dégrade en soirée (chrononutrition, ex. restriction glucidique au dîner vs petit-déj en type 2).`,

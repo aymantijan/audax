@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { estimateMacros, foodQualityScore, setCustomFoods, getServingOptions } from '../utils/nutrition-db';
 import { getFoodMicros } from '../utils/food-micronutrients';
+import { getMicronutrientRDA } from '../utils/micronutrients';
 import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
@@ -121,6 +122,7 @@ export const useHealthStore = create(
       awardedBadges: [], // badge ids already toasted, so we don't re-fire every render
       coachCache: null, // { date, text, tone } — 1x/day
       cycleLogs: [], // [{ id, date, flow:'light'|'medium'|'heavy', symptoms:[...], notes }] — one per period start date
+      bloodTests: [], // [{ id, date, ferritinNgMl, hemoglobinGDl, source:'manual'|'ocr', notes }] — user-entered lab values, optional
       goals: [], // [{ id, type:'weight'|'strength'|'sleep', targetKg?, exercise?, targetScore?, startWeightKg?, achieved, createdAt }]
       reminders: {
         enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null,
@@ -138,6 +140,10 @@ export const useHealthStore = create(
         equipmentAccess: [], injuries: [],
         activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
         cycleTrackingEnabled: null, maleTrackingEnabled: null, hormonalContraception: false,
+        // 'none' | 'pregnant' | 'postpartum' | 'perimenopause' | 'menopause'.
+        // pregnancyStartDate is the LMP (last menstrual period) date, the
+        // standard clinical convention for dating gestational age in weeks.
+        lifeStage: 'none', pregnancyStartDate: null,
         reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
         completedAt: null, lastRecomputedAt: null,
       },
@@ -154,6 +160,7 @@ export const useHealthStore = create(
           equipmentAccess: [], injuries: [],
           activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
           cycleTrackingEnabled: null, maleTrackingEnabled: null, hormonalContraception: false,
+          lifeStage: 'none', pregnancyStartDate: null,
           reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
           completedAt: null, lastRecomputedAt: null,
         },
@@ -442,13 +449,14 @@ export const useHealthStore = create(
         // contraception (ovulation generally suppressed, no natural luteal
         // surge to compensate for).
         const cyclePhase = globalUser?.gender === 'female' && get().isCyclePhaseHormonallyReliable() ? get().getCyclePhase()?.phase : null;
+        const pregnancyTrimester = profile.lifeStage === 'pregnant' ? get().getPregnancyInfo()?.trimester ?? null : null;
         const plan = generateNutritionPlan({
           weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
           heightCm: globalUser?.heightCm ?? overrides?.heightCm,
           age, sex: globalUser?.gender ?? null,
           activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
           budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
-          mealsPerDay: profile.mealsPerDay, cyclePhase, dislikedFoods: profile.dislikedFoods,
+          mealsPerDay: profile.mealsPerDay, cyclePhase, pregnancyTrimester, dislikedFoods: profile.dislikedFoods,
           customFoods: get().customFoods, foodPrices: get().foodPrices,
           ...overrides,
         });
@@ -867,7 +875,79 @@ export const useHealthStore = create(
       markPeriodEnd: (id, endDate) =>
         set({ cycleLogs: get().cycleLogs.map((c) => (c.id === id ? { ...c, endDate: endDate || todayKey() } : c)) }),
       deleteCycleLog: (id) => set({ cycleLogs: get().cycleLogs.filter((c) => c.id !== id) }),
-      getCyclePhase: () => computeCyclePhase(get().cycleLogs.map((c) => c.date), null, todayKey()),
+      // No cycle phase during pregnancy (no menstrual cycle) or menopause
+      // (periods have stopped) — a calendar estimate would be meaningless,
+      // not just unreliable. Perimenopause/postpartum still cycle (often
+      // irregularly, which is expected) so phase estimation stays active.
+      getCyclePhase: () => {
+        const stage = get().healthProfile.lifeStage;
+        if (stage === 'pregnant' || stage === 'menopause') return null;
+        return computeCyclePhase(get().cycleLogs.map((c) => c.date), null, todayKey());
+      },
+
+      // Gestational age (LMP convention) + trimester, only when lifeStage is
+      // 'pregnant' and a start date has been set.
+      getPregnancyInfo: () => {
+        const { lifeStage, pregnancyStartDate } = get().healthProfile;
+        if (lifeStage !== 'pregnant' || !pregnancyStartDate) return null;
+        const daysSince = Math.floor((new Date(todayKey() + 'T00:00:00') - new Date(pregnancyStartDate + 'T00:00:00')) / dayMs);
+        if (daysSince < 0) return null;
+        const weeks = Math.floor(daysSince / 7);
+        const trimester = weeks < 13 ? 1 : weeks < 27 ? 2 : 3;
+        return { weeks, trimester };
+      },
+
+      // ─────────── Blood tests (optional, user-entered lab values) ───────────
+      logBloodTest: (data) => {
+        const entry = { id: uid(), date: data.date || todayKey(), ferritinNgMl: data.ferritinNgMl ?? null, hemoglobinGDl: data.hemoglobinGDl ?? null, source: data.source || 'manual', notes: data.notes || '', createdAt: Date.now() };
+        set({ bloodTests: [...get().bloodTests, entry].sort((a, b) => (a.date < b.date ? -1 : 1)) });
+        toast('Analyse enregistrée', 'success');
+      },
+      deleteBloodTest: (id) => set({ bloodTests: get().bloodTests.filter((b) => b.id !== id) }),
+
+      // Two independent signals, surfaced together but never merged into one
+      // fabricated "risk score":
+      // - dietaryIron: a purely descriptive 14-day average intake vs RDA
+      //   (getMicronutrientRDA), from foods that carry real micronutrient
+      //   data — no claim about deficiency, just "here's what you're eating".
+      // - labStatus: only appears once the user has actually entered a real
+      //   lab value. THEN, and only then, it's compared to the real WHO
+      //   anemia/iron-deficiency reference thresholds (hemoglobin <12g/dL
+      //   non-pregnant / <11g/dL pregnant; ferritin <15ng/mL = deficiency,
+      //   <30ng/mL = depleted stores, common clinical secondary cutoff) —
+      //   applying an established clinical reference to a real measured
+      //   value is standard, unlike inferring a "risk" from food-diary data
+      //   alone, which would be fabricated. Always framed as informational,
+      //   never a diagnosis.
+      getIronStatus: () => {
+        const globalUser = useAuthStore.getState().user;
+        const rda = getMicronutrientRDA(globalUser?.gender, get().healthProfile.lifeStage);
+        const cutoffKey = todayKey(new Date(Date.now() - 14 * dayMs));
+        const recentNutrition = get().nutritionLogs.filter((n) => n.date >= cutoffKey);
+        const ironByDay = {};
+        for (const n of recentNutrition) {
+          const ironVal = n.micros?.iron?.value;
+          if (ironVal != null) ironByDay[n.date] = (ironByDay[n.date] || 0) + ironVal;
+        }
+        const daysWithData = Object.keys(ironByDay);
+        const dietaryIron = daysWithData.length >= 3
+          ? { avgMgPerDay: r1(daysWithData.reduce((a, d) => a + ironByDay[d], 0) / daysWithData.length), rdaMg: rda.iron.value, daysWithData: daysWithData.length }
+          : null;
+
+        const latestTest = [...get().bloodTests].filter((b) => b.ferritinNgMl != null || b.hemoglobinGDl != null).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        let labStatus = null;
+        if (latestTest) {
+          const hbThreshold = get().healthProfile.lifeStage === 'pregnant' ? 11.0 : 12.0;
+          const ferritinLowThreshold = 15;
+          const ferritinBorderlineThreshold = 30;
+          const flags = [];
+          if (latestTest.hemoglobinGDl != null && latestTest.hemoglobinGDl < hbThreshold) flags.push('hemoglobin_low');
+          if (latestTest.ferritinNgMl != null && latestTest.ferritinNgMl < ferritinLowThreshold) flags.push('ferritin_low');
+          else if (latestTest.ferritinNgMl != null && latestTest.ferritinNgMl < ferritinBorderlineThreshold) flags.push('ferritin_borderline');
+          labStatus = { date: latestTest.date, hemoglobinGDl: latestTest.hemoglobinGDl, ferritinNgMl: latestTest.ferritinNgMl, flags, hbThreshold, ferritinLowThreshold, ferritinBorderlineThreshold };
+        }
+        return { dietaryIron, labStatus };
+      },
 
       // Phase-aware coaching note + a training-load hint the active program
       // (if any) can be read against — informational only, never auto-alters
@@ -899,6 +979,11 @@ export const useHealthStore = create(
       // user knowing about (RED-S / hypothalamic amenorrhea literature),
       // framed as "worth mentioning to a professional", never a verdict.
       getCycleHealthFlag: () => {
+        // Irregular/absent cycles are the expected norm during pregnancy,
+        // perimenopause and menopause — flagging them as a caution here
+        // would be noise, not signal.
+        const stage = get().healthProfile.lifeStage;
+        if (stage === 'pregnant' || stage === 'menopause' || stage === 'perimenopause') return null;
         const regularity = assessCycleRegularity(get().cycleLogs.map((c) => c.date), todayKey());
         if (!regularity || regularity.status === 'insufficient_data' || regularity.status === 'regular') {
           return { regularity, energyAvailabilityCaution: false };
@@ -1685,7 +1770,7 @@ export const useHealthStore = create(
       resetAll: () =>
         set({
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, bodyComp: [], recoveryLogs: [],
-          checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
+          checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], bloodTests: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: {
         enabled: false, lastMorningReminderDate: null, lastWorkoutReminderDate: null,

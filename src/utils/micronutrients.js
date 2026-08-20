@@ -27,9 +27,25 @@ const BASE_RDA = {
   manganese: { value: 2.3, unit: 'mg' }, iodine: { value: 150, unit: 'µg' },
 };
 
-export function getMicronutrientRDA(sex) {
+// lifeStage overrides the menstruating-woman default where NIH ODS reference
+// values genuinely differ: pregnancy raises iron/folate/B12/vitaminC demand
+// (placental/fetal growth, blood volume expansion); postmenopause drops iron
+// back to the non-menstruating level and raises calcium/vitaminD (bone density,
+// no longer offset by estrogen). Values are the NIH Office of Dietary
+// Supplements fact-sheet RDAs, not a personalized clinical target.
+export function getMicronutrientRDA(sex, lifeStage = 'none') {
   const rda = { ...BASE_RDA };
   if (sex === 'female') rda.iron = { value: 18, unit: 'mg' }; // NIH: ~18mg for menstruating adult women vs ~8mg for men
+  if (lifeStage === 'pregnant') {
+    rda.iron = { value: 27, unit: 'mg' };
+    rda.vitaminB9 = { value: 600, unit: 'µg' };
+    rda.vitaminB12 = { value: 2.6, unit: 'µg' };
+    rda.vitaminC = { value: 85, unit: 'mg' };
+  } else if (lifeStage === 'menopause' || lifeStage === 'perimenopause') {
+    rda.iron = { value: 8, unit: 'mg' };
+    rda.calcium = { value: 1200, unit: 'mg' };
+    rda.vitaminD = { value: 20, unit: 'µg' };
+  }
   return rda;
 }
 
