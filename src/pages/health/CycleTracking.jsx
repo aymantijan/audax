@@ -29,7 +29,7 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 }
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
@@ -40,6 +40,7 @@ export default function CycleTracking() {
 
   const phase = getCyclePhase();
   const coaching = getCyclePhaseCoaching();
+  const healthFlag = getCycleHealthFlag();
   const activeProgram = getActiveProgram() || getActiveCuratedProgram();
   const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
 
@@ -163,6 +164,24 @@ export default function CycleTracking() {
             <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => markPeriodEnd(openPeriod.id, endDate)}>Mark ended</Button>
           </div>
         </div>
+      )}
+
+      {healthFlag?.regularity && (healthFlag.regularity.status === 'late' || healthFlag.regularity.status === 'irregular') && (
+        <Card title="Régularité du cycle">
+          <div className="flex items-start gap-2.5 text-sm">
+            <Badge color="var(--warning)">{healthFlag.regularity.status === 'late' ? 'En retard' : 'Irrégulier'}</Badge>
+            <div className="flex-1">
+              {healthFlag.regularity.status === 'late' ? (
+                <p>Ton dernier cycle a démarré il y a {healthFlag.regularity.daysSinceLast} jours, contre une moyenne habituelle d'environ {healthFlag.regularity.avgLength}j — un retard ponctuel est normal, mais si ça se répète ça vaut le coup d'en parler à un·e professionnel·le de santé.</p>
+              ) : (
+                <p>Tes cycles varient d'environ {healthFlag.regularity.variability}j entre le plus court et le plus long (moyenne ~{healthFlag.regularity.avgLength}j) — au-delà de ~9j d'écart est considéré irrégulier. Rien d'alarmant en soi, mais utile à surveiller dans le temps.</p>
+              )}
+              {healthFlag.energyAvailabilityCaution && (
+                <p className="mt-2 text-xs text-mute">Sur les 14 derniers jours, ton apport calorique moyen est nettement sous ta cible du plan nutritionnel — un déficit énergétique prolongé peut être un facteur d'irrégularité du cycle. Si ça persiste, c'est aussi un point à mentionner à un·e professionnel·le de santé.</p>
+              )}
+            </div>
+          </div>
+        </Card>
       )}
 
       <Card title="Log Period Start">

@@ -8,7 +8,7 @@ import {
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
   bestSleepWindow, getSleepLoadTarget, computeCyclePhase, computeGoalProgress, estimate1RM,
   bodyFatYMCA, bodyFatDeurenberg, estimateFFMI, estimateLeanMassKg, smoothedTrend,
-  estimateVO2max, cyclePhaseCoachingNote,
+  estimateVO2max, cyclePhaseCoachingNote, assessCycleRegularity,
 } from '../utils/health-science';
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
@@ -871,6 +871,30 @@ export const useHealthStore = create(
         const phase = get().getCyclePhase();
         if (!phase) return null;
         return { phase: phase.phase, ...cyclePhaseCoachingNote(phase.phase) };
+      },
+
+      // Cycle regularity + a lifestyle-awareness (not diagnostic) energy-
+      // availability caution — surfaces a pattern where an irregular/late
+      // cycle coincides with a sustained caloric deficit, which is worth the
+      // user knowing about (RED-S / hypothalamic amenorrhea literature),
+      // framed as "worth mentioning to a professional", never a verdict.
+      getCycleHealthFlag: () => {
+        const regularity = assessCycleRegularity(get().cycleLogs.map((c) => c.date), todayKey());
+        if (!regularity || regularity.status === 'insufficient_data' || regularity.status === 'regular') {
+          return { regularity, energyAvailabilityCaution: false };
+        }
+        const plan = get().getActiveNutritionPlan();
+        const cutoffKey = todayKey(new Date(Date.now() - 14 * dayMs));
+        const recentNutrition = get().nutritionLogs.filter((n) => n.date >= cutoffKey);
+        const loggedDays = [...new Set(recentNutrition.map((n) => n.date))];
+        let energyAvailabilityCaution = false;
+        if (plan?.targetKcal && loggedDays.length >= 7) {
+          const kcalByDay = {};
+          for (const n of recentNutrition) kcalByDay[n.date] = (kcalByDay[n.date] || 0) + n.kcal;
+          const avgKcal = Object.values(kcalByDay).reduce((a, v) => a + v, 0) / loggedDays.length;
+          energyAvailabilityCaution = avgKcal < plan.targetKcal * 0.8;
+        }
+        return { regularity, energyAvailabilityCaution };
       },
 
       // ─────────── Performance & Recovery (open to every account — lifestyle/

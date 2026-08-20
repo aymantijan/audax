@@ -392,6 +392,35 @@ export function cyclePhaseCoachingNote(phase) {
   return CYCLE_PHASE_COACHING[phase] || CYCLE_PHASE_COACHING.unknown;
 }
 
+// ---- Cycle regularity check (informational, not diagnostic) ----
+// ACOG defines a normal adult cycle as 21-35 days with cycle-to-cycle
+// variability under ~7-9 days; a period more than ~2 weeks later than the
+// person's own average is flagged as "late" rather than assumed missed
+// outright (single-cycle noise is normal). This never diagnoses anything —
+// it only surfaces a pattern worth being aware of, same framing as the rest
+// of the cycle-phase coaching notes.
+export function assessCycleRegularity(cycleStartDates, today) {
+  if (!cycleStartDates?.length) return null;
+  const sorted = [...cycleStartDates].sort();
+  const lastStart = sorted[sorted.length - 1];
+  const daysSinceLast = Math.floor((new Date(today + 'T00:00:00') - new Date(lastStart + 'T00:00:00')) / 86400000);
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = (new Date(sorted[i] + 'T00:00:00') - new Date(sorted[i - 1] + 'T00:00:00')) / 86400000;
+    if (gap > 10 && gap < 60) gaps.push(gap);
+  }
+  if (gaps.length < 2) return { status: 'insufficient_data', daysSinceLast, avgLength: gaps[0] ?? null, variability: null };
+
+  const avgLength = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  const variability = Math.max(...gaps) - Math.min(...gaps);
+  const late = daysSinceLast > avgLength + 14;
+  let status;
+  if (late) status = 'late';
+  else if (variability > 9 || avgLength < 21 || avgLength > 35) status = 'irregular';
+  else status = 'regular';
+  return { status, daysSinceLast, avgLength: r1(avgLength), variability: r1(variability) };
+}
+
 // ---- Health goal progress ----
 // Three goal types (weight, strength-PR, sleep-quality), each reusing data the
 // app already tracks rather than asking for anything new. `weeklyRateKg` (the
