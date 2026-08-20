@@ -218,6 +218,9 @@ export default function Programs() {
                 <div className="text-xs text-mute uppercase tracking-wide mb-1">Poids</div>
                 <div>{progression.weightTrend.deltaKg > 0 ? '+' : ''}{progression.weightTrend.deltaKg}kg sur la période</div>
                 <div className="text-xs text-mute">{progression.weightTrend.entriesLogged} pesées loggées</div>
+                {progression.weightTrendCycleCaveat && (
+                  <div className="text-xs text-mute italic">Phase du cycle actuelle — une partie de cette hausse est probablement de la rétention d'eau, pas de la graisse.</div>
+                )}
               </div>
             ) : (
               <div className="text-xs text-mute">Poids : au moins 2 pesées sur 14 jours nécessaires pour voir une tendance.</div>

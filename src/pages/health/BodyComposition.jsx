@@ -109,7 +109,13 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 }
 
 export default function BodyComposition() {
-  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence } = useHealthStore();
+  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence, getCyclePhaseCoaching } = useHealthStore();
+  const cycleCoaching = getCyclePhaseCoaching();
+  // Progesterone peaks mid-luteal and promotes fluid retention — a well-
+  // documented ~0.5-1.4kg (up to ~2.3kg) scale increase that's water, not
+  // fat, and resolves once the period starts. Shown so a normal premenstrual
+  // fluctuation doesn't get misread as the diet/program failing.
+  const showWaterRetentionNote = cycleCoaching?.phase === 'luteal' || cycleCoaching?.phase === 'menstrual';
   const latest = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
   const precision = getBodyCompPrecision();
   const smoothed = getSmoothedBodyCompTrend();
@@ -167,6 +173,15 @@ export default function BodyComposition() {
 
   return (
     <div className="space-y-6">
+      {showWaterRetentionNote && (
+        <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
+          <div className="text-sm text-mute">
+            <span className="font-medium text-ink">{cycleCoaching.phase === 'luteal' ? 'Phase lutéale' : 'Phase menstruelle'} :</span>{' '}
+            une prise de 0.5-1.4kg sur la balance (jusqu'à ~2.3kg selon les personnes) est normale à ce moment du cycle — c'est de la rétention d'eau liée à la progestérone, pas de la graisse. Ça se résorbe après le début des règles ; pas un signal d'échec du programme ou du plan nutritionnel.
+          </div>
+        </div>
+      )}
+
       <Card title="Log Body Composition">
         <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Field label="Weight (kg)">

@@ -377,8 +377,14 @@ export const useHealthStore = create(
           const deltaKg = recentBodyComp[recentBodyComp.length - 1].weightKg - recentBodyComp[0].weightKg;
           weightTrend = { deltaKg: r1(deltaKg), entriesLogged: recentBodyComp.length };
         }
+        // A luteal/menstrual-phase uptick is commonly water retention (see
+        // BodyComposition.jsx's note), not the program failing — flagged
+        // here too so this specific card doesn't read as a verdict without
+        // that context.
+        const cyclePhase = get().getCyclePhaseCoaching()?.phase;
+        const weightTrendCycleCaveat = weightTrend && weightTrend.deltaKg > 0 && (cyclePhase === 'luteal' || cyclePhase === 'menstrual');
 
-        return { objective: program.objective, nutritionAdherence, weightTrend };
+        return { objective: program.objective, nutritionAdherence, weightTrend, weightTrendCycleCaveat };
       },
 
       // ─────────── Program schedule (onboarding-generated, per active curated program) ───────────
