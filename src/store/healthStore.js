@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
-import { estimateMacros, foodQualityScore, setCustomFoods, getServingOptions } from '../utils/nutrition-db';
+import { estimateMacros, foodQualityScore, setCustomFoods, setFoodOverrides, getServingOptions } from '../utils/nutrition-db';
 import { getFoodMicros } from '../utils/food-micronutrients';
 import { getMicronutrientRDA } from '../utils/micronutrients';
 import {
@@ -115,6 +115,23 @@ export const useHealthStore = create(
       foodPrices: {},
       setFoodPrice: (foodName, pricePerGram) => set({ foodPrices: { ...get().foodPrices, [foodName]: Number(pricePerGram) || 0 } }),
       deleteFoodPrice: (foodName) => set({ foodPrices: Object.fromEntries(Object.entries(get().foodPrices).filter(([n]) => n !== foodName)) }),
+      // { [foodName]: { protein?, carbs?, fat?, kcal?, unitGrams? } } — user
+      // corrections to a food's generic macros (per 100g) and/or the real net
+      // weight of its purchase unit (e.g. a specific can of sardines nets
+      // 55g, not the generic 106g assumed — which silently makes an 8Dh can
+      // look cheap when it's actually ~14.5Dh/100g). Applied by nutrition-
+      // db.js's lookupFood on top of either a built-in or custom food, kept
+      // in sync via the same store-subscription pattern as customFoods.
+      foodOverrides: {},
+      setFoodOverride: (foodName, patch) => {
+        const existing = get().foodOverrides[foodName] || {};
+        const merged = { ...existing, ...patch };
+        // Drop keys explicitly cleared back to null so an old correction
+        // doesn't linger once the user removes it.
+        for (const k of Object.keys(merged)) if (merged[k] == null) delete merged[k];
+        set({ foodOverrides: { ...get().foodOverrides, [foodName]: merged } });
+      },
+      deleteFoodOverride: (foodName) => set({ foodOverrides: Object.fromEntries(Object.entries(get().foodOverrides).filter(([n]) => n !== foodName)) }),
       bodyComp: [], // [{ id, date, weightKg, waistCm, neckCm, hipCm, heightCm, sex, absRating, bodyFatPct, bodyFatMethod, photo }]
       recoveryLogs: [], // [{ id, date, activities:['sleep8','meditation','stretching','cold','massage'] }]
       checkins: [], // [{ id, date, slot:'morning'|'postWorkout'|'afternoon'|'evening', energy, stress, note }]
@@ -1769,7 +1786,7 @@ export const useHealthStore = create(
 
       resetAll: () =>
         set({
-          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, bodyComp: [], recoveryLogs: [],
+          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, foodOverrides: {}, bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], bloodTests: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: {
@@ -1799,3 +1816,4 @@ export const useHealthStore = create(
 // localStorage rehydration completes, so this is correct from first paint
 // without a separate app-startup effect.
 useHealthStore.subscribe((state) => setCustomFoods(state.customFoods));
+useHealthStore.subscribe((state) => setFoodOverrides(state.foodOverrides));

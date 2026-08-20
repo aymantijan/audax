@@ -166,16 +166,40 @@ export function setCustomFoods(list) {
   CUSTOM_FOODS = Array.isArray(list) ? list : [];
 }
 
+// Per-food corrections to the generic FOOD_DB/Morocco-list estimates — e.g.
+// a specific brand's canned sardines nets 55g, not the generic 106g assumed
+// for "a can" (which silently makes a "cheap" 8Dh can actually ~14.5Dh/100g,
+// the exact case that prompted this). { [foodName]: { protein?, carbs?,
+// fat?, kcal?, unitGrams? } } — any field can be omitted to keep the
+// default; kept in sync via a healthStore subscription, same pattern as
+// CUSTOM_FOODS above.
+let FOOD_OVERRIDES = {};
+export function setFoodOverrides(map) {
+  FOOD_OVERRIDES = map && typeof map === 'object' ? map : {};
+}
+
 // Fuzzy-match a logged meal name against the DB (substring, either direction)
 // — checks user-added foods first so a custom entry can intentionally
-// shadow/override a built-in one of the same name.
+// shadow/override a built-in one of the same name. Applies any stored
+// correction (macros and/or the first serving's real net weight) on top of
+// whichever base entry was found, custom or built-in.
 export function lookupFood(name) {
   const q = norm(name);
   if (!q) return null;
   const all = [...CUSTOM_FOODS, ...FOOD_DB];
   const exact = all.find((f) => norm(f.name) === q);
-  if (exact) return exact;
-  return all.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
+  const found = exact || all.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
+  if (!found) return null;
+  const override = FOOD_OVERRIDES[found.name];
+  if (!override) return found;
+  const merged = { ...found };
+  for (const key of ['protein', 'carbs', 'fat', 'kcal']) {
+    if (override[key] != null) merged[key] = override[key];
+  }
+  if (override.unitGrams != null && merged.servings?.length) {
+    merged.servings = merged.servings.map((s, i) => (i === 0 ? { ...s, grams: override.unitGrams } : s));
+  }
+  return merged;
 }
 
 // Unit options for a food's quantity input — grams is always available;

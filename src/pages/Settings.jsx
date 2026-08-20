@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus } from 'lucide-react';
-import { FOOD_DB, getServingOptions } from '../utils/nutrition-db';
+import { FOOD_DB, getServingOptions, lookupFood } from '../utils/nutrition-db';
 import { MOROCCO_FOOD_COST_TIERS } from '../utils/morocco-food-budget';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { isSupabaseConfigured } from '../services/supabase';
@@ -50,11 +50,14 @@ export default function SettingsPage() {
   });
 
   // ─────────── Mes aliments & prix ───────────
-  const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice } = useHealthStore();
+  const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice, foodOverrides, setFoodOverride, deleteFoodOverride } = useHealthStore();
   const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '', isUnit: false, unitLabel: '', unitGrams: '', unitPrice: '' });
   const [priceEntry, setPriceEntry] = useState({ name: '', price: '' });
+  const [infoEntry, setInfoEntry] = useState({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitGrams: '' });
   const allFoodNames = [...new Set([...FOOD_DB.map((f) => f.name), ...MOROCCO_FOOD_COST_TIERS.map((f) => f.name), ...customFoods.map((f) => f.name)])].sort();
   const priceEntryUnit = getDiscreteUnit(priceEntry.name.trim());
+  const infoEntryFood = infoEntry.name.trim() ? lookupFood(infoEntry.name.trim()) : null;
+  const infoEntryUnit = infoEntryFood?.servings?.[0] || null;
 
   const submitNewFood = (e) => {
     e.preventDefault();
@@ -84,6 +87,24 @@ export default function SettingsPage() {
     const pricePerGram = priceEntryUnit ? Number(priceEntry.price) / priceEntryUnit.grams : Number(priceEntry.price) / 100;
     setFoodPrice(priceEntry.name.trim(), pricePerGram);
     setPriceEntry({ name: '', price: '' });
+  };
+
+  // Corrects a generic FOOD_DB/Morocco-list estimate for the specific
+  // product the user actually has — e.g. their can of sardines nets 55g,
+  // not the generic 106g assumed (which silently makes an "8Dh" can read as
+  // cheap when it's really ~14.5Dh/100g). Partial: only the fields actually
+  // filled in are stored, everything else keeps the generic default.
+  const submitFoodInfo = (e) => {
+    e.preventDefault();
+    const name = infoEntry.name.trim();
+    if (!name) return;
+    const patch = {};
+    for (const k of ['protein', 'carbs', 'fat', 'kcal']) if (infoEntry[k] !== '') patch[k] = Number(infoEntry[k]);
+    if (infoEntry.unitGrams !== '') patch.unitGrams = Number(infoEntry.unitGrams);
+    if (!Object.keys(patch).length) return toast('Renseigne au moins une valeur à corriger.', 'warning');
+    setFoodOverride(name, patch);
+    setInfoEntry({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitGrams: '' });
+    toast('Fiche corrigée', 'success');
   };
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
@@ -356,6 +377,57 @@ export default function SettingsPage() {
                 </li>
               );
             })}
+          </ul>
+        )}
+
+        <div className="mb-2 mt-5 border-t border-line pt-4">
+          <div className="text-xs text-mute uppercase tracking-wide mb-2">Corriger la fiche d'un aliment existant</div>
+          <p className="text-[11px] text-mute mb-2">
+            Les valeurs génériques ne correspondent pas toujours à ton produit réel — ex. une boîte de sardines assumée à 106g de poids net alors que la tienne n'en fait que 55g (ce qui change complètement le prix réel au 100g). Corrige uniquement ce qui diffère, le reste garde la valeur générique.
+          </p>
+          <form onSubmit={submitFoodInfo} className="grid sm:grid-cols-3 gap-2 items-end">
+            <Field label="Aliment">
+              <Input list="all-foods" value={infoEntry.name} onChange={(e) => setInfoEntry({ ...infoEntry, name: e.target.value })} placeholder="ex. Sardines (canned)" />
+            </Field>
+            {infoEntryUnit && (
+              <Field label={`Poids réel d'un ${infoEntryUnit.label} (g)`} hint={`générique : ${infoEntryUnit.grams}g`}>
+                <Input type="number" min="1" value={infoEntry.unitGrams} onChange={(e) => setInfoEntry({ ...infoEntry, unitGrams: e.target.value })} placeholder={String(infoEntryUnit.grams)} />
+              </Field>
+            )}
+            <Field label="Protéine /100g (g)" hint={infoEntryFood ? `générique : ${infoEntryFood.protein}g` : undefined}>
+              <Input type="number" min="0" step="0.1" value={infoEntry.protein} onChange={(e) => setInfoEntry({ ...infoEntry, protein: e.target.value })} placeholder={infoEntryFood ? String(infoEntryFood.protein) : ''} />
+            </Field>
+            <Field label="Glucides /100g (g)" hint={infoEntryFood ? `générique : ${infoEntryFood.carbs}g` : undefined}>
+              <Input type="number" min="0" step="0.1" value={infoEntry.carbs} onChange={(e) => setInfoEntry({ ...infoEntry, carbs: e.target.value })} placeholder={infoEntryFood ? String(infoEntryFood.carbs) : ''} />
+            </Field>
+            <Field label="Lipides /100g (g)" hint={infoEntryFood ? `générique : ${infoEntryFood.fat}g` : undefined}>
+              <Input type="number" min="0" step="0.1" value={infoEntry.fat} onChange={(e) => setInfoEntry({ ...infoEntry, fat: e.target.value })} placeholder={infoEntryFood ? String(infoEntryFood.fat) : ''} />
+            </Field>
+            <Field label="Calories /100g" hint={infoEntryFood ? `générique : ${infoEntryFood.kcal}` : undefined}>
+              <Input type="number" min="0" value={infoEntry.kcal} onChange={(e) => setInfoEntry({ ...infoEntry, kcal: e.target.value })} placeholder={infoEntryFood ? String(infoEntryFood.kcal) : ''} />
+            </Field>
+            <Button type="submit" variant="secondary" className="sm:col-span-1">Corriger</Button>
+          </form>
+        </div>
+
+        {Object.keys(foodOverrides).length > 0 && (
+          <ul className="space-y-1.5 mt-2">
+            {Object.entries(foodOverrides).map(([name, ov]) => (
+              <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                <span>
+                  {name} <span className="text-mute text-xs">
+                    ({[
+                      ov.unitGrams != null && `poids unité ${ov.unitGrams}g`,
+                      ov.protein != null && `${ov.protein}g P`,
+                      ov.carbs != null && `${ov.carbs}g G`,
+                      ov.fat != null && `${ov.fat}g L`,
+                      ov.kcal != null && `${ov.kcal}kcal`,
+                    ].filter(Boolean).join(' · ')})
+                  </span>
+                </span>
+                <button onClick={() => deleteFoodOverride(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+              </li>
+            ))}
           </ul>
         )}
       </Card>
