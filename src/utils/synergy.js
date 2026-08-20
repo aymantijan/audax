@@ -10,7 +10,7 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // All five domain scores are 0-100. Weighted composite = primary*0.75 + avg(others)*0.25.
 // Note: the raw spec formulas divided each weighted sum by 3, which caps scores near 33 —
 // implemented here as proper 0-100 weighted averages instead so color thresholds work.
-export function calculateSynergies({ trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras }) {
+export function calculateSynergies({ trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras, labEntries, engineeringProjects, engineeringEnabled }) {
   const monthStart = startOfMonth(new Date());
 
   const scores = {
@@ -20,6 +20,11 @@ export function calculateSynergies({ trades, courses, journal, accountingBudgets
     health: healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras),
     growth: growthScore(skills, habits, monthStart),
   };
+  // Only scored for accounts that actually turned Engineering on — otherwise
+  // it would silently pull the composite average/weighted score of every
+  // other user down toward 0 (an untouched, brand-new domain) the moment
+  // this shipped, for a module they never opted into.
+  if (engineeringEnabled) scores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
 
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
@@ -167,6 +172,27 @@ function growthScore(skills, habits, monthStart) {
   const habitComponent = clamp(newHabits * 25);
 
   return r1(clamp(xpComponent * 0.4 + levelComponent * 0.3 + habitComponent * 0.3));
+}
+
+// 0 if truly nothing logged yet (same convention as financeScore/healthScore —
+// an empty domain reads as "not started", not a neutral 50). Three signals:
+// lab-entry frequency this month, project tasks completed this month, and
+// engineering-category habit compliance (neutral 50 if no such habit exists).
+function engineeringScore(labEntries, projects, habits, habitLogs, monthStart, today) {
+  if (!labEntries.length && !projects.length) return 0;
+  const monthStartMs = monthStart.getTime();
+
+  const monthLab = labEntries.filter((e) => new Date(e.date + 'T00:00:00') >= monthStart).length;
+  const labComponent = clamp(monthLab * 15); // ~7 entries/month → near-max
+
+  const monthTasksDone = projects.flatMap((p) => p.tasks || []).filter((t) => t.status === 'done' && t.completedAt >= monthStartMs).length;
+  const taskComponent = clamp(monthTasksDone * 12);
+
+  const engHabits = habits.filter((h) => h.category === 'engineering' && !h.archived);
+  const comp = habitCompliance(engHabits, habitLogs, 30, today);
+  const habitComponent = engHabits.length ? comp.rate * 100 : 50;
+
+  return r1(clamp(labComponent * 0.35 + taskComponent * 0.35 + habitComponent * 0.3));
 }
 
 export function synergyColor(score) {

@@ -61,6 +61,22 @@ export const ENGINEERING_PROJECT_STAGES = [
 ];
 export const ENGINEERING_PROJECT_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
 
+// Which skill-tree node a completed task's XP goes to, keyed by the project
+// stage it belongs to (see engineeringStore.setTaskStatus) — stages without
+// a distinct technical skill (spec, lit review, report, defense) fall back
+// to the general engineering-discipline node rather than a fabricated
+// "report-writing-lv1" node that doesn't correspond to a real course.
+export const ENGINEERING_STAGE_SKILL = {
+  'Cahier des charges': 'engineering-discipline-lv1',
+  'Recherche bibliographique': 'engineering-discipline-lv1',
+  'Conception / Dimensionnement': 'unit-operations-lv1',
+  'Simulation': 'process-simulation-lv1',
+  'Analyse de sécurité (HAZOP)': 'process-safety-lv1',
+  'Optimisation': 'reactor-engineering-lv1',
+  'Rédaction du rapport': 'engineering-discipline-lv1',
+  'Soutenance': 'engineering-discipline-lv1',
+};
+
 export const INITIAL_ACCOUNT_VALUE = 52000;
 
 export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];
@@ -139,7 +155,7 @@ export const LIABILITY_TYPES = [
   { key: 'otherLiabilities', label: 'Other liabilities' },
 ];
 
-export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery'];
+export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery', 'engineering'];
 // 'custom' = repeats only on the specific weekdays chosen in `habit.weekdays`
 // (e.g. Heavy Weight Lifting on Mon/Wed/Fri) — see utils/calculations.js#isHabitDueOn.
 // Labeled explicitly (not plain strings) so the day-picker option is discoverable

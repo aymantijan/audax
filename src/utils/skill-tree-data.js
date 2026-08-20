@@ -14,6 +14,7 @@ const f = mk('Finance');
 const k = mk('Knowledge');
 const s = mk('Soft Skills');
 const d = mk('Discipline');
+const e = mk('Engineering');
 
 const BASE_SKILLS = [
   // ════════ TRADING · Strategy Mastery (15) ════════
@@ -272,6 +273,22 @@ const BASE_SKILLS = [
   d('health-discipline-lv1', 'Health Discipline Lv1', 'Health Discipline', [], 'Exercise consistency, sleep hygiene, meditation practice'),
   d('health-discipline-lv2', 'Health Discipline Lv2', 'Health Discipline', ['health-discipline-lv1'], 'Nutrition optimization, stress recovery, energy management'),
   d('decision-discipline-lv1', 'Decision-Making Discipline Lv1', 'Decision-Making Discipline', [], 'Logged decisions, probabilistic thinking, outcome tracking'),
+  d('engineering-discipline-lv1', 'Engineering Discipline Lv1', 'Engineering Discipline', [], 'Rigorous lab journaling, protocol adherence, consistent project logging'),
+  d('engineering-discipline-lv2', 'Engineering Discipline Lv2', 'Engineering Discipline', ['engineering-discipline-lv1'], 'Systematic review of results, reproducibility, cross-project consistency'),
+
+  // ════════ ENGINEERING (12) — chemical engineering & process engineering core competencies ════════
+  e('thermodynamics-lv1', 'Thermodynamics Lv1', 'Thermodynamique', [], 'Energy/entropy balances, phase equilibria, ideal & real gas behavior'),
+  e('thermodynamics-lv2', 'Thermodynamics Lv2', 'Thermodynamique', ['thermodynamics-lv1'], 'Multi-component VLE, activity coefficients, thermodynamic cycles for process design'),
+  e('unit-operations-lv1', 'Unit Operations Lv1', 'Opérations Unitaires', [], 'Distillation, absorption, extraction, filtration — equipment sizing fundamentals'),
+  e('unit-operations-lv2', 'Unit Operations Lv2', 'Opérations Unitaires', ['unit-operations-lv1'], 'Column design (McCabe-Thiele, HETP), multi-stage separation train optimization'),
+  e('reactor-engineering-lv1', 'Reactor Engineering Lv1', 'Génie des Réacteurs', [], 'Batch/CSTR/PFR mass balances, kinetics, conversion & selectivity'),
+  e('reactor-engineering-lv2', 'Reactor Engineering Lv2', 'Génie des Réacteurs', ['reactor-engineering-lv1'], 'Non-ideal flow, residence time distribution, catalytic & multiphase reactor design'),
+  e('process-safety-lv1', 'Process Safety Lv1', 'Sécurité des Procédés', [], 'Hazard identification, HAZOP methodology, layers of protection'),
+  e('process-safety-lv2', 'Process Safety Lv2', 'Sécurité des Procédés', ['process-safety-lv1'], 'Quantitative risk assessment, relief system sizing, safety instrumented systems'),
+  e('process-simulation-lv1', 'Process Simulation Lv1', 'Simulation de Procédés', [], 'Flowsheet construction, thermodynamic package selection, steady-state convergence'),
+  e('process-simulation-lv2', 'Process Simulation Lv2', 'Simulation de Procédés', ['process-simulation-lv1'], 'Sensitivity analysis, recycle/optimization loops, dynamic simulation'),
+  e('heat-mass-transfer-lv1', 'Heat & Mass Transfer Lv1', 'Transfert de Chaleur et de Matière', [], 'Conduction/convection/radiation basics, heat exchanger sizing, diffusion fundamentals'),
+  e('heat-mass-transfer-lv2', 'Heat & Mass Transfer Lv2', 'Transfert de Chaleur et de Matière', ['heat-mass-transfer-lv1'], 'Multi-pass exchanger networks, pinch analysis, coupled heat/mass transfer in separations'),
 ];
 
 // Base skills get an inferred career track; professional skills carry an explicit one.

@@ -18,6 +18,7 @@ const STARTER_HABIT_NAMES = [
   'Daily spending log', 'Weekly budget check',
   'Morning exercise', '8+ hours sleep',
   'Daily Journal', 'Gratitude journaling',
+  'Log today\'s lab session', 'Advance a project task',
 ];
 const ALL_TEMPLATE_ITEMS = HABIT_TEMPLATES.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group })));
 const STARTER_HABITS = STARTER_HABIT_NAMES.map((name) => ALL_TEMPLATE_ITEMS.find((it) => it.name === name)).filter(Boolean);

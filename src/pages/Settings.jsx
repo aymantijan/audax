@@ -262,7 +262,7 @@ export default function SettingsPage() {
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
-              options={['trading', 'learning', 'finance', 'health', 'growth']}
+              options={['trading', 'learning', 'finance', 'health', 'growth', 'engineering']}
             />
           </Field>
           <Field label="Career goal" hint="Focuses the skill tree & deals.">

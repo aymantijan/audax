@@ -466,5 +466,5 @@ export default function Dashboard() {
 }
 
 function domainRoute(domain) {
-  return { trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills' }[domain] || '/';
+  return { trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering' }[domain] || '/';
 }

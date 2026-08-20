@@ -62,6 +62,7 @@ export default function Welcome() {
                   { value: 'finance', label: 'Finance' },
                   { value: 'health', label: 'Health' },
                   { value: 'growth', label: 'Growth' },
+                  { value: 'engineering', label: 'Engineering' },
                 ]}
               />
             </Field>

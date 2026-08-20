@@ -4,6 +4,7 @@ import { useLearningStore } from '../store/learningStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useHealthStore } from '../store/healthStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 import { useSkillStore } from '../store/skillStore';
 import { useAuthStore } from '../store/authStore';
 import { calculateSynergies } from '../utils/synergy';
@@ -37,6 +38,9 @@ export function useSynergy() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const skills = useSkillStore((s) => s.skills);
   const primaryDomain = useAuthStore((s) => s.user?.primaryDomain || 'trading');
+  const engineeringEnabled = useAuthStore((s) => s.user?.enabledModules?.engineering ?? false);
+  const labEntries = useEngineeringStore((s) => s.labEntries);
+  const engineeringProjects = useEngineeringStore((s) => s.projects);
 
   // Raw slices only (never a store getter returning a fresh object) — see the
   // useSyncExternalStore infinite-loop note in project memory. Derived values
@@ -82,8 +86,11 @@ export function useSynergy() {
         primaryDomain,
         today: todayKey(),
         healthExtras,
+        labEntries,
+        engineeringProjects,
+        engineeringEnabled,
       }),
-    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras]
+    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled]
   );
 
   // Persist today's snapshot so we can show day-over-day trend

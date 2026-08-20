@@ -2,16 +2,18 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
-  BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight,
+  BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { isHabitDueOn, habitStreak } from '../utils/calculations';
+import { ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
 import { Card, Button, Badge, EmptyState } from '../components/common/ui';
@@ -57,6 +59,11 @@ export default function Today() {
   const { pendingPrompts, dismissPrompt, workouts, nutritionLogs } = useHealthStore();
   const workedOutToday = workouts.some((w) => w.date === today);
   const loggedMealToday = nutritionLogs.some((n) => n.date === today);
+
+  // ---- Engineering ----
+  const { labEntries, projects: engProjects } = useEngineeringStore();
+  const loggedLabToday = labEntries.some((e) => e.date === today);
+  const activeEngProjects = engProjects.filter((p) => !(p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done'));
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -242,6 +249,38 @@ export default function Today() {
           </ul>
         )}
       </Card>
+
+      {/* ---- Engineering ---- */}
+      {(user?.enabledModules?.engineering ?? false) && (
+        <Card
+          title="Ingénierie"
+          action={
+            <Link to="/engineering" className="text-xs text-accent hover:underline flex items-center gap-1">
+              Ouvrir <ChevronRight size={12} />
+            </Link>
+          }
+        >
+          <div className="flex items-center gap-6 text-sm flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <FlaskConical size={15} className={loggedLabToday ? 'text-good' : 'text-mute'} />
+              <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience loggée' : 'Aucune expérience loggée'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-mute">{activeEngProjects.length} projet{activeEngProjects.length !== 1 ? 's' : ''} en cours</span>
+            </div>
+          </div>
+          {activeEngProjects.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {activeEngProjects.slice(0, 3).map((p) => (
+                <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                  <Link to={`/engineering/${p.id}`} className="hover:text-accent">{p.name}</Link>
+                  <span className="text-xs text-mute">{ENGINEERING_PROJECT_STAGES[p.stageIndex]}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
 
       {/* ---- Learning & reading ---- */}
       {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (

@@ -94,4 +94,15 @@ export const HABIT_TEMPLATES = [
       h('Confidence calibration check', 'reflection', 5, 'decision-confidence-lv1', { frequency: 'weekly', duration: 10 }),
     ],
   },
+  {
+    group: 'Engineering',
+    items: [
+      h('Log today\'s lab session', 'engineering', 6, 'engineering-discipline-lv1', { mandatory: true, duration: 10 }),
+      h('Review lecture notes', 'engineering', 5, 'engineering-discipline-lv2', { duration: 20 }),
+      h('Attend labs/TP', 'engineering', 6, 'engineering-discipline-lv1', { duration: 120 }),
+      h('Advance a project task', 'engineering', 8, 'engineering-discipline-lv2', { duration: 30 }),
+      h('Weekly project review', 'engineering', 12, 'engineering-discipline-lv2', { frequency: 'weekly', duration: 30 }),
+      h('Practice a simulation tool (Aspen/HYSYS)', 'engineering', 8, 'process-simulation-lv1', { frequency: 'weekly', duration: 45 }),
+    ],
+  },
 ];
