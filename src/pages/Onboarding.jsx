@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake,
+  Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -37,7 +37,7 @@ export default function Onboarding() {
   const addHabit = useHabitStore((s) => s.addHabit);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(() => new Set(STARTER_HABITS.slice(0, 4).map((h) => h.name)));
-  const [modules, setModules] = useState(() => ({ trading: user?.enabledModules?.trading ?? true, deals: user?.enabledModules?.deals ?? true }));
+  const [modules, setModules] = useState(() => ({ trading: user?.enabledModules?.trading ?? true, deals: user?.enabledModules?.deals ?? true, engineering: user?.enabledModules?.engineering ?? true }));
 
   const toggle = (name) =>
     setSelected((s) => {
@@ -92,11 +92,12 @@ export default function Onboarding() {
         {step === 1 && (
           <Card>
             <h1 className="text-xl font-bold mb-1">Which sections do you want?</h1>
-            <p className="text-mute text-sm mb-5">Trading and Deals stay off your nav if you don't need them — you can turn them back on anytime in Settings.</p>
+            <p className="text-mute text-sm mb-5">Turn off anything you don't need — you can change this anytime in Settings.</p>
             <div className="space-y-2">
               {[
                 { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Multi-account journal, risk management, psychology tracking.' },
                 { key: 'deals', icon: Handshake, title: 'Deals', text: 'Pipeline/deal tracking for PE, GE, VC, RBF work.' },
+                { key: 'engineering', icon: FlaskConical, title: 'Engineering', text: 'Lab journal + design-project pipeline — chemical engineering & related.' },
               ].map((m) => {
                 const on = modules[m.key];
                 return (

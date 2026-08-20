@@ -36,6 +36,8 @@ const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
 const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
 const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
 const DealDetail = lazy(lazyWithRetry(() => import('./pages/DealDetail'), 'DealDetail'));
+const Engineering = lazy(lazyWithRetry(() => import('./pages/Engineering'), 'Engineering'));
+const EngineeringProjectDetail = lazy(lazyWithRetry(() => import('./pages/EngineeringProjectDetail'), 'EngineeringProjectDetail'));
 const BusinessDetail = lazy(lazyWithRetry(() => import('./pages/deals/BusinessDetail'), 'BusinessDetail'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
@@ -163,6 +165,8 @@ export default function App() {
         <Route path="/deals" element={<Deals />} />
         <Route path="/deals/business/:id" element={<BusinessDetail />} />
         <Route path="/deals/:id" element={<DealDetail />} />
+        <Route path="/engineering" element={<Engineering />} />
+        <Route path="/engineering/:id" element={<EngineeringProjectDetail />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />

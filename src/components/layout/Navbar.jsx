@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/habits', label: 'Habits' },
   { to: '/health', label: 'Health' },
   { to: '/deals', label: 'Deals' },
+  { to: '/engineering', label: 'Engineering' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },
 ];
@@ -29,6 +30,7 @@ export default function Navbar() {
   const navItems = NAV_ITEMS.filter((item) => {
     if (item.to === '/trading') return user?.enabledModules?.trading ?? true;
     if (item.to === '/deals') return user?.enabledModules?.deals ?? true;
+    if (item.to === '/engineering') return user?.enabledModules?.engineering ?? false;
     return true;
   });
 

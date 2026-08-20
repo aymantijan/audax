@@ -14,6 +14,7 @@ import { useFinanceStore } from '../store/financeStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
@@ -23,7 +24,7 @@ import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-health', 'audax-business', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-synergy-history'];
 
 const FOOD_CATEGORIES = [
   { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
@@ -233,6 +234,7 @@ export default function SettingsPage() {
     useHabitStore.getState().resetAll();
     useSkillStore.getState().resetAll();
     useDealsStore.getState().resetAll();
+    useEngineeringStore.getState().resetAll();
     useReadingsStore.getState().resetAll();
     useAccountingStore.getState().resetAll();
     useHealthStore.getState().resetAll();
@@ -301,14 +303,14 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="Sections visibles">
-        <p className="text-sm text-mute mb-3">Trading et Deals peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
+        <p className="text-sm text-mute mb-3">Trading, Deals et Ingénierie peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
         <div className="flex flex-wrap gap-3">
-          {[{ key: 'trading', label: 'Trading' }, { key: 'deals', label: 'Deals' }].map((m) => (
+          {[{ key: 'trading', label: 'Trading', default: true }, { key: 'deals', label: 'Deals', default: true }, { key: 'engineering', label: 'Ingénierie', default: false }].map((m) => (
             <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
-                checked={user?.enabledModules?.[m.key] ?? true}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, deals: true }), [m.key]: e.target.checked } })}
+                checked={user?.enabledModules?.[m.key] ?? m.default}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, deals: true, engineering: false }), [m.key]: e.target.checked } })}
                 className="cursor-pointer"
               />
               {m.label}

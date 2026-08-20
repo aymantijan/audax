@@ -26,9 +26,17 @@ function withDefaults(user) {
     heightCm: user.heightCm ?? null,
     // Which top-level sections show in the nav — asked once during
     // Onboarding.jsx, editable later in Settings. Existing accounts default
-    // both to true (unchanged behavior) rather than being retroactively
-    // hidden from a section they were already using.
-    enabledModules: { trading: user.enabledModules?.trading ?? true, deals: user.enabledModules?.deals ?? true },
+    // trading/deals to true (unchanged behavior — those were the only two
+    // sections before this preference existed, so every account was already
+    // "using" them). `engineering` is a genuinely new addition with no prior
+    // behavior to preserve, so it defaults to false for accounts that
+    // predate it — it only turns on for someone who explicitly asks for it,
+    // never as silent nav clutter for an existing business-track user.
+    enabledModules: {
+      trading: user.enabledModules?.trading ?? true,
+      deals: user.enabledModules?.deals ?? true,
+      engineering: user.enabledModules?.engineering ?? false,
+    },
   };
 }
 
@@ -54,7 +62,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, deals: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, deals: true, engineering: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

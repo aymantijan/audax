@@ -42,6 +42,25 @@ export const TASK_LEGACY_DEAL_SKILL = {
   Distressed: ['bankruptcy-distress-lv1', 'credit-analysis-lv1'],
 };
 
+// ─────────── Engineering (chemical engineering students) ───────────
+// Mirrors the DEAL_STAGES/DEAL_STAGE_STATUS pipeline pattern above, but for
+// a design/research project instead of a deal — HAZOP/safety analysis is
+// its own gate rather than folded into "conception", since process safety
+// review is a distinct, mandatory step in real chemical engineering work,
+// not an afterthought.
+export const ENGINEERING_PROJECT_TYPES = ['Projet de conception', 'Projet de fin d\'études', 'Stage', 'Projet de recherche', 'TP long', 'Autre'];
+export const ENGINEERING_PROJECT_STAGES = [
+  'Cahier des charges',
+  'Recherche bibliographique',
+  'Conception / Dimensionnement',
+  'Simulation',
+  'Analyse de sécurité (HAZOP)',
+  'Optimisation',
+  'Rédaction du rapport',
+  'Soutenance',
+];
+export const ENGINEERING_PROJECT_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
+
 export const INITIAL_ACCOUNT_VALUE = 52000;
 
 export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];
