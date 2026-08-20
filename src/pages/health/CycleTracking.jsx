@@ -10,8 +10,26 @@ import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../com
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
+// Shared by energyByPhase and rpeByPhase below — which phase `dateStr` falls
+// in, given the cycle-start dates logged so far and an estimated cycle
+// length. Same day-of-cycle boundaries as computeCyclePhase in
+// health-science.js, duplicated here (not imported) because this needs to
+// classify a whole history of past dates against their OWN nearest-preceding
+// cycle start, not just "today" against the latest one.
+function phaseForDate(dateStr, cycleStartDates, cycleLen) {
+  const cyclesBefore = cycleStartDates.filter((d) => d <= dateStr);
+  if (!cyclesBefore.length) return null;
+  const lastStart = cyclesBefore[cyclesBefore.length - 1];
+  const dayOfCycle = Math.floor((new Date(dateStr) - new Date(lastStart)) / 86400000) + 1;
+  if (dayOfCycle <= 5) return 'menstrual';
+  if (dayOfCycle <= cycleLen * 0.46) return 'follicular';
+  if (dayOfCycle <= cycleLen * 0.54) return 'ovulation';
+  if (dayOfCycle <= cycleLen) return 'luteal';
+  return null;
+}
+
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts } = useHealthStore();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
@@ -62,21 +80,33 @@ export default function CycleTracking() {
     const cycleLen = estimateCycleLength(dates) || 28;
     const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
     for (const log of energyLogs) {
-      const cyclesBefore = dates.filter((d) => d <= log.date);
-      if (!cyclesBefore.length) continue;
-      const lastStart = cyclesBefore[cyclesBefore.length - 1];
-      const dayOfCycle = Math.floor((new Date(log.date) - new Date(lastStart)) / 86400000) + 1;
-      let p;
-      if (dayOfCycle <= 5) p = 'menstrual';
-      else if (dayOfCycle <= cycleLen * 0.46) p = 'follicular';
-      else if (dayOfCycle <= cycleLen * 0.54) p = 'ovulation';
-      else if (dayOfCycle <= cycleLen) p = 'luteal';
-      else continue;
-      if (log.energyStartLevel != null) buckets[p].push(log.energyStartLevel);
+      const p = phaseForDate(log.date, dates, cycleLen);
+      if (p && log.energyStartLevel != null) buckets[p].push(log.energyStartLevel);
     }
     const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
     return { energyByPhase: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, avg(v)])), cycleLen };
   }, [cycleLogs, energyLogs]);
+
+  // Average RPE (perceived exertion, 1-10) by cycle phase, from this
+  // person's own logged gym sets — not a generic claim about "energy may be
+  // lower", but their OWN training data: did sessions genuinely feel harder
+  // in one phase than another. Same phase-bucketing as energyByPhase above,
+  // reusing the same estimated cycle length so the two views never disagree.
+  const rpeByPhase = useMemo(() => {
+    const dates = cycleLogs.map((c) => c.date).sort();
+    if (dates.length < 2) return null;
+    const len = estimateCycleLength(dates) || 28;
+    const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
+    for (const w of workouts) {
+      if (w.type !== 'strength' || !w.sets) continue;
+      const p = phaseForDate(w.date, dates, len);
+      if (!p) continue;
+      for (const s of w.sets) if (s.rpe != null) buckets[p].push(Number(s.rpe));
+    }
+    const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
+    const result = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, { avg: avg(v), n: v.length }]));
+    return Object.values(result).some((r) => r.avg != null) ? result : null;
+  }, [cycleLogs, workouts]);
 
   // Predicted next period = last start + estimated cycle length. A rough
   // calendar projection, not a fertility/ovulation prediction.
@@ -188,6 +218,21 @@ export default function CycleTracking() {
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {rpeByPhase && (
+        <Card title="Effort perçu par phase (RPE)" action={cycleLen && <span className="text-xs text-mute">est. cycle length: {cycleLen}d</span>}>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            {Object.entries(rpeByPhase).map(([phaseKey, { avg, n }]) => (
+              <div key={phaseKey}>
+                <div className="text-xs text-mute mb-1">{CYCLE_PHASE_LABEL[phaseKey]}</div>
+                <div className="text-lg font-semibold" style={{ color: CYCLE_PHASE_COLOR[phaseKey] }}>{avg ?? '—'}</div>
+                <div className="text-[10px] text-mute">{n} série{n > 1 ? 's' : ''}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-mute mt-2">RPE moyen (1-10) de tes séries loggées, par phase du cycle — basé sur tes propres données d'entraînement.</p>
         </Card>
       )}
 
