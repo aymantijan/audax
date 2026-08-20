@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, HeartPulse } from 'lucide-react';
+import { CheckCircle2, HeartPulse, X } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Input, Field, Select } from '../../components/common/ui';
@@ -28,8 +28,14 @@ function parseSetCount(setsReps) {
   return match ? Number(match[1]) : 3;
 }
 
+// `done: true` by default — the prescribed set count is a target, not a
+// requirement. A set can be marked not-done (e.g. stopped a set short, ran
+// out of time, cut the session at 3/4 sets) via the × button per row, which
+// excludes it from both validation and the logged payload instead of
+// forcing every prescribed set to be filled before the session can log at
+// all.
 function makeSets(setsReps) {
-  return Array.from({ length: parseSetCount(setsReps) }, () => ({ reps: prefillReps(setsReps), weight: '', rpe: 7, form: 'Good' }));
+  return Array.from({ length: parseSetCount(setsReps) }, () => ({ reps: prefillReps(setsReps), weight: '', rpe: 7, form: 'Good', done: true }));
 }
 
 // The fast-path structured logger for today's prescribed cardio block from
@@ -165,6 +171,10 @@ export function CuratedGymLogger() {
     const all = setsFor(ex);
     return lighterMode && all.length > 1 ? all.slice(0, -1) : all;
   };
+  // The sets that actually count — validated and logged. A row toggled
+  // "not done" (didn't happen tonight — fatigue, time, injury caution…)
+  // never blocks the rest of the session from logging.
+  const doneSetsFor = (ex) => effectiveSetsFor(ex).filter((s) => s.done !== false);
 
   const toggle = (name) => setChecked((s) => { const next = new Set(s); next.has(name) ? next.delete(name) : next.add(name); return next; });
   const updateSet = (ex, setIdx, patch) =>
@@ -174,19 +184,21 @@ export function CuratedGymLogger() {
     setError('');
     const picked = exercises.filter((e) => checked.has(e.name));
     if (!picked.length) return setError('Coche au moins un exercice fait.');
-    const missingReps = picked.some((e) => effectiveSetsFor(e).some((s) => !s.reps));
-    if (missingReps) return setError('Indique les reps pour chaque série.');
+    const noDoneSets = picked.some((e) => !doneSetsFor(e).length);
+    if (noDoneSets) return setError('Chaque exercice coché doit avoir au moins une série non décochée (×), ou décoche l\'exercice.');
+    const missingReps = picked.some((e) => doneSetsFor(e).some((s) => !s.reps));
+    if (missingReps) return setError('Indique les reps pour chaque série non décochée.');
     // Weight is required per set for any loaded exercise (barbell/dumbbell/
     // machine) — only bodyweight-flagged movements (pull-ups, dips…) can
     // legitimately have an empty weight field, meaning "bodyweight only".
-    const missingWeight = picked.some((e) => !e.bodyweightExercise && effectiveSetsFor(e).some((s) => !s.weight));
-    if (missingWeight) return setError('Indique le poids de chaque série (sauf poids du corps).');
+    const missingWeight = picked.some((e) => !e.bodyweightExercise && doneSetsFor(e).some((s) => !s.weight));
+    if (missingWeight) return setError('Indique le poids de chaque série non décochée (sauf poids du corps).');
     logGymSession({
       date: logDate,
       sessionType: null,
       exercises: picked.map((e) => ({
         exercise: e.name,
-        sets: effectiveSetsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
+        sets: doneSetsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
       })),
       quality: sessionQuality,
       notes: [notes, activeSession.isVariant ? '(variante)' : '', lighterMode ? '(séance allégée -1 série/exercice)' : ''].filter(Boolean).join(' — '),
@@ -197,9 +209,15 @@ export function CuratedGymLogger() {
 
   const allChecked = exercises.length > 0 && exercises.every((e) => checked.has(e.name));
   // Mirrors submitTraining's validation so the button is disabled (not just
-  // rejected after the click) until every checked exercise's sets all have
-  // reps, plus a weight unless it's a bodyweight movement.
-  const canSubmit = allChecked && exercises.every((e) => effectiveSetsFor(e).every((s) => s.reps && (e.bodyweightExercise || s.weight)));
+  // rejected after the click) until every CHECKED exercise has at least one
+  // non-skipped set, and every non-skipped set has reps (+ weight unless
+  // it's a bodyweight movement) — skipped sets are excluded entirely.
+  const canSubmit =
+    allChecked &&
+    exercises.every((e) => {
+      const done = doneSetsFor(e);
+      return done.length > 0 && done.every((s) => s.reps && (e.bodyweightExercise || s.weight));
+    });
 
   if (!program || !next || !exercises.length) return null;
 
@@ -237,22 +255,32 @@ export function CuratedGymLogger() {
               </div>
             </div>
             <div className="mt-2 pl-7 space-y-1.5">
-              {effectiveSetsFor(ex).map((s, setIdx) => (
-                <div key={setIdx} className="flex items-center gap-2">
-                  <span className="text-[10px] text-mute w-10 shrink-0">Série {setIdx + 1}</span>
-                  <Input type="number" className="!py-1 !text-xs w-14" placeholder="reps" value={s.reps ?? ''} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
-                  <Input
-                    type="number" className="!py-1 !text-xs w-20"
-                    placeholder={ex.bodyweightExercise ? 'poids ajouté' : 'poids (kg)'}
-                    value={s.weight ?? ''} onChange={(e) => updateSet(ex, setIdx, { weight: e.target.value })}
-                  />
-                  <div className="flex items-center gap-1 w-24 shrink-0">
-                    <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSet(ex, setIdx, { rpe: Number(e.target.value) })} className="w-full" />
-                    <span className="text-[10px] text-mute w-11 shrink-0">RPE {s.rpe}</span>
+              {effectiveSetsFor(ex).map((s, setIdx) => {
+                const done = s.done !== false;
+                return (
+                  <div key={setIdx} className={`flex items-center gap-2 ${done ? '' : 'opacity-40'}`}>
+                    <button
+                      type="button"
+                      onClick={() => updateSet(ex, setIdx, { done: !done })}
+                      title={done ? 'Marquer cette série comme non faite' : 'Marquer cette série comme faite'}
+                      className={`w-10 shrink-0 text-[10px] cursor-pointer text-left ${done ? 'text-mute hover:text-bad' : 'text-bad'}`}
+                    >
+                      {done ? `Série ${setIdx + 1}` : <span className="flex items-center gap-0.5"><X size={10} /> ratée</span>}
+                    </button>
+                    <Input type="number" className="!py-1 !text-xs w-14" placeholder="reps" value={s.reps ?? ''} disabled={!done} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
+                    <Input
+                      type="number" className="!py-1 !text-xs w-20"
+                      placeholder={ex.bodyweightExercise ? 'poids ajouté' : 'poids (kg)'}
+                      value={s.weight ?? ''} disabled={!done} onChange={(e) => updateSet(ex, setIdx, { weight: e.target.value })}
+                    />
+                    <div className="flex items-center gap-1 w-24 shrink-0">
+                      <input type="range" min="1" max="10" value={s.rpe} disabled={!done} onChange={(e) => updateSet(ex, setIdx, { rpe: Number(e.target.value) })} className="w-full" />
+                      <span className="text-[10px] text-mute w-11 shrink-0">RPE {s.rpe}</span>
+                    </div>
+                    <Select className="!py-1 !text-xs w-20" value={s.form} disabled={!done} onChange={(e) => updateSet(ex, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
                   </div>
-                  <Select className="!py-1 !text-xs w-20" value={s.form} onChange={(e) => updateSet(ex, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
@@ -273,10 +301,10 @@ export function CuratedGymLogger() {
       <Button className="mt-3" onClick={submitTraining} disabled={!canSubmit}>
         <span className="flex items-center gap-2">
           <CheckCircle2 size={14} />
-          {canSubmit ? 'Logger la séance' : !allChecked ? `Coche les ${exercises.length} exercices pour terminer` : 'Remplis reps et poids pour chaque série'}
+          {canSubmit ? 'Logger la séance' : !allChecked ? `Coche les ${exercises.length} exercices pour terminer` : 'Remplis reps et poids pour chaque série non décochée'}
         </span>
       </Button>
-      <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur une série au poids du corps = faite au poids du corps seul ; un nombre = poids ajouté en plus. Chaque série a son propre poids.</p>
+      <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur une série au poids du corps = faite au poids du corps seul ; un nombre = poids ajouté en plus. Chaque série a son propre poids. Cliquer sur "Série N" décoche une série non faite (arrêtée en cours, blessure, temps…) — elle ne sera ni requise ni loggée.</p>
     </Card>
   );
 }
