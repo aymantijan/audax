@@ -230,6 +230,90 @@ export function bestSleepWindow(energyLogs) {
   return { bedtime: mode(bedHours), wakeTime: mode(wakeHours), sampleSize: good.length, avgQuality };
 }
 
+// ---- Training-load-aware sleep target ----
+// General adult guidance is 7-9h/night (NSF's 2015 review of 133 meta-
+// analyses across ~3200 studies). Athletes / high training-load individuals
+// consistently show a higher real need in the literature — commonly cited
+// as 8-10h, with studies on sleep-restricted athletes linking <6h to
+// materially higher injury risk. This isn't a fixed "athlete" vs "everyone
+// else" split though: what counts as a demanding day is relative to what a
+// given person normally does, so the target below compares TODAY's training
+// load to that same person's own trailing 14-day average rather than to an
+// absolute number.
+const CARDIO_ZONE_LOAD_MULT = { zone1: 0.5, zone2: 0.7, zone3: 1, zone4: 1.3, zone5: 1.6, hiit: 1.5, liss: 0.6 };
+
+// A single day's training load — RPE-weighted volume for gym work (a set at
+// RPE 9 counts for more than the same reps×weight logged at RPE 5) plus
+// zone-weighted cardio minutes. Deliberately unitless: never compared to an
+// absolute scale, only ever to this same person's own recent days below.
+export function computeDailyTrainingLoad(workouts, dateKey) {
+  const dayWorkouts = workouts.filter((w) => w.date === dateKey);
+  let gymLoad = 0;
+  for (const w of dayWorkouts) {
+    if (w.type !== 'strength' || !w.sets) continue;
+    for (const s of w.sets) {
+      const vol = (Number(s.reps) || 0) * (Number(s.weight) || 0);
+      const rpeMult = s.rpe ? Number(s.rpe) / 7 : 1; // 7 treated as a "normal effort" reference point
+      gymLoad += vol * rpeMult;
+    }
+  }
+  let cardioLoad = 0;
+  for (const w of dayWorkouts) {
+    if (w.type !== 'cardio') continue;
+    cardioLoad += (w.durationMin || 0) * (CARDIO_ZONE_LOAD_MULT[w.sessionType] ?? 1);
+  }
+  return gymLoad / 10 + cardioLoad; // gym volume runs an order of magnitude above cardio minutes — this brings the two onto a comparable scale
+}
+
+// Tonight's sleep-duration target, informed by how hard TODAY was relative
+// to this person's own recent training. Extension toward the athlete range
+// is framed as the research suggests it should be used: an earlier bedtime
+// rather than a later wake time (large wake-time shifts disrupt circadian
+// regularity per the NSF's 2023 sleep-regularity consensus statement more
+// than an earlier bedtime does) — bedtimeSuggestion below is computed that
+// way when a known wake-time anchor is available.
+export function getSleepLoadTarget(workouts, dateKey, wakeTimeAnchor) {
+  const today = computeDailyTrainingLoad(workouts, dateKey);
+  const history = [];
+  const d = new Date(dateKey + 'T00:00:00');
+  for (let i = 1; i <= 14; i++) {
+    const prev = new Date(d);
+    prev.setDate(prev.getDate() - i);
+    // Local-date formatting, NOT toISOString() — that converts to UTC, which
+    // silently shifts every date back a day (and drops a real day of
+    // history) for anyone west of UTC. Matches todayKey()'s own convention.
+    const key = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+    history.push(computeDailyTrainingLoad(workouts, key));
+  }
+  const sampled = history.filter((v) => v > 0);
+  const avg = sampled.length ? sampled.reduce((a, v) => a + v, 0) / sampled.length : 0;
+
+  let tier, targetMin, targetMax;
+  if (today === 0) {
+    tier = 'rest'; targetMin = 7; targetMax = 8;
+  } else if (sampled.length < 3) {
+    // Not enough of this person's own history yet to say today was
+    // unusually big — stick to the general-adult range rather than overclaim.
+    tier = 'normal'; targetMin = 7; targetMax = 9;
+  } else if (today >= avg * 1.4) {
+    tier = 'high'; targetMin = 9; targetMax = 10;
+  } else if (today >= avg * 0.7) {
+    tier = 'normal'; targetMin = 7; targetMax = 9;
+  } else {
+    tier = 'light'; targetMin = 7; targetMax = 8;
+  }
+
+  let bedtimeSuggestion = null;
+  if (wakeTimeAnchor) {
+    const [h, m] = wakeTimeAnchor.split(':').map(Number);
+    const wakeMin = h * 60 + m;
+    const bedMin = ((wakeMin - targetMax * 60) % 1440 + 1440) % 1440;
+    bedtimeSuggestion = `${String(Math.floor(bedMin / 60)).padStart(2, '0')}:${String(bedMin % 60).padStart(2, '0')}`;
+  }
+
+  return { tier, targetMin, targetMax, todayLoad: r1(today), avgLoad: r1(avg), bedtimeSuggestion };
+}
+
 // ---- Menstrual cycle phase (optional tracker) ----
 // Simple calendar-based estimate from logged cycle-start dates — NOT a medical
 // prediction, just a phase label to correlate against energy/mood/performance

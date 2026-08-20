@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Moon, BedDouble } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useHabitStore } from '../../store/habitStore';
 import { useHealthStore } from '../../store/healthStore';
@@ -8,14 +9,23 @@ import { Card, Button, EmptyState } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
+const TIER_COPY = {
+  high: { label: 'Grosse journée d\'entraînement', color: 'var(--warning)', note: "Ta charge d'aujourd'hui (Gym + Cardio) est nettement au-dessus de ta moyenne récente — la littérature sur les athlètes situe le besoin réel de récupération plutôt entre 9 et 10h ces jours-là, contre 7-9h en général." },
+  normal: { label: 'Journée d\'entraînement normale', color: 'var(--accent-primary)', note: "Charge dans ta moyenne habituelle — la plage générale adulte (7-9h, revue NSF de 133 méta-analyses) s'applique." },
+  light: { label: 'Journée légère', color: 'var(--text-secondary)', note: "Charge en dessous de ta moyenne récente — pas besoin d'étendre, vise le bas de la fourchette générale." },
+  rest: { label: 'Jour de repos', color: 'var(--text-secondary)', note: "Rien loggé en Gym/Cardio aujourd'hui — plage générale adulte standard." },
+};
+
 // Sleep is entered once per day on the Habits page's morning check-in (bedtime +
 // wake time → auto-scored) — reused here rather than duplicated, since burnout.js
 // and the synergy score already depend on that single entry point.
 export default function SleepTracker() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
-  const { getSleepWindow } = useHealthStore();
+  const { getSleepWindow, getSleepTarget } = useHealthStore();
   const navigate = useNavigate();
   const window_ = getSleepWindow();
+  const target = getSleepTarget();
+  const tierInfo = TIER_COPY[target.tier];
 
   const history = useMemo(
     () =>
@@ -35,6 +45,31 @@ export default function SleepTracker() {
 
   return (
     <div className="space-y-6">
+      <Card title="Sommeil recommandé ce soir" action={<span className="text-xs font-medium" style={{ color: tierInfo.color }}>{tierInfo.label}</span>}>
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Moon size={20} className="text-accent shrink-0" />
+            <div>
+              <div className="text-xl font-bold">{target.targetMin}–{target.targetMax}h</div>
+              <div className="text-xs text-mute">cette nuit</div>
+            </div>
+          </div>
+          {target.bedtimeSuggestion && (
+            <div className="flex items-center gap-2">
+              <BedDouble size={20} className="text-accent shrink-0" />
+              <div>
+                <div className="text-xl font-bold">{target.bedtimeSuggestion}</div>
+                <div className="text-xs text-mute">coucher suggéré (réveil habituel {window_?.wakeTime} inchangé)</div>
+              </div>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-mute mt-3">{tierInfo.note}</p>
+        {target.avgLoad > 0 && (
+          <p className="text-[11px] text-mute mt-1">Charge estimée aujourd'hui vs moyenne des 14 derniers jours : {target.todayLoad} vs {target.avgLoad}.</p>
+        )}
+      </Card>
+
       {window_ && (
         <Card title="Your Optimal Sleep Window">
           <div className="flex items-center gap-6">

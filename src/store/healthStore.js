@@ -5,7 +5,7 @@ import { estimateMacros, foodQualityScore } from '../utils/nutrition-db';
 import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
   checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation,
-  bestSleepWindow, computeCyclePhase, computeGoalProgress, estimate1RM,
+  bestSleepWindow, getSleepLoadTarget, computeCyclePhase, computeGoalProgress, estimate1RM,
   bodyFatYMCA, bodyFatDeurenberg, estimateFFMI, estimateLeanMassKg, smoothedTrend,
   estimateVO2max, cyclePhaseCoachingNote,
 } from '../utils/health-science';
@@ -1446,6 +1446,17 @@ export const useHealthStore = create(
       },
 
       getSleepWindow: () => bestSleepWindow(useHabitStore.getState().energyLogs),
+
+      // Tonight's sleep-duration target given how demanding today's Gym/Cardio
+      // actually was, relative to this person's own recent training (see
+      // getSleepLoadTarget's comment in health-science.js for the research
+      // behind the ranges). Anchors the "sleep earlier, not later" bedtime
+      // suggestion to the user's own known wake time when there's enough
+      // history for one.
+      getSleepTarget: () => {
+        const window_ = get().getSleepWindow();
+        return getSleepLoadTarget(get().workouts, todayKey(), window_?.wakeTime || null);
+      },
 
       // Auto-generated trailing-N-day summary — shared by the annual report and
       // the weekly digest so the two never drift out of sync.
