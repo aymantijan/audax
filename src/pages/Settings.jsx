@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus } from 'lucide-react';
-import { FOOD_DB } from '../utils/nutrition-db';
+import { FOOD_DB, getServingOptions } from '../utils/nutrition-db';
 import { MOROCCO_FOOD_COST_TIERS } from '../utils/morocco-food-budget';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { isSupabaseConfigured } from '../services/supabase';
@@ -30,6 +30,18 @@ const FOOD_CATEGORIES = [
   { value: 'veg', label: 'Légumes' }, { value: 'fruit', label: 'Fruits' }, { value: 'dairy', label: 'Laitier' },
 ];
 
+// Servings that are legitimately fractional/by-volume in real cooking (cup,
+// tbsp…) stay priced per 100g — everything else with a defined serving
+// (egg, can, cuisse, steak…) is a physical item you buy as a whole unit, not
+// by weight, so pricing switches to "per unit" for those. Same split as
+// CONTINUOUS_SERVING_LABELS in nutrition-plan-generator.js/healthStore.js.
+const CONTINUOUS_SERVING_LABELS = new Set(['cup', 'tbsp', 'slice', 'handful', 'handful (~23)', 'glass', 'loaf', 'poignée']);
+function getDiscreteUnit(foodName) {
+  if (!foodName) return null;
+  const options = getServingOptions(foodName);
+  return options.find((o) => o.grams > 1 && !CONTINUOUS_SERVING_LABELS.has(o.label)) || null;
+}
+
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
@@ -39,26 +51,39 @@ export default function SettingsPage() {
 
   // ─────────── Mes aliments & prix ───────────
   const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice } = useHealthStore();
-  const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '' });
-  const [priceEntry, setPriceEntry] = useState({ name: '', pricePer100g: '' });
+  const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '', isUnit: false, unitLabel: '', unitGrams: '', unitPrice: '' });
+  const [priceEntry, setPriceEntry] = useState({ name: '', price: '' });
   const allFoodNames = [...new Set([...FOOD_DB.map((f) => f.name), ...MOROCCO_FOOD_COST_TIERS.map((f) => f.name), ...customFoods.map((f) => f.name)])].sort();
+  const priceEntryUnit = getDiscreteUnit(priceEntry.name.trim());
 
   const submitNewFood = (e) => {
     e.preventDefault();
     if (!newFood.name.trim() || !newFood.protein || !newFood.kcal) return toast('Nom, protéine et calories sont requis.', 'warning');
+    if (newFood.isUnit && (!newFood.unitLabel.trim() || !newFood.unitGrams)) return toast("Nom de l'unité et poids d'une unité sont requis pour un aliment compté en unités.", 'warning');
     addCustomFood({
       name: newFood.name.trim(), category: newFood.category,
       protein: Number(newFood.protein) || 0, carbs: Number(newFood.carbs) || 0, fat: Number(newFood.fat) || 0, kcal: Number(newFood.kcal) || 0,
-      pricePerGram: newFood.pricePerGram ? Number(newFood.pricePerGram) / 100 : null,
+      ...(newFood.isUnit
+        ? {
+            whole: true,
+            servings: [{ label: newFood.unitLabel.trim(), grams: Number(newFood.unitGrams) }],
+            pricePerGram: newFood.unitPrice ? Number(newFood.unitPrice) / Number(newFood.unitGrams) : null,
+          }
+        : { pricePerGram: newFood.pricePerGram ? Number(newFood.pricePerGram) / 100 : null }),
     });
-    setNewFood({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '' });
+    setNewFood({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '', isUnit: false, unitLabel: '', unitGrams: '', unitPrice: '' });
   };
 
   const submitPrice = (e) => {
     e.preventDefault();
-    if (!priceEntry.name.trim() || !priceEntry.pricePer100g) return;
-    setFoodPrice(priceEntry.name.trim(), Number(priceEntry.pricePer100g) / 100);
-    setPriceEntry({ name: '', pricePer100g: '' });
+    if (!priceEntry.name.trim() || !priceEntry.price) return;
+    // Foods bought as whole units (eggs, cans…) are priced per unit, not per
+    // gram — converted to DH/gram for storage since that's what
+    // foodsForBudget's price sort compares, but the user never enters or
+    // sees a per-gram number for these.
+    const pricePerGram = priceEntryUnit ? Number(priceEntry.price) / priceEntryUnit.grams : Number(priceEntry.price) / 100;
+    setFoodPrice(priceEntry.name.trim(), pricePerGram);
+    setPriceEntry({ name: '', price: '' });
   };
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
@@ -250,9 +275,28 @@ export default function SettingsPage() {
             <Field label="Catégorie">
               <Select value={newFood.category} onChange={(e) => setNewFood({ ...newFood, category: e.target.value })} options={FOOD_CATEGORIES} />
             </Field>
-            <Field label="Prix / 100g (Dh)">
-              <Input type="number" min="0" step="0.1" value={newFood.pricePerGram} onChange={(e) => setNewFood({ ...newFood, pricePerGram: e.target.value })} />
-            </Field>
+            <label className="flex items-center gap-2 text-xs text-mute cursor-pointer sm:col-span-1">
+              <input type="checkbox" checked={newFood.isUnit} onChange={(e) => setNewFood({ ...newFood, isUnit: e.target.checked })} className="cursor-pointer" />
+              Se compte en unités (pas en grammes) — ex. œuf, boîte
+            </label>
+
+            {newFood.isUnit ? (
+              <>
+                <Field label="Nom de l'unité">
+                  <Input value={newFood.unitLabel} onChange={(e) => setNewFood({ ...newFood, unitLabel: e.target.value })} placeholder="ex. œuf" />
+                </Field>
+                <Field label="Poids d'une unité (g)">
+                  <Input type="number" min="1" value={newFood.unitGrams} onChange={(e) => setNewFood({ ...newFood, unitGrams: e.target.value })} placeholder="ex. 50" />
+                </Field>
+                <Field label={`Prix par ${newFood.unitLabel.trim() || 'unité'} (Dh)`}>
+                  <Input type="number" min="0" step="0.1" value={newFood.unitPrice} onChange={(e) => setNewFood({ ...newFood, unitPrice: e.target.value })} />
+                </Field>
+              </>
+            ) : (
+              <Field label="Prix / 100g (Dh)">
+                <Input type="number" min="0" step="0.1" value={newFood.pricePerGram} onChange={(e) => setNewFood({ ...newFood, pricePerGram: e.target.value })} />
+              </Field>
+            )}
             <Field label="Protéine /100g (g)">
               <Input type="number" min="0" step="0.1" value={newFood.protein} onChange={(e) => setNewFood({ ...newFood, protein: e.target.value })} />
             </Field>
@@ -267,6 +311,7 @@ export default function SettingsPage() {
             </Field>
             <Button type="submit" className="sm:col-span-2"><span className="flex items-center gap-2 justify-center"><Plus size={14} /> Ajouter à mes aliments</span></Button>
           </form>
+          <p className="text-[11px] text-mute mt-1.5">Les macros restent toujours saisies pour 100g (fait nutritionnel indépendant de l'unité d'achat) — seule l'unité de prix/achat change.</p>
         </div>
 
         {customFoods.length > 0 && (
@@ -275,7 +320,7 @@ export default function SettingsPage() {
             <ul className="space-y-1.5">
               {customFoods.map((f) => (
                 <li key={f.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                  <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${(f.pricePerGram * 100).toFixed(1)}Dh/100g` : ''})</span></span>
+                  <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${f.servings?.[0] ? `${(f.pricePerGram * f.servings[0].grams).toFixed(2)}Dh/${f.servings[0].label}` : `${(f.pricePerGram * 100).toFixed(1)}Dh/100g`}` : ''})</span></span>
                   <button onClick={() => deleteCustomFood(f.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </li>
               ))}
@@ -292,21 +337,25 @@ export default function SettingsPage() {
                 {allFoodNames.map((n) => <option key={n} value={n} />)}
               </datalist>
             </Field>
-            <Field label="Prix / 100g (Dh)">
-              <Input type="number" min="0" step="0.1" value={priceEntry.pricePer100g} onChange={(e) => setPriceEntry({ ...priceEntry, pricePer100g: e.target.value })} className="w-32" />
+            <Field label={priceEntryUnit ? `Prix par ${priceEntryUnit.label} (Dh)` : 'Prix / 100g (Dh)'}>
+              <Input type="number" min="0" step="0.1" value={priceEntry.price} onChange={(e) => setPriceEntry({ ...priceEntry, price: e.target.value })} className="w-32" />
             </Field>
             <Button type="submit" variant="secondary">Enregistrer le prix</Button>
           </form>
+          {priceEntryUnit && <p className="text-[11px] text-mute mt-1.5">"{priceEntry.name.trim()}" s'achète en {priceEntryUnit.label} — prix demandé par unité, pas au poids.</p>}
         </div>
 
         {Object.keys(foodPrices).length > 0 && (
           <ul className="space-y-1.5 mt-3">
-            {Object.entries(foodPrices).map(([name, pricePerGram]) => (
-              <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>{name} <span className="text-mute text-xs">{(pricePerGram * 100).toFixed(1)}Dh/100g</span></span>
-                <button onClick={() => deleteFoodPrice(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
-              </li>
-            ))}
+            {Object.entries(foodPrices).map(([name, pricePerGram]) => {
+              const unit = getDiscreteUnit(name);
+              return (
+                <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                  <span>{name} <span className="text-mute text-xs">{unit ? `${(pricePerGram * unit.grams).toFixed(2)}Dh/${unit.label}` : `${(pricePerGram * 100).toFixed(1)}Dh/100g`}</span></span>
+                  <button onClick={() => deleteFoodPrice(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
