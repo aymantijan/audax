@@ -12,8 +12,8 @@ const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border
 const TIER_COPY = {
   high: { label: 'Grosse journée d\'entraînement', color: 'var(--warning)', note: "Ta charge d'aujourd'hui (Gym + Cardio) est nettement au-dessus de ta moyenne récente — la littérature sur les athlètes situe le besoin réel de récupération plutôt entre 9 et 10h ces jours-là, contre 7-9h en général." },
   normal: { label: 'Journée d\'entraînement normale', color: 'var(--accent-primary)', note: "Charge dans ta moyenne habituelle — la plage générale adulte (7-9h, revue NSF de 133 méta-analyses) s'applique." },
-  light: { label: 'Journée légère', color: 'var(--text-secondary)', note: "Charge en dessous de ta moyenne récente — pas besoin d'étendre, vise le bas de la fourchette générale." },
-  rest: { label: 'Jour de repos', color: 'var(--text-secondary)', note: "Rien loggé en Gym/Cardio aujourd'hui — plage générale adulte standard." },
+  light: { label: 'Journée légère', color: 'var(--text-secondary)', note: "Charge en dessous de ta moyenne récente — vise plutôt le bas de la fourchette ci-dessus." },
+  rest: { label: 'Jour de repos', color: 'var(--text-secondary)', note: "Rien loggé en Gym/Cardio aujourd'hui." },
 };
 
 // Sleep is entered once per day on the Habits page's morning check-in (bedtime +
@@ -21,11 +21,12 @@ const TIER_COPY = {
 // and the synergy score already depend on that single entry point.
 export default function SleepTracker() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
-  const { getSleepWindow, getSleepTarget } = useHealthStore();
+  const { getSleepWindow, getSleepTarget, getActiveCuratedProgram } = useHealthStore();
   const navigate = useNavigate();
   const window_ = getSleepWindow();
   const target = getSleepTarget();
   const tierInfo = TIER_COPY[target.tier];
+  const activeCurated = getActiveCuratedProgram();
 
   const history = useMemo(
     () =>
@@ -65,6 +66,11 @@ export default function SleepTracker() {
           )}
         </div>
         <p className="text-xs text-mute mt-3">{tierInfo.note}</p>
+        {target.floorApplied && (
+          <p className="text-xs text-mute mt-1">
+            Plancher relevé car <span className="font-medium">{activeCurated?.name}</span> est un programme exigeant — même une journée "normale" pour ce programme justifie plus de sommeil que la moyenne générale, pas seulement les pics au-dessus de ta propre moyenne.
+          </p>
+        )}
         {target.avgLoad > 0 && (
           <p className="text-[11px] text-mute mt-1">Charge estimée aujourd'hui vs moyenne des 14 derniers jours : {target.todayLoad} vs {target.avgLoad}.</p>
         )}

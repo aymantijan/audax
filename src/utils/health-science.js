@@ -272,7 +272,19 @@ export function computeDailyTrainingLoad(workouts, dateKey) {
 // regularity per the NSF's 2023 sleep-regularity consensus statement more
 // than an earlier bedtime does) — bedtimeSuggestion below is computed that
 // way when a known wake-time anchor is available.
-export function getSleepLoadTarget(workouts, dateKey, wakeTimeAnchor) {
+//
+// `programFloor` (optional {min,max}, from the active curated program's
+// sleepFloor — see programme-extreme.js) guards against a real blind spot in
+// the relative-to-self comparison above: someone training a genuinely
+// demanding program EVERY day drags their own 14-day average up with it, so
+// yesterday's brutal session reads as merely "normal" relative to an
+// already-extreme baseline and never gets flagged as needing more sleep —
+// exactly backwards from what the athlete-sleep literature says (that
+// baseline itself should sit higher, not just its spikes). When set, it's
+// applied as a floor the tier-based range can never fall below, and only
+// narrows upward (toward 9-10h) on days that are hard even by that
+// demanding program's own standard — never a reason to sleep LESS.
+export function getSleepLoadTarget(workouts, dateKey, wakeTimeAnchor, programFloor) {
   const today = computeDailyTrainingLoad(workouts, dateKey);
   const history = [];
   const d = new Date(dateKey + 'T00:00:00');
@@ -303,6 +315,19 @@ export function getSleepLoadTarget(workouts, dateKey, wakeTimeAnchor) {
     tier = 'light'; targetMin = 7; targetMax = 8;
   }
 
+  let floorApplied = false;
+  if (programFloor) {
+    // A rest day gets a softened floor (1h below the program's full floor) —
+    // no training happened today, so the full "even normal days are
+    // elevated" logic doesn't apply, but the surrounding demanding days
+    // still warrant more recovery than a fully sedentary person's 7-8h.
+    const floorMin = tier === 'rest' ? Math.max(7, programFloor.min - 1) : programFloor.min;
+    const floorMax = tier === 'rest' ? Math.max(8, programFloor.max - 1) : programFloor.max;
+    if (floorMin > targetMin || floorMax > targetMax) floorApplied = true;
+    targetMin = Math.max(targetMin, floorMin);
+    targetMax = Math.max(targetMax, floorMax);
+  }
+
   let bedtimeSuggestion = null;
   if (wakeTimeAnchor) {
     const [h, m] = wakeTimeAnchor.split(':').map(Number);
@@ -311,7 +336,7 @@ export function getSleepLoadTarget(workouts, dateKey, wakeTimeAnchor) {
     bedtimeSuggestion = `${String(Math.floor(bedMin / 60)).padStart(2, '0')}:${String(bedMin % 60).padStart(2, '0')}`;
   }
 
-  return { tier, targetMin, targetMax, todayLoad: r1(today), avgLoad: r1(avg), bedtimeSuggestion };
+  return { tier, targetMin, targetMax, todayLoad: r1(today), avgLoad: r1(avg), bedtimeSuggestion, floorApplied };
 }
 
 // ---- Menstrual cycle phase (optional tracker) ----

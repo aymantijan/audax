@@ -12,6 +12,13 @@ export const PROGRAMME_EXTREME = {
   tags: ['force', 'hypertrophie', 'avancé', 'cardio', 'agilité', '5j/semaine'],
   designedFor: 'Homme, 25 ans — Casablanca, Maroc — Master 1 ISCAE',
   objective: 'Dépasser les standards naturels · maintenir 15% bodyfat · protéger le système nerveux',
+  // Sleep-target floor (see getSleepLoadTarget in health-science.js): a
+  // program this demanding warrants an elevated baseline even on days that
+  // look "normal" relative to the user's OWN recent (already-high) average —
+  // the athlete sleep literature (8-10h under high training load) applies to
+  // the whole program, not just to days that spike above an already-extreme
+  // norm. Programme Débutant deliberately has no floor — it doesn't warrant one.
+  sleepFloor: { min: 8, max: 10 },
   // Machine-readable timing rules — drives the generic schedule generator
   // (program-schedule-generator.js), which reasons about these fields for
   // ANY curated program, not just this one.

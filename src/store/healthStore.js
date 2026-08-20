@@ -1455,7 +1455,8 @@ export const useHealthStore = create(
       // history for one.
       getSleepTarget: () => {
         const window_ = get().getSleepWindow();
-        return getSleepLoadTarget(get().workouts, todayKey(), window_?.wakeTime || null);
+        const activeCurated = get().getActiveCuratedProgram();
+        return getSleepLoadTarget(get().workouts, todayKey(), window_?.wakeTime || null, activeCurated?.sleepFloor || null);
       },
 
       // Auto-generated trailing-N-day summary — shared by the annual report and
