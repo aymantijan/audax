@@ -4,6 +4,7 @@ import { uid } from '../utils/formatters';
 import { ENGINEERING_STAGE_SKILL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
+import { deleteCalendarEvent } from '../services/google-calendar';
 
 // Fixed XP a lab entry awards — cross-cutting "did the work" credit, same
 // role as health's per-log discipline XP (healthStore's health-discipline-lv1
@@ -72,7 +73,7 @@ export const useEngineeringStore = create(
       },
 
       addTask: (projectId, data) => {
-        const task = { id: uid(), title: data.title, stage: data.stage || null, status: 'todo', createdAt: Date.now(), completedAt: null };
+        const task = { id: uid(), title: data.title, stage: data.stage || null, status: 'todo', createdAt: Date.now(), completedAt: null, googleEventId: null, googleEventLink: null };
         set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: [...(p.tasks || []), task], updatedAt: Date.now() } : p)) });
         return task.id;
       },
@@ -118,8 +119,20 @@ export const useEngineeringStore = create(
           const skillId = ENGINEERING_STAGE_SKILL[task.stage] || 'engineering-discipline-lv1';
           useSkillStore.getState().removeXP(skillId, TASK_XP, 'task deleted');
         }
+        if (task?.googleEventId) deleteCalendarEvent(task.googleEventId);
         set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: p.tasks.filter((t) => t.id !== taskId), updatedAt: Date.now() } : p)) });
       },
+
+      // Records the Google Calendar event a task's "Schedule" action created —
+      // same role as dealsStore.setTaskCalendarEvent.
+      setTaskCalendarEvent: (projectId, taskId, { eventId, htmlLink }) =>
+        set({
+          projects: get().projects.map((p) =>
+            p.id === projectId
+              ? { ...p, tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, googleEventId: eventId, googleEventLink: htmlLink } : t)), updatedAt: Date.now() }
+              : p
+          ),
+        }),
 
       resetAll: () => set({ labEntries: [], projects: [] }),
     }),

@@ -4,6 +4,7 @@ import { useHabitStore } from '../store/habitStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 import { SKILL_MAP } from '../utils/constants';
 
 // Reads every store via `.getState()` — a one-shot imperative snapshot, NOT a
@@ -48,6 +49,14 @@ export function buildSearchIndex() {
   const deals = useDealsStore.getState().deals;
   for (const d of deals) {
     items.push({ id: `deal-${d.id}`, domain: 'Deals', label: d.name, sub: d.stageStatus, to: `/deals/${d.id}` });
+  }
+
+  const { labEntries, projects: engProjects } = useEngineeringStore.getState();
+  for (const p of engProjects) {
+    items.push({ id: `eng-project-${p.id}`, domain: 'Engineering', label: p.name, sub: p.type, to: `/engineering/${p.id}` });
+  }
+  for (const e of labEntries.slice(-300)) {
+    items.push({ id: `eng-lab-${e.id}`, domain: 'Engineering', label: e.title, sub: `${e.date}${e.course ? ` · ${e.course}` : ''}`, to: '/engineering' });
   }
 
   for (const skill of Object.values(SKILL_MAP)) {

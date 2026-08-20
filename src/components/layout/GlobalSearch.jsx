@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, GitBranch } from 'lucide-react';
+import { Search, X, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, GitBranch, FlaskConical } from 'lucide-react';
 import { buildSearchIndex, searchIndex } from '../../utils/global-search';
 
-const DOMAIN_ICON = { Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Skills: GitBranch };
+const DOMAIN_ICON = { Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Skills: GitBranch, Engineering: FlaskConical };
 
 // Global command-palette search — Ctrl/Cmd+K anywhere, or the search icon in
 // the navbar. Reads a fresh index from every relevant store on each open
@@ -70,7 +70,7 @@ export default function GlobalSearch() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
             onKeyDown={onKeyDownInput}
-            placeholder="Search trades, transactions, habits, courses, books, deals, skills…"
+            placeholder="Search trades, transactions, habits, courses, books, deals, projects, skills…"
             className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-mute"
           />
           <button onClick={() => setOpen(false)} className="text-mute hover:text-ink cursor-pointer shrink-0">

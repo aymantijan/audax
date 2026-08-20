@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FlaskConical, FolderKanban, Plus, Trash2, Pencil } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
+
+const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 
@@ -41,6 +44,15 @@ function LabJournal() {
     setForm(blankEntry());
   };
 
+  const yieldTrend = useMemo(
+    () =>
+      [...labEntries]
+        .filter((e) => e.yieldPercent !== '' && e.yieldPercent != null)
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+        .map((e) => ({ date: e.date.slice(5), yield: Number(e.yieldPercent), title: e.title })),
+    [labEntries]
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -53,6 +65,20 @@ function LabJournal() {
         <Stat label="Rendement moyen" value={labEntries.filter((e) => e.yieldPercent !== '' && e.yieldPercent != null).length ? `${Math.round((labEntries.reduce((a, e) => a + (Number(e.yieldPercent) || 0), 0) / labEntries.filter((e) => e.yieldPercent !== '' && e.yieldPercent != null).length) * 10) / 10}%` : '—'} />
         <Stat label="Cours couverts" value={new Set(labEntries.map((e) => e.course).filter(Boolean)).size} />
       </div>
+
+      {yieldTrend.length > 1 && (
+        <Card title="Rendement dans le temps">
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={yieldTrend}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+              <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} unit="%" />
+              <Tooltip {...tooltipStyle} formatter={(v, n, p) => [`${v}%`, p.payload.title]} />
+              <Line type="monotone" dataKey="yield" stroke="#66ccff" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       <Card title={`Journal (${labEntries.length})`}>
         {labEntries.length ? (

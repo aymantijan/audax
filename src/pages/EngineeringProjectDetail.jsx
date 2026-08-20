@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check } from 'lucide-react';
+import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check, CalendarPlus, CalendarCheck } from 'lucide-react';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES, ENGINEERING_PROJECT_STATUS } from '../utils/constants';
 import { fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
+import ScheduleEventModal from '../components/common/ScheduleEventModal';
 
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 const STAGE_STATUS_LABEL = { 'not-started': 'Pas commencé', 'in-progress': 'En cours', blocked: 'Bloqué', done: 'Terminé' };
@@ -47,11 +48,12 @@ const projectFields = [
 export default function EngineeringProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { projects, editProject, deleteProject, setProjectStage, addTask, updateTask, setTaskStatus, deleteTask } = useEngineeringStore();
+  const { projects, editProject, deleteProject, setProjectStage, addTask, updateTask, setTaskStatus, deleteTask, setTaskCalendarEvent } = useEngineeringStore();
   const [editModal, setEditModal] = useState(false);
   const [taskModal, setTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(blankTask());
+  const [schedulingTask, setSchedulingTask] = useState(null);
 
   const project = projects.find((p) => p.id === id);
   if (!project) {
@@ -186,6 +188,13 @@ export default function EngineeringProjectDetail() {
                       </button>
                     </td>
                     <td className="py-2.5 text-right whitespace-nowrap">
+                      <button
+                        className={`mr-3 cursor-pointer ${t.googleEventLink ? 'text-good hover:text-accent' : 'text-mute hover:text-accent'}`}
+                        onClick={() => setSchedulingTask(t)}
+                        title={t.googleEventLink ? 'Éditer dans Google Calendar' : 'Planifier dans Google Calendar'}
+                      >
+                        {t.googleEventLink ? <CalendarCheck size={14} /> : <CalendarPlus size={14} />}
+                      </button>
                       <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => openEditTask(t)} title="Éditer">
                         <Pencil size={14} />
                       </button>
@@ -233,6 +242,18 @@ export default function EngineeringProjectDetail() {
         initial={project}
         wide
         onSave={(values) => editProject(project.id, values)}
+      />
+
+      <ScheduleEventModal
+        open={!!schedulingTask}
+        onClose={() => setSchedulingTask(null)}
+        title="cette tâche"
+        defaultSummary={schedulingTask ? `${schedulingTask.title} — ${project.name}` : ''}
+        description={project.notes}
+        existingEventId={schedulingTask?.googleEventId || null}
+        existingEventLink={schedulingTask?.googleEventLink || null}
+        onScheduled={({ eventId, htmlLink }) => setTaskCalendarEvent(project.id, schedulingTask.id, { eventId, htmlLink })}
+        onUnschedule={() => setTaskCalendarEvent(project.id, schedulingTask.id, { eventId: null, htmlLink: null })}
       />
     </div>
   );
