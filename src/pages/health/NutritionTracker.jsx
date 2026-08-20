@@ -55,7 +55,7 @@ function macroTargets(proteinTargetG) {
 }
 
 export default function NutritionTracker({ pendingPrompt }) {
-  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem, healthProfile, completeHealthProfile, generatePlan, deleteNutritionPlan, getCyclePhaseCoaching } = useHealthStore();
+  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem, healthProfile, completeHealthProfile, generatePlan, deleteNutritionPlan, getCyclePhaseCoaching, addCustomFood, customFoods } = useHealthStore();
   const user = useAuthStore((s) => s.user);
   const gender = user?.gender;
   const profileComplete = !!(user?.gender && user?.heightCm && user?.dobYear);
@@ -233,6 +233,25 @@ export default function NutritionTracker({ pendingPrompt }) {
               <Input type="number" min="1" value={scanQty} onChange={(e) => setScanQty(Number(e.target.value) || 0)} className="w-28" />
             </Field>
             <Button onClick={confirmScannedProduct}>Logger ce produit</Button>
+            <Button
+              variant="secondary"
+              disabled={customFoods.some((f) => f.name === scannedProduct.name)}
+              onClick={() => {
+                // OpenFoodFacts doesn't classify by macro-category the way the
+                // generator's food pools need — a rough heuristic from the
+                // product's own macro balance beats defaulting every scan to
+                // "protein" regardless of what it actually is.
+                const { protein, carbs, fat } = scannedProduct;
+                const category = fat >= protein && fat >= carbs ? 'fat' : carbs >= protein * 2 ? 'carb' : 'protein';
+                addCustomFood({
+                  name: scannedProduct.name, category,
+                  protein, carbs, fat, kcal: scannedProduct.kcal,
+                  barcode: scannedProduct.barcode,
+                });
+              }}
+            >
+              {customFoods.some((f) => f.name === scannedProduct.name) ? 'Déjà dans mes aliments' : 'Ajouter à mes aliments'}
+            </Button>
             <Button variant="secondary" onClick={() => setScannedProduct(null)}>Annuler</Button>
           </div>
         </Card>

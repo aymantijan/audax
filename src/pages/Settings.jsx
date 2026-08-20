@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff } from 'lucide-react';
+import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus } from 'lucide-react';
+import { FOOD_DB } from '../utils/nutrition-db';
+import { MOROCCO_FOOD_COST_TIERS } from '../utils/morocco-food-budget';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { isSupabaseConfigured } from '../services/supabase';
 import { getSession } from '../services/auth-supabase';
@@ -23,12 +25,41 @@ import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-readings', 'audax-health', 'audax-business', 'audax-synergy-history'];
 
+const FOOD_CATEGORIES = [
+  { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
+  { value: 'veg', label: 'Légumes' }, { value: 'fruit', label: 'Fruits' }, { value: 'dairy', label: 'Laitier' },
+];
+
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
     name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid',
     gender: user?.gender || '', dobYear: user?.dobYear || '', heightCm: user?.heightCm || '',
   });
+
+  // ─────────── Mes aliments & prix ───────────
+  const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice } = useHealthStore();
+  const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '' });
+  const [priceEntry, setPriceEntry] = useState({ name: '', pricePer100g: '' });
+  const allFoodNames = [...new Set([...FOOD_DB.map((f) => f.name), ...MOROCCO_FOOD_COST_TIERS.map((f) => f.name), ...customFoods.map((f) => f.name)])].sort();
+
+  const submitNewFood = (e) => {
+    e.preventDefault();
+    if (!newFood.name.trim() || !newFood.protein || !newFood.kcal) return toast('Nom, protéine et calories sont requis.', 'warning');
+    addCustomFood({
+      name: newFood.name.trim(), category: newFood.category,
+      protein: Number(newFood.protein) || 0, carbs: Number(newFood.carbs) || 0, fat: Number(newFood.fat) || 0, kcal: Number(newFood.kcal) || 0,
+      pricePerGram: newFood.pricePerGram ? Number(newFood.pricePerGram) / 100 : null,
+    });
+    setNewFood({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '' });
+  };
+
+  const submitPrice = (e) => {
+    e.preventDefault();
+    if (!priceEntry.name.trim() || !priceEntry.pricePer100g) return;
+    setFoodPrice(priceEntry.name.trim(), Number(priceEntry.pricePer100g) / 100);
+    setPriceEntry({ name: '', pricePer100g: '' });
+  };
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
@@ -203,6 +234,81 @@ export default function SettingsPage() {
         >
           Save profile
         </Button>
+      </Card>
+
+      <Card title="Mes aliments & prix">
+        <p className="text-sm text-mute mb-4">
+          Le prix réel que tu paies pour chaque aliment — propre à toi, pas une moyenne générique. Dès qu'un prix est renseigné, le générateur de plan nutritionnel privilégie tes aliments les moins chers en premier.
+        </p>
+
+        <div className="mb-5">
+          <div className="text-xs text-mute uppercase tracking-wide mb-2">Ajouter un aliment</div>
+          <form onSubmit={submitNewFood} className="grid sm:grid-cols-3 gap-2 items-end">
+            <Field label="Nom">
+              <Input value={newFood.name} onChange={(e) => setNewFood({ ...newFood, name: e.target.value })} placeholder="ex. Poulet fermier local" />
+            </Field>
+            <Field label="Catégorie">
+              <Select value={newFood.category} onChange={(e) => setNewFood({ ...newFood, category: e.target.value })} options={FOOD_CATEGORIES} />
+            </Field>
+            <Field label="Prix / 100g (Dh)">
+              <Input type="number" min="0" step="0.1" value={newFood.pricePerGram} onChange={(e) => setNewFood({ ...newFood, pricePerGram: e.target.value })} />
+            </Field>
+            <Field label="Protéine /100g (g)">
+              <Input type="number" min="0" step="0.1" value={newFood.protein} onChange={(e) => setNewFood({ ...newFood, protein: e.target.value })} />
+            </Field>
+            <Field label="Glucides /100g (g)">
+              <Input type="number" min="0" step="0.1" value={newFood.carbs} onChange={(e) => setNewFood({ ...newFood, carbs: e.target.value })} />
+            </Field>
+            <Field label="Lipides /100g (g)">
+              <Input type="number" min="0" step="0.1" value={newFood.fat} onChange={(e) => setNewFood({ ...newFood, fat: e.target.value })} />
+            </Field>
+            <Field label="Calories /100g">
+              <Input type="number" min="0" value={newFood.kcal} onChange={(e) => setNewFood({ ...newFood, kcal: e.target.value })} />
+            </Field>
+            <Button type="submit" className="sm:col-span-2"><span className="flex items-center gap-2 justify-center"><Plus size={14} /> Ajouter à mes aliments</span></Button>
+          </form>
+        </div>
+
+        {customFoods.length > 0 && (
+          <div className="mb-5">
+            <div className="text-xs text-mute uppercase tracking-wide mb-2">Tes aliments ajoutés</div>
+            <ul className="space-y-1.5">
+              {customFoods.map((f) => (
+                <li key={f.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                  <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${(f.pricePerGram * 100).toFixed(1)}Dh/100g` : ''})</span></span>
+                  <button onClick={() => deleteCustomFood(f.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="mb-2">
+          <div className="text-xs text-mute uppercase tracking-wide mb-2">Prix d'un aliment existant</div>
+          <form onSubmit={submitPrice} className="flex flex-wrap gap-2 items-end">
+            <Field label="Aliment">
+              <Input list="all-foods" value={priceEntry.name} onChange={(e) => setPriceEntry({ ...priceEntry, name: e.target.value })} placeholder="ex. Chicken thigh" />
+              <datalist id="all-foods">
+                {allFoodNames.map((n) => <option key={n} value={n} />)}
+              </datalist>
+            </Field>
+            <Field label="Prix / 100g (Dh)">
+              <Input type="number" min="0" step="0.1" value={priceEntry.pricePer100g} onChange={(e) => setPriceEntry({ ...priceEntry, pricePer100g: e.target.value })} className="w-32" />
+            </Field>
+            <Button type="submit" variant="secondary">Enregistrer le prix</Button>
+          </form>
+        </div>
+
+        {Object.keys(foodPrices).length > 0 && (
+          <ul className="space-y-1.5 mt-3">
+            {Object.entries(foodPrices).map(([name, pricePerGram]) => (
+              <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                <span>{name} <span className="text-mute text-xs">{(pricePerGram * 100).toFixed(1)}Dh/100g</span></span>
+                <button onClick={() => deleteFoodPrice(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card title="Cloud Sync">

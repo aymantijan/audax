@@ -154,13 +154,28 @@ export const FOOD_DB = [
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 
-// Fuzzy-match a logged meal name against the DB (substring, either direction).
+// User-added foods (healthStore.customFoods — manually entered or saved from
+// a barcode scan) — kept in sync by a store subscription (see healthStore.js,
+// bottom of file) rather than threaded as a parameter through every call
+// site, since lookupFood/estimateMacros/getServingOptions are called from
+// many places (Quick Log, the plan generator, meal templates…) that would
+// otherwise all need to know about custom foods individually. Same per-100g
+// shape as FOOD_DB.
+let CUSTOM_FOODS = [];
+export function setCustomFoods(list) {
+  CUSTOM_FOODS = Array.isArray(list) ? list : [];
+}
+
+// Fuzzy-match a logged meal name against the DB (substring, either direction)
+// — checks user-added foods first so a custom entry can intentionally
+// shadow/override a built-in one of the same name.
 export function lookupFood(name) {
   const q = norm(name);
   if (!q) return null;
-  const exact = FOOD_DB.find((f) => norm(f.name) === q);
+  const all = [...CUSTOM_FOODS, ...FOOD_DB];
+  const exact = all.find((f) => norm(f.name) === q);
   if (exact) return exact;
-  return FOOD_DB.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
+  return all.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
 }
 
 // Unit options for a food's quantity input — grams is always available;

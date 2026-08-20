@@ -5,7 +5,7 @@
 // from nutrition-db.js. Deterministic, no LLM dependency.
 // ─────────────────────────────────────────────────────────────────────────────
 import { computeBMR, computeTDEE } from './health-science';
-import { estimateMacros } from './nutrition-db';
+import { estimateMacros, getServingOptions } from './nutrition-db';
 import { foodsForBudget } from './morocco-food-budget';
 import { uid } from './formatters';
 
@@ -48,22 +48,68 @@ function applyDislikes(foods, dislikedFoods) {
   return filtered.length ? filtered : foods;
 }
 
+// Highest DIAAS (protein quality) first — sorts the pool so the rotation in
+// buildProteinItems below naturally favors higher-quality sources without
+// excluding anything. See morocco-food-budget.js's proteinQuality comment
+// for the DIAAS values/sources. Foods without a score (custom/user-added,
+// or anything outside the curated protein list) sort after every scored one
+// — unscored isn't the same as low-quality, but there's no basis to rank it
+// above a known value either.
+// `foods` arrives already price-sorted (ascending, priced foods first) from
+// foodsForBudget when the user has entered any real prices — that ordering
+// is left untouched here, since the user's own actual cost is a stronger,
+// more specific signal than a generic quality heuristic. Quality only
+// re-sorts the REMAINING foods with no known price, highest DIAAS first —
+// it fills in a sensible default for anything price didn't already decide,
+// rather than silently overriding what the user explicitly priced.
+function sortByProteinQuality(foods, foodPrices) {
+  const priced = foods.filter((f) => foodPrices?.[f.name] != null);
+  const unpriced = foods.filter((f) => foodPrices?.[f.name] == null);
+  const qualitySorted = [...unpriced].sort((a, b) => {
+    if (a.proteinQuality != null && b.proteinQuality != null) return b.proteinQuality - a.proteinQuality;
+    if (a.proteinQuality != null) return -1;
+    if (b.proteinQuality != null) return 1;
+    return 0;
+  });
+  return [...priced, ...qualitySorted];
+}
+
 // A single food beyond this many grams in one meal reads as an unrealistic
 // portion (e.g. 300g of eggs — ~5-6 eggs in one sitting) — real people don't
 // eat a whole macro target from one item, they combine 2 lighter sources.
 const REALISTIC_MAX_G = 220;
 
+// Serving labels that are legitimately fractional in real cooking (you can
+// measure 1.5 cups, half a tablespoon) — everything else with a defined
+// serving (egg, can, cuisse, steak, medium, carotte…) is a physical item you
+// can't split, so grams gets rounded to a whole multiple of it below.
+const CONTINUOUS_SERVING_LABELS = new Set(['cup', 'tbsp', 'slice', 'handful', 'handful (~23)', 'glass', 'loaf', 'poignée']);
+
+// "2.6 eggs" isn't something anyone can actually put on a plate — rounds to
+// the nearest whole multiple of the food's discrete serving unit when it has
+// one (min 1 unit), leaves continuous-measure foods (rice, oil…) untouched.
+function roundToDiscreteUnit(foodName, grams) {
+  const discrete = getServingOptions(foodName).find((o) => o.grams > 1 && !CONTINUOUS_SERVING_LABELS.has(o.label));
+  if (!discrete) return grams;
+  const units = Math.max(1, Math.round(grams / discrete.grams));
+  return units * discrete.grams;
+}
+
 // Grams of `food` needed to hit `targetG` of `macroKey`, clamped to a
-// realistic single-portion range.
+// realistic single-portion range, then rounded to a whole unit if the food
+// is only sold/eaten as discrete pieces.
 function gramsForMacroTarget(food, targetG, macroKey) {
   const per100 = estimateMacros(food.name, 100, 'g');
   const needed = per100?.[macroKey] ? (targetG / per100[macroKey]) * 100 : 120;
-  return Math.max(30, Math.min(REALISTIC_MAX_G, Math.round(needed)));
+  const clamped = Math.max(30, Math.min(REALISTIC_MAX_G, Math.round(needed)));
+  return roundToDiscreteUnit(food.name, clamped);
 }
 
 // Builds 1-2 protein items for a meal slot: a single source normally, but
 // split across two sources (half the target each) when one food alone would
-// need more than REALISTIC_MAX_G to hit the slot's protein target.
+// need more than REALISTIC_MAX_G to hit the slot's protein target. `foods`
+// is expected pre-sorted by protein quality (sortByProteinQuality) so the
+// rotation favors better sources first.
 function buildProteinItems(foods, slotIndex, targetG) {
   if (!foods.length) return [];
   const primary = foods[slotIndex % foods.length];
@@ -80,7 +126,10 @@ function buildProteinItems(foods, slotIndex, targetG) {
   ];
 }
 
-export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate', dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, dislikedFoods = [] } = {}) {
+export function generateNutritionPlan({
+  weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate',
+  dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, dislikedFoods = [], customFoods = [], foodPrices = {},
+} = {}) {
   const bmr = computeBMR({ weightKg, heightCm, age, sex });
   const tdee = bmr ? computeTDEE(bmr, activityLevel) : null;
   if (!tdee) {
@@ -105,8 +154,9 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
     `TDEE estimé à ${tdee} kcal/j (BMR ${bmr} × multiplicateur d'activité "${activityLevel}").`,
     `Objectif "${dietGoal}" → ${Math.round(tdee * (1 + adjust))} kcal/j (${adjust === 0 ? 'maintenance' : `${adjust > 0 ? '+' : ''}${Math.round(adjust * 100)}%`}).`,
     ...(lutealBump ? [`Phase lutéale : +${Math.round(LUTEAL_KCAL_BUMP * 100)}% (+${lutealBump} kcal) — le métabolisme de repos augmente légèrement sous l'effet thermogénique de la progestérone.`] : []),
-    `Protéine à ${proteinGPerKg}g/kg (${proteinG}g) — priorité pour préserver la masse maigre.`,
+    `Protéine à ${proteinGPerKg}g/kg (${proteinG}g) — priorité pour préserver la masse maigre. Sources triées par qualité protéique (score DIAAS — Herreman et al. 2020) : viande/poisson/œufs/laitier d'abord.`,
     `Graisses au plancher ~0.7g/kg (${fatG}g) pour la santé hormonale, glucides (${carbsG}g) en complément.`,
+    `Repas 1 = petit-déjeuner (avec fruit), dernier repas = dîner plus léger en glucides — la tolérance au glucose est meilleure le matin et se dégrade en soirée (chrononutrition, ex. restriction glucidique au dîner vs petit-déj en type 2).`,
   ];
 
   // Sample day: distribute macros across mealsPerDay slots, each slot picking
@@ -116,24 +166,39 @@ export function generateNutritionPlan({ weightKg, heightCm, age, sex, activityLe
   // legumes just because they happen to be cheap and sit early in the food
   // list; they're the primary pool only for an explicit vegetarian/vegan
   // profile (where animal sources are excluded by applyRestrictions anyway).
+  const budgetOpts = { customFoods, foodPrices };
   const wantsPlantOnly = (dietaryRestrictions || []).some((r) => r === 'vegetarian' || r === 'vegan');
-  const allProteinFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'protein'), dietaryRestrictions), dislikedFoods);
+  const allProteinFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'protein', budgetOpts), dietaryRestrictions), dislikedFoods);
   const animalProteinFoods = allProteinFoods.filter((f) => f.fromType !== 'legume');
-  const proteinFoods = wantsPlantOnly || !animalProteinFoods.length ? allProteinFoods : animalProteinFoods;
-  const carbFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'carb'), dietaryRestrictions), dislikedFoods);
-  const fatFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'fat'), dietaryRestrictions), dislikedFoods);
-  const vegFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'veg'), dietaryRestrictions), dislikedFoods);
+  const proteinFoods = sortByProteinQuality(wantsPlantOnly || !animalProteinFoods.length ? allProteinFoods : animalProteinFoods, foodPrices);
+  const carbFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'carb', budgetOpts), dietaryRestrictions), dislikedFoods);
+  const fatFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'fat', budgetOpts), dietaryRestrictions), dislikedFoods);
+  const vegFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'veg', budgetOpts), dietaryRestrictions), dislikedFoods);
+  const fruitFoods = applyDislikes(applyRestrictions(foodsForBudget(budgetTier, 'fruit', budgetOpts), dietaryRestrictions), dislikedFoods);
 
   const slots = Math.max(3, Math.min(6, mealsPerDay));
   const sampleMeals = Array.from({ length: slots }, (_, i) => {
+    const isBreakfast = i === 0;
+    const isDinner = i === slots - 1 && slots > 1;
     const slotProteinG = Math.round(proteinG / slots);
     const carbItem = carbFoods[i % carbFoods.length];
     const vegItem = vegFoods[i % vegFoods.length];
     const items = [...buildProteinItems(proteinFoods, i, slotProteinG)];
-    if (carbItem) items.push({ name: carbItem.name, grams: 150, unit: 'g', category: 'carb' });
-    if (vegItem) items.push({ name: vegItem.name, grams: 100, unit: 'g', category: 'veg' });
-    if (i === 0 && fatFoods[0]) items.push({ name: fatFoods[0].name, grams: 15, unit: 'g', category: 'fat' });
-    return { mealSlot: `Repas ${i + 1}`, items };
+    // Dinner: carb tolerance/insulin sensitivity is worse in the evening
+    // (see explanationNotes) — halve the starchy-carb portion and make up
+    // volume/satiety with extra vegetables instead, rather than cutting the
+    // meal down overall.
+    if (carbItem) {
+      const carbGrams = isDinner ? 75 : 150;
+      items.push({ name: carbItem.name, grams: roundToDiscreteUnit(carbItem.name, carbGrams), unit: 'g', category: 'carb' });
+    }
+    if (vegItem) {
+      const vegGrams = isDinner ? 130 : 100;
+      items.push({ name: vegItem.name, grams: roundToDiscreteUnit(vegItem.name, vegGrams), unit: 'g', category: 'veg' });
+    }
+    if (isBreakfast && fatFoods[0]) items.push({ name: fatFoods[0].name, grams: roundToDiscreteUnit(fatFoods[0].name, 15), unit: 'g', category: 'fat' });
+    if (isBreakfast && fruitFoods[0]) items.push({ name: fruitFoods[0].name, grams: roundToDiscreteUnit(fruitFoods[0].name, 120), unit: 'g', category: 'fruit' });
+    return { mealSlot: i === 0 ? 'Petit-déjeuner' : isDinner ? 'Dîner' : `Repas ${i + 1}`, items };
   });
 
   return {

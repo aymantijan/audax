@@ -20,21 +20,29 @@ export const MOROCCO_FOOD_COST_TIERS = [
   // classées à part et ne servent de source PRINCIPALE que si l'utilisateur a
   // explicitement choisi un régime végétarien/végan — voir buildProteinItems
   // dans nutrition-plan-generator.js.
-  { name: 'Eggs', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'protéine complète la moins chère au Maroc' },
-  { name: 'Chicken thigh', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'avec os/peau — une des viandes les moins chères au Maroc' },
-  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', fromType: 'animal', costNote: 'oméga-3 bon marché, très courant au Maroc' },
-  { name: 'Lentils (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', costNote: 'légumineuse — protéine + glucides en un seul aliment' },
-  { name: 'Chickpeas (cooked)', category: 'protein', tier: 'tight', fromType: 'legume' },
-  { name: 'Black beans (cooked)', category: 'protein', tier: 'tight', fromType: 'legume' },
-  { name: 'Chicken breast', category: 'protein', tier: 'moderate', fromType: 'animal' },
-  { name: 'Tuna (canned)', category: 'protein', tier: 'moderate', fromType: 'animal' },
-  { name: 'Greek yogurt (plain)', category: 'protein', tier: 'moderate', fromType: 'animal' },
-  { name: 'Cottage cheese', category: 'protein', tier: 'moderate', fromType: 'animal' },
-  { name: 'Whey protein (scoop, 30g)', category: 'protein', tier: 'moderate', fromType: 'animal', costNote: 'pratique mais plus cher au kg de protéine que les sources entières' },
-  { name: 'Beef (ground, 90/10)', category: 'protein', tier: 'comfortable', fromType: 'animal' },
-  { name: 'Beef (lean)', category: 'protein', tier: 'comfortable', fromType: 'animal' },
-  { name: 'Salmon', category: 'protein', tier: 'comfortable', fromType: 'animal', costNote: 'importé, cher au Maroc' },
-  { name: 'Shrimp', category: 'protein', tier: 'comfortable', fromType: 'animal' },
+  //
+  // `proteinQuality` — DIAAS (Digestible Indispensable Amino Acid Score),
+  // the current gold-standard protein-quality metric (FAO 2013). ≥100 =
+  // "excellent" (complete essential-amino-acid profile, fully absorbed);
+  // 75-99 = "good"; <75 = no quality claim under FAO's own classification.
+  // Sourced from Herreman et al. 2020 (comprehensive DIAAS review) and
+  // FAO/WHO reference values — see the buildProteinItems comment below for
+  // how this is used (sorts the pool, doesn't exclude anything).
+  { name: 'Eggs', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 113, costNote: 'protéine complète la moins chère au Maroc' },
+  { name: 'Chicken thigh', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 108, costNote: 'avec os/peau — une des viandes les moins chères au Maroc' },
+  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 100, costNote: 'oméga-3 bon marché, très courant au Maroc' },
+  { name: 'Lentils (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 63, costNote: 'légumineuse — protéine + glucides en un seul aliment' },
+  { name: 'Chickpeas (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 70 },
+  { name: 'Black beans (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 60 },
+  { name: 'Chicken breast', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 108 },
+  { name: 'Tuna (canned)', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 100 },
+  { name: 'Greek yogurt (plain)', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 114 },
+  { name: 'Cottage cheese', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 114 },
+  { name: 'Whey protein (scoop, 30g)', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 109, costNote: 'pratique mais plus cher au kg de protéine que les sources entières' },
+  { name: 'Beef (ground, 90/10)', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 111 },
+  { name: 'Beef (lean)', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 111 },
+  { name: 'Salmon', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 100, costNote: 'importé, cher au Maroc' },
+  { name: 'Shrimp', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 90 },
 
   // ── Glucides ── (couscous délibérément absent : plat traditionnel du
   // vendredi, pas un aliment quotidien — le proposer chaque jour dans un plan
@@ -88,9 +96,34 @@ export const MOROCCO_FOOD_COST_TIERS = [
 // Every tier at or below (cheaper than) the user's budget tier is always
 // allowed — a "comfortable" budget can still eat "tight"-tier foods, never
 // the reverse.
-export function foodsForBudget(budgetTier, category) {
+//
+// `opts.customFoods` — the user's own added foods (healthStore.customFoods),
+// unioned in for this category, always allowed regardless of tier (the user
+// added them themselves, so they're already known-available to them).
+//
+// `opts.foodPrices` — real per-gram prices the user entered for ANY food
+// (Settings → "Mes aliments & prix"). When at least one price is known, the
+// WHOLE returned pool is sorted by price ascending first (priced foods
+// float to the front, cheapest first — "mettre les aliments à coût bas [en
+// premier]" as requested) — foods with no known price keep the generic tier
+// ordering and sort after every priced one, since a real number always beats
+// a generic cost tier for that specific person.
+export function foodsForBudget(budgetTier, category, opts = {}) {
+  const { customFoods = [], foodPrices = {} } = opts;
   const maxOrder = MOROCCO_BUDGET_TIERS[budgetTier]?.order ?? 0;
-  return MOROCCO_FOOD_COST_TIERS.filter(
+  const curated = MOROCCO_FOOD_COST_TIERS.filter(
     (f) => (MOROCCO_BUDGET_TIERS[f.tier]?.order ?? 0) <= maxOrder && (!category || f.category === category)
   );
+  const custom = customFoods
+    .filter((f) => !category || f.category === category)
+    .map((f) => ({ name: f.name, category: f.category, tier: budgetTier, fromType: 'custom' }));
+  const pool = [...custom, ...curated];
+  if (!Object.keys(foodPrices).length) return pool;
+  return [...pool].sort((a, b) => {
+    const pa = foodPrices[a.name], pb = foodPrices[b.name];
+    if (pa != null && pb != null) return pa - pb;
+    if (pa != null) return -1;
+    if (pb != null) return 1;
+    return 0;
+  });
 }

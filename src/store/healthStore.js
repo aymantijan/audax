@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
-import { estimateMacros, foodQualityScore } from '../utils/nutrition-db';
+import { estimateMacros, foodQualityScore, setCustomFoods, getServingOptions } from '../utils/nutrition-db';
 import { getFoodMicros } from '../utils/food-micronutrients';
 import {
   computeReadiness, bodyFatNavyMale, bodyFatNavyFemale, computeWeightPrediction,
@@ -89,6 +89,31 @@ export const useHealthStore = create(
       nutritionLogs: [], // [{ id, date, name, grams, protein, carbs, fat, kcal, whole, proteinTargetMet }]
       proteinTargetG: 140, // daily protein target used for "target met" + Protein Perfect badge
       mealTemplates: [], // [{ id, name, items:[{name,grams}] }]
+      // User-added foods — manually entered or saved from a barcode scan.
+      // Same per-100g macro shape as FOOD_DB, plus pricePerGram (that
+      // person's real local price, not a generic tier) and an optional
+      // category so the plan generator can slot them alongside the curated
+      // Morocco list. Kept in sync with nutrition-db.js's lookup registry by
+      // a store subscription set up right after this store is created (see
+      // bottom of file) — every logMeal/estimateMacros/getServingOptions
+      // call anywhere in the app can already resolve these by name for free.
+      customFoods: [], // [{id, name, category, protein, carbs, fat, kcal, whole, servings?, pricePerGram, barcode?}]
+      addCustomFood: (food) => {
+        const entry = { id: uid(), whole: false, servings: null, pricePerGram: null, barcode: null, ...food };
+        set({ customFoods: [...get().customFoods, entry] });
+        toast('Aliment ajouté à tes aliments', 'success');
+        return entry;
+      },
+      deleteCustomFood: (id) => set({ customFoods: get().customFoods.filter((f) => f.id !== id) }),
+      // { [foodName]: pricePerGram } — the user's own real local price for
+      // ANY food (curated Morocco list, FOOD_DB, or a custom food), in
+      // DH/gram. Overrides the generic MOROCCO_FOOD_COST_TIERS tier system
+      // for that specific person's actual cost of living: foodsForBudget()
+      // sorts by known price first when any prices are set, tier order
+      // otherwise (see morocco-food-budget.js).
+      foodPrices: {},
+      setFoodPrice: (foodName, pricePerGram) => set({ foodPrices: { ...get().foodPrices, [foodName]: Number(pricePerGram) || 0 } }),
+      deleteFoodPrice: (foodName) => set({ foodPrices: Object.fromEntries(Object.entries(get().foodPrices).filter(([n]) => n !== foodName)) }),
       bodyComp: [], // [{ id, date, weightKg, waistCm, neckCm, hipCm, heightCm, sex, absRating, bodyFatPct, bodyFatMethod, photo }]
       recoveryLogs: [], // [{ id, date, activities:['sleep8','meditation','stretching','cold','massage'] }]
       checkins: [], // [{ id, date, slot:'morning'|'postWorkout'|'afternoon'|'evening', energy, stress, note }]
@@ -413,6 +438,7 @@ export const useHealthStore = create(
           activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
           budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
           mealsPerDay: profile.mealsPerDay, cyclePhase, dislikedFoods: profile.dislikedFoods,
+          customFoods: get().customFoods, foodPrices: get().foodPrices,
           ...overrides,
         });
         if (plan.error) { toast('Complète ton profil (poids, taille, année de naissance dans Réglages) pour générer un plan nutritionnel.', 'warning'); return plan; }
@@ -444,7 +470,8 @@ export const useHealthStore = create(
         if (!item?.category) return [];
         const { budgetTier, dislikedFoods } = get().healthProfile;
         const disliked = new Set(dislikedFoods || []);
-        return foodsForBudget(budgetTier || 'moderate', item.category).filter((f) => f.name !== item.name && !disliked.has(f.name));
+        const opts = { customFoods: get().customFoods, foodPrices: get().foodPrices };
+        return foodsForBudget(budgetTier || 'moderate', item.category, opts).filter((f) => f.name !== item.name && !disliked.has(f.name));
       },
       // Replaces a plan item's food, re-portioning grams so the new food hits
       // the same macro target (protein g for protein items, etc.) the
@@ -466,6 +493,11 @@ export const useHealthStore = create(
             // 220g caps a single-item portion at something a person would
             // actually eat — mirrors REALISTIC_MAX_G in nutrition-plan-generator.js.
             newGrams = Math.max(20, Math.min(220, Math.round((original[macroKey] / per100[macroKey]) * 100)));
+            // Round to a whole serving unit for foods only sold/eaten as
+            // discrete pieces (eggs, cans…) — same rule as generation, so a
+            // swap can't reintroduce "2.6 eggs".
+            const discrete = getServingOptions(newFoodName).find((o) => o.grams > 1 && o.label !== 'cup' && o.label !== 'tbsp' && o.label !== 'slice' && o.label !== 'glass' && o.label !== 'loaf' && o.label !== 'handful' && o.label !== 'poignée');
+            if (discrete) newGrams = Math.max(1, Math.round(newGrams / discrete.grams)) * discrete.grams;
           }
         }
         set({
@@ -1597,7 +1629,7 @@ export const useHealthStore = create(
 
       resetAll: () =>
         set({
-          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], bodyComp: [], recoveryLogs: [],
+          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, bodyComp: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: {
@@ -1620,3 +1652,10 @@ export const useHealthStore = create(
     { name: 'audax-health' }
   )
 );
+
+// Keeps nutrition-db.js's custom-food lookup registry in sync with the
+// persisted store — fires on every change (cheap, a plain array assignment)
+// and, crucially, on the internal set() the persist middleware issues once
+// localStorage rehydration completes, so this is correct from first paint
+// without a separate app-startup effect.
+useHealthStore.subscribe((state) => setCustomFoods(state.customFoods));
