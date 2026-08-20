@@ -66,7 +66,7 @@ export default function CardioLogging({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
-      <CyclePhaseHint />
+      <CyclePhaseHint context="cardio" />
       {curatedProgram && <CuratedCardioLogger />}
 
       {hasCuratedToday && !editing && (

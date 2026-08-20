@@ -109,13 +109,15 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 }
 
 export default function BodyComposition() {
-  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence, getCyclePhaseCoaching } = useHealthStore();
+  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence, getCyclePhaseCoaching, isCyclePhaseHormonallyReliable } = useHealthStore();
   const cycleCoaching = getCyclePhaseCoaching();
   // Progesterone peaks mid-luteal and promotes fluid retention — a well-
   // documented ~0.5-1.4kg (up to ~2.3kg) scale increase that's water, not
   // fat, and resolves once the period starts. Shown so a normal premenstrual
-  // fluctuation doesn't get misread as the diet/program failing.
-  const showWaterRetentionNote = cycleCoaching?.phase === 'luteal' || cycleCoaching?.phase === 'menstrual';
+  // fluctuation doesn't get misread as the diet/program failing. The luteal
+  // mechanism assumes a real progesterone surge, generally suppressed under
+  // hormonal contraception — menstrual-window bloating stays regardless.
+  const showWaterRetentionNote = cycleCoaching?.phase === 'menstrual' || (cycleCoaching?.phase === 'luteal' && isCyclePhaseHormonallyReliable());
   const latest = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
   const precision = getBodyCompPrecision();
   const smoothed = getSmoothedBodyCompTrend();

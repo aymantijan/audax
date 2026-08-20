@@ -29,7 +29,8 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 }
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable } = useHealthStore();
+  const hormonallyReliable = isCyclePhaseHormonallyReliable();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
   const [symptoms, setSymptoms] = useState([]);
@@ -77,7 +78,7 @@ export default function CycleTracking() {
   // hardcoded to 28 here, which could silently disagree with that card).
   const { energyByPhase, cycleLen } = useMemo(() => {
     const dates = cycleLogs.map((c) => c.date).sort();
-    if (dates.length < 2) return { energyByPhase: null, cycleLen: null };
+    if (dates.length < 2 || !hormonallyReliable) return { energyByPhase: null, cycleLen: null };
     const cycleLen = estimateCycleLength(dates) || 28;
     const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
     for (const log of energyLogs) {
@@ -86,7 +87,7 @@ export default function CycleTracking() {
     }
     const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
     return { energyByPhase: Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, avg(v)])), cycleLen };
-  }, [cycleLogs, energyLogs]);
+  }, [cycleLogs, energyLogs, hormonallyReliable]);
 
   // Average RPE (perceived exertion, 1-10) by cycle phase, from this
   // person's own logged gym sets — not a generic claim about "energy may be
@@ -95,7 +96,7 @@ export default function CycleTracking() {
   // reusing the same estimated cycle length so the two views never disagree.
   const rpeByPhase = useMemo(() => {
     const dates = cycleLogs.map((c) => c.date).sort();
-    if (dates.length < 2) return null;
+    if (dates.length < 2 || !hormonallyReliable) return null;
     const len = estimateCycleLength(dates) || 28;
     const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
     for (const w of workouts) {
@@ -107,7 +108,27 @@ export default function CycleTracking() {
     const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
     const result = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, { avg: avg(v), n: v.length }]));
     return Object.values(result).some((r) => r.avg != null) ? result : null;
-  }, [cycleLogs, workouts]);
+  }, [cycleLogs, workouts, hormonallyReliable]);
+
+  // Average resting HR by cycle phase — progesterone raises basal body
+  // temperature and resting heart rate through the luteal phase (a
+  // consistently replicated finding, e.g. used clinically as a fertility-
+  // awareness marker), so a self-logged uptick isn't a fitness regression.
+  // Gated behind hormonallyReliable for the same reason as rpeByPhase.
+  const restingHrByPhase = useMemo(() => {
+    const dates = cycleLogs.map((c) => c.date).sort();
+    if (dates.length < 2 || !hormonallyReliable) return null;
+    const len = estimateCycleLength(dates) || 28;
+    const buckets = { menstrual: [], follicular: [], ovulation: [], luteal: [] };
+    for (const p of performanceLogs) {
+      if (p.restingHr == null) continue;
+      const phaseKey = phaseForDate(p.date, dates, len);
+      if (phaseKey) buckets[phaseKey].push(Number(p.restingHr));
+    }
+    const avg = (arr) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
+    const result = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, { avg: avg(v), n: v.length }]));
+    return Object.values(result).some((r) => r.avg != null) ? result : null;
+  }, [cycleLogs, performanceLogs, hormonallyReliable]);
 
   // Predicted next period = last start + estimated cycle length. A rough
   // calendar projection, not a fertility/ovulation prediction.
@@ -131,6 +152,19 @@ export default function CycleTracking() {
           </div>
         </Card>
       )}
+
+      <label className="flex items-start gap-2.5 border border-line rounded-lg px-4 py-3 bg-card cursor-pointer text-sm">
+        <input
+          type="checkbox"
+          checked={!!healthProfile.hormonalContraception}
+          onChange={(e) => setHealthProfile({ hormonalContraception: e.target.checked })}
+          className="mt-0.5 cursor-pointer"
+        />
+        <span>
+          Je suis sous contraception hormonale (pilule, DIU hormonal, implant…)
+          <span className="block text-xs text-mute mt-0.5">Désactive les conseils basés sur les phases folliculaire/ovulation/lutéale, qui supposent un cycle ovulatoire naturel — le suivi du saignement reste inchangé.</span>
+        </span>
+      </label>
 
       {coaching?.note && (
         <div className="flex items-start gap-3 border border-line rounded-lg px-4 py-3 bg-card">
@@ -252,6 +286,21 @@ export default function CycleTracking() {
             ))}
           </div>
           <p className="text-[11px] text-mute mt-2">RPE moyen (1-10) de tes séries loggées, par phase du cycle — basé sur tes propres données d'entraînement.</p>
+        </Card>
+      )}
+
+      {restingHrByPhase && (
+        <Card title="FC au repos par phase" action={cycleLen && <span className="text-xs text-mute">est. cycle length: {cycleLen}d</span>}>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            {Object.entries(restingHrByPhase).map(([phaseKey, { avg, n }]) => (
+              <div key={phaseKey}>
+                <div className="text-xs text-mute mb-1">{CYCLE_PHASE_LABEL[phaseKey]}</div>
+                <div className="text-lg font-semibold" style={{ color: CYCLE_PHASE_COLOR[phaseKey] }}>{avg ?? '—'}</div>
+                <div className="text-[10px] text-mute">{n} mesure{n > 1 ? 's' : ''}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-mute mt-2">FC au repos moyenne (bpm), par phase — une hausse en phase lutéale est normale (progestérone) et pas un signe de fatigue.</p>
         </Card>
       )}
 

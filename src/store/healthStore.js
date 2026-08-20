@@ -137,7 +137,7 @@ export const useHealthStore = create(
         experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
         equipmentAccess: [], injuries: [],
         activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
-        cycleTrackingEnabled: null, maleTrackingEnabled: null,
+        cycleTrackingEnabled: null, maleTrackingEnabled: null, hormonalContraception: false,
         reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
         completedAt: null, lastRecomputedAt: null,
       },
@@ -153,7 +153,7 @@ export const useHealthStore = create(
           experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
           equipmentAccess: [], injuries: [],
           activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
-          cycleTrackingEnabled: null, maleTrackingEnabled: null,
+          cycleTrackingEnabled: null, maleTrackingEnabled: null, hormonalContraception: false,
           reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
           completedAt: null, lastRecomputedAt: null,
         },
@@ -382,7 +382,8 @@ export const useHealthStore = create(
         // here too so this specific card doesn't read as a verdict without
         // that context.
         const cyclePhase = get().getCyclePhaseCoaching()?.phase;
-        const weightTrendCycleCaveat = weightTrend && weightTrend.deltaKg > 0 && (cyclePhase === 'luteal' || cyclePhase === 'menstrual');
+        const weightTrendCycleCaveat = weightTrend && weightTrend.deltaKg > 0 &&
+          (cyclePhase === 'menstrual' || (cyclePhase === 'luteal' && get().isCyclePhaseHormonallyReliable()));
 
         return { objective: program.objective, nutritionAdherence, weightTrend, weightTrendCycleCaveat };
       },
@@ -436,7 +437,11 @@ export const useHealthStore = create(
         const profile = get().healthProfile;
         const globalUser = useAuthStore.getState().user;
         const age = globalUser?.dobYear ? new Date().getFullYear() - globalUser.dobYear : null;
-        const cyclePhase = globalUser?.gender === 'female' ? get().getCyclePhase()?.phase : null;
+        // Only used for the luteal-phase calorie bump downstream, which
+        // assumes a real progesterone rise — skip it under hormonal
+        // contraception (ovulation generally suppressed, no natural luteal
+        // surge to compensate for).
+        const cyclePhase = globalUser?.gender === 'female' && get().isCyclePhaseHormonallyReliable() ? get().getCyclePhase()?.phase : null;
         const plan = generateNutritionPlan({
           weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
           heightCm: globalUser?.heightCm ?? overrides?.heightCm,
@@ -870,8 +875,23 @@ export const useHealthStore = create(
       getCyclePhaseCoaching: () => {
         const phase = get().getCyclePhase();
         if (!phase) return null;
+        // Hormonal contraception (pill, IUD, implant...) generally suppresses
+        // ovulation, so the calendar-estimated follicular/ovulation/luteal
+        // sub-phases don't correspond to real hormonal fluctuations for these
+        // users — giving phase-based energy/training/nutrition advice would
+        // be asserting something not biologically true. The bleed window
+        // itself (withdrawal bleed or spotting) is still real, so that part
+        // stays informative; everything else is replaced with an explanatory
+        // note and no training-load hint.
+        if (get().healthProfile.hormonalContraception) {
+          if (phase.phase === 'menstrual') {
+            return { phase: phase.phase, note: 'Fenêtre de saignement — les ressentis peuvent varier, écoute-toi comme d\'habitude.', trainingLoadHint: null, hormonalNote: true };
+          }
+          return { phase: phase.phase, note: 'Sous contraception hormonale, l\'ovulation est généralement supprimée : cette estimation de phase ne reflète pas de vraies fluctuations hormonales pour toi, donc pas de conseil basé dessus.', trainingLoadHint: null, hormonalNote: true };
+        }
         return { phase: phase.phase, ...cyclePhaseCoachingNote(phase.phase) };
       },
+      isCyclePhaseHormonallyReliable: () => !get().healthProfile.hormonalContraception,
 
       // Cycle regularity + a lifestyle-awareness (not diagnostic) energy-
       // availability caution — surfaces a pattern where an irregular/late
@@ -1578,7 +1598,12 @@ export const useHealthStore = create(
         const cycleCoaching = get().getCyclePhaseCoaching();
         const floorParts = [];
         if (activeCurated?.sleepFloor) floorParts.push({ ...activeCurated.sleepFloor, reason: activeCurated.name });
-        if (cycleCoaching?.phase === 'menstrual' || cycleCoaching?.phase === 'luteal') {
+        // Luteal-phase floor assumes a real progesterone rise, which hormonal
+        // contraception generally suppresses — the bleed-window (menstrual)
+        // floor stays regardless, since that discomfort is independent of
+        // contraceptive method.
+        const hormonallyReliable = get().isCyclePhaseHormonallyReliable();
+        if (cycleCoaching?.phase === 'menstrual' || (hormonallyReliable && cycleCoaching?.phase === 'luteal')) {
           floorParts.push({ min: 7, max: 9, reason: cycleCoaching.phase === 'menstrual' ? 'phase menstruelle' : 'phase lutéale' });
         }
         const combinedFloor = floorParts.length
