@@ -166,6 +166,27 @@ export const useEngineeringStore = create(
           ),
         }),
 
+      // Snapshot sent as context to the AI coach (see
+      // services/engineering-coach-ai.js) — same idea as healthStore's
+      // buildCoachContext: recent real data, nothing fabricated, capped so
+      // it doesn't grow unbounded for a heavy user.
+      buildCoachContext: () => {
+        const state = get();
+        return {
+          recentLabEntries: [...state.labEntries].slice(0, 20).map((e) => ({ date: e.date, title: e.title, course: e.course, yieldPercent: e.yieldPercent })),
+          projects: state.projects.map((p) => ({
+            name: p.name,
+            type: p.type,
+            stage: ENGINEERING_PROJECT_STAGES[p.stageIndex],
+            stageStatus: p.stageStatus,
+            deadline: p.deadline,
+            tasksDone: (p.tasks || []).filter((t) => t.status === 'done').length,
+            tasksTotal: (p.tasks || []).length,
+          })),
+          badgesEarned: state.awardedBadges,
+        };
+      },
+
       resetAll: () => set({ labEntries: [], projects: [], awardedBadges: [] }),
     }),
     { name: 'audax-engineering', version: 1 }

@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown, Send } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useEngineeringStore } from '../store/engineeringStore';
+import { useLearningStore } from '../store/learningStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
+import { askAIEngineeringQuestion } from '../services/engineering-coach-ai';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -60,6 +62,12 @@ const blankProject = () => ({ name: '', type: ENGINEERING_PROJECT_TYPES[0], desc
 
 function LabJournal() {
   const { labEntries, addLabEntry, editLabEntry, deleteLabEntry } = useEngineeringStore();
+  const courses = useLearningStore((s) => s.courses);
+  // Suggests the user's own tracked Learning courses so "Génie des réacteurs"
+  // in the lab journal can match the same course logged in Learning — still
+  // free text underneath (a lab session for a course not tracked there is
+  // just as valid), this only autocompletes, never restricts the value.
+  const courseNames = useMemo(() => [...new Set(courses.map((c) => c.name))], [courses]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(blankEntry());
@@ -67,7 +75,7 @@ function LabJournal() {
   const editFields = [
     { name: 'date', label: 'Date', type: 'date' },
     { name: 'title', label: "Titre de l'expérience", type: 'text' },
-    { name: 'course', label: 'Cours / module', type: 'text', placeholder: 'ex. Génie des réacteurs' },
+    { name: 'course', label: 'Cours / module', type: 'text', placeholder: 'ex. Génie des réacteurs', list: 'lab-course-options', listOptions: courseNames },
     { name: 'yieldPercent', label: 'Rendement (%)', type: 'number', step: 'any' },
     { name: 'objective', label: 'Objectif', type: 'textarea' },
     { name: 'protocol', label: 'Protocole', type: 'textarea' },
@@ -151,7 +159,12 @@ function LabJournal() {
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date"><Input type="date" value={form.date} max={todayKey()} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
-            <Field label="Cours / module"><Input value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} placeholder="ex. Génie des réacteurs" /></Field>
+            <Field label="Cours / module">
+              <Input list="lab-course-options-add" value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} placeholder="ex. Génie des réacteurs" />
+              <datalist id="lab-course-options-add">
+                {courseNames.map((c) => <option key={c} value={c} />)}
+              </datalist>
+            </Field>
           </div>
           <Field label="Titre de l'expérience"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="ex. Distillation fractionnée — mélange éthanol/eau" autoFocus /></Field>
           <Field label="Objectif"><Textarea rows={2} value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} /></Field>
@@ -220,6 +233,20 @@ function Projects() {
         <Stat label="Types utilisés" value={byType.length} sub={`sur ${ENGINEERING_PROJECT_TYPES.length}`} />
       </div>
 
+      {byType.length > 1 && (
+        <Card title="Projets par type">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={byType}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#66ccff" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <Card title={`Projets (${projects.length})`}>
         {projects.length ? (
           <div className="overflow-x-auto">
@@ -283,6 +310,46 @@ const TABS = [
   { key: 'projects', label: 'Projets', icon: FolderKanban, Component: Projects },
 ];
 
+// Same UX as Health's "Ask the Health AI" (Dashboard.jsx) — degrades to a
+// plain error message rather than crashing when the backend isn't
+// configured on this deployment (api/engineering-coach.js returns 503 if
+// OPENROUTER_API_KEY is unset).
+function AskEngineeringAI() {
+  const buildCoachContext = useEngineeringStore((s) => s.buildCoachContext);
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState('');
+
+  const submitQuestion = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setAsking(true);
+    setAskError('');
+    setAnswer(null);
+    try {
+      const text = await askAIEngineeringQuestion(buildCoachContext(), question.trim());
+      setAnswer(text);
+    } catch {
+      setAskError("Le coach IA n'est pas disponible pour l'instant (non configuré ou hors ligne) — réessaie plus tard.");
+    } finally {
+      setAsking(false);
+    }
+  };
+
+  return (
+    <Card title="Demander au coach Ingénierie">
+      <form onSubmit={submitQuestion} className="flex gap-2 mb-3">
+        <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ex. Pourquoi mon rendement baisse-t-il ces derniers essais ?" className="flex-1" />
+        <Button type="submit" disabled={asking}>{asking ? 'Réflexion…' : <span className="flex items-center gap-1.5"><Send size={13} /> Demander</span>}</Button>
+      </form>
+      {answer && <div className="text-sm bg-surface border border-line rounded-lg p-3">{answer}</div>}
+      {askError && <div className="text-sm text-bad">{askError}</div>}
+      {!answer && !askError && !asking && <div className="text-xs text-mute">Pose une question sur tes propres données loggées (labo, projets) — nécessite que le coach IA soit configuré sur ce déploiement.</div>}
+    </Card>
+  );
+}
+
 export default function Engineering() {
   const [tab, setTab] = useState('journal');
   // Destructure from the whole store (not a scoped selector) so this
@@ -319,6 +386,8 @@ export default function Engineering() {
       </div>
 
       <Active />
+
+      <AskEngineeringAI />
 
       {badges.some((b) => b.earned) && (
         <Card title="Badges obtenus">

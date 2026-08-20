@@ -70,11 +70,16 @@ export default function EntityFormModal({
             } else if (f.type === 'weekday-picker') {
               control = <WeekdayPicker value={values[f.name] || []} onChange={(v) => set(f.name, v)} options={f.options} />;
             } else {
-              control = <Input type={f.type} {...common} step={f.step} min={f.min} max={f.max} placeholder={f.placeholder || ''} />;
+              control = <Input type={f.type} {...common} step={f.step} min={f.min} max={f.max} placeholder={f.placeholder || ''} list={f.list} />;
             }
             return (
               <Field key={f.name} label={f.label + (isMoney(f) && f.currency ? ` (${f.currency})` : '')} hint={f.hint}>
                 {control}
+                {f.list && f.listOptions && (
+                  <datalist id={f.list}>
+                    {f.listOptions.map((o) => <option key={o} value={o} />)}
+                  </datalist>
+                )}
               </Field>
             );
           })}
