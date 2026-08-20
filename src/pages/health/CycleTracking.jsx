@@ -29,9 +29,10 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 }
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo, getPostpartumInfo } = useHealthStore();
   const lifeStage = healthProfile.lifeStage || 'none';
   const pregnancyInfo = getPregnancyInfo();
+  const postpartumInfo = getPostpartumInfo();
   const hormonallyReliable = isCyclePhaseHormonallyReliable();
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const [flow, setFlow] = useState('medium');
@@ -165,7 +166,23 @@ export default function CycleTracking() {
               <Input type="date" value={healthProfile.pregnancyStartDate || ''} max={todayKey()} onChange={(e) => setHealthProfile({ pregnancyStartDate: e.target.value || null })} />
             </Field>
           )}
+          {lifeStage === 'postpartum' && (
+            <Field label="Date d'accouchement">
+              <Input type="date" value={healthProfile.postpartumStartDate || ''} max={todayKey()} onChange={(e) => setHealthProfile({ postpartumStartDate: e.target.value || null })} />
+            </Field>
+          )}
         </div>
+        {lifeStage === 'postpartum' && (
+          <label className="flex items-center gap-2 text-sm mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!healthProfile.breastfeeding}
+              onChange={(e) => setHealthProfile({ breastfeeding: e.target.checked })}
+              className="cursor-pointer"
+            />
+            J'allaite
+          </label>
+        )}
       </Card>
 
       {lifeStage === 'pregnant' ? (
@@ -180,6 +197,25 @@ export default function CycleTracking() {
             </div>
           ) : (
             <p className="text-xs text-mute">Renseigne la date de tes dernières règles ci-dessus pour estimer ton trimestre.</p>
+          )}
+        </Card>
+      ) : lifeStage === 'postpartum' ? (
+        <Card title="Post-partum">
+          {postpartumInfo ? (
+            <div className="text-sm space-y-2">
+              <div className="flex items-center gap-3">
+                <Badge color="var(--accent-primary)">{postpartumInfo.weeks} semaine{postpartumInfo.weeks > 1 ? 's' : ''} post-partum</Badge>
+                {postpartumInfo.breastfeeding && postpartumInfo.kcalBump > 0 && <span className="text-mute">+{postpartumInfo.kcalBump} kcal/j allaitement</span>}
+              </div>
+              <p className="text-xs text-mute">La reprise du sport doit être validée par ton médecin (souvent au minimum 6 semaines, plus après une césarienne), en particulier pour le renforcement abdominal et le périnée.</p>
+              {postpartumInfo.breastfeeding ? (
+                <p className="text-xs text-mute">Allaitement : besoin calorique et hydrique plus élevés, déjà reflétés dans ton plan nutritionnel (voir Nutrition) tant que tu restes dans les 12 premiers mois.</p>
+              ) : (
+                <p className="text-xs text-mute">Coche "J'allaite" ci-dessus si c'est le cas, pour que ton plan nutritionnel intègre le supplément calorique correspondant.</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-mute">Renseigne ta date d'accouchement ci-dessus.</p>
           )}
         </Card>
       ) : lifeStage === 'menopause' ? (

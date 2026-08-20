@@ -31,9 +31,13 @@ const BASE_RDA = {
 // values genuinely differ: pregnancy raises iron/folate/B12/vitaminC demand
 // (placental/fetal growth, blood volume expansion); postmenopause drops iron
 // back to the non-menstruating level and raises calcium/vitaminD (bone density,
-// no longer offset by estrogen). Values are the NIH Office of Dietary
-// Supplements fact-sheet RDAs, not a personalized clinical target.
-export function getMicronutrientRDA(sex, lifeStage = 'none') {
+// no longer offset by estrogen); breastfeeding raises vitaminA/C/zinc/iodine
+// (transferred to milk) but LOWERS iron back near the non-menstruating level,
+// since lactational amenorrhea typically suppresses periods. Values are the
+// NIH Office of Dietary Supplements fact-sheet RDAs, not a personalized
+// clinical target. `breastfeeding` only matters when lifeStage is
+// 'postpartum' — postpartum alone doesn't imply it.
+export function getMicronutrientRDA(sex, lifeStage = 'none', breastfeeding = false) {
   const rda = { ...BASE_RDA };
   if (sex === 'female') rda.iron = { value: 18, unit: 'mg' }; // NIH: ~18mg for menstruating adult women vs ~8mg for men
   if (lifeStage === 'pregnant') {
@@ -45,6 +49,12 @@ export function getMicronutrientRDA(sex, lifeStage = 'none') {
     rda.iron = { value: 8, unit: 'mg' };
     rda.calcium = { value: 1200, unit: 'mg' };
     rda.vitaminD = { value: 20, unit: 'µg' };
+  } else if (lifeStage === 'postpartum' && breastfeeding) {
+    rda.vitaminA = { value: 1300, unit: 'µg' };
+    rda.vitaminC = { value: 120, unit: 'mg' };
+    rda.zinc = { value: 12, unit: 'mg' };
+    rda.iodine = { value: 290, unit: 'µg' };
+    rda.iron = { value: 9, unit: 'mg' };
   }
   return rda;
 }

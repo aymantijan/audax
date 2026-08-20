@@ -160,7 +160,9 @@ export const useHealthStore = create(
         // 'none' | 'pregnant' | 'postpartum' | 'perimenopause' | 'menopause'.
         // pregnancyStartDate is the LMP (last menstrual period) date, the
         // standard clinical convention for dating gestational age in weeks.
-        lifeStage: 'none', pregnancyStartDate: null,
+        // postpartumStartDate is the birth date; breastfeeding is null until
+        // explicitly answered (postpartum alone doesn't imply it either way).
+        lifeStage: 'none', pregnancyStartDate: null, postpartumStartDate: null, breastfeeding: null,
         reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
         completedAt: null, lastRecomputedAt: null,
       },
@@ -177,7 +179,7 @@ export const useHealthStore = create(
           equipmentAccess: [], injuries: [],
           activityLevel: null, dietGoal: null, budgetTier: null, dietaryRestrictions: [], mealsPerDay: null,
           cycleTrackingEnabled: null, maleTrackingEnabled: null, hormonalContraception: false,
-          lifeStage: 'none', pregnancyStartDate: null,
+          lifeStage: 'none', pregnancyStartDate: null, postpartumStartDate: null, breastfeeding: null,
           reminderPrefs: { weighInTime: null, mealWindows: [], waterReminderGapMin: 180, bedtimeTarget: null },
           completedAt: null, lastRecomputedAt: null,
         },
@@ -467,13 +469,14 @@ export const useHealthStore = create(
         // surge to compensate for).
         const cyclePhase = globalUser?.gender === 'female' && get().isCyclePhaseHormonallyReliable() ? get().getCyclePhase()?.phase : null;
         const pregnancyTrimester = profile.lifeStage === 'pregnant' ? get().getPregnancyInfo()?.trimester ?? null : null;
+        const breastfeedingKcalBump = profile.lifeStage === 'postpartum' ? get().getPostpartumInfo()?.kcalBump ?? 0 : 0;
         const plan = generateNutritionPlan({
           weightKg: latestBodyComp?.weightKg ?? overrides?.weightKg,
           heightCm: globalUser?.heightCm ?? overrides?.heightCm,
           age, sex: globalUser?.gender ?? null,
           activityLevel: profile.activityLevel, dietGoal: profile.dietGoal,
           budgetTier: profile.budgetTier, dietaryRestrictions: profile.dietaryRestrictions,
-          mealsPerDay: profile.mealsPerDay, cyclePhase, pregnancyTrimester, dislikedFoods: profile.dislikedFoods,
+          mealsPerDay: profile.mealsPerDay, cyclePhase, pregnancyTrimester, breastfeedingKcalBump, dislikedFoods: profile.dislikedFoods,
           customFoods: get().customFoods, foodPrices: get().foodPrices,
           ...overrides,
         });
@@ -914,6 +917,23 @@ export const useHealthStore = create(
         return { weeks, trimester };
       },
 
+      // Weeks/months since birth + a breastfeeding kcal-addition tier, only
+      // when lifeStage is 'postpartum' and a birth date has been set. IOM
+      // (Institute of Medicine) DRI tables define the lactation energy
+      // addition for 0-6 months (+330 kcal/j) and 7-12 months (+400 kcal/j)
+      // of EXCLUSIVE breastfeeding — beyond 12 months there's no standard
+      // DRI figure to apply, so no bump rather than a fabricated one.
+      getPostpartumInfo: () => {
+        const { lifeStage, postpartumStartDate, breastfeeding } = get().healthProfile;
+        if (lifeStage !== 'postpartum' || !postpartumStartDate) return null;
+        const daysSince = Math.floor((new Date(todayKey() + 'T00:00:00') - new Date(postpartumStartDate + 'T00:00:00')) / dayMs);
+        if (daysSince < 0) return null;
+        const weeks = Math.floor(daysSince / 7);
+        const months = Math.floor(daysSince / 30.44);
+        const kcalBump = breastfeeding && months < 6 ? 330 : breastfeeding && months < 12 ? 400 : 0;
+        return { weeks, months, breastfeeding, kcalBump };
+      },
+
       // ─────────── Blood tests (optional, user-entered lab values) ───────────
       logBloodTest: (data) => {
         const entry = { id: uid(), date: data.date || todayKey(), ferritinNgMl: data.ferritinNgMl ?? null, hemoglobinGDl: data.hemoglobinGDl ?? null, source: data.source || 'manual', notes: data.notes || '', createdAt: Date.now() };
@@ -938,7 +958,7 @@ export const useHealthStore = create(
       //   never a diagnosis.
       getIronStatus: () => {
         const globalUser = useAuthStore.getState().user;
-        const rda = getMicronutrientRDA(globalUser?.gender, get().healthProfile.lifeStage);
+        const rda = getMicronutrientRDA(globalUser?.gender, get().healthProfile.lifeStage, !!get().healthProfile.breastfeeding);
         const cutoffKey = todayKey(new Date(Date.now() - 14 * dayMs));
         const recentNutrition = get().nutritionLogs.filter((n) => n.date >= cutoffKey);
         const ironByDay = {};

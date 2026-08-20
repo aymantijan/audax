@@ -75,7 +75,7 @@ export default function NutritionTracker({ pendingPrompt }) {
   const { entries, totals, quality } = getTodayNutrition();
   const activePlan = getActiveNutritionPlan();
   const planDirty = activePlan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > activePlan.generatedAt;
-  const microRDA = useMemo(() => getMicronutrientRDA(gender, healthProfile.lifeStage), [gender, healthProfile.lifeStage]);
+  const microRDA = useMemo(() => getMicronutrientRDA(gender, healthProfile.lifeStage, !!healthProfile.breastfeeding), [gender, healthProfile.lifeStage, healthProfile.breastfeeding]);
   const microTotals = useMemo(() => sumMicros(entries, microRDA), [entries, microRDA]);
   // Prefer the generated plan's real TDEE-based targets over the rough
   // protein-ratio heuristic below, when one exists.

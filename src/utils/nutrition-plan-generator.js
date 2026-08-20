@@ -134,7 +134,7 @@ function buildProteinItems(foods, slotIndex, targetG) {
 
 export function generateNutritionPlan({
   weightKg, heightCm, age, sex, activityLevel = 'moderate', dietGoal = 'maintain', budgetTier = 'moderate',
-  dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, pregnancyTrimester = null, dislikedFoods = [], customFoods = [], foodPrices = {},
+  dietaryRestrictions = [], mealsPerDay = 3, cyclePhase = null, pregnancyTrimester = null, breastfeedingKcalBump = 0, dislikedFoods = [], customFoods = [], foodPrices = {},
 } = {}) {
   const bmr = computeBMR({ weightKg, heightCm, age, sex });
   const tdee = bmr ? computeTDEE(bmr, activityLevel) : null;
@@ -150,7 +150,10 @@ export function generateNutritionPlan({
   let targetKcal = Math.round(tdee * (1 + adjust));
   const lutealBump = !pregnancyTrimester && cyclePhase === 'luteal' ? Math.round(targetKcal * LUTEAL_KCAL_BUMP) : 0;
   const pregnancyBump = pregnancyTrimester ? (PREGNANCY_KCAL_BUMP[pregnancyTrimester] ?? 0) : 0;
-  targetKcal += lutealBump + pregnancyBump;
+  // Unlike pregnancy, a moderate deficit is considered safe while
+  // breastfeeding (ACOG/IOM) — so this adds on top of whatever the diet
+  // goal already produces rather than overriding it to maintenance.
+  targetKcal += lutealBump + pregnancyBump + (breastfeedingKcalBump || 0);
 
   // Protein prioritized first (1.6-2.2 g/kg — higher end during a cut to
   // preserve lean mass, per Helms et al. 2014), fat floor ~0.6g/kg (hormonal
@@ -167,6 +170,7 @@ export function generateNutritionPlan({
     ...(lutealBump ? [`Phase lutéale : +${Math.round(LUTEAL_KCAL_BUMP * 100)}% (+${lutealBump} kcal) — le métabolisme de repos augmente légèrement sous l'effet thermogénique de la progestérone.`] : []),
     ...(pregnancyBump ? [`Grossesse (T${pregnancyTrimester}) : +${pregnancyBump} kcal/j (IOM/ACOG) au-dessus de ta dépense de base — pas d'objectif "perte/prise de poids" appliqué par-dessus pendant la grossesse.`] : []),
     ...(pregnancyTrimester ? ['Grossesse : évite poisson cru, fromages au lait cru/non pasteurisé, charcuterie non recuite et alcool — vérifie chaque nouvel aliment ajouté manuellement avec ta sage-femme/médecin, cette liste ne filtre pas automatiquement.'] : []),
+    ...(breastfeedingKcalBump ? [`Allaitement : +${breastfeedingKcalBump} kcal/j (IOM) — contrairement à la grossesse, un déficit modéré reste considéré sûr pendant l'allaitement, ce bonus s'ajoute donc à ton objectif "${dietGoal}" au lieu de l'annuler.`] : []),
     `Protéine à ${proteinGPerKg}g/kg (${proteinG}g) — priorité pour préserver la masse maigre. Sources triées par qualité protéique (score DIAAS — Herreman et al. 2020) : viande/poisson/œufs/laitier d'abord.`,
     `Graisses au plancher ~0.7g/kg (${fatG}g) pour la santé hormonale, glucides (${carbsG}g) en complément.`,
     `Repas 1 = petit-déjeuner (avec fruit), dernier repas = dîner plus léger en glucides — la tolérance au glucose est meilleure le matin et se dégrade en soirée (chrononutrition, ex. restriction glucidique au dîner vs petit-déj en type 2).`,
