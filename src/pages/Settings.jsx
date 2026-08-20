@@ -52,8 +52,13 @@ export default function SettingsPage() {
   // ─────────── Mes aliments & prix ───────────
   const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice, foodOverrides, setFoodOverride, deleteFoodOverride } = useHealthStore();
   const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '', isUnit: false, unitLabel: '', unitGrams: '', unitPrice: '' });
-  const [priceEntry, setPriceEntry] = useState({ name: '', price: '' });
-  const [infoEntry, setInfoEntry] = useState({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitGrams: '' });
+  // priceMode: 'weight' (Dh/100g, always available) or 'unit' — every food
+  // can be priced either way now (not just ones with a built-in serving like
+  // eggs), same flexibility as MyFitnessPal's per-serving logging. If the
+  // food has no defined unit yet, unitLabel/unitGrams below define one on
+  // the fly instead of requiring a separate trip to the correction form.
+  const [priceEntry, setPriceEntry] = useState({ name: '', price: '', priceMode: 'weight', unitLabel: '', unitGrams: '' });
+  const [infoEntry, setInfoEntry] = useState({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitLabel: '', unitGrams: '' });
   const allFoodNames = [...new Set([...FOOD_DB.map((f) => f.name), ...MOROCCO_FOOD_COST_TIERS.map((f) => f.name), ...customFoods.map((f) => f.name)])].sort();
   const priceEntryUnit = getDiscreteUnit(priceEntry.name.trim());
   const infoEntryFood = infoEntry.name.trim() ? lookupFood(infoEntry.name.trim()) : null;
@@ -79,14 +84,25 @@ export default function SettingsPage() {
 
   const submitPrice = (e) => {
     e.preventDefault();
-    if (!priceEntry.name.trim() || !priceEntry.price) return;
-    // Foods bought as whole units (eggs, cans…) are priced per unit, not per
-    // gram — converted to DH/gram for storage since that's what
-    // foodsForBudget's price sort compares, but the user never enters or
-    // sees a per-gram number for these.
-    const pricePerGram = priceEntryUnit ? Number(priceEntry.price) / priceEntryUnit.grams : Number(priceEntry.price) / 100;
-    setFoodPrice(priceEntry.name.trim(), pricePerGram);
-    setPriceEntry({ name: '', price: '' });
+    const name = priceEntry.name.trim();
+    if (!name || !priceEntry.price) return;
+    if (priceEntry.priceMode === 'weight') {
+      setFoodPrice(name, Number(priceEntry.price) / 100);
+    } else {
+      // Priced per unit: use the food's existing purchase unit if it has
+      // one, otherwise define one right here from the label/grams fields
+      // (e.g. "Chicken breast" has no built-in unit — the user can price it
+      // as "1 barquette = 500g" without a separate trip to the correction
+      // form below).
+      let unitGrams = priceEntryUnit?.grams;
+      if (!priceEntryUnit) {
+        if (!priceEntry.unitLabel.trim() || !priceEntry.unitGrams) return toast("Nom de l'unité et poids d'une unité sont requis pour cet aliment (il n'a pas encore d'unité définie).", 'warning');
+        setFoodOverride(name, { unitLabel: priceEntry.unitLabel.trim(), unitGrams: Number(priceEntry.unitGrams) });
+        unitGrams = Number(priceEntry.unitGrams);
+      }
+      setFoodPrice(name, Number(priceEntry.price) / unitGrams);
+    }
+    setPriceEntry({ name: '', price: '', priceMode: 'weight', unitLabel: '', unitGrams: '' });
   };
 
   // Corrects a generic FOOD_DB/Morocco-list estimate for the specific
@@ -100,10 +116,12 @@ export default function SettingsPage() {
     if (!name) return;
     const patch = {};
     for (const k of ['protein', 'carbs', 'fat', 'kcal']) if (infoEntry[k] !== '') patch[k] = Number(infoEntry[k]);
+    if (infoEntry.unitLabel.trim() !== '') patch.unitLabel = infoEntry.unitLabel.trim();
     if (infoEntry.unitGrams !== '') patch.unitGrams = Number(infoEntry.unitGrams);
+    if (patch.unitGrams != null && !patch.unitLabel && !infoEntryUnit) return toast("Donne aussi un nom d'unité (ex. \"barquette\") pour un aliment qui n'en a pas encore.", 'warning');
     if (!Object.keys(patch).length) return toast('Renseigne au moins une valeur à corriger.', 'warning');
     setFoodOverride(name, patch);
-    setInfoEntry({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitGrams: '' });
+    setInfoEntry({ name: '', protein: '', carbs: '', fat: '', kcal: '', unitLabel: '', unitGrams: '' });
     toast('Fiche corrigée', 'success');
   };
   const fileRef = useRef(null);
@@ -351,6 +369,9 @@ export default function SettingsPage() {
 
         <div className="mb-2">
           <div className="text-xs text-mute uppercase tracking-wide mb-2">Prix d'un aliment existant</div>
+          <p className="text-[11px] text-mute mb-2">
+            Par défaut, tout se prix au poids (100g) — sauf les œufs et quelques aliments avec une unité connue (boîte, cuisse…). Comme dans MyFitnessPal, tu peux choisir de prix n'importe quel aliment par unité à la place (ex. "1 barquette de poulet = 45Dh"), même s'il n'en avait pas une au départ.
+          </p>
           <form onSubmit={submitPrice} className="flex flex-wrap gap-2 items-end">
             <Field label="Aliment">
               <Input list="all-foods" value={priceEntry.name} onChange={(e) => setPriceEntry({ ...priceEntry, name: e.target.value })} placeholder="ex. Chicken thigh" />
@@ -358,12 +379,29 @@ export default function SettingsPage() {
                 {allFoodNames.map((n) => <option key={n} value={n} />)}
               </datalist>
             </Field>
-            <Field label={priceEntryUnit ? `Prix par ${priceEntryUnit.label} (Dh)` : 'Prix / 100g (Dh)'}>
+            <Field label="Mode de prix">
+              <Select
+                value={priceEntry.priceMode}
+                onChange={(e) => setPriceEntry({ ...priceEntry, priceMode: e.target.value })}
+                options={[{ value: 'weight', label: 'Par poids (100g)' }, { value: 'unit', label: 'Par unité' }]}
+              />
+            </Field>
+            {priceEntry.priceMode === 'unit' && !priceEntryUnit && (
+              <>
+                <Field label="Nom de l'unité">
+                  <Input value={priceEntry.unitLabel} onChange={(e) => setPriceEntry({ ...priceEntry, unitLabel: e.target.value })} placeholder="ex. barquette" className="w-32" />
+                </Field>
+                <Field label="Poids d'une unité (g)">
+                  <Input type="number" min="1" value={priceEntry.unitGrams} onChange={(e) => setPriceEntry({ ...priceEntry, unitGrams: e.target.value })} placeholder="ex. 500" className="w-32" />
+                </Field>
+              </>
+            )}
+            <Field label={priceEntry.priceMode === 'unit' ? `Prix par ${priceEntryUnit?.label || priceEntry.unitLabel.trim() || 'unité'} (Dh)` : 'Prix / 100g (Dh)'}>
               <Input type="number" min="0" step="0.1" value={priceEntry.price} onChange={(e) => setPriceEntry({ ...priceEntry, price: e.target.value })} className="w-32" />
             </Field>
             <Button type="submit" variant="secondary">Enregistrer le prix</Button>
           </form>
-          {priceEntryUnit && <p className="text-[11px] text-mute mt-1.5">"{priceEntry.name.trim()}" s'achète en {priceEntryUnit.label} — prix demandé par unité, pas au poids.</p>}
+          {priceEntry.priceMode === 'unit' && priceEntryUnit && <p className="text-[11px] text-mute mt-1.5">"{priceEntry.name.trim()}" a déjà une unité connue : {priceEntryUnit.label} ({priceEntryUnit.grams}g).</p>}
         </div>
 
         {Object.keys(foodPrices).length > 0 && (
@@ -383,17 +421,18 @@ export default function SettingsPage() {
         <div className="mb-2 mt-5 border-t border-line pt-4">
           <div className="text-xs text-mute uppercase tracking-wide mb-2">Corriger la fiche d'un aliment existant</div>
           <p className="text-[11px] text-mute mb-2">
-            Les valeurs génériques ne correspondent pas toujours à ton produit réel — ex. une boîte de sardines assumée à 106g de poids net alors que la tienne n'en fait que 55g (ce qui change complètement le prix réel au 100g). Corrige uniquement ce qui diffère, le reste garde la valeur générique.
+            Les valeurs génériques ne correspondent pas toujours à ton produit réel — ex. une boîte de sardines assumée à 106g de poids net alors que la tienne n'en fait que 55g (ce qui change complètement le prix réel au 100g). Marche aussi pour donner une unité à un aliment qui n'en a pas encore (ex. une barquette de poulet). Corrige uniquement ce qui diffère, le reste garde la valeur générique.
           </p>
           <form onSubmit={submitFoodInfo} className="grid sm:grid-cols-3 gap-2 items-end">
             <Field label="Aliment">
               <Input list="all-foods" value={infoEntry.name} onChange={(e) => setInfoEntry({ ...infoEntry, name: e.target.value })} placeholder="ex. Sardines (canned)" />
             </Field>
-            {infoEntryUnit && (
-              <Field label={`Poids réel d'un ${infoEntryUnit.label} (g)`} hint={`générique : ${infoEntryUnit.grams}g`}>
-                <Input type="number" min="1" value={infoEntry.unitGrams} onChange={(e) => setInfoEntry({ ...infoEntry, unitGrams: e.target.value })} placeholder={String(infoEntryUnit.grams)} />
-              </Field>
-            )}
+            <Field label="Nom de l'unité" hint={infoEntryUnit ? `générique : ${infoEntryUnit.label}` : "aucune pour l'instant"}>
+              <Input value={infoEntry.unitLabel} onChange={(e) => setInfoEntry({ ...infoEntry, unitLabel: e.target.value })} placeholder={infoEntryUnit?.label || 'ex. barquette'} />
+            </Field>
+            <Field label="Poids réel d'une unité (g)" hint={infoEntryUnit ? `générique : ${infoEntryUnit.grams}g` : undefined}>
+              <Input type="number" min="1" value={infoEntry.unitGrams} onChange={(e) => setInfoEntry({ ...infoEntry, unitGrams: e.target.value })} placeholder={infoEntryUnit ? String(infoEntryUnit.grams) : ''} />
+            </Field>
             <Field label="Protéine /100g (g)" hint={infoEntryFood ? `générique : ${infoEntryFood.protein}g` : undefined}>
               <Input type="number" min="0" step="0.1" value={infoEntry.protein} onChange={(e) => setInfoEntry({ ...infoEntry, protein: e.target.value })} placeholder={infoEntryFood ? String(infoEntryFood.protein) : ''} />
             </Field>
@@ -417,7 +456,7 @@ export default function SettingsPage() {
                 <span>
                   {name} <span className="text-mute text-xs">
                     ({[
-                      ov.unitGrams != null && `poids unité ${ov.unitGrams}g`,
+                      (ov.unitLabel != null || ov.unitGrams != null) && `unité${ov.unitLabel ? ` "${ov.unitLabel}"` : ''}${ov.unitGrams != null ? ` = ${ov.unitGrams}g` : ''}`,
                       ov.protein != null && `${ov.protein}g P`,
                       ov.carbs != null && `${ov.carbs}g G`,
                       ov.fat != null && `${ov.fat}g L`,

@@ -196,8 +196,17 @@ export function lookupFood(name) {
   for (const key of ['protein', 'carbs', 'fat', 'kcal']) {
     if (override[key] != null) merged[key] = override[key];
   }
-  if (override.unitGrams != null && merged.servings?.length) {
-    merged.servings = merged.servings.map((s, i) => (i === 0 ? { ...s, grams: override.unitGrams } : s));
+  // A user-defined unit — for the food's existing serving (correcting its
+  // label and/or real net weight) OR, when it has none, creating one from
+  // scratch (e.g. pricing "Chicken breast" as "1 barquette = 500g" even
+  // though the generic entry only ever had per-100g figures).
+  if (override.unitGrams != null || override.unitLabel != null) {
+    const base = merged.servings?.[0];
+    const grams = override.unitGrams ?? base?.grams;
+    const label = override.unitLabel ?? base?.label;
+    if (grams != null && label) {
+      merged.servings = merged.servings?.length ? merged.servings.map((s, i) => (i === 0 ? { label, grams } : s)) : [{ label, grams }];
+    }
   }
   return merged;
 }

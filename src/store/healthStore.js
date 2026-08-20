@@ -115,7 +115,7 @@ export const useHealthStore = create(
       foodPrices: {},
       setFoodPrice: (foodName, pricePerGram) => set({ foodPrices: { ...get().foodPrices, [foodName]: Number(pricePerGram) || 0 } }),
       deleteFoodPrice: (foodName) => set({ foodPrices: Object.fromEntries(Object.entries(get().foodPrices).filter(([n]) => n !== foodName)) }),
-      // { [foodName]: { protein?, carbs?, fat?, kcal?, unitGrams? } } — user
+      // { [foodName]: { protein?, carbs?, fat?, kcal?, unitLabel?, unitGrams? } } — user
       // corrections to a food's generic macros (per 100g) and/or the real net
       // weight of its purchase unit (e.g. a specific can of sardines nets
       // 55g, not the generic 106g assumed — which silently makes an 8Dh can
