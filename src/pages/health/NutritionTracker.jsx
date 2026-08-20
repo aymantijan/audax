@@ -55,7 +55,7 @@ function macroTargets(proteinTargetG) {
 }
 
 export default function NutritionTracker({ pendingPrompt }) {
-  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem, healthProfile, completeHealthProfile, generatePlan, deleteNutritionPlan } = useHealthStore();
+  const { nutritionLogs, mealTemplates, proteinTargetG, logMeal, deleteMeal, setProteinTarget, saveMealTemplate, deleteMealTemplate, logMealTemplate, getTodayNutrition, getActiveNutritionPlan, logPlanMeal, getSwapOptionsForItem, swapPlanMealItem, healthProfile, completeHealthProfile, generatePlan, deleteNutritionPlan, getCyclePhaseCoaching } = useHealthStore();
   const user = useAuthStore((s) => s.user);
   const gender = user?.gender;
   const profileComplete = !!(user?.gender && user?.heightCm && user?.dobYear);
@@ -81,6 +81,22 @@ export default function NutritionTracker({ pendingPrompt }) {
   const targets = activePlan
     ? { protein: activePlan.targetMacros.proteinG, carbs: activePlan.targetMacros.carbsG, fat: activePlan.targetMacros.fatG, kcal: activePlan.targetKcal }
     : macroTargets(proteinTargetG);
+
+  // Iron needs are higher during menstruation (blood loss) — the RDA table
+  // already accounts for this (18mg vs 8mg, see micronutrients.js), but a
+  // number alone doesn't help someone decide what to actually eat. Surfaces
+  // the plan's own best iron sources instead of a generic list, so it's
+  // something to act on today, not just informational text.
+  const cycleCoaching = gender === 'female' ? getCyclePhaseCoaching() : null;
+  const ironHighlights = useMemo(() => {
+    if (cycleCoaching?.phase !== 'menstrual' || !activePlan) return [];
+    const items = activePlan.sampleMeals.flatMap((m) => m.items.map((it) => ({ ...it, mealSlot: m.mealSlot })));
+    return items
+      .map((it) => ({ ...it, iron: getFoodMicros(it.name, it.grams)?.iron?.value || 0 }))
+      .filter((it) => it.iron > 0)
+      .sort((a, b) => b.iron - a.iron)
+      .slice(0, 3);
+  }, [cycleCoaching?.phase, activePlan]);
 
   // Unit choices update as the food name changes — e.g. typing "egg" reveals
   // an "egg" option alongside the always-available "g", so 100g of guessing
@@ -218,6 +234,21 @@ export default function NutritionTracker({ pendingPrompt }) {
             </Field>
             <Button onClick={confirmScannedProduct}>Logger ce produit</Button>
             <Button variant="secondary" onClick={() => setScannedProduct(null)}>Annuler</Button>
+          </div>
+        </Card>
+      )}
+
+      {ironHighlights.length > 0 && (
+        <Card title="Fer & phase menstruelle">
+          <p className="text-sm text-mute mb-2">
+            Les pertes de sang augmentent le besoin en fer pendant les règles (RDA à 18mg au lieu de 8mg). Tes meilleures sources dans le plan d'aujourd'hui :
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {ironHighlights.map((it, i) => (
+              <span key={i} className="text-xs bg-panel border border-line rounded-full px-2.5 py-1">
+                {it.name} ({it.mealSlot}) — {it.iron}mg
+              </span>
+            ))}
           </div>
         </Card>
       )}

@@ -835,8 +835,8 @@ export const useHealthStore = create(
         return { phase: phase.phase, ...cyclePhaseCoachingNote(phase.phase) };
       },
 
-      // ─────────── Performance & Recovery (men's track — lifestyle/performance
-      // framing, explicitly non-medical: no hormonal/biomarker claims) ───────────
+      // ─────────── Performance & Recovery (open to every account — lifestyle/
+      // performance framing, explicitly non-medical: no hormonal/biomarker claims) ───────────
       performanceLogs: [], // [{id, date, restingHr, vitality, mobility, notes}]
       logPerformance: (data, date) => {
         const target = date || todayKey();

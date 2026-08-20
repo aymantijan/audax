@@ -86,8 +86,9 @@ export function CuratedCardioLogger() {
 // unless a weight is entered — the "weight" field is then added weight, not
 // a replacement.
 export function CuratedGymLogger() {
-  const { getActiveCuratedProgram, getNextGymSession, logGymSession, markCuratedSessionDone } = useHealthStore();
+  const { getActiveCuratedProgram, getNextGymSession, logGymSession, markCuratedSessionDone, getCyclePhaseCoaching } = useHealthStore();
   const program = getActiveCuratedProgram();
+  const cycleCoaching = getCyclePhaseCoaching();
   // Rotation-based, not calendar-day-based — the next session is whatever
   // comes after the last one actually completed, so missing/rescheduling a
   // day (e.g. training Push a day late) never leaves nothing prescribed or
@@ -108,6 +109,12 @@ export function CuratedGymLogger() {
   const [logDate, setLogDate] = useState(todayKey());
   const [sessionQuality, setSessionQuality] = useState(7);
   const [notes, setNotes] = useState('');
+  // "Alléger la séance" — a one-tap version of Programme Extrême's own
+  // written auto-regulation rule ("Score 60-79 → réduire le volume de 20%,
+  // une série en moins par exercice"), offered on days the cycle-phase hint
+  // says lighter_ok (menstrual phase) instead of leaving that rule as text
+  // the user has to remember and apply by hand.
+  const [lighterMode, setLighterMode] = useState(false);
 
   // getNextGymSession() advances after a submit (markCuratedSessionDone), but
   // this component doesn't remount — without this, `sets` would still be
@@ -120,6 +127,7 @@ export function CuratedGymLogger() {
     setLogDate(todayKey());
     setSessionQuality(7);
     setNotes('');
+    setLighterMode(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [next?.sessionKey]);
 
@@ -129,6 +137,15 @@ export function CuratedGymLogger() {
   // previous session's `sets` object, which doesn't have the new exercise
   // names as keys.
   const setsFor = (ex) => sets[ex.name] || makeSets(ex.setsReps);
+  // The set list actually rendered/submitted — trims the last set per
+  // exercise when "Alléger" is on. Slicing off the END (not skipping via
+  // index) means updateSet's setIdx values still point at the right entries
+  // in the underlying full array, so editing a visible set never touches the
+  // wrong one.
+  const effectiveSetsFor = (ex) => {
+    const all = setsFor(ex);
+    return lighterMode && all.length > 1 ? all.slice(0, -1) : all;
+  };
 
   const toggle = (name) => setChecked((s) => { const next = new Set(s); next.has(name) ? next.delete(name) : next.add(name); return next; });
   const updateSet = (ex, setIdx, patch) =>
@@ -138,22 +155,22 @@ export function CuratedGymLogger() {
     setError('');
     const picked = exercises.filter((e) => checked.has(e.name));
     if (!picked.length) return setError('Coche au moins un exercice fait.');
-    const missingReps = picked.some((e) => setsFor(e).some((s) => !s.reps));
+    const missingReps = picked.some((e) => effectiveSetsFor(e).some((s) => !s.reps));
     if (missingReps) return setError('Indique les reps pour chaque série.');
     // Weight is required per set for any loaded exercise (barbell/dumbbell/
     // machine) — only bodyweight-flagged movements (pull-ups, dips…) can
     // legitimately have an empty weight field, meaning "bodyweight only".
-    const missingWeight = picked.some((e) => !e.bodyweightExercise && setsFor(e).some((s) => !s.weight));
+    const missingWeight = picked.some((e) => !e.bodyweightExercise && effectiveSetsFor(e).some((s) => !s.weight));
     if (missingWeight) return setError('Indique le poids de chaque série (sauf poids du corps).');
     logGymSession({
       date: logDate,
       sessionType: null,
       exercises: picked.map((e) => ({
         exercise: e.name,
-        sets: setsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
+        sets: effectiveSetsFor(e).map((s) => ({ reps: Number(s.reps), weight: s.weight ? Number(s.weight) : 0, rpe: Number(s.rpe) || null, form: s.form || null })),
       })),
       quality: sessionQuality,
-      notes: [notes, next.session.isVariant ? '(variante)' : ''].filter(Boolean).join(' — '),
+      notes: [notes, next.session.isVariant ? '(variante)' : '', lighterMode ? '(séance allégée -1 série/exercice)' : ''].filter(Boolean).join(' — '),
     });
     markCuratedSessionDone(program.id, next.sessionKey);
     setChecked(new Set());
@@ -163,12 +180,18 @@ export function CuratedGymLogger() {
   // Mirrors submitTraining's validation so the button is disabled (not just
   // rejected after the click) until every checked exercise's sets all have
   // reps, plus a weight unless it's a bodyweight movement.
-  const canSubmit = allChecked && exercises.every((e) => setsFor(e).every((s) => s.reps && (e.bodyweightExercise || s.weight)));
+  const canSubmit = allChecked && exercises.every((e) => effectiveSetsFor(e).every((s) => s.reps && (e.bodyweightExercise || s.weight)));
 
   if (!program || !exercises.length) return null;
 
   return (
     <Card title={`Prochaine séance — ${next.session.label}${next.session.isVariant ? ' (variante)' : ''}`}>
+      {cycleCoaching?.trainingLoadHint === 'lighter_ok' && (
+        <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer border border-line rounded-lg px-3 py-2 bg-surface">
+          <input type="checkbox" checked={lighterMode} onChange={(e) => setLighterMode(e.target.checked)} />
+          Alléger la séance aujourd'hui (-1 série par exercice) — règle d'auto-régulation du programme, phase menstruelle
+        </label>
+      )}
       <div className="space-y-3">
         {exercises.map((ex) => (
           <div key={ex.name} className="bg-surface border border-line rounded-lg px-3 py-2">
@@ -180,7 +203,7 @@ export function CuratedGymLogger() {
               </div>
             </div>
             <div className="mt-2 pl-7 space-y-1.5">
-              {setsFor(ex).map((s, setIdx) => (
+              {effectiveSetsFor(ex).map((s, setIdx) => (
                 <div key={setIdx} className="flex items-center gap-2">
                   <span className="text-[10px] text-mute w-10 shrink-0">Série {setIdx + 1}</span>
                   <Input type="number" className="!py-1 !text-xs w-14" placeholder="reps" value={s.reps ?? ''} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
