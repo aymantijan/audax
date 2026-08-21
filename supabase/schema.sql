@@ -43,9 +43,20 @@ create policy "delete own app_state"
   on public.app_state for delete
   using (auth.uid() = user_id);
 
--- Enable realtime (multi-device live sync) on this table.
--- If this errors with "already a member", that's fine — it means it's already enabled.
-alter publication supabase_realtime add table public.app_state;
+-- Enable realtime (multi-device live sync) on this table. Guarded so
+-- re-running this whole script (e.g. to pick up a later addition further
+-- down, like leaderboard_profiles) never aborts on "already a member of
+-- publication" — Supabase's SQL Editor treats that as a hard error that
+-- stops the rest of the script from running, not a warning to skip past.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'app_state'
+  ) then
+    alter publication supabase_realtime add table public.app_state;
+  end if;
+end $$;
 
 -- Web Push subscriptions (see api/push-subscribe.js, api/push-send-test.js).
 -- One row per browser/device the user has granted notification permission on
