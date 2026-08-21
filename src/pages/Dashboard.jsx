@@ -77,11 +77,12 @@ export default function Dashboard() {
   const goals = accountingStore.getGoalRows();
   const todayEnergy = energyLogs.find((l) => l.date === today);
 
-  // Grade (game rank) from domain-BALANCED XP (not raw lifetime XP — see
-  // utils/xp-domains.js: grading on the raw sum let one over-farmed domain,
-  // trading in practice, dominate rank progression) + synergy score.
-  const balancedGradeXP = useSkillStore((s) => s.getBalancedGradeXP());
-  const grade = gradeFor(balancedGradeXP, synergy.weighted);
+  // Grade (game rank) from raw lifetime XP (not the domain-balanced figure —
+  // user explicitly rejected the diminishing-returns mechanic: it made a
+  // large, real XP total look "stuck" behind an invisible, harder-to-read
+  // number) + synergy score.
+  const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
+  const grade = gradeFor(lifetimeXP, synergy.weighted);
   const equityCurve = useMemo(
     () => tradingStore.getEquityCurve(activeAccountId).map((p, i) => ({ i, value: p.value })),
     [acctTrades, activeAccountId]

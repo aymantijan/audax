@@ -50,19 +50,15 @@ function YourGradeCard({ grade, consistency }) {
   );
 }
 
-// Shows the raw XP split across the 5 domains that grade progression is
-// actually balanced across (see utils/xp-domains.js) — makes the diminishing-
-// returns mechanic legible instead of a black box: without this, a heavy
-// trader would just see their grade climbing slower than raw XP would
-// suggest with no visible explanation why.
+// Shows the raw XP split across the 5 life domains (see utils/xp-domains.js)
+// — purely informational since grade progression was switched back to raw
+// Lifetime XP (no diminishing returns): this just answers "where is my XP
+// actually coming from", it no longer explains a grading mechanic.
 function DomainBalanceCard({ domainXP }) {
   const total = XP_DOMAINS.reduce((a, d) => a + domainXP[d], 0);
   const max = Math.max(1, ...XP_DOMAINS.map((d) => domainXP[d]));
   return (
-    <Card
-      title="Domain Balance"
-      action={<span className="text-[10px] text-mute normal-case">grade rewards breadth — see below</span>}
-    >
+    <Card title="Domain Balance">
       {total === 0 ? (
         <EmptyState>Earn some XP anywhere to see your domain balance.</EmptyState>
       ) : (
@@ -85,9 +81,6 @@ function DomainBalanceCard({ domainXP }) {
               </div>
             );
           })}
-          <p className="text-[11px] text-mute pt-1">
-            Grade progression applies diminishing returns per domain — the same total XP climbs the ladder faster when spread across all 5 than when piled into one.
-          </p>
         </div>
       )}
     </Card>
@@ -351,11 +344,6 @@ function MilestonesView({ currentLevel }) {
 
 export default function Leaderboard() {
   const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
-  // Grade uses domain-balanced XP (see utils/xp-domains.js), not the raw
-  // total above — "Lifetime XP" stays a literal bragging-rights figure for
-  // ranking against personalities, but grade progression rewards breadth
-  // across all 5 domains instead of volume in whichever one is easiest to farm.
-  const balancedGradeXP = useSkillStore((s) => s.getBalancedGradeXP());
   // Raw stable slice (not a getter that builds a fresh object every call —
   // see the useSyncExternalStore infinite-loop note in project memory),
   // derived value computed in a useMemo instead.
@@ -369,7 +357,7 @@ export default function Leaderboard() {
   const synergy = useSynergy();
   const [tab, setTab] = useState('ranking');
 
-  const grade = gradeFor(balancedGradeXP, synergy.weighted);
+  const grade = gradeFor(lifetimeXP, synergy.weighted);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -380,19 +368,10 @@ export default function Leaderboard() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <YourGradeCard grade={grade} consistency={consistency} />
         <Stat label="Lifetime XP" value={lifetimeXP.toLocaleString()} sub={`synergy ${synergy.weighted}`} />
-        <Stat
-          label="Grade XP"
-          value={balancedGradeXP.toLocaleString()}
-          sub="what grade gates actually use"
-          color="var(--accent-secondary)"
-        />
       </div>
-      <p className="text-[11px] text-mute -mt-2">
-        Your grade is gated on <strong>Grade XP</strong> ({balancedGradeXP.toLocaleString()}), not Lifetime XP ({lifetimeXP.toLocaleString()}) — Grade XP applies diminishing returns per domain, so the same total XP is worth less the more it's piled into one domain instead of spread across all 5 (see Domain Balance below).
-      </p>
 
       <DomainBalanceCard domainXP={domainXP} />
 
