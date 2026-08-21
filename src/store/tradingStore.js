@@ -483,6 +483,33 @@ export const useTradingStore = create(
         get().checkBadges();
       },
 
+      // A hard rule violation (max daily loss, max total drawdown) that
+      // terminates the account immediately — distinct from 'failed', which
+      // means an EVALUATION phase simply wasn't cleared in time (missed
+      // profit target / min days) without breaking a rule. Breach can hit
+      // an account at ANY stage, including already-funded — the phase-only
+      // advancePropFirmPhase('failed') couldn't represent that at all, since
+      // funded accounts never showed a fail/breach action in the UI.
+      breachAccount: (id, note) => {
+        const acct = get().accounts.find((a) => a.id === id);
+        if (!acct || acct.type !== 'propfirm') return;
+        const progress = computePropFirmProgress(acct, get().trades.filter((t) => t.accountId === id));
+        const historyEntry = {
+          phase: acct.phase,
+          startedAt: acct.currentPhaseStartAt,
+          endedAt: Date.now(),
+          outcome: 'breached',
+          note: note || '',
+          snapshot: { profitPct: progress.profitPct, tradingDays: progress.tradingDays, maxDrawdownPct: progress.maxDrawdownPct },
+        };
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === id ? stamp({ ...a, status: 'breached', phaseHistory: [...(a.phaseHistory || []), historyEntry] }) : a
+          ),
+        });
+        toast(`${acct.name} marked as breached${note ? ` — ${note}` : ''}`, 'error');
+      },
+
       // ─────────── Demo account: opt-in Prop Firm simulation ───────────
       // Lets a Demo account train against a self-configured multi-phase
       // ruleset (pick 1-3 phases, each with its own profit target / daily

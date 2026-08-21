@@ -14,13 +14,13 @@ import PropFirmSimConfig from '../components/trading/PropFirmSimConfig';
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
 const STATUS_COLOR = {
   active: 'var(--accent-primary)', funded: 'var(--success)', passed: 'var(--success)',
-  failed: 'var(--error)', archived: 'var(--text-secondary)',
+  failed: 'var(--error)', breached: 'var(--error)', archived: 'var(--text-secondary)',
 };
 
 export default function TradingAccountDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { accounts, getStats, accountValue, getEquityCurve, getAccountTrades, getPropFirmProgress, advancePropFirmPhase, adjustAccountBalance, setActiveAccount, addPayout, deletePayout, getTotalPayouts, getAccountScore } = useTradingStore();
+  const { accounts, getStats, accountValue, getEquityCurve, getAccountTrades, getPropFirmProgress, advancePropFirmPhase, breachAccount, adjustAccountBalance, setActiveAccount, addPayout, deletePayout, getTotalPayouts, getAccountScore } = useTradingStore();
   const [editModal, setEditModal] = useState(false);
   const [balModal, setBalModal] = useState(false);
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
@@ -54,6 +54,15 @@ export default function TradingAccountDetail() {
     if (!Number(payoutForm.amount)) return;
     addPayout(account.id, payoutForm);
     setPayoutForm({ amount: '', date: new Date().toISOString().slice(0, 10), notes: '' });
+  };
+  // Breach can hit at any stage (funded or still in evaluation) — a hard
+  // rule violation, not a missed target, so it's a separate confirm from
+  // "Mark failed" with its own wording and an optional note for what broke
+  // (e.g. "max daily loss on the NFP spike").
+  const markBreached = () => {
+    if (!confirm(`Mark "${account.name}" as breached? This ends the account immediately — use this for a hard rule violation (max daily loss / max drawdown), not a missed profit target.`)) return;
+    const note = prompt('What rule was breached? (optional)') || '';
+    breachAccount(account.id, note);
   };
 
   return (
@@ -149,7 +158,15 @@ export default function TradingAccountDetail() {
       )}
 
       {account.type === 'propfirm' && account.status === 'funded' && (
-        <Card title="Payouts" action={<Badge color="var(--success)">Total: {fmtMoney(totalPayouts, 0, currency)}</Badge>}>
+        <Card
+          title="Payouts"
+          action={
+            <div className="flex items-center gap-2">
+              <Badge color="var(--success)">Total: {fmtMoney(totalPayouts, 0, currency)}</Badge>
+              <Button variant="danger" className="!px-3 !py-1.5 text-xs" onClick={markBreached}>Mark breached</Button>
+            </div>
+          }
+        >
           <form onSubmit={submitPayout} className="flex flex-wrap gap-2 items-end mb-4">
             <Field label={`Amount (${currency})`}>
               <Input type="number" step="any" value={payoutForm.amount} onChange={(e) => setPayoutForm({ ...payoutForm, amount: e.target.value })} className="w-32" />
@@ -184,9 +201,10 @@ export default function TradingAccountDetail() {
         <Card
           title={`Phase: ${PROP_FIRM_PHASES.find((p) => p.value === account.phase)?.label || account.phase}`}
           action={
-            account.status !== 'failed' && account.status !== 'archived' && !isLastPhase ? (
-              <div className="flex gap-2">
+            account.status !== 'failed' && account.status !== 'breached' && account.status !== 'archived' && !isLastPhase ? (
+              <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => { if (confirm('Mark this phase as failed?')) advancePropFirmPhase(account.id, 'failed'); }}>Mark failed</Button>
+                <Button variant="danger" className="!px-3 !py-1.5 text-xs" onClick={markBreached}>Mark breached</Button>
                 <Button
                   className="!px-3 !py-1.5 text-xs"
                   disabled={!progress.readyToAdvance}
@@ -227,10 +245,12 @@ export default function TradingAccountDetail() {
               <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Phase History</div>
               <ul className="space-y-1.5 text-sm">
                 {account.phaseHistory.map((h, i) => (
-                  <li key={i} className="flex items-center justify-between">
+                  <li key={i} className="flex items-center justify-between gap-2 flex-wrap">
                     <span>{PROP_FIRM_PHASES.find((p) => p.value === h.phase)?.label || h.phase}</span>
                     <span className={h.outcome === 'passed' ? 'text-good' : 'text-bad'}>
-                      {h.outcome === 'passed' ? 'Passed' : 'Failed'} · {h.snapshot.profitPct}% · {h.snapshot.tradingDays}d
+                      {h.outcome === 'passed' ? 'Passed' : h.outcome === 'breached' ? 'Breached' : 'Failed'}
+                      {h.snapshot && ` · ${h.snapshot.profitPct}% · ${h.snapshot.tradingDays}d`}
+                      {h.note && <span className="text-mute"> — {h.note}</span>}
                     </span>
                   </li>
                 ))}

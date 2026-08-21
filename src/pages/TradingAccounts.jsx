@@ -10,7 +10,7 @@ const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
 const TYPE_ORDER = ['demo', 'broker', 'propfirm'];
 const STATUS_COLOR = {
   active: 'var(--accent-primary)', funded: 'var(--success)', passed: 'var(--success)',
-  failed: 'var(--error)', archived: 'var(--text-secondary)',
+  failed: 'var(--error)', breached: 'var(--error)', archived: 'var(--text-secondary)',
 };
 
 export default function TradingAccounts() {
