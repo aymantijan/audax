@@ -57,6 +57,40 @@ async function pushStore(userId, name, data) {
   if (error) console.error(`[cloud-sync] push ${name} failed:`, error.message);
 }
 
+// Keeps the public `leaderboard_profiles` row (see supabase/schema.sql) in
+// sync — just a display name, career track, and a lifetime XP number, NOT a
+// copy of app_state (that stays private, per-user-only via RLS). Cheap
+// enough to recompute from scratch on every call: getLifetimeXP() is a
+// single reduce over already-in-memory skills.
+async function pushLeaderboardProfile(userId) {
+  if (!isSupabaseConfigured) return;
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  const lifetimeXp = useSkillStore.getState().getLifetimeXP();
+  const { error } = await supabase
+    .from('leaderboard_profiles')
+    .upsert(
+      { user_id: userId, display_name: user.name || 'Anonymous', career_goal: user.careerGoal || null, lifetime_xp: lifetimeXp, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  if (error) console.error('[cloud-sync] push leaderboard profile failed:', error.message);
+}
+
+// Every other user's public leaderboard row (see supabase/schema.sql) — this
+// is the ONLY cross-user read anywhere in the app, deliberately scoped to
+// this one minimal table. Called from Leaderboard.jsx, not part of the
+// per-device sync cycle above (no realtime subscription — a leaderboard is
+// fine refreshing on page load rather than staying live-subscribed).
+export async function fetchLeaderboardProfiles() {
+  if (!isSupabaseConfigured) return { ok: true, profiles: [] };
+  const { data, error } = await supabase.from('leaderboard_profiles').select('user_id, display_name, career_goal, lifetime_xp');
+  if (error) {
+    console.error('[cloud-sync] fetch leaderboard profiles failed:', error.message);
+    return { ok: false, profiles: [] };
+  }
+  return { ok: true, profiles: data || [] };
+}
+
 // Fetch every synced store's cloud data for this user. `data` is a map keyed
 // by store name; a store absent from the map has no cloud row yet (first
 // login for that store). `ok: false` means the fetch itself failed (network/DB
@@ -150,6 +184,16 @@ export async function startCloudSync(userId) {
     });
     unsubscribeFns.push(unsub);
   }
+
+  // Leaderboard profile: pushed once now (so a fresh account/name/career
+  // change shows up immediately) and re-pushed, debounced, whenever XP or
+  // profile fields change — same pattern as the REGISTRY loop above, just
+  // writing to leaderboard_profiles instead of app_state.
+  await pushLeaderboardProfile(userId);
+  if (myGeneration !== generation) return;
+  const pushProfileDebounced = debounce(() => pushLeaderboardProfile(userId), 2000);
+  unsubscribeFns.push(useSkillStore.subscribe(() => { if (!applyingRemote) pushProfileDebounced(); }));
+  unsubscribeFns.push(useAuthStore.subscribe(() => { if (!applyingRemote) pushProfileDebounced(); }));
 
   // Realtime: pick up changes made from another device/tab.
   activeSubscription = supabase

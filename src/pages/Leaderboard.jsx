@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check, Globe } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSkillStore } from '../store/skillStore';
 import { useSynergy } from '../hooks/useSynergy';
@@ -9,6 +9,9 @@ import { preview, CONSISTENCY_CONFIG } from '../utils/momentum';
 import { XP_DOMAINS, XP_DOMAIN_LABELS, domainXpBreakdown } from '../utils/xp-domains';
 import { todayKey } from '../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
+import { fetchLeaderboardProfiles } from '../services/cloud-sync';
+import { getSession } from '../services/auth-supabase';
+import { isSupabaseConfigured } from '../services/supabase';
 
 const PAGE_SIZE = 50;
 
@@ -95,16 +98,52 @@ function RankingView() {
   const [domain, setDomain] = useState('all');
   const [country, setCountry] = useState('all');
   const [page, setPage] = useState(0);
+  // Other real AUDAX users, pulled from the public leaderboard_profiles table
+  // (see services/cloud-sync.js) — empty until fetched, or forever empty if
+  // Supabase isn't configured / this account isn't cloud-synced (local-only
+  // accounts never appear on, or see, the shared leaderboard).
+  const [realUsers, setRealUsers] = useState([]);
+  const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'loading' : 'unconfigured');
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      const session = await getSession();
+      if (!session?.user) {
+        if (!cancelled) setCloudStatus('signed-out');
+        return;
+      }
+      const { ok, profiles } = await fetchLeaderboardProfiles();
+      if (cancelled) return;
+      setRealUsers(
+        profiles
+          .filter((p) => p.user_id !== session.user.id) // exclude self — the "You" row below already covers that, from live local state
+          .map((p) => ({
+            name: p.display_name || 'AUDAX user',
+            domain: p.career_goal || 'AUDAX',
+            country: '—',
+            xp: p.lifetime_xp || 0,
+            note: 'AUDAX user',
+            isYou: false,
+            isRealUser: true,
+          }))
+      );
+      setCloudStatus(ok ? 'ready' : 'error');
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const youName = `${user?.name || 'You'}`;
 
   const ranked = useMemo(() => {
     const rows = [
       ...LEADERBOARD.map((p) => ({ ...p, isYou: false })),
+      ...realUsers,
       { name: youName, domain: 'You', country: user?.careerGoal || '—', xp: lifetimeXP, note: 'That\'s you — climb the ranks.', isYou: true },
     ].sort((a, b) => b.xp - a.xp || (a.isYou ? 1 : 0));
     return rows.map((r, i) => ({ ...r, rank: i + 1, grade: gradeForXpOnly(r.xp) }));
-  }, [lifetimeXP, youName, user?.careerGoal]);
+  }, [lifetimeXP, youName, user?.careerGoal, realUsers]);
 
   const me = ranked.find((r) => r.isYou);
   const total = ranked.length;
@@ -134,6 +173,21 @@ function RankingView() {
   return (
     <div className="space-y-6">
       <Stat label="Your rank" value={me ? `#${me.rank}` : '—'} sub={`of ${total}`} color="var(--accent-primary)" />
+
+      {cloudStatus !== 'ready' && (
+        <div className="text-xs text-mute bg-surface border border-line rounded-lg px-3 py-2 flex items-center gap-2">
+          <Globe size={13} className="shrink-0" />
+          {cloudStatus === 'unconfigured' && 'Cloud sync isn\'t set up on this deployment — the shared leaderboard (other real AUDAX users) needs it to work.'}
+          {cloudStatus === 'signed-out' && 'Sign in with cloud sync (Settings) to appear on, and see, the shared leaderboard of real AUDAX users.'}
+          {cloudStatus === 'loading' && 'Loading other AUDAX users…'}
+          {cloudStatus === 'error' && 'Could not load other AUDAX users right now — showing personalities and your own rank only.'}
+        </div>
+      )}
+      {cloudStatus === 'ready' && realUsers.length > 0 && (
+        <p className="text-[11px] text-mute flex items-center gap-1.5">
+          <Globe size={12} className="text-good shrink-0" /> {realUsers.length} other real AUDAX user{realUsers.length > 1 ? 's' : ''} shown alongside the personalities below.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-56">
@@ -185,6 +239,7 @@ function RankingView() {
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         {r.isYou && <Star size={13} className="text-accent shrink-0" fill="currentColor" />}
+                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Real AUDAX user" />}
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
                       </div>
                       {r.note && <div className="text-[11px] text-mute mt-0.5 max-w-md truncate">{r.note}</div>}

@@ -83,3 +83,38 @@ drop policy if exists "delete own push_subscriptions" on public.push_subscriptio
 create policy "delete own push_subscriptions"
   on public.push_subscriptions for delete
   using (auth.uid() = user_id);
+
+-- Public leaderboard profiles (see src/services/cloud-sync.js's
+-- pushLeaderboardProfile). Deliberately a SEPARATE, minimal table rather than
+-- loosening app_state's RLS — app_state rows hold everything (trades, health
+-- logs, journal entries...), so making any of it cross-user-readable would
+-- leak real financial/health data. This table holds only what a leaderboard
+-- needs: display name, career track, and a lifetime XP number, kept in sync
+-- client-side whenever the user's `skills` store changes. Any signed-in user
+-- can read every row (that's the point of a leaderboard); a user can only
+-- write their own row.
+create table if not exists public.leaderboard_profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  display_name text not null,
+  career_goal text,
+  lifetime_xp integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.leaderboard_profiles enable row level security;
+
+drop policy if exists "select all leaderboard_profiles" on public.leaderboard_profiles;
+create policy "select all leaderboard_profiles"
+  on public.leaderboard_profiles for select
+  using (auth.uid() is not null);
+
+drop policy if exists "upsert own leaderboard_profiles" on public.leaderboard_profiles;
+create policy "upsert own leaderboard_profiles"
+  on public.leaderboard_profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "update own leaderboard_profiles" on public.leaderboard_profiles;
+create policy "update own leaderboard_profiles"
+  on public.leaderboard_profiles for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
