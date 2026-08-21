@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, HeartPulse, X } from 'lucide-react';
+import { CheckCircle2, Circle, HeartPulse, RotateCcw } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Input, Field, Select } from '../../components/common/ui';
@@ -219,6 +219,9 @@ export function CuratedGymLogger() {
       return done.length > 0 && done.every((s) => s.reps && (e.bodyweightExercise || s.weight));
     });
 
+  const anySetSkipped = exercises.some((e) => effectiveSetsFor(e).some((s) => s.done === false));
+  const resetAllSets = () => setSets(Object.fromEntries(exercises.map((e) => [e.name, setsFor(e).map((s) => ({ ...s, done: true }))])));
+
   if (!program || !next || !exercises.length) return null;
 
   return (
@@ -237,6 +240,14 @@ export function CuratedGymLogger() {
     >
       {overrideSessionKey && (
         <p className="text-[11px] text-mute mb-2">Séance changée manuellement — la rotation avancera à partir de "{activeSession.label}" au lieu de la prescription automatique.</p>
+      )}
+      {anySetSkipped && (
+        <div className="flex items-center justify-between gap-2 text-xs bg-surface border border-bad/40 rounded-lg px-3 py-2 mb-3">
+          <span className="text-mute">Des séries sont marquées "ratée" dans cette séance — vérifie que c'est voulu.</span>
+          <button type="button" onClick={resetAllSets} className="flex items-center gap-1 text-accent hover:underline cursor-pointer shrink-0">
+            <RotateCcw size={12} /> Tout remettre à "faite"
+          </button>
+        </div>
       )}
       {cycleCoaching?.trainingLoadHint === 'lighter_ok' && (
         <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer border border-line rounded-lg px-3 py-2 bg-surface">
@@ -258,15 +269,19 @@ export function CuratedGymLogger() {
               {effectiveSetsFor(ex).map((s, setIdx) => {
                 const done = s.done !== false;
                 return (
-                  <div key={setIdx} className={`flex items-center gap-2 flex-wrap ${done ? '' : 'opacity-40'}`}>
+                  <div key={setIdx} className={`flex items-center gap-2 flex-wrap ${done ? '' : 'opacity-50'}`}>
+                    {/* A dedicated small icon button, not the "Série N" text itself — that text used to be the
+                        whole clickable toggle with no visual sign it was a button, which on mobile got tapped by
+                        accident while scrolling and silently marked entire sessions as "ratée" (real incident). */}
                     <button
                       type="button"
                       onClick={() => updateSet(ex, setIdx, { done: !done })}
                       title={done ? 'Marquer cette série comme non faite' : 'Marquer cette série comme faite'}
-                      className={`w-12 shrink-0 text-[10px] cursor-pointer text-left ${done ? 'text-mute hover:text-bad' : 'text-bad'}`}
+                      className={`shrink-0 cursor-pointer ${done ? 'text-good' : 'text-bad'}`}
                     >
-                      {done ? `Série ${setIdx + 1}` : <span className="flex items-center gap-0.5"><X size={10} /> ratée</span>}
+                      {done ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                     </button>
+                    <span className="text-[10px] text-mute w-14 shrink-0">{done ? `Série ${setIdx + 1}` : 'Série ratée'}</span>
                     <Input type="number" className="!py-1 !text-xs w-14" placeholder="reps" value={s.reps ?? ''} disabled={!done} onChange={(e) => updateSet(ex, setIdx, { reps: e.target.value })} />
                     <Input
                       type="number" className="!py-1 !text-xs w-20"
