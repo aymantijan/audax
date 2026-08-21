@@ -254,16 +254,16 @@ export function CuratedGymLogger() {
                 <div className="text-[11px] text-mute">{ex.setsReps}{ex.note ? ` · ${ex.note}` : ''}</div>
               </div>
             </div>
-            <div className="mt-2 pl-7 space-y-1.5">
+            <div className="mt-2 pl-2 sm:pl-7 space-y-2">
               {effectiveSetsFor(ex).map((s, setIdx) => {
                 const done = s.done !== false;
                 return (
-                  <div key={setIdx} className={`flex items-center gap-2 ${done ? '' : 'opacity-40'}`}>
+                  <div key={setIdx} className={`flex items-center gap-2 flex-wrap ${done ? '' : 'opacity-40'}`}>
                     <button
                       type="button"
                       onClick={() => updateSet(ex, setIdx, { done: !done })}
                       title={done ? 'Marquer cette série comme non faite' : 'Marquer cette série comme faite'}
-                      className={`w-10 shrink-0 text-[10px] cursor-pointer text-left ${done ? 'text-mute hover:text-bad' : 'text-bad'}`}
+                      className={`w-12 shrink-0 text-[10px] cursor-pointer text-left ${done ? 'text-mute hover:text-bad' : 'text-bad'}`}
                     >
                       {done ? `Série ${setIdx + 1}` : <span className="flex items-center gap-0.5"><X size={10} /> ratée</span>}
                     </button>
