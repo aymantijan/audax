@@ -207,14 +207,19 @@ export function CuratedGymLogger() {
     setChecked(new Set());
   };
 
-  const allChecked = exercises.length > 0 && exercises.every((e) => checked.has(e.name));
+  // Only CHECKED exercises need to be valid — an exercise left unchecked
+  // means "didn't do this one at all" (séance interrompue avant d'y
+  // arriver) and is simply excluded, exactly like submitTraining's `picked`
+  // filter. Requiring every exercise on the sheet to be checked would make
+  // it impossible to ever submit a session stopped partway through.
+  const pickedExercises = exercises.filter((e) => checked.has(e.name));
   // Mirrors submitTraining's validation so the button is disabled (not just
   // rejected after the click) until every CHECKED exercise has at least one
   // non-skipped set, and every non-skipped set has reps (+ weight unless
   // it's a bodyweight movement) — skipped sets are excluded entirely.
   const canSubmit =
-    allChecked &&
-    exercises.every((e) => {
+    pickedExercises.length > 0 &&
+    pickedExercises.every((e) => {
       const done = doneSetsFor(e);
       return done.length > 0 && done.every((s) => s.reps && (e.bodyweightExercise || s.weight));
     });
@@ -331,7 +336,7 @@ export function CuratedGymLogger() {
       <Button className="mt-3" onClick={submitTraining} disabled={!canSubmit}>
         <span className="flex items-center gap-2">
           <CheckCircle2 size={14} />
-          {canSubmit ? 'Logger la séance' : !allChecked ? `Coche les ${exercises.length} exercices pour terminer` : 'Remplis reps et poids pour chaque série non décochée'}
+          {canSubmit ? 'Logger la séance' : !pickedExercises.length ? 'Coche les exercices faits pour logger' : 'Remplis reps et poids pour chaque série non décochée'}
         </span>
       </Button>
       <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur une série au poids du corps = faite au poids du corps seul ; un nombre = poids ajouté en plus. Chaque série a son propre poids. Le rond à gauche de chaque série la marque non faite (séance arrêtée en cours, blessure, temps…), ou "Arrêté ici" pour toutes les séries restantes d'un exercice d'un coup — elles ne seront ni requises ni loggées.</p>
