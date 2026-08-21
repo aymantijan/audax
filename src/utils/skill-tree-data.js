@@ -15,6 +15,7 @@ const k = mk('Knowledge');
 const s = mk('Soft Skills');
 const d = mk('Discipline');
 const e = mk('Engineering');
+const hh = mk('Health');
 
 const BASE_SKILLS = [
   // ════════ TRADING · Strategy Mastery (15) ════════
@@ -263,15 +264,26 @@ const BASE_SKILLS = [
   s('board-executive-lv1', 'Board & Executive Management Lv1', 'Stakeholder Management', ['presentation-skills-lv1'], 'Board reporting, executive alignment, governance'),
 
   // ════════ DISCIPLINE (10) ════════
-  d('trading-discipline-lv1', 'Trading Discipline Lv1', 'Trading Discipline', [], 'Honoring stops, following system, no revenge trading'),
-  d('trading-discipline-lv2', 'Trading Discipline Lv2', 'Trading Discipline', ['trading-discipline-lv1'], 'Journaling every trade, reviewing systematically, continuous improvement'),
-  d('trading-discipline-lv3', 'Trading Discipline Lv3', 'Trading Discipline', ['trading-discipline-lv2'], 'Maintaining discipline in long winners/losers, avoiding overconfidence'),
-  d('learning-discipline-lv1', 'Learning Discipline Lv1', 'Learning Discipline', [], 'Daily reading, course attendance, concept application'),
-  d('learning-discipline-lv2', 'Learning Discipline Lv2', 'Learning Discipline', ['learning-discipline-lv1'], 'Spaced repetition, Zettelkasten, knowledge integration'),
-  d('financial-discipline-lv1', 'Financial Discipline Lv1', 'Financial Discipline', [], 'Budget adherence, no emotional spending, savings goals'),
-  d('financial-discipline-lv2', 'Financial Discipline Lv2', 'Financial Discipline', ['financial-discipline-lv1'], 'Net worth tracking, no excessive leverage, long-term thinking'),
-  d('health-discipline-lv1', 'Health Discipline Lv1', 'Health Discipline', [], 'Exercise consistency, sleep hygiene, meditation practice'),
-  d('health-discipline-lv2', 'Health Discipline Lv2', 'Health Discipline', ['health-discipline-lv1'], 'Nutrition optimization, stress recovery, energy management'),
+  // NOTE: the domain-tied ones below (trading/learning/financial/health) use
+  // their OWN category maker (t/k/f/hh), not `d`/'Discipline' — they used to
+  // all share category:'Discipline', which xp-domains.js's
+  // CATEGORY_TO_XP_DOMAIN maps entirely to 'growth'. That silently routed
+  // every bit of XP from these 7 skills — meaningful volume, since they're
+  // awarded on nearly every health/trading/finance log — into the Growth
+  // domain instead of their own, which is why Health (and to a lesser
+  // extent Trading/Finance) could show 0 or near-0 XP on the Leaderboard's
+  // Domain Balance despite real logged activity. Only decision-discipline
+  // (genuinely cross-cutting) and engineering-discipline (not one of the 5
+  // tracked domains) legitimately stay under generic Discipline → growth.
+  t('trading-discipline-lv1', 'Trading Discipline Lv1', 'Trading Discipline', [], 'Honoring stops, following system, no revenge trading'),
+  t('trading-discipline-lv2', 'Trading Discipline Lv2', 'Trading Discipline', ['trading-discipline-lv1'], 'Journaling every trade, reviewing systematically, continuous improvement'),
+  t('trading-discipline-lv3', 'Trading Discipline Lv3', 'Trading Discipline', ['trading-discipline-lv2'], 'Maintaining discipline in long winners/losers, avoiding overconfidence'),
+  k('learning-discipline-lv1', 'Learning Discipline Lv1', 'Learning Discipline', [], 'Daily reading, course attendance, concept application'),
+  k('learning-discipline-lv2', 'Learning Discipline Lv2', 'Learning Discipline', ['learning-discipline-lv1'], 'Spaced repetition, Zettelkasten, knowledge integration'),
+  f('financial-discipline-lv1', 'Financial Discipline Lv1', 'Financial Discipline', [], 'Budget adherence, no emotional spending, savings goals'),
+  f('financial-discipline-lv2', 'Financial Discipline Lv2', 'Financial Discipline', ['financial-discipline-lv1'], 'Net worth tracking, no excessive leverage, long-term thinking'),
+  hh('health-discipline-lv1', 'Health Discipline Lv1', 'Health Discipline', [], 'Exercise consistency, sleep hygiene, meditation practice'),
+  hh('health-discipline-lv2', 'Health Discipline Lv2', 'Health Discipline', ['health-discipline-lv1'], 'Nutrition optimization, stress recovery, energy management'),
   d('decision-discipline-lv1', 'Decision-Making Discipline Lv1', 'Decision-Making Discipline', [], 'Logged decisions, probabilistic thinking, outcome tracking'),
   d('engineering-discipline-lv1', 'Engineering Discipline Lv1', 'Engineering Discipline', [], 'Rigorous lab journaling, protocol adherence, consistent project logging'),
   d('engineering-discipline-lv2', 'Engineering Discipline Lv2', 'Engineering Discipline', ['engineering-discipline-lv1'], 'Systematic review of results, reproducibility, cross-project consistency'),
