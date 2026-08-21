@@ -7,6 +7,7 @@ import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_SKILL, DEAL_STAGES, SKILL_MAP
 import { fmtMoney, fmtDateShort } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import EntityFormModal from '../../components/common/EntityFormModal';
+import BadgeList from '../../components/common/BadgeList';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STATUS_COLOR = { ongoing: 'var(--accent-primary)', completed: 'var(--success)', passed: 'var(--text-secondary)' };
@@ -14,7 +15,7 @@ const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progres
 const blank = () => ({ name: '', type: 'LBO', size: '', role: 'Modeling', status: 'ongoing', firm: '', date: new Date().toISOString().slice(0, 10), notes: '' });
 
 export default function PrivateEquity() {
-  const { deals, addDeal, editDeal, deleteDeal } = useDealsStore();
+  const { deals, addDeal, editDeal, deleteDeal, getBadges } = useDealsStore();
   const [editing, setEditing] = useState(null);
   const editFields = [
     { name: 'name', label: 'Deal name', type: 'text' },
@@ -154,6 +155,8 @@ export default function PrivateEquity() {
           <EmptyState>No deals match.</EmptyState>
         )}
       </Card>
+
+      <BadgeList badges={getBadges()} />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Log Deal">
         <form onSubmit={submit} className="space-y-3">

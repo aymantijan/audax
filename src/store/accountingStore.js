@@ -15,6 +15,7 @@ import { useFinanceStore } from './financeStore';
 import { useSkillStore } from './skillStore';
 import { useTradingStore } from './tradingStore';
 import { toast } from './uiStore';
+import { evaluateBadges } from '../utils/badges';
 
 // Comptabilité générale personnelle en partie double.
 // Le journal est la source unique ; chaque sélecteur dérive un état de synthèse
@@ -22,6 +23,24 @@ import { toast } from './uiStore';
 // et la trésorerie — exactement comme demandé : une saisie, tout se propage.
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
+
+// Same shape/mechanism as healthStore's/engineeringStore's BADGE_DEFS —
+// `check` receives this store's state, `awardedBadges` persists which ones
+// already fired so re-checking on every mutation never re-toasts one. Distinct
+// from the per-goal trophy system (goal.badge, checkGoalAchievement) above —
+// that's a one-off label on a specific financial goal; this is a cross-cutting
+// achievement list, same as every other domain.
+const BADGE_DEFS = [
+  { id: 'first-entry', name: 'First Entry', tier: 'bronze', check: (s) => s.journal.length >= 1 },
+  { id: 'budget-setter', name: 'Budget Setter', tier: 'bronze', check: (s) => s.budgets.length >= 1 },
+  { id: 'echeance-planner', name: 'Échéance Planner', tier: 'bronze', check: (s) => s.echeances.length >= 1 },
+  { id: 'bookkeeper', name: 'Bookkeeper', tier: 'silver', check: (s) => s.journal.length >= 50 },
+  { id: 'full-budget', name: 'Full Budget', tier: 'silver', check: (s) => s.budgets.length >= 5 },
+  { id: 'treasury-organizer', name: 'Treasury Organizer', tier: 'silver', check: (s) => s.treasuryAccounts.length >= 3 },
+  { id: 'correction-analyst', name: 'Correction Analyst', tier: 'silver', check: (s) => s.corrections.length >= 5 },
+  { id: 'goal-achiever', name: 'Goal Achiever', tier: 'gold', check: (s) => s.goals.some((g) => g.achieved) },
+  { id: 'ledger-master', name: 'Ledger Master', tier: 'gold', check: (s) => s.journal.length >= 200 },
+];
 
 export const useAccountingStore = create(
   persist(
@@ -36,6 +55,13 @@ export const useAccountingStore = create(
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
       echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
       budgetAlerts: { enabled: false, lastShown: {} }, // idem pour les dépassements de budget (charges)
+      awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
+
+      checkBadges: () => {
+        const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'financial-discipline-lv1');
+        if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
+      },
+      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -80,6 +106,7 @@ export const useAccountingStore = create(
         };
         set({ treasuryAccounts: [...get().treasuryAccounts, account] });
         toast(`Compte auxiliaire créé : ${account.name}`, 'success');
+        get().checkBadges();
         return { ok: true, code: account.code };
       },
       editTreasuryAccount: (id, updates) =>
@@ -128,6 +155,7 @@ export const useAccountingStore = create(
         award('journal-keeper-lv1', 1, `journal: ${clean.label}`);
         if (clean.lines.length > 2) award('double-entry-lv2', 2, `multi-line entry: ${clean.label}`);
         toast(`Écriture enregistrée : ${clean.label}`, 'success');
+        get().checkBadges();
         return { ok: true, id: clean.id };
       },
       editEntry: (id, entry) => {
@@ -194,6 +222,7 @@ export const useAccountingStore = create(
         const budget = { id: uid(), account, amount: Number(amount), period: period || DEFAULT_BUDGET_PERIOD, createdAt: Date.now(), updatedAt: Date.now() };
         set({ budgets: [...get().budgets, budget] });
         useSkillStore.getState().awardXP('budget-control-lv1', 3, `budget set: ${account}`);
+        get().checkBadges();
         return budget.id;
       },
       editBudget: (id, { account, amount, period }) =>
@@ -262,6 +291,7 @@ export const useAccountingStore = create(
         set({ echeances: [...get().echeances, ech] });
         useSkillStore.getState().awardXP('budget-control-lv1', 2, `échéance créée : ${ech.label}`);
         toast(`Échéance créée : ${ech.label}`, 'success');
+        get().checkBadges();
         return { ok: true, id: ech.id };
       },
       editEcheance: (id, updates) =>
@@ -367,6 +397,7 @@ export const useAccountingStore = create(
         const c = { ...data, id: uid(), amount: Number(data.amount), createdAt: Date.now(), updatedAt: Date.now() };
         set({ corrections: [...get().corrections, c] });
         toast(`Correction ajoutée : ${c.label}`, 'success');
+        get().checkBadges();
       },
       editCorrection: (id, updates) =>
         set({ corrections: get().corrections.map((c) => (c.id === id ? stamp({ ...c, ...updates, amount: Number(updates.amount ?? c.amount) }) : c)) }),
@@ -418,6 +449,7 @@ export const useAccountingStore = create(
         const skillId = goal.type === 'treasury' ? 'treasury-planning-lv1' : 'ratio-analysis-lv1';
         useSkillStore.getState().awardXP(skillId, xp, `objectif atteint : ${goal.name}`);
         toast(`🎉 Objectif atteint : ${goal.name} · +${xp} XP · Badge : ${badge}`, 'success');
+        get().checkBadges();
       },
 
       // ─────────── Sélecteurs (tout dérive du journal) ───────────
@@ -490,7 +522,7 @@ export const useAccountingStore = create(
       resetAll: () =>
         set({
           journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [],
-          echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} },
+          echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} }, awardedBadges: [],
         }),
     }),
     { name: 'audax-accounting' }

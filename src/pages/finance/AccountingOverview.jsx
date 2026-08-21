@@ -5,6 +5,7 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { ACCOUNT_MAP } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../../components/common/ui';
+import BadgeList from '../../components/common/BadgeList';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const PIE_COLORS = ['#00d9ff', '#b366ff', '#00d97f', '#ffa500', '#ff6b6b', '#7aa2ff', '#f7c948', '#9ae6b4'];
@@ -117,6 +118,8 @@ export default function AccountingOverview() {
           )}
         </Card>
       </div>
+
+      <BadgeList badges={store.getBadges()} />
     </div>
   );
 }

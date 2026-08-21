@@ -12,9 +12,26 @@ import { TRADE_XP, STRATEGY_SKILL, INSTRUMENT_SKILL, MACRO_SKILL, INSTRUMENTS, S
 import { useSkillStore } from './skillStore';
 import { useAuthStore } from './authStore';
 import { toast } from './uiStore';
+import { evaluateBadges } from '../utils/badges';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
+
+// Same shape/mechanism as healthStore's/engineeringStore's BADGE_DEFS —
+// `check` receives this store's state, `awardedBadges` persists which ones
+// already fired so re-checking on every trade never re-toasts one.
+const BADGE_DEFS = [
+  { id: 'first-trade', name: 'First Trade', tier: 'bronze', check: (s) => s.trades.length >= 1 },
+  { id: 'strategy-explorer', name: 'Strategy Explorer', tier: 'bronze', check: (s) => new Set(s.trades.map((t) => t.strategy).filter(Boolean)).size >= 3 },
+  { id: 'instrument-explorer', name: 'Instrument Explorer', tier: 'silver', check: (s) => new Set(s.trades.map((t) => t.instrument).filter(Boolean)).size >= 4 },
+  { id: 'half-century-trader', name: 'Half Century', tier: 'silver', check: (s) => s.trades.length >= 50 },
+  { id: 'century-trader', name: 'Century Trader', tier: 'gold', check: (s) => s.trades.length >= 100 },
+  { id: 'multi-account', name: 'Multi-Account', tier: 'silver', check: (s) => s.accounts.length >= 3 },
+  { id: 'funded-trader', name: 'Funded Trader', tier: 'gold', check: (s) => s.accounts.some((a) => a.status === 'funded') },
+  { id: 'profitable-trader', name: 'Profitable Trader', tier: 'silver', check: (s) => s.trades.filter((t) => t.pnl > 0).length >= 50 },
+  { id: 'no-revenge-streak', name: 'No Revenge', tier: 'silver', check: (s) => s.trades.length >= 20 && detectRevengeTrades(s.trades).length === 0 },
+  { id: 'disciplined-trader', name: 'Disciplined Trader', tier: 'gold', check: (s) => s.trades.length >= 20 && (computeDisciplineScore(s.trades)?.score ?? 0) >= 80 },
+];
 
 // Derived XP awards for a trade (in addition to user-picked linkedSkills).
 // awardXP no-ops on locked/unknown skills, so mapping to locked masteries is safe.
@@ -38,6 +55,13 @@ export const useTradingStore = create(
       trades: [], // trades[].accountId points into accounts[] (was accountType — 'demo'/'real' ids preserved for backward compat)
       accounts: [], // [{ id, type:'demo'|'broker'|'propfirm', name, broker, accountNumber, leverage, initialBalance, status, phase?, currentPhaseStartAt, phaseHistory, propFirmRules?, balanceAdjustments, createdAt, updatedAt }]
       activeAccountId: null,
+      awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
+
+      checkBadges: () => {
+        const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'trading-discipline-lv1');
+        if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
+      },
+      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
       // ─────────── Custom instruments & strategies ───────────
       // The 5 INSTRUMENTS / 3 STRATEGIES in constants.js stay fixed (they're
@@ -353,6 +377,7 @@ export const useTradingStore = create(
         };
         set({ accounts: [...get().accounts, account], activeAccountId: account.id });
         toast(`Account created: ${account.name}`, 'success');
+        get().checkBadges();
         return account.id;
       },
 
@@ -455,6 +480,7 @@ export const useTradingStore = create(
         });
         if (outcome !== 'failed') useSkillStore.getState().awardXP('discipline-execution-lv1', 15, `prop firm phase passed: ${acct.name}`);
         toast(outcome === 'failed' ? `${acct.name} marked as failed` : `${acct.name} advanced to ${newPhase}`, outcome === 'failed' ? 'error' : 'success');
+        get().checkBadges();
       },
 
       // ─────────── Demo account: opt-in Prop Firm simulation ───────────
@@ -614,6 +640,7 @@ export const useTradingStore = create(
           `Trade saved (${acct?.name || accountId}) — ${trade.pnl >= 0 ? '+' : ''}${sym}${trade.pnl} · +${autoXP + (trade.linkedSkills?.length || 0) * TRADE_XP} XP`,
           trade.pnl >= 0 ? 'success' : 'info'
         );
+        get().checkBadges();
         return trade.id;
       },
 
@@ -642,7 +669,7 @@ export const useTradingStore = create(
 
       resetAll: () =>
         set({
-          trades: [], accounts: [], activeAccountId: null,
+          trades: [], accounts: [], activeAccountId: null, awardedBadges: [],
           alerts: { enabled: false, lastShown: {} }, coachCache: {},
           scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
           customInstruments: [], customStrategies: [],

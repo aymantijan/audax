@@ -8,6 +8,7 @@ import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
+import BadgeList from '../components/common/BadgeList';
 import { askAIEngineeringQuestion } from '../services/engineering-coach-ai';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
@@ -389,15 +390,7 @@ export default function Engineering() {
 
       <AskEngineeringAI />
 
-      {badges.some((b) => b.earned) && (
-        <Card title="Badges obtenus">
-          <div className="flex flex-wrap gap-2">
-            {badges.filter((b) => b.earned).map((b) => (
-              <Badge key={b.id}>{b.name}</Badge>
-            ))}
-          </div>
-        </Card>
-      )}
+      <BadgeList badges={badges} />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Award, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown } from 'lucide-react';
+import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { readinessBand } from '../../utils/health-science';
 import { todayKey } from '../../utils/formatters';
 import { Card, Stat, Button, Input, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
+import BadgeList from '../../components/common/BadgeList';
 import QuickCheckin from './QuickCheckin';
 
 export default function Dashboard({ goTo }) {
@@ -203,15 +204,7 @@ export default function Dashboard({ goTo }) {
         </Card>
       )}
 
-      <Card title="Badges">
-        <div className="flex flex-wrap gap-2">
-          {badges.map((b) => (
-            <span key={b.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border ${b.earned ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute opacity-50'}`}>
-              <Award size={12} /> {b.name}
-            </span>
-          ))}
-        </div>
-      </Card>
+      <BadgeList badges={badges} />
     </div>
   );
 }

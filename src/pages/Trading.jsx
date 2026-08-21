@@ -10,6 +10,7 @@ import { tradeStats, equityCurve, currentAccountValue, maxDrawdown } from '../ut
 import { INSTRUMENTS, STRATEGIES } from '../utils/constants';
 import { fmtMoney, fmtSignedMoney, fmtPct, fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, EmptyState } from '../components/common/ui';
+import BadgeList from '../components/common/BadgeList';
 import AccountSwitcher from '../components/common/AccountSwitcher';
 import TradeForm from '../components/trading/TradeForm';
 import PreTradingChecklist from '../components/trading/PreTradingChecklist';
@@ -35,7 +36,8 @@ const tooltipStyle = {
 export default function Trading() {
   // Subscribe to the whole store so any trade change (add/edit/delete) re-renders.
   const tradingStore = useTradingStore();
-  const { deleteTrade, adjustAccountBalance, alerts, setAlertsEnabled } = tradingStore;
+  const { deleteTrade, adjustAccountBalance, alerts, setAlertsEnabled, getBadges } = tradingStore;
+  const badges = getBadges();
   // QuickAdd FAB deep-links here as /trading?quickadd=trade — read once on
   // mount (not a live subscription) so it opens the form exactly once and a
   // later state change never reopens it.
@@ -235,6 +237,8 @@ export default function Trading() {
       </div>
 
       <PnLCalendar trades={trades} currency={currency} />
+
+      <BadgeList badges={badges} />
 
       <AdvancedAnalytics trades={trades} currency={currency} instruments={instrumentList} strategies={strategyList} />
 

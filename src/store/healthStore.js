@@ -30,6 +30,7 @@ import {
   computeFastingWindows, computeHydrationGaps, computeMealTimingConsistency,
   computeSleepConsistency, computeNapImpact, deriveChronoAlerts,
 } from '../utils/health-chrono';
+import { evaluateBadges } from '../utils/badges';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
 const dayMs = 86400000;
@@ -72,15 +73,23 @@ const HEALTH_LINK_SKILLS = {
 };
 
 const BADGE_DEFS = [
-  { id: 'cardio-king', name: 'Cardio King', check: (s) => s.workouts.filter((w) => w.type === 'cardio').length >= 20 },
-  { id: 'iron', name: 'Iron', check: (s) => s.workouts.filter((w) => w.type === 'strength').length >= 20 },
-  { id: 'deadlift-king', name: 'Deadlift King', check: (s) => s.workouts.some((w) => w.exercise && /deadlift/i.test(w.exercise) && Number(w.weight) >= 140) },
-  { id: 'sleep-champion', name: 'Sleep Champion', check: (s) => {
+  { id: 'first-session', name: 'First Session', tier: 'bronze', check: (s) => s.workouts.length >= 1 },
+  { id: 'body-comp-tracker', name: 'Body Comp Tracker', tier: 'bronze', check: (s) => s.bodyComp.length >= 10 },
+  { id: 'cardio-king', name: 'Cardio King', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'cardio').length >= 20 },
+  { id: 'iron', name: 'Iron', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'strength').length >= 20 },
+  { id: 'deadlift-king', name: 'Deadlift King', tier: 'gold', check: (s) => s.workouts.some((w) => w.exercise && /deadlift/i.test(w.exercise) && Number(w.weight) >= 140) },
+  { id: 'sleep-champion', name: 'Sleep Champion', tier: 'silver', check: (s) => {
       const logs = useHabitStore.getState().energyLogs;
       return logs.filter((l) => (l.sleepData?.sleepQualityScore ?? 0) >= 8).length >= 14;
     } },
-  { id: 'protein-perfect', name: 'Protein Perfect', check: (s) => s.nutritionLogs.filter((n) => n.proteinTargetMet).length >= 14 },
-  { id: 'recovery-master', name: 'Recovery Master', check: (s) => s.recoveryLogs.length >= 20 },
+  { id: 'protein-perfect', name: 'Protein Perfect', tier: 'silver', check: (s) => s.nutritionLogs.filter((n) => n.proteinTargetMet).length >= 14 },
+  { id: 'nutrition-consistent', name: 'Nutrition Consistent', tier: 'silver', check: (s) => new Set(s.nutritionLogs.map((n) => n.date)).size >= 30 },
+  { id: 'recovery-master', name: 'Recovery Master', tier: 'silver', check: (s) => s.recoveryLogs.length >= 20 },
+  { id: 'hydration-hero', name: 'Hydration Hero', tier: 'silver', check: (s) => s.waterLogs.length >= 50 },
+  { id: 'pr-hunter', name: 'PR Hunter', tier: 'silver', check: (s) => s.getPRs().length >= 15 },
+  { id: 'goal-crusher', name: 'Goal Crusher', tier: 'silver', check: (s) => s.goals.some((g) => g.achieved) },
+  { id: 'dedicated-30', name: 'Dedicated ×30', tier: 'silver', check: (s) => s.workouts.length >= 30 },
+  { id: 'century-club', name: 'Century Club', tier: 'gold', check: (s) => s.workouts.length >= 100 },
 ];
 
 export const useHealthStore = create(
@@ -1156,18 +1165,10 @@ export const useHealthStore = create(
 
       // ─────────── Badges ───────────
       checkBadges: () => {
-        const state = get();
-        const newlyAwarded = [];
-        for (const b of BADGE_DEFS) {
-          if (state.awardedBadges.includes(b.id)) continue;
-          if (b.check(state)) newlyAwarded.push(b.id);
-        }
-        if (newlyAwarded.length) {
-          set({ awardedBadges: [...state.awardedBadges, ...newlyAwarded] });
-          for (const id of newlyAwarded) toast(`🏅 Badge earned: ${BADGE_DEFS.find((b) => b.id === id).name}`, 'success');
-        }
+        const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'health-discipline-lv1');
+        if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
       },
-      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, earned: get().awardedBadges.includes(b.id) })),
+      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
       // ─────────── Derived / analytics selectors ───────────
       getTodayNutrition: () => {

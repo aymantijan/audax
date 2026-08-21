@@ -13,6 +13,7 @@ import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { habitSchema, validate } from '../utils/validators';
 import { todayKey, dateKey, fmtDate } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar, WeekdayPicker } from '../components/common/ui';
+import BadgeList from '../components/common/BadgeList';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
 import ScheduleEventModal from '../components/common/ScheduleEventModal';
@@ -33,7 +34,7 @@ const blankCheckIn = () => ({
 });
 
 export default function Habits() {
-  const { habits, logs, energyLogs, addHabit, editHabit, deleteHabit, toggleHabit, saveEnergyLog } = useHabitStore();
+  const { habits, logs, energyLogs, addHabit, editHabit, deleteHabit, toggleHabit, saveEnergyLog, getBadges } = useHabitStore();
   const [editing, setEditing] = useState(null);
   const [scheduling, setScheduling] = useState(null);
   const trades = useTradingStore((s) => s.trades);
@@ -421,6 +422,8 @@ export default function Habits() {
           <EmptyState>Log a few check-ins to see trends.</EmptyState>
         )}
       </Card>
+
+      <BadgeList badges={getBadges()} />
 
       <Modal open={habitModal} onClose={() => setHabitModal(false)} title="Add Habit">
         <form onSubmit={submitHabit} className="space-y-3">

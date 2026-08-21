@@ -5,6 +5,7 @@ import { ENGINEERING_STAGE_SKILL, ENGINEERING_PROJECT_STAGES } from '../utils/co
 import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 import { deleteCalendarEvent } from '../services/google-calendar';
+import { evaluateBadges } from '../utils/badges';
 
 const HAZOP_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.indexOf('Analyse de sécurité (HAZOP)');
 const LAST_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.length - 1;
@@ -13,11 +14,16 @@ const LAST_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.length - 1;
 // receives the store state, `awardedBadges` persists which ones already
 // toasted so re-checking on every mutation never re-fires one.
 const BADGE_DEFS = [
-  { id: 'lab-regular', name: 'Lab Regular', check: (s) => s.labEntries.length >= 10 },
-  { id: 'high-yield', name: 'High Yield', check: (s) => s.labEntries.some((e) => Number(e.yieldPercent) >= 90) },
-  { id: 'multi-course', name: 'Cross-Course', check: (s) => new Set(s.labEntries.map((e) => e.course).filter(Boolean)).size >= 3 },
-  { id: 'safety-first', name: 'Safety First', check: (s) => s.projects.some((p) => p.stageIndex > HAZOP_STAGE_INDEX || (p.stageIndex === HAZOP_STAGE_INDEX && p.stageStatus === 'done')) },
-  { id: 'process-master', name: 'Process Master', check: (s) => s.projects.some((p) => p.stageIndex === LAST_STAGE_INDEX && p.stageStatus === 'done') },
+  { id: 'first-entry', name: 'First Entry', tier: 'bronze', check: (s) => s.labEntries.length >= 1 },
+  { id: 'project-starter', name: 'Project Starter', tier: 'bronze', check: (s) => s.projects.length >= 1 },
+  { id: 'lab-regular', name: 'Lab Regular', tier: 'silver', check: (s) => s.labEntries.length >= 10 },
+  { id: 'lab-veteran', name: 'Lab Veteran', tier: 'gold', check: (s) => s.labEntries.length >= 50 },
+  { id: 'high-yield', name: 'High Yield', tier: 'silver', check: (s) => s.labEntries.some((e) => Number(e.yieldPercent) >= 90) },
+  { id: 'perfect-yield', name: 'Perfect Yield', tier: 'gold', check: (s) => s.labEntries.some((e) => Number(e.yieldPercent) >= 98) },
+  { id: 'multi-course', name: 'Cross-Course', tier: 'bronze', check: (s) => new Set(s.labEntries.map((e) => e.course).filter(Boolean)).size >= 3 },
+  { id: 'multi-project', name: 'Multi-Project', tier: 'silver', check: (s) => s.projects.length >= 5 },
+  { id: 'safety-first', name: 'Safety First', tier: 'silver', check: (s) => s.projects.some((p) => p.stageIndex > HAZOP_STAGE_INDEX || (p.stageIndex === HAZOP_STAGE_INDEX && p.stageStatus === 'done')) },
+  { id: 'process-master', name: 'Process Master', tier: 'gold', check: (s) => s.projects.some((p) => p.stageIndex === LAST_STAGE_INDEX && p.stageStatus === 'done') },
 ];
 
 // Fixed XP a lab entry awards — cross-cutting "did the work" credit, same
@@ -45,18 +51,10 @@ export const useEngineeringStore = create(
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
 
       checkBadges: () => {
-        const state = get();
-        const newlyAwarded = [];
-        for (const b of BADGE_DEFS) {
-          if (state.awardedBadges.includes(b.id)) continue;
-          if (b.check(state)) newlyAwarded.push(b.id);
-        }
-        if (newlyAwarded.length) {
-          set({ awardedBadges: [...state.awardedBadges, ...newlyAwarded] });
-          for (const id of newlyAwarded) toast(`🏅 Badge earned: ${BADGE_DEFS.find((b) => b.id === id).name}`, 'success');
-        }
+        const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'engineering-discipline-lv1');
+        if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
       },
-      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, earned: get().awardedBadges.includes(b.id) })),
+      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
       addLabEntry: (data) => {
         const entry = { ...data, id: uid(), createdAt: Date.now(), updatedAt: Date.now() };
