@@ -221,6 +221,11 @@ export function CuratedGymLogger() {
 
   const anySetSkipped = exercises.some((e) => effectiveSetsFor(e).some((s) => s.done === false));
   const resetAllSets = () => setSets(Object.fromEntries(exercises.map((e) => [e.name, setsFor(e).map((s) => ({ ...s, done: true }))])));
+  // One tap to mark every remaining set of ONE exercise as not-done, instead
+  // of toggling each set individually — the common case is stopping an
+  // exercise partway through (or skipping it after checking it off), not
+  // toggling one set in isolation.
+  const skipRestOfExercise = (ex) => setSets((s) => ({ ...s, [ex.name]: setsFor(ex).map((set) => ({ ...set, done: false })) }));
 
   if (!program || !next || !exercises.length) return null;
 
@@ -242,8 +247,8 @@ export function CuratedGymLogger() {
         <p className="text-[11px] text-mute mb-2">Séance changée manuellement — la rotation avancera à partir de "{activeSession.label}" au lieu de la prescription automatique.</p>
       )}
       {anySetSkipped && (
-        <div className="flex items-center justify-between gap-2 text-xs bg-surface border border-bad/40 rounded-lg px-3 py-2 mb-3">
-          <span className="text-mute">Des séries sont marquées "ratée" dans cette séance — vérifie que c'est voulu.</span>
+        <div className="flex items-center justify-between gap-2 text-xs bg-surface border border-line rounded-lg px-3 py-2 mb-3">
+          <span className="text-mute">Séance partielle — les séries non faites ne seront ni requises ni loggées.</span>
           <button type="button" onClick={resetAllSets} className="flex items-center gap-1 text-accent hover:underline cursor-pointer shrink-0">
             <RotateCcw size={12} /> Tout remettre à "faite"
           </button>
@@ -264,6 +269,16 @@ export function CuratedGymLogger() {
                 <div className="text-sm">{ex.name}</div>
                 <div className="text-[11px] text-mute">{ex.setsReps}{ex.note ? ` · ${ex.note}` : ''}</div>
               </div>
+              {effectiveSetsFor(ex).some((s) => s.done !== false) && (
+                <button
+                  type="button"
+                  onClick={() => skipRestOfExercise(ex)}
+                  className="text-[11px] text-mute hover:text-bad cursor-pointer shrink-0"
+                  title="Marquer toutes les séries restantes de cet exercice comme non faites"
+                >
+                  Arrêté ici
+                </button>
+              )}
             </div>
             <div className="mt-2 pl-2 sm:pl-7 space-y-2">
               {effectiveSetsFor(ex).map((s, setIdx) => {
@@ -319,7 +334,7 @@ export function CuratedGymLogger() {
           {canSubmit ? 'Logger la séance' : !allChecked ? `Coche les ${exercises.length} exercices pour terminer` : 'Remplis reps et poids pour chaque série non décochée'}
         </span>
       </Button>
-      <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur une série au poids du corps = faite au poids du corps seul ; un nombre = poids ajouté en plus. Chaque série a son propre poids. Cliquer sur "Série N" décoche une série non faite (arrêtée en cours, blessure, temps…) — elle ne sera ni requise ni loggée.</p>
+      <p className="text-[11px] text-mute mt-2">Champ "poids" vide sur une série au poids du corps = faite au poids du corps seul ; un nombre = poids ajouté en plus. Chaque série a son propre poids. Le rond à gauche de chaque série la marque non faite (séance arrêtée en cours, blessure, temps…), ou "Arrêté ici" pour toutes les séries restantes d'un exercice d'un coup — elles ne seront ni requises ni loggées.</p>
     </Card>
   );
 }
