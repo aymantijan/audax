@@ -380,10 +380,19 @@ export default function Leaderboard() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <YourGradeCard grade={grade} consistency={consistency} />
         <Stat label="Lifetime XP" value={lifetimeXP.toLocaleString()} sub={`synergy ${synergy.weighted}`} />
+        <Stat
+          label="Grade XP"
+          value={balancedGradeXP.toLocaleString()}
+          sub="what grade gates actually use"
+          color="var(--accent-secondary)"
+        />
       </div>
+      <p className="text-[11px] text-mute -mt-2">
+        Your grade is gated on <strong>Grade XP</strong> ({balancedGradeXP.toLocaleString()}), not Lifetime XP ({lifetimeXP.toLocaleString()}) — Grade XP applies diminishing returns per domain, so the same total XP is worth less the more it's piled into one domain instead of spread across all 5 (see Domain Balance below).
+      </p>
 
       <DomainBalanceCard domainXP={domainXP} />
 
