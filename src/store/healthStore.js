@@ -626,6 +626,12 @@ export const useHealthStore = create(
         award('health-discipline-lv1', 5, `workout logged: ${w.exercise || w.type}`);
         if (w.quality >= 8 && w.type === 'strength') award('form-mastery-lv1', 5, `great form: ${w.exercise}`);
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
+        // Reverse of queueHabitPrompt: this workout was logged directly (e.g.
+        // the curated program's own logger), not via checking a habit — so
+        // any matching "Zone-2 Cardio"/strength habit for today needs to be
+        // marked done too, or it keeps reading as "not done" and prompting
+        // for something already logged.
+        useHabitStore.getState().completeLinkedHabits(w.type === 'strength' ? 'strength' : 'cardio', w.date);
         get().checkBadges();
         toast(`Workout logged: ${w.exercise || w.type}`, 'success');
         if (newPR) toast(`🏆 New PR: ${newPR.exercise} — ${newPR.weight}kg!`, 'success');
@@ -685,6 +691,10 @@ export const useHealthStore = create(
         award('health-discipline-lv1', 5, 'gym session logged');
         if (data.quality >= 8) award('form-mastery-lv1', 5, 'great gym session form');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
+        // See logWorkout's comment — same reverse-link so a "Strength" habit
+        // doesn't keep asking to be logged after the curated gym session
+        // logger already did.
+        useHabitStore.getState().completeLinkedHabits('strength', date);
         get().checkBadges();
         toast(`Session logged: ${entries.length} exercise${entries.length !== 1 ? 's' : ''}`, 'success');
         for (const pr of newPRs) toast(`🏆 New PR: ${pr.exercise} — ${pr.weight}kg!`, 'success');
@@ -790,6 +800,7 @@ export const useHealthStore = create(
         award('health-discipline-lv1', 2, `meal logged: ${name}`);
         if (entry.proteinTargetMet) award('nutrition-discipline-lv1', 5, 'protein target met');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
+        if (entry.proteinTargetMet) useHabitStore.getState().completeLinkedHabits('nutrition', entry.date);
         get().checkBadges();
         const dateNote = entryDate === todayKey() ? '' : ` for ${entryDate}`;
         toast(est ? `Logged ${name}${dateNote} (~${est.kcal} kcal)` : `Logged ${name}${dateNote} (unrecognized food — 0 macros, add manually)`, est ? 'success' : 'info');
@@ -863,6 +874,7 @@ export const useHealthStore = create(
         set({ recoveryLogs: [...get().recoveryLogs.filter((r) => r.date !== target), entry] });
         useSkillStore.getState().awardXP('health-discipline-lv1', 5, 'recovery activities logged');
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
+        if (activities?.length) useHabitStore.getState().completeLinkedHabits('recovery', target);
         get().checkBadges();
         toast(`Recovery logged${target === todayKey() ? '' : ` for ${target}`}`, 'success');
       },

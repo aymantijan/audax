@@ -102,6 +102,33 @@ export const useHabitStore = create(
         get().checkBadges();
       },
 
+      // The REVERSE of the flow above — called FROM healthStore when a
+      // health action was logged directly (e.g. the curated program's own
+      // cardio/gym-session logger), not via checking a habit. Without this,
+      // completing today's prescribed Zone 2 run through the program logger
+      // never touched a same-day "Zone-2 Cardio" habit at all — the two
+      // systems only knew about each other in the habit→health direction
+      // (queueHabitPrompt above), so the habit still read as "not done" and
+      // kept prompting for something that, from the user's side, was already
+      // logged. Marks every active habit whose healthLink matches `linkType`
+      // as completed for that date — no queueHabitPrompt call here, since
+      // the health log this is reacting to already exists (nothing to
+      // prompt "log it?" about).
+      completeLinkedHabits: (linkType, date = todayKey()) => {
+        const matches = get().habits.filter((h) => !h.archived && h.healthLink === linkType);
+        for (const habit of matches) {
+          const existing = get().logs.find((l) => l.habitId === habit.id && l.date === date);
+          if (existing?.completed) continue;
+          if (existing) {
+            set({ logs: get().logs.map((l) => (l === existing ? { ...l, completed: true } : l)) });
+          } else {
+            set({ logs: [...get().logs, { habitId: habit.id, date, completed: true, createdAt: Date.now() }] });
+          }
+          if (habit.linkedSkill) useSkillStore.getState().awardXP(habit.linkedSkill, habit.xpReward, `habit auto-completed from program log: ${habit.name}`);
+        }
+        if (matches.length) get().checkBadges();
+      },
+
       saveEnergyLog: (log) => {
         const others = get().energyLogs.filter((l) => l.date !== log.date);
         const existing = get().energyLogs.find((l) => l.date === log.date);
