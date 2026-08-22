@@ -565,9 +565,12 @@ export default function SettingsPage() {
             <Key size={20} className="shrink-0 mt-0.5 text-mute" />
             <div className="text-sm flex-1 min-w-0">
               <p className="text-mute">
-                Generate a personal key to share your <strong>Finance</strong> data with an external tool — e.g. paste it into a Claude conversation and ask Claude to fetch{' '}
-                <code className="bg-surface px-1 py-0.5 rounded text-xs">{window.location.origin}/api/finance-data?key=YOUR_KEY</code>. Read-only, revocable any time, scoped to Finance only.
+                Generate a personal key to share your data with an external tool — e.g. paste it into a Claude conversation along with one of these URLs and ask Claude to fetch it. The key always resolves to your account only, never anyone else's. Read-only, revocable any time.
               </p>
+              <ul className="text-xs text-mute mt-2 space-y-1">
+                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/account-data?key=YOUR_KEY</code> — everything: trading, finance, health, habits, deals, learning, skills…</li>
+                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/finance-data?key=YOUR_KEY</code> — Finance only</li>
+              </ul>
 
               {newApiKey && (
                 <div className="mt-3 bg-surface border border-accent/40 rounded-lg p-3">
