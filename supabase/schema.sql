@@ -129,3 +129,43 @@ create policy "update own leaderboard_profiles"
   on public.leaderboard_profiles for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Personal API key for external read access to a user's own AUDAX data (see
+-- src/pages/Settings.jsx's "API Access" section and api/finance-data.js).
+-- Only a SHA-256 HASH of the key is ever stored — the raw key is shown to
+-- the user exactly once at generation time, client-side, and never sent
+-- anywhere or persisted in plaintext. RLS still scopes reads to the owner
+-- (so a signed-in user can see whether/when they have a key, never the key
+-- itself, which was never stored). api/finance-data.js looks rows up by
+-- key_hash using a service-role key (bypassing RLS) because the caller
+-- presents a raw API key, not a Supabase session — same justified exception
+-- as reminders-cron.js's cross-user read.
+create table if not exists public.api_keys (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  key_hash text not null unique,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
+alter table public.api_keys enable row level security;
+
+drop policy if exists "select own api_keys" on public.api_keys;
+create policy "select own api_keys"
+  on public.api_keys for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "upsert own api_keys" on public.api_keys;
+create policy "upsert own api_keys"
+  on public.api_keys for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "update own api_keys" on public.api_keys;
+create policy "update own api_keys"
+  on public.api_keys for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "delete own api_keys" on public.api_keys;
+create policy "delete own api_keys"
+  on public.api_keys for delete
+  using (auth.uid() = user_id);

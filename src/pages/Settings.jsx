@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus } from 'lucide-react';
+import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus, Key, Copy } from 'lucide-react';
 import { FOOD_DB, getServingOptions, lookupFood } from '../utils/nutrition-db';
 import { MOROCCO_FOOD_COST_TIERS } from '../utils/morocco-food-budget';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { isSupabaseConfigured } from '../services/supabase';
 import { getSession } from '../services/auth-supabase';
+import { getApiKeyStatus, createOrRotateApiKey, revokeApiKey } from '../services/api-keys';
 import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
 import { useGoogleCalendarStatus } from '../hooks/useGoogleCalendarStatus';
 import { useAuthStore } from '../store/authStore';
@@ -128,10 +129,47 @@ export default function SettingsPage() {
   const fileRef = useRef(null);
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
+  const [cloudUserId, setCloudUserId] = useState(null); // needed by the API Access card below — cloudStatus alone doesn't carry the id
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    getSession().then((s) => setCloudStatus(s?.user ? 'active' : 'offline'));
+    getSession().then((s) => { setCloudStatus(s?.user ? 'active' : 'offline'); setCloudUserId(s?.user?.id || null); });
   }, []);
+
+  // API Access (Finance export key — see services/api-keys.js + api/finance-data.js)
+  const [apiKeyStatus, setApiKeyStatus] = useState(null); // { createdAt, lastUsedAt } | null | undefined(loading)
+  const [newApiKey, setNewApiKey] = useState(''); // only ever populated right after (re)generating — never re-fetched
+  const [apiKeyBusy, setApiKeyBusy] = useState(false);
+  useEffect(() => {
+    if (!cloudUserId) return;
+    getApiKeyStatus(cloudUserId).then(setApiKeyStatus);
+  }, [cloudUserId]);
+  const generateApiKey = async () => {
+    setApiKeyBusy(true);
+    try {
+      const key = await createOrRotateApiKey(cloudUserId);
+      setNewApiKey(key);
+      setApiKeyStatus(await getApiKeyStatus(cloudUserId));
+      toast('API key generated — copy it now, it won\'t be shown again', 'success');
+    } catch (e) {
+      toast(`Could not generate an API key: ${e.message}`, 'error');
+    } finally {
+      setApiKeyBusy(false);
+    }
+  };
+  const revokeApiKeyNow = async () => {
+    if (!confirm('Revoke this API key? Anything using it (e.g. a Claude conversation) will stop working until you generate a new one.')) return;
+    setApiKeyBusy(true);
+    try {
+      await revokeApiKey(cloudUserId);
+      setApiKeyStatus(null);
+      setNewApiKey('');
+      toast('API key revoked', 'info');
+    } catch (e) {
+      toast(`Could not revoke the API key: ${e.message}`, 'error');
+    } finally {
+      setApiKeyBusy(false);
+    }
+  };
 
   const gcalConfigured = isGoogleCalendarConfigured();
   const { connected: gcalConnected, expiresAt: gcalExpiresAt } = useGoogleCalendarStatus();
@@ -520,6 +558,52 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+
+      {cloudStatus === 'active' && (
+        <Card title="API Access">
+          <div className="flex items-start gap-3 mb-3">
+            <Key size={20} className="shrink-0 mt-0.5 text-mute" />
+            <div className="text-sm flex-1 min-w-0">
+              <p className="text-mute">
+                Generate a personal key to share your <strong>Finance</strong> data with an external tool — e.g. paste it into a Claude conversation and ask Claude to fetch{' '}
+                <code className="bg-surface px-1 py-0.5 rounded text-xs">{window.location.origin}/api/finance-data?key=YOUR_KEY</code>. Read-only, revocable any time, scoped to Finance only.
+              </p>
+
+              {newApiKey && (
+                <div className="mt-3 bg-surface border border-accent/40 rounded-lg p-3">
+                  <p className="text-xs text-warning mb-2">Copy this now — it won't be shown again.</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate text-xs bg-card border border-line rounded px-2 py-1.5">{newApiKey}</code>
+                    <button
+                      className="shrink-0 text-mute hover:text-accent cursor-pointer"
+                      title="Copy"
+                      onClick={() => { navigator.clipboard.writeText(newApiKey); toast('Copied', 'success'); }}
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {apiKeyStatus && !newApiKey && (
+                <p className="text-xs text-mute mt-3">
+                  Key created {new Date(apiKeyStatus.createdAt).toLocaleDateString()}
+                  {apiKeyStatus.lastUsedAt ? ` · last used ${new Date(apiKeyStatus.lastUsedAt).toLocaleString()}` : ' · never used yet'}. The key itself isn't shown again — generate a new one if you lost it.
+                </p>
+              )}
+
+              <div className="flex gap-2 mt-3">
+                <Button className="!px-3 !py-1.5 text-xs" disabled={apiKeyBusy} onClick={generateApiKey}>
+                  {apiKeyStatus ? 'Regenerate key' : 'Generate key'}
+                </Button>
+                {apiKeyStatus && (
+                  <Button variant="danger" className="!px-3 !py-1.5 text-xs" disabled={apiKeyBusy} onClick={revokeApiKeyNow}>Revoke</Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card title="Google Calendar">
         <div className="flex items-start gap-3">
