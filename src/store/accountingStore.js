@@ -24,6 +24,17 @@ import { evaluateBadges } from '../utils/badges';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
 
+// Local Y/M/D date key — NEVER `.toISOString()` for this (round-trips
+// through UTC and can roll a date back a day right at a day/month/week
+// boundary in any timezone ahead of UTC — see checkFinanceRewards' history).
+const localDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// 'YYYY-MM' the month before `mk` ('YYYY-MM'), handling year wraparound.
+const monthBefore = (mk) => {
+  const [y, m] = mk.split('-').map(Number);
+  const d = new Date(y, m - 2, 1); // m is 1-indexed; -2 = one month before, 0-indexed
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 // Same shape/mechanism as healthStore's/engineeringStore's BADGE_DEFS —
 // `check` receives this store's state, `awardedBadges` persists which ones
 // already fired so re-checking on every mutation never re-toasts one. Distinct
@@ -40,6 +51,12 @@ const BADGE_DEFS = [
   { id: 'correction-analyst', name: 'Correction Analyst', tier: 'silver', check: (s) => s.corrections.length >= 5 },
   { id: 'goal-achiever', name: 'Goal Achiever', tier: 'gold', check: (s) => s.goals.some((g) => g.achieved) },
   { id: 'ledger-master', name: 'Ledger Master', tier: 'gold', check: (s) => s.journal.length >= 200 },
+  // Streak-driven — see checkFinanceRewards()/markEcheancePaid() below, the
+  // only writers of `financeStreaks`.
+  { id: 'regular-saver', name: 'Épargnant Régulier', tier: 'silver', check: (s) => (s.financeStreaks?.positiveSavingsMonths || 0) >= 3 },
+  { id: 'zero-overage', name: 'Zéro Dépassement', tier: 'gold', check: (s) => (s.financeStreaks?.noOverageMonths || 0) >= 3 },
+  { id: 'growing-net-worth', name: 'Patrimoine En Hausse', tier: 'gold', check: (s) => (s.financeStreaks?.netWorthGrowthMonths || 0) >= 6 },
+  { id: 'punctual', name: 'Ponctuel', tier: 'silver', check: (s) => (s.financeStreaks?.onTimeEcheances || 0) >= 5 },
 ];
 
 export const useAccountingStore = create(
@@ -56,7 +73,16 @@ export const useAccountingStore = create(
       echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
       budgetAlerts: { enabled: false, lastShown: {} }, // idem pour les dépassements de budget (charges)
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
-      financeMonthChecks: [], // ['2026-07', ...] months already evaluated for the savings-rate bonus below — checked once, ever, regardless of outcome
+      financeMonthChecks: [], // ['2026-07', ...] months already evaluated by checkFinanceRewards — checked once, ever, regardless of outcome
+      financeWeekChecks: [], // ['2026-08-17', ...] Mondays of weeks already evaluated by checkWeeklyBudgetStreak
+      financeStreaks: {
+        bookkeepingMonths: 0, // consecutive closed months with >= 1 journal entry
+        positiveSavingsMonths: 0, // consecutive closed months with tauxEpargne > 0
+        noOverageMonths: 0, // consecutive closed months with zero overage on monthly budgets
+        noOverageWeeks: 0, // consecutive closed weeks with zero overage on weekly budgets
+        onTimeEcheances: 0, // consecutive échéances paid on or before their due date (resets on ANY late payment)
+        netWorthGrowthMonths: 0, // consecutive closed months where ANCC grew vs the month before
+      },
 
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'financial-discipline-lv1');
@@ -64,15 +90,15 @@ export const useAccountingStore = create(
       },
       getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
-      // Rewards a genuinely closed month (not the in-progress one — it's
-      // over, the number is final) that ended with a positive savings rate
-      // (ESG's tauxEpargne > 0). Idempotent via financeMonthChecks: each
-      // month is evaluated exactly once, ever, whichever page happens to
-      // call this first after that month ends — a losing month is marked
-      // checked too (not retried forever), it just earns nothing. Call from
-      // any Finance page's mount (see AccountingOverview.jsx) — cheap
-      // no-op once caught up.
-      checkMonthlySavingsBonus: () => {
+      // Evaluates the most recently CLOSED month (not the in-progress one —
+      // it's over, every number is final) across every recurring Finance
+      // reward at once. Idempotent via financeMonthChecks: each month is
+      // evaluated exactly once, ever, whichever page happens to call this
+      // first after that month ends — a losing month is marked checked too
+      // (never retried), it just doesn't extend a streak. Call from any
+      // Finance page's mount (see AccountingOverview.jsx) — cheap no-op
+      // once caught up.
+      checkFinanceRewards: () => {
         // Built from local Y/M directly, NOT via `.toISOString()` (that
         // round-trips through UTC and can roll the date back a day right
         // at a month boundary in any timezone ahead of UTC — silently
@@ -83,13 +109,94 @@ export const useAccountingStore = create(
         const m = ((prevMonthIndex % 12) + 12) % 12;
         const mk = `${y}-${String(m + 1).padStart(2, '0')}`;
         if (get().financeMonthChecks.includes(mk)) return;
-        const period = { from: `${mk}-01`, to: `${mk}-31` };
-        const e = esg(get().journal, period);
         set({ financeMonthChecks: [...get().financeMonthChecks, mk] });
+
+        const journal = get().journal;
+        const period = { from: `${mk}-01`, to: `${mk}-31` };
+        const award = useSkillStore.getState().awardXP;
+        const streaks = { ...get().financeStreaks };
+
+        // C — tenue de livre : au moins une écriture ce mois-là.
+        const hadEntry = journal.some((e) => e.date >= period.from && e.date <= period.to);
+        streaks.bookkeepingMonths = hadEntry ? streaks.bookkeepingMonths + 1 : 0;
+        if (hadEntry) award('journal-keeper-lv1', 3, `mois tenu à jour : ${mk}`);
+
+        // B — taux d'épargne positif, et bonus si en progression vs le mois d'avant.
+        const e = esg(journal, period);
         if (e.tauxEpargne != null && e.tauxEpargne > 0) {
-          useSkillStore.getState().awardXP('financial-discipline-lv1', 20, `mois clôturé, épargne positive : ${mk}`);
+          streaks.positiveSavingsMonths += 1;
+          award('financial-discipline-lv1', 20, `mois clôturé, épargne positive : ${mk}`);
           toast(`🎉 ${mk} clôturé avec un taux d'épargne positif (${e.tauxEpargne.toFixed(1)}%) · +20 XP`, 'success');
+          const prevMk = monthBefore(mk);
+          const prevE = esg(journal, { from: `${prevMk}-01`, to: `${prevMk}-31` });
+          if (prevE.tauxEpargne != null && e.tauxEpargne > prevE.tauxEpargne) {
+            award('financial-discipline-lv1', 10, `épargne en progression vs le mois précédent : ${mk}`);
+          }
+        } else {
+          streaks.positiveSavingsMonths = 0;
         }
+
+        // B/E — budgets MENSUELS (period.type calendar, 1 mois) sans dépassement.
+        // Connecte budget-control-lv2 ("favorable écarts month after month"),
+        // qui n'avait jusqu'ici jamais reçu d'XP nulle part.
+        const monthlyBudgets = get().budgets.filter((b) => (b.period?.type || 'calendar') === 'calendar' && (b.period?.months || 1) === 1);
+        if (monthlyBudgets.length) {
+          const variance = budgetVariance(journal, monthlyBudgets, `${mk}-15`, get().getAccountMap());
+          const anyOverage = variance.some((v) => v.cls === 6 && !v.favorable);
+          streaks.noOverageMonths = anyOverage ? 0 : streaks.noOverageMonths + 1;
+          if (!anyOverage) {
+            award('budget-control-lv2', 15, `mois sans dépassement budgétaire : ${mk}`);
+            toast(`✅ ${mk} : aucun dépassement de budget · +15 XP`, 'success');
+          }
+        }
+
+        // B — patrimoine (ANCC) en hausse vs le mois précédent.
+        const hist = netWorthHistory(journal, get().corrections, 13);
+        const idx = hist.findIndex((h) => h.key === mk);
+        if (idx > 0) {
+          const grew = hist[idx].ancc > hist[idx - 1].ancc;
+          streaks.netWorthGrowthMonths = grew ? streaks.netWorthGrowthMonths + 1 : 0;
+          if (grew) award('ratio-analysis-lv1', 8, `patrimoine en hausse : ${mk}`);
+        }
+
+        // B — bonus trimestriel/annuel : la tenue de livre elle-même, sans
+        // interruption, est le jalon le plus rare et le plus difficile —
+        // XP explicitement plus généreux qu'un mois isolé.
+        if (streaks.bookkeepingMonths > 0 && streaks.bookkeepingMonths % 12 === 0) {
+          award('financial-discipline-lv1', 100, `un an de comptabilité tenue sans interruption : ${mk}`);
+          toast(`🏆 12 mois de comptabilité tenue d'affilée · +100 XP`, 'success');
+        } else if (streaks.bookkeepingMonths > 0 && streaks.bookkeepingMonths % 3 === 0) {
+          award('financial-discipline-lv1', 30, `trimestre de comptabilité tenue sans interruption : ${mk}`);
+          toast(`🏆 3 mois de comptabilité tenue d'affilée · +30 XP`, 'success');
+        }
+
+        set({ financeStreaks: streaks });
+        get().checkBadges();
+      },
+
+      // Weekly counterpart of the block above, scoped to budgets whose OWN
+      // period is 'weekly' (monthly budgets are covered by checkFinanceRewards).
+      // Evaluates the most recently closed week (Monday-Sunday), idempotent
+      // via financeWeekChecks keyed on that week's Monday.
+      checkWeeklyBudgetStreak: () => {
+        const now = new Date();
+        const day = now.getDay(); // 0=dim..6=sam
+        const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day === 0 ? 6 : day - 1));
+        const lastMonday = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+        const wk = localDateKey(lastMonday);
+        if (get().financeWeekChecks.includes(wk)) return;
+        set({ financeWeekChecks: [...get().financeWeekChecks, wk] });
+
+        const weeklyBudgets = get().budgets.filter((b) => b.period?.type === 'weekly');
+        if (!weeklyBudgets.length) return; // nothing to evaluate — streak untouched either way
+        const midWeek = new Date(lastMonday.getFullYear(), lastMonday.getMonth(), lastMonday.getDate() + 3);
+        const variance = budgetVariance(get().journal, weeklyBudgets, localDateKey(midWeek), get().getAccountMap());
+        const anyOverage = variance.some((v) => v.cls === 6 && !v.favorable);
+        const streaks = { ...get().financeStreaks };
+        streaks.noOverageWeeks = anyOverage ? 0 : streaks.noOverageWeeks + 1;
+        set({ financeStreaks: streaks });
+        if (!anyOverage) useSkillStore.getState().awardXP('budget-control-lv1', 5, `semaine sans dépassement budgétaire : ${wk}`);
+        get().checkBadges();
       },
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
@@ -187,6 +294,27 @@ export const useAccountingStore = create(
         award('double-entry-lv1', 2, `journal: ${clean.label}`);
         award('journal-keeper-lv1', 1, `journal: ${clean.label}`);
         if (clean.lines.length > 2) award('double-entry-lv2', 2, `multi-line entry: ${clean.label}`);
+        // F — pont cross-domaine : un trading payout gagné mais jamais
+        // réellement comptabilisé n'existe que dans tradingStore, séparé de
+        // la vraie trésorerie qu'on suit ici. Auto-détecte une écriture qui
+        // correspond à un payout non encore relié (même montant, ±7 jours)
+        // et le marque comme comptabilisé — récompense le fait de VRAIMENT
+        // faire remonter les gains de trading dans la compta, pas juste de
+        // les logger côté Trading et de s'arrêter là.
+        const incoming = clean.lines.reduce((a, l) => a + (classOf(l.account) === 5 ? Number(l.debit) || 0 : 0), 0);
+        if (incoming > 0) {
+          const entryTime = new Date(`${clean.date}T00:00:00`).getTime();
+          const match = useTradingStore.getState().getAllPayoutsFlat().find((p) => {
+            if (p.bookkept || Math.abs(p.amount - incoming) > 0.01) return false;
+            const payoutTime = new Date(`${p.date}T00:00:00`).getTime();
+            return Math.abs(entryTime - payoutTime) <= 7 * 86400000;
+          });
+          if (match) {
+            useTradingStore.getState().markPayoutBookkept(match.accountId, match.id);
+            award('treasury-planning-lv1', 8, `payout trading comptabilisé : ${match.accountName}`);
+            toast(`💰 Payout "${match.accountName}" relié à cette écriture · +8 XP`, 'success');
+          }
+        }
         toast(`Écriture enregistrée : ${clean.label}`, 'success');
         get().checkBadges();
         return { ok: true, id: clean.id };
@@ -340,14 +468,30 @@ export const useAccountingStore = create(
       // Transforme UNE occurrence d'échéance en véritable écriture de journal
       // (partie double) et l'ajoute à paidDates pour qu'elle ne réapparaisse
       // plus comme "à venir" ni ne soit comptée deux fois dans la prévision.
-      markEcheancePaid: (id, occurrenceDate) => {
+      // `occurrenceDate` reste la vraie date d'échéance théorique de cette
+      // occurrence (sert au calcul "payé à temps" ci-dessous ET à paidDates,
+      // inchangé) ; `entryDate` (optionnel) est la date effective de
+      // l'écriture si l'utilisateur l'a modifiée dans le formulaire —
+      // distinction nécessaire pour ne pas confondre "j'ai backdaté une
+      // écriture" avec "j'ai payé en retard".
+      markEcheancePaid: (id, occurrenceDate, entryDate) => {
         const ech = get().echeances.find((e) => e.id === id);
         if (!ech) return { ok: false, error: 'Échéance introuvable.' };
         const amount = Number(ech.amount);
         const { debitAccount, creditAccount } = resolveEcheanceLines(ech);
         const lines = [{ account: debitAccount, debit: amount, credit: 0 }, { account: creditAccount, debit: 0, credit: amount }];
-        const res = get().addEntry({ date: occurrenceDate, label: ech.label, lines });
+        const res = get().addEntry({ date: entryDate || occurrenceDate, label: ech.label, lines });
         if (!res.ok) return res;
+        // "À temps" = marqué payé au plus tard le jour de son échéance
+        // théorique — comparé à AUJOURD'HUI (l'instant du clic), pas à la
+        // date de l'écriture (qui peut être backdatée sans rapport avec la
+        // ponctualité réelle).
+        const onTime = occurrenceDate >= localDateKey(new Date());
+        const streaks = { ...get().financeStreaks };
+        streaks.onTimeEcheances = onTime ? streaks.onTimeEcheances + 1 : 0;
+        set({ financeStreaks: streaks });
+        if (onTime) useSkillStore.getState().awardXP('budget-control-lv1', 1, `échéance payée à temps : ${ech.label}`);
+        get().checkBadges();
         set({
           echeances: get().echeances.map((e) =>
             e.id === id

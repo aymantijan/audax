@@ -90,7 +90,10 @@ export default function Echeances() {
   const payKey = (row) => `${row.id}|${row.occurrenceDate}`;
   const submitPay = (row) => {
     const date = payDate[payKey(row)] || row.occurrenceDate;
-    const res = markEcheancePaid(row.id, date);
+    // row.occurrenceDate stays the theoretical due date (used for the
+    // "payé à temps" streak); `date` is only the entry's own date, which
+    // may have been overridden separately in the form.
+    const res = markEcheancePaid(row.id, row.occurrenceDate, date);
     if (!res.ok) alert(res.error);
   };
 

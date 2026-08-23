@@ -441,8 +441,13 @@ export const useTradingStore = create(
       },
 
       // ─────────── Prop firm payouts ───────────
+      // `bookkept` starts false — flipped once accountingStore.addEntry
+      // auto-matches this payout to a real Finance journal entry (same
+      // amount, within a few days). Lets the cross-domain bonus in
+      // accountingStore fire exactly once per payout, never re-matching an
+      // already-linked one.
       addPayout: (id, { amount, date, notes }) => {
-        const payout = { id: uid(), amount: Number(amount) || 0, date: date || new Date().toISOString().slice(0, 10), notes: notes || '', createdAt: Date.now() };
+        const payout = { id: uid(), amount: Number(amount) || 0, date: date || new Date().toISOString().slice(0, 10), notes: notes || '', bookkept: false, createdAt: Date.now() };
         set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: [...(a.payouts || []), payout] }) : a)) });
         const sym = CURRENCY_SYMBOL[get().getAccount(id)?.currency] || '$';
         toast(`Payout logged: ${sym}${payout.amount}`, 'success');
@@ -450,6 +455,18 @@ export const useTradingStore = create(
       deletePayout: (id, payoutId) =>
         set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: (a.payouts || []).filter((p) => p.id !== payoutId) }) : a)) }),
       getTotalPayouts: (id) => (get().getAccount(id)?.payouts || []).reduce((a, p) => a + p.amount, 0),
+
+      // Every payout across every account, flattened with its accountId —
+      // what accountingStore.addEntry scans to auto-match a newly-logged
+      // Finance entry against an unbookkept trading payout.
+      getAllPayoutsFlat: () =>
+        get().accounts.flatMap((a) => (a.payouts || []).map((p) => ({ ...p, accountId: a.id, accountName: a.name }))),
+      markPayoutBookkept: (accountId, payoutId) =>
+        set({
+          accounts: get().accounts.map((a) =>
+            a.id === accountId ? stamp({ ...a, payouts: (a.payouts || []).map((p) => (p.id === payoutId ? { ...p, bookkept: true } : p)) }) : a
+          ),
+        }),
 
       // ─────────── Prop firm phase lifecycle ───────────
       // outcome: 'advance' (phase1→phase2→funded) | 'failed'.

@@ -24,7 +24,8 @@ export default function AccountingOverview() {
   // once per mount rather than on the store subscription, since nothing
   // about it needs to react to live journal edits.
   useEffect(() => {
-    store.checkMonthlySavingsBonus();
+    store.checkFinanceRewards();
+    store.checkWeeklyBudgetStreak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
