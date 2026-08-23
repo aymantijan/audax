@@ -488,9 +488,10 @@ export function computeGoalProgress(goal, { startWeightKg, currentWeightKg, curr
 // YMCA method (weight + waist only, no tape-around-neck needed) — coarser
 // than Navy but useful as a quick cross-check or when neck wasn't measured.
 export function bodyFatYMCA({ weightKg, waistCm, sex }) {
-  if (!weightKg || !waistCm) return null;
-  const weightLb = weightKg / 0.453592;
-  const waistIn = waistCm / 2.54;
+  const weightKgN = Number(weightKg), waistCmN = Number(waistCm);
+  if (!weightKgN || !waistCmN) return null;
+  const weightLb = weightKgN / 0.453592;
+  const waistIn = waistCmN / 2.54;
   const bf = sex === 'female'
     ? ((waistIn * 4.15) - (weightLb * 0.082) - 76.76) / weightLb * 100 // approximation for female, same family of formula
     : ((waistIn * 4.15) - (weightLb * 0.082) - 98.42) / weightLb * 100;
@@ -502,10 +503,11 @@ export function bodyFatYMCA({ weightKg, waistCm, sex }) {
 // sex (no tape measure at all). Systematically less precise than circumference
 // methods but a useful "at least something" fallback when no measurements exist.
 export function bodyFatDeurenberg({ weightKg, heightCm, age, sex }) {
-  if (!weightKg || !heightCm || !age) return null;
-  const bmi = weightKg / ((heightCm / 100) ** 2);
+  const weightKgN = Number(weightKg), heightCmN = Number(heightCm), ageN = Number(age);
+  if (!weightKgN || !heightCmN || !ageN) return null;
+  const bmi = weightKgN / ((heightCmN / 100) ** 2);
   const sexFactor = sex === 'female' ? 0 : 1;
-  const bf = 1.20 * bmi + 0.23 * age - 10.8 * sexFactor - 5.4;
+  const bf = 1.20 * bmi + 0.23 * ageN - 10.8 * sexFactor - 5.4;
   return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
 }
 
