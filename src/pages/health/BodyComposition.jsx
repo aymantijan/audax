@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Trash2, FileDown, Camera } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
-import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
+import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS, bodyFatNavyMale, bodyFatNavyFemale } from '../../utils/health-science';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, EmptyState } from '../../components/common/ui';
 
@@ -160,8 +160,29 @@ export default function BodyComposition() {
   const kcalFromMacros = (Number(targetForm.proteinG) || 0) * 4 + (Number(targetForm.carbsG) || 0) * 4 + (Number(targetForm.fatG) || 0) * 9;
   const kcalMismatch = targetForm.kcal && kcalFromMacros && Math.abs(kcalFromMacros - Number(targetForm.kcal)) > Number(targetForm.kcal) * 0.1;
 
+  // The Navy formula's own [2, 60] clamp (health-science.js) exists so a bad
+  // measurement never produces NaN/Infinity on screen — but it also means a
+  // transposed digit or a neck/waist mix-up (e.g. neck typed where waist
+  // goes) silently lands EXACTLY on that 2% or 60% floor/ceiling and gets
+  // displayed as if it were a real reading, with zero indication anything
+  // was off. Real body fat essentially never measures at those extremes
+  // (2% is below what's survivable; 60% is not a Navy-formula-plausible
+  // reading either) — landing there is the tell that something was
+  // mistyped, not a genuine result.
+  const isImplausibleBodyFat = (pct) => pct != null && (pct <= 3 || pct >= 58);
+
   const submit = (e) => {
     e.preventDefault();
+    const bf =
+      form.sex === 'female'
+        ? bodyFatNavyFemale({ waistCm: form.waistCm, hipCm: form.hipCm, neckCm: form.neckCm, heightCm: form.heightCm })
+        : bodyFatNavyMale({ waistCm: form.waistCm, neckCm: form.neckCm, heightCm: form.heightCm });
+    if (
+      isImplausibleBodyFat(bf) &&
+      !confirm(`Le calcul donne ${bf}% de masse grasse, ce qui n'est pas plausible — vérifie tes mesures (cou/taille/hanche potentiellement inversées ou une unité incorrecte). Enregistrer quand même ?`)
+    ) {
+      return;
+    }
     logBodyComp(form);
     setForm((f) => ({ ...f, photo: null, date: todayKey() }));
   };
@@ -279,6 +300,11 @@ export default function BodyComposition() {
               <div className="text-xl font-bold">{latest.waistCm ?? '—'} cm</div>
             </div>
           </div>
+          {latest.bodyFatMethod === 'navy' && isImplausibleBodyFat(latest.bodyFatPct) && (
+            <p className="text-[11px] text-warning mt-3">
+              {latest.bodyFatPct}% n'est pas un résultat plausible pour la méthode Navy — cette entrée ({latest.date}) a probablement une mesure inversée ou mal saisie (cou/taille/hanche). Modifie et resauvegarde l'entrée ci-dessous, ou dans l'historique.
+            </p>
+          )}
         </Card>
       )}
 

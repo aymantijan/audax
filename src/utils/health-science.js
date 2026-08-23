@@ -52,14 +52,27 @@ export function readinessBand(score) {
 
 // ---- Body fat % — Navy circumference method (US Navy, Hodgdon & Beckett 1984) ----
 // Units: cm for all circumferences and height. Returns null if inputs are missing.
+//
+// Every caller passes these straight from form state, i.e. STRINGS (an
+// <input type="number">'s .value is always a string) — Number() them before
+// any arithmetic. Without it, `waistCm + hipCm` on two strings does JS
+// string CONCATENATION, not addition ("71.5"+"84" → "71.584", not 155.5),
+// silently corrupting the female formula's result; the guard clauses above
+// it compare those same strings LEXICOGRAPHICALLY ("9" <= "10" is false, as
+// a string comparison, even though 9 < 10). Real incident: this produced a
+// Navy-method body-fat reading of 2% (the function's own floor clamp) for a
+// perfectly ordinary set of measurements — a result that looked like bad
+// user input but was actually this coercion bug.
 export function bodyFatNavyMale({ waistCm, neckCm, heightCm }) {
-  if (!waistCm || !neckCm || !heightCm || waistCm <= neckCm) return null;
-  const bf = 86.010 * Math.log10(waistCm - neckCm) - 70.041 * Math.log10(heightCm) + 36.76;
+  const w = Number(waistCm), n = Number(neckCm), h = Number(heightCm);
+  if (!w || !n || !h || w <= n) return null;
+  const bf = 86.010 * Math.log10(w - n) - 70.041 * Math.log10(h) + 36.76;
   return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
 }
 export function bodyFatNavyFemale({ waistCm, hipCm, neckCm, heightCm }) {
-  if (!waistCm || !hipCm || !neckCm || !heightCm || waistCm + hipCm <= neckCm) return null;
-  const bf = 163.205 * Math.log10(waistCm + hipCm - neckCm) - 97.684 * Math.log10(heightCm) - 78.387;
+  const w = Number(waistCm), hip = Number(hipCm), n = Number(neckCm), h = Number(heightCm);
+  if (!w || !hip || !n || !h || w + hip <= n) return null;
+  const bf = 163.205 * Math.log10(w + hip - n) - 97.684 * Math.log10(h) - 78.387;
   return Math.round(Math.max(2, Math.min(60, bf)) * 10) / 10;
 }
 
