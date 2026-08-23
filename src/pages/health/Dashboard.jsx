@@ -157,7 +157,7 @@ export default function Dashboard({ goTo }) {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Sleep" value={todayLog ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
+        <Stat label="Sleep" value={todayLog?.sleepData ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
         <Stat label="Energy" value={todayLog ? `${todayLog.energyStartLevel}/10` : '—'} />
         <Stat label="Stress" value={todayLog ? `${todayLog.stressLevel}/10` : '—'} />
         <Stat label="Nutrition quality" value={nutrition.quality != null ? `${nutrition.quality}%` : '—'} sub={`${Math.round(nutrition.totals.protein)}g protein today`} />

@@ -22,16 +22,40 @@ const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
 };
 
+const blankStressChecklist = () => Object.fromEntries(STRESS_ITEMS.map((i) => [i.key, 0]));
+
 const blankCheckIn = () => ({
   energyStartLevel: 6,
   sleepHours: 7,
   sleepStartTime: '23:00',
   wakeTime: '07:00',
-  stressChecklist: Object.fromEntries(STRESS_ITEMS.map((i) => [i.key, 0])),
+  stressChecklist: blankStressChecklist(),
   recoveryActivities: [],
   energyEndLevel: 6,
   mood: 'okay',
 });
+
+// Builds the check-in form's state from a saved energyLog entry — or a blank
+// form if there isn't one for that date yet. Guards every field with a
+// fallback: an entry saved before `stressChecklist` (or `sleepData`) existed
+// as a field, or written by some other path that only set a subset, left
+// those undefined — reading `checkIn.stressChecklist[item.key]` straight off
+// that then crashed the whole page ("can't access property 'heartPalpitations',
+// stressChecklist is undefined"), a real incident. Never trust a stored log
+// to have every field this form expects; always merge onto known-good defaults.
+const checkInFromLog = (log) =>
+  log
+    ? {
+        energyStartLevel: log.energyStartLevel ?? 6,
+        sleepHours: log.sleepData?.sleepHours ?? 7,
+        sleepStartTime: log.sleepData?.sleepStartTime ?? '23:00',
+        wakeTime: log.sleepData?.wakeTime ?? '07:00',
+        stressChecklist: log.stressChecklist || blankStressChecklist(),
+        recoveryActivities: log.recoveryActivities || [],
+        energyEndLevel: log.energyEndLevel ?? 6,
+        mood: log.mood || 'okay',
+      }
+    : blankCheckIn();
 
 export default function Habits() {
   const { habits, logs, energyLogs, addHabit, editHabit, deleteHabit, toggleHabit, saveEnergyLog, getBadges } = useHabitStore();
@@ -70,39 +94,12 @@ export default function Habits() {
 
   const todayEnergyLog = energyLogs.find((l) => l.date === today);
   const checklistEnergyLog = energyLogs.find((l) => l.date === checklistDate);
-  const [checkIn, setCheckIn] = useState(() =>
-    todayEnergyLog
-      ? {
-          energyStartLevel: todayEnergyLog.energyStartLevel,
-          sleepHours: todayEnergyLog.sleepData.sleepHours,
-          sleepStartTime: todayEnergyLog.sleepData.sleepStartTime,
-          wakeTime: todayEnergyLog.sleepData.wakeTime,
-          stressChecklist: todayEnergyLog.stressChecklist,
-          recoveryActivities: todayEnergyLog.recoveryActivities || [],
-          energyEndLevel: todayEnergyLog.energyEndLevel,
-          mood: todayEnergyLog.mood,
-        }
-      : blankCheckIn()
-  );
+  const [checkIn, setCheckIn] = useState(() => checkInFromLog(todayEnergyLog));
 
   // Re-seed the check-in form whenever the user steps to a different day, so
   // editing a past day's check-in loads that day's values (or a blank form).
   useEffect(() => {
-    const log = energyLogs.find((l) => l.date === checklistDate);
-    setCheckIn(
-      log
-        ? {
-            energyStartLevel: log.energyStartLevel,
-            sleepHours: log.sleepData.sleepHours,
-            sleepStartTime: log.sleepData.sleepStartTime,
-            wakeTime: log.sleepData.wakeTime,
-            stressChecklist: log.stressChecklist,
-            recoveryActivities: log.recoveryActivities || [],
-            energyEndLevel: log.energyEndLevel,
-            mood: log.mood,
-          }
-        : blankCheckIn()
-    );
+    setCheckIn(checkInFromLog(energyLogs.find((l) => l.date === checklistDate)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checklistDate]);
 
@@ -216,8 +213,8 @@ export default function Habits() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Habits today" value={`${dueToday.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed)).length}/${dueToday.length}`} />
         <Stat label="7-day compliance" value={compliance.total ? `${Math.round(compliance.rate * 100)}%` : '—'} />
-        <Stat label="Sleep quality today" value={todayEnergyLog ? `${todayEnergyLog.sleepData.sleepQualityScore}/10` : '—'} />
-        <Stat label="Stress today" value={todayEnergyLog ? `${todayEnergyLog.stressLevel}/10` : '—'} sub={todayEnergyLog ? stressLabel(todayEnergyLog.stressLevel) : ''} />
+        <Stat label="Sleep quality today" value={todayEnergyLog?.sleepData?.sleepQualityScore != null ? `${todayEnergyLog.sleepData.sleepQualityScore}/10` : '—'} />
+        <Stat label="Stress today" value={todayEnergyLog?.stressLevel != null ? `${todayEnergyLog.stressLevel}/10` : '—'} sub={todayEnergyLog?.stressLevel != null ? stressLabel(todayEnergyLog.stressLevel) : ''} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
