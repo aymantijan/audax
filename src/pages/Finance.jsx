@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock, CalendarDays, Crown } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { todayKey } from '../utils/formatters';
 import AccountingOverview from './finance/AccountingOverview';
@@ -13,6 +13,7 @@ import TreasuryPure from './finance/TreasuryPure';
 import Goals from './finance/Goals';
 import Labels from './finance/Labels';
 import PnLCalendar from './finance/PnLCalendar';
+import WealthRank from './finance/WealthRank';
 
 // Système financier personnel interconnecté, fondé sur la comptabilité générale
 // en partie double (inspiration : plan comptable marocain adapté à une personne
@@ -30,6 +31,7 @@ const TABS = [
   { key: 'echeances', label: 'Échéances', icon: CalendarClock, Component: Echeances },
   { key: 'treasury', label: 'Trésorerie', icon: Landmark, Component: TreasuryPure },
   { key: 'goals', label: 'Objectifs', icon: Target, Component: Goals },
+  { key: 'wealthRank', label: 'Rang de Richesse', icon: Crown, Component: WealthRank },
 ];
 
 export default function Finance() {
