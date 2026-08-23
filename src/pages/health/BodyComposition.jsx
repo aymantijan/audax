@@ -109,7 +109,8 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 }
 
 export default function BodyComposition() {
-  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence, getCyclePhaseCoaching, isCyclePhaseHormonallyReliable } = useHealthStore();
+  const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveProgram, getActiveCuratedProgram, getActiveNutritionPlan, getProgramAdherence, getCyclePhaseCoaching, isCyclePhaseHormonallyReliable, setManualNutritionTarget } = useHealthStore();
+  const activePlan = getActiveNutritionPlan();
   const cycleCoaching = getCyclePhaseCoaching();
   // Progesterone peaks mid-luteal and promotes fluid retention — a well-
   // documented ~0.5-1.4kg (up to ~2.3kg) scale increase that's water, not
@@ -141,6 +142,23 @@ export default function BodyComposition() {
   });
   const [photoError, setPhotoError] = useState('');
   const [activityLevel, setActivityLevel] = useState('moderate');
+  // Manual kcal/macro target — prefilled from whatever plan is already
+  // active (auto-generated or previously set manually here) so opening this
+  // card shows the real current targets, not blank fields.
+  const [targetForm, setTargetForm] = useState({
+    kcal: activePlan?.targetKcal ?? '',
+    proteinG: activePlan?.targetMacros?.proteinG ?? '',
+    carbsG: activePlan?.targetMacros?.carbsG ?? '',
+    fatG: activePlan?.targetMacros?.fatG ?? '',
+  });
+  const submitTarget = (e) => {
+    e.preventDefault();
+    setManualNutritionTarget(targetForm);
+  };
+  // 4 kcal/g protein & carbs, 9 kcal/g fat — cross-check only, never blocks
+  // saving (some people deliberately round loosely, that's their call).
+  const kcalFromMacros = (Number(targetForm.proteinG) || 0) * 4 + (Number(targetForm.carbsG) || 0) * 4 + (Number(targetForm.fatG) || 0) * 9;
+  const kcalMismatch = targetForm.kcal && kcalFromMacros && Math.abs(kcalFromMacros - Number(targetForm.kcal)) > Number(targetForm.kcal) * 0.1;
 
   const submit = (e) => {
     e.preventDefault();
@@ -326,6 +344,34 @@ export default function BodyComposition() {
           )}
         </Card>
       )}
+
+      <Card title="Cibles nutritionnelles (kcal & macros)">
+        <p className="text-[11px] text-mute mb-3">
+          Choisis directement tes calories et macros quotidiennes — pas besoin de repasser par le questionnaire complet. {activePlan ? 'Modifie le plan actif ci-dessous.' : "Aucun plan actif pour l'instant : ceci en crée un minimal (sans repas types)."}
+        </p>
+        <form onSubmit={submitTarget} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Field label="Calories (kcal/jour)">
+            <Input type="number" min="0" value={targetForm.kcal} onChange={(e) => setTargetForm({ ...targetForm, kcal: e.target.value })} />
+          </Field>
+          <Field label="Protéines (g/jour)">
+            <Input type="number" min="0" value={targetForm.proteinG} onChange={(e) => setTargetForm({ ...targetForm, proteinG: e.target.value })} />
+          </Field>
+          <Field label="Glucides (g/jour)">
+            <Input type="number" min="0" value={targetForm.carbsG} onChange={(e) => setTargetForm({ ...targetForm, carbsG: e.target.value })} />
+          </Field>
+          <Field label="Lipides (g/jour)">
+            <Input type="number" min="0" value={targetForm.fatG} onChange={(e) => setTargetForm({ ...targetForm, fatG: e.target.value })} />
+          </Field>
+          <div className="col-span-2 md:col-span-4">
+            {kcalMismatch && (
+              <p className="text-[11px] text-warning mb-2">
+                Ces macros représentent ~{Math.round(kcalFromMacros)} kcal, assez loin des {targetForm.kcal} kcal indiqués — vérifie si c'est voulu (ex. marge d'alcool/fibres non comptée) avant d'enregistrer.
+              </p>
+            )}
+            <Button type="submit" className="w-full">Enregistrer mes cibles</Button>
+          </div>
+        </form>
+      </Card>
 
       <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: getActiveProgram() || getActiveCuratedProgram(), plan: getActiveNutritionPlan(), adherence: getProgramAdherence() })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
         <div className="text-xs text-mute mb-3">Confidence: {prediction.confidence}% (based on days logged) · Efficiency multiplier: {prediction.efficiency}%</div>

@@ -509,6 +509,38 @@ export const useHealthStore = create(
         toast('Plan nutritionnel généré', 'success');
         return plan;
       },
+      // Direct manual override of kcal + macro targets — for someone who
+      // already knows the numbers they want (a coach gave them a target, they
+      // did the math themselves, etc.) and doesn't want to run the full
+      // questionnaire in PlanSetup.jsx just to set 4 numbers. Updates the
+      // active plan's targets in place if one exists (sampleMeals/budgetTier/
+      // etc. untouched — they may now target a slightly different kcal figure
+      // than before, same drift as passing `overrides` to generatePlan
+      // already accepted); otherwise creates a minimal plan with no sample
+      // meals (source:'manual') so downstream selectors that read
+      // getActiveNutritionPlan() (energy-availability caution, PDF export,
+      // etc.) have something to work from.
+      setManualNutritionTarget: ({ kcal, proteinG, carbsG, fatG }) => {
+        const targetKcal = Math.round(Number(kcal)) || 0;
+        const targetMacros = { proteinG: Math.round(Number(proteinG)) || 0, carbsG: Math.round(Number(carbsG)) || 0, fatG: Math.round(Number(fatG)) || 0 };
+        if (!targetKcal || (!targetMacros.proteinG && !targetMacros.carbsG && !targetMacros.fatG)) {
+          toast('Indique au moins les calories et un macro.', 'warning');
+          return;
+        }
+        const active = get().getActiveNutritionPlan();
+        if (active) {
+          set({ nutritionPlans: get().nutritionPlans.map((p) => (p.id === active.id ? { ...p, targetKcal, targetMacros, source: 'manual' } : p)) });
+        } else {
+          const plan = {
+            id: uid(), generatedAt: Date.now(), targetKcal, targetMacros,
+            budgetTier: null, dietGoal: null, activityLevel: null,
+            sampleMeals: [], explanationNotes: [], source: 'manual', active: true,
+          };
+          set({ nutritionPlans: [...get().nutritionPlans.map((p) => ({ ...p, active: false })), plan] });
+        }
+        set({ proteinTargetG: targetMacros.proteinG });
+        toast('Cibles nutritionnelles mises à jour', 'success');
+      },
       setActiveNutritionPlan: (id) => set({ nutritionPlans: get().nutritionPlans.map((p) => ({ ...p, active: p.id === id })) }),
       deleteNutritionPlan: (id) => set({ nutritionPlans: get().nutritionPlans.filter((p) => p.id !== id) }),
       getActiveNutritionPlan: () => get().nutritionPlans.find((p) => p.active) || null,
