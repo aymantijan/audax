@@ -429,6 +429,21 @@ export const useAccountingStore = create(
         const treasuryCurrent = treasurySeries.length ? treasurySeries[treasurySeries.length - 1].solde : treasuryBalance(journal);
 
         return get().goals.map((g) => {
+          // Once achieved, the goal is CLOSED: frozen at the amount actually
+          // reached when it was hit (achievedAmount), never recomputed
+          // against today's live balance. Without this, a goal marked
+          // "atteint" kept showing a progress bar racing the current
+          // treasury/net-worth figure — which naturally drifts BELOW the
+          // target again the moment money gets spent, making an achieved
+          // goal look unachieved days later. Pre-existing achieved goals
+          // that predate this fix (no achievedAmount on file) fall back to
+          // the target itself — the best available "closed at 100%" value,
+          // since the actual historical figure was never stored.
+          if (g.achieved) {
+            const amount = g.achievedAmount ?? g.targetAmount;
+            const progress = g.targetAmount > 0 ? Math.max(0, Math.min(100, (amount / g.targetAmount) * 100)) : null;
+            return { ...g, current: amount, pace: null, progress, projected: null, onTrack: null };
+          }
           const isTreasury = g.type === 'treasury';
           const current = isTreasury ? treasuryCurrent : nwCurrent;
           const pace = isTreasury ? treasuryPace : nwPace;
@@ -440,12 +455,14 @@ export const useAccountingStore = create(
       },
 
       // Idempotent : XP + badge une seule fois, au franchissement du seuil.
+      // achievedAmount freezes what getGoalRows() displays forever after —
+      // see its comment above for why that matters.
       checkGoalAchievement: (goalId, current) => {
         const goal = get().goals.find((g) => g.id === goalId);
         if (!goal || goal.achieved || current < goal.targetAmount) return;
         const xp = calculateGoalXP(goal.targetAmount);
         const badge = badgeForGoal(goal.targetAmount);
-        set({ goals: get().goals.map((g) => (g.id === goalId ? stamp({ ...g, achieved: true, achievedAt: Date.now(), xpAwarded: xp, badge }) : g)) });
+        set({ goals: get().goals.map((g) => (g.id === goalId ? stamp({ ...g, achieved: true, achievedAt: Date.now(), achievedAmount: current, xpAwarded: xp, badge }) : g)) });
         const skillId = goal.type === 'treasury' ? 'treasury-planning-lv1' : 'ratio-analysis-lv1';
         useSkillStore.getState().awardXP(skillId, xp, `objectif atteint : ${goal.name}`);
         toast(`🎉 Objectif atteint : ${goal.name} · +${xp} XP · Badge : ${badge}`, 'success');

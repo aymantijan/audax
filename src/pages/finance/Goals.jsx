@@ -28,9 +28,11 @@ function GoalCard({ g, onEdit, onDelete }) {
           {!g.achieved && g.onTrack !== null && (
             <Badge color={g.onTrack ? 'var(--success)' : 'var(--error)'}>{g.onTrack ? 'en bonne voie' : 'hors rythme'}</Badge>
           )}
-          <button className="text-mute hover:text-accent cursor-pointer" onClick={() => onEdit(g)} title="Modifier">
-            <Pencil size={13} />
-          </button>
+          {!g.achieved && (
+            <button className="text-mute hover:text-accent cursor-pointer" onClick={() => onEdit(g)} title="Modifier">
+              <Pencil size={13} />
+            </button>
+          )}
           <button className="text-mute hover:text-bad cursor-pointer" onClick={() => onDelete(g)} title="Supprimer">
             <Trash2 size={13} />
           </button>
