@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AlertTriangle, AlertCircle, BookOpen } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
@@ -19,6 +19,14 @@ export default function AccountingOverview() {
   const netWorth = store.getNetWorth();
   const series = store.getMonthlySeries(6);
   const variance = store.getBudgetVariance();
+
+  // Cheap no-op once caught up (see the action's own comment) — checked
+  // once per mount rather than on the store subscription, since nothing
+  // about it needs to react to live journal edits.
+  useEffect(() => {
+    store.checkMonthlySavingsBonus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const alerts = useMemo(() => {
     const out = [];

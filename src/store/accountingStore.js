@@ -4,7 +4,7 @@ import { uid, usdToMad } from '../utils/formatters';
 import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
-  budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue, monthKey,
+  budgetVariance, treasuryForecast, treasuryBalance, netWorthHistory, paceFromEdges, projectValue,
   echeanceOccurrences, treasuryForecastV2, netWorthForecastV2, resolveEcheanceLines,
   DEFAULT_BUDGET_PERIOD, budgetInsights, dailyResults,
 } from '../utils/accounting-engine';
@@ -56,12 +56,41 @@ export const useAccountingStore = create(
       echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
       budgetAlerts: { enabled: false, lastShown: {} }, // idem pour les dépassements de budget (charges)
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
+      financeMonthChecks: [], // ['2026-07', ...] months already evaluated for the savings-rate bonus below — checked once, ever, regardless of outcome
 
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'financial-discipline-lv1');
         if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
       },
       getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
+
+      // Rewards a genuinely closed month (not the in-progress one — it's
+      // over, the number is final) that ended with a positive savings rate
+      // (ESG's tauxEpargne > 0). Idempotent via financeMonthChecks: each
+      // month is evaluated exactly once, ever, whichever page happens to
+      // call this first after that month ends — a losing month is marked
+      // checked too (not retried forever), it just earns nothing. Call from
+      // any Finance page's mount (see AccountingOverview.jsx) — cheap
+      // no-op once caught up.
+      checkMonthlySavingsBonus: () => {
+        // Built from local Y/M directly, NOT via `.toISOString()` (that
+        // round-trips through UTC and can roll the date back a day right
+        // at a month boundary in any timezone ahead of UTC — silently
+        // evaluating the wrong month).
+        const now = new Date();
+        const prevMonthIndex = now.getMonth() - 1;
+        const y = prevMonthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear();
+        const m = ((prevMonthIndex % 12) + 12) % 12;
+        const mk = `${y}-${String(m + 1).padStart(2, '0')}`;
+        if (get().financeMonthChecks.includes(mk)) return;
+        const period = { from: `${mk}-01`, to: `${mk}-31` };
+        const e = esg(get().journal, period);
+        set({ financeMonthChecks: [...get().financeMonthChecks, mk] });
+        if (e.tauxEpargne != null && e.tauxEpargne > 0) {
+          useSkillStore.getState().awardXP('financial-discipline-lv1', 20, `mois clôturé, épargne positive : ${mk}`);
+          toast(`🎉 ${mk} clôturé avec un taux d'épargne positif (${e.tauxEpargne.toFixed(1)}%) · +20 XP`, 'success');
+        }
+      },
 
       // Vérifie, POUR CHAQUE ligne de charge (classe 6) de l'écriture, si une
       // limite est configurée pour son (compte, libellé) et si l'ajout de ce
@@ -105,6 +134,10 @@ export const useAccountingStore = create(
           archived: false, createdAt: Date.now(), updatedAt: Date.now(),
         };
         set({ treasuryAccounts: [...get().treasuryAccounts, account] });
+        // Was a real gap: treasury-planning-lv1 previously only ever got XP
+        // from an achieved treasury goal (rare) — setting up how your money
+        // is actually organized is itself treasury planning, not a footnote.
+        useSkillStore.getState().awardXP('treasury-planning-lv1', 3, `compte auxiliaire créé : ${account.name}`);
         toast(`Compte auxiliaire créé : ${account.name}`, 'success');
         get().checkBadges();
         return { ok: true, code: account.code };
@@ -188,6 +221,11 @@ export const useAccountingStore = create(
           set({ labelLimits: get().labelLimits.map((l) => (l.id === existing.id ? { ...l, ...values, updatedAt: Date.now() } : l)) });
         } else {
           set({ labelLimits: [...get().labelLimits, { id: uid(), account, label: label.trim(), ...values, createdAt: Date.now() }] });
+          // Only on first creation, not every edit (re-saving the same limit
+          // shouldn't be farmable). Third gap fill: ratio-analysis-lv1 never
+          // had a routine XP source — setting a spend-ratio guardrail is
+          // literally that skill's own description in action.
+          useSkillStore.getState().awardXP('ratio-analysis-lv1', 2, `limite définie : ${label.trim()}`);
         }
         toast(`Limite enregistrée pour "${label.trim()}"`, 'success');
       },
@@ -396,6 +434,11 @@ export const useAccountingStore = create(
       addCorrection: (data) => {
         const c = { ...data, id: uid(), amount: Number(data.amount), createdAt: Date.now(), updatedAt: Date.now() };
         set({ corrections: [...get().corrections, c] });
+        // Another real gap: financial-statements-lv1 ("Read your own Bilan,
+        // CPC, and ESG fluently") never received XP anywhere — an ANC→ANCC
+        // correction is exactly that skill in action (recognizing your ANC
+        // doesn't reflect real value and adjusting it).
+        useSkillStore.getState().awardXP('financial-statements-lv1', 3, `correction ajoutée : ${c.label}`);
         toast(`Correction ajoutée : ${c.label}`, 'success');
         get().checkBadges();
       },
@@ -499,9 +542,13 @@ export const useAccountingStore = create(
         return budgetInsights(get().journal, budget, refDate || new Date().toISOString().slice(0, 10), get().getAccountMap());
       },
 
-      // Période du mois courant : { from, to }
+      // Période du mois courant : { from, to }. Built from local Y/M/D
+      // directly, not `.toISOString()` — that round-trips through UTC and
+      // can roll back a day right at a month boundary in any timezone
+      // ahead of UTC, silently showing last month's period as "current."
       currentMonthPeriod: () => {
-        const mk = monthKey(new Date().toISOString().slice(0, 10));
+        const now = new Date();
+        const mk = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         return { from: `${mk}-01`, to: `${mk}-31` };
       },
 
