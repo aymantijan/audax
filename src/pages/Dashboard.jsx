@@ -27,6 +27,13 @@ import { startOfMonth } from 'date-fns';
 export default function Dashboard() {
   const [demoOpen, setDemoOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
+  // Same bug class as synergy.js's trading gate: this page never checked
+  // enabledModules at all, so a user who opted OUT of Trading/Deals during
+  // onboarding still saw the account switcher, Account value/Month P&L
+  // stats, the equity curve, and a "Deals" life-balance bar for modules
+  // they explicitly turned off.
+  const tradingEnabled = user?.enabledModules?.trading ?? true;
+  const dealsEnabled = user?.enabledModules?.deals ?? true;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
@@ -91,7 +98,7 @@ export default function Dashboard() {
     { label: 'Skills', value: Math.round((Object.values(skills).filter((s) => !s.locked).length / Object.values(skills).length) * 100), sub: `${Object.values(skills).filter((s) => !s.locked).length}/${Object.values(skills).length} unlocked`, color: 'var(--accent-primary)' },
     { label: 'Courses', value: courses.length ? Math.round((courses.filter((c) => c.status === 'completed').length / courses.length) * 100) : 0, sub: `${courses.filter((c) => c.status === 'completed').length}/${courses.length} completed`, color: 'var(--accent-secondary)' },
     { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
-    { label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' },
+    ...(dealsEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -206,7 +213,7 @@ export default function Dashboard() {
             Track: <span className="text-accent font-medium">{user?.careerGoal || 'Hybrid'}</span> · here's where you stand today.
           </p>
         </div>
-        <AccountSwitcher />
+        {tradingEnabled && <AccountSwitcher />}
       </div>
 
       {burnout.burnoutRisk && (
@@ -262,15 +269,15 @@ export default function Dashboard() {
         </div>
       </Link>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Stat label="Account value" value={fmtMoney(account)} />
-        <Stat label="Month P&L" value={fmtSignedMoney(monthStats.totalPnl)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} sub={`${monthStats.count} trades · ${monthStats.count ? fmtPct(monthStats.winRate) : '—'} win`} />
+      <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 ${tradingEnabled ? 'lg:grid-cols-5' : 'lg:grid-cols-3'}`}>
+        {tradingEnabled && <Stat label="Account value" value={fmtMoney(account)} />}
+        {tradingEnabled && <Stat label="Month P&L" value={fmtSignedMoney(monthStats.totalPnl)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} sub={`${monthStats.count} trades · ${monthStats.count ? fmtPct(monthStats.winRate) : '—'} win`} />}
         <Stat label="Net worth" value={netWorth !== null ? fmtMAD(netWorth) : '—'} sub="dirhams" />
         <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub={`${courses.filter((c) => c.status === 'active').length} active courses`} />
         <Stat label="Energy today" value={todayEnergy ? `${todayEnergy.energyStartLevel}/10` : '—'} sub={todayEnergy ? `Stress ${todayEnergy.stressLevel}/10` : 'Not logged yet'} />
       </div>
 
-      {hasNonDemo && activeAccountObj?.type !== 'demo' && demoAccounts.length > 0 && (
+      {tradingEnabled && hasNonDemo && activeAccountObj?.type !== 'demo' && demoAccounts.length > 0 && (
         <div className="border border-line rounded-xl bg-card">
           <button onClick={() => setDemoOpen((v) => !v)} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm cursor-pointer text-left">
             {demoOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -290,29 +297,31 @@ export default function Dashboard() {
 
       {/* Visualizations replace the old wall of KPI cards */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title={`Account equity · ${activeAccountObj?.name || ''}`}>
-          {equityCurve.length > 1 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={equityCurve} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
-                <defs>
-                  <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="i" hide />
-                <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={(v) => fmtMoney(v)} width={54} />
-                <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtMoney(v)} labelFormatter={() => ''} />
-                <Area type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} fill="url(#eqFill)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyState>Log trades to see your equity curve.</EmptyState>
-          )}
-        </Card>
+        {tradingEnabled && (
+          <Card title={`Account equity · ${activeAccountObj?.name || ''}`}>
+            {equityCurve.length > 1 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={equityCurve} margin={{ top: 4, right: 4, bottom: 0, left: -12 }}>
+                  <defs>
+                    <linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="i" hide />
+                  <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={(v) => fmtMoney(v)} width={54} />
+                  <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} formatter={(v) => fmtMoney(v)} labelFormatter={() => ''} />
+                  <Area type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} fill="url(#eqFill)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState>Log trades to see your equity curve.</EmptyState>
+            )}
+          </Card>
+        )}
 
-        <Card title="Life balance">
+        <Card title="Life balance" className={!tradingEnabled ? 'lg:col-span-2' : undefined}>
           <div className="space-y-4 pt-1">
             {lifeBalance.map((b) => (
               <div key={b.label}>
