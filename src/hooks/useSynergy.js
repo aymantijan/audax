@@ -39,6 +39,7 @@ export function useSynergy() {
   const skills = useSkillStore((s) => s.skills);
   const primaryDomain = useAuthStore((s) => s.user?.primaryDomain || 'trading');
   const engineeringEnabled = useAuthStore((s) => s.user?.enabledModules?.engineering ?? false);
+  const tradingEnabled = useAuthStore((s) => s.user?.enabledModules?.trading ?? true);
   const labEntries = useEngineeringStore((s) => s.labEntries);
   const engineeringProjects = useEngineeringStore((s) => s.projects);
 
@@ -89,8 +90,9 @@ export function useSynergy() {
         labEntries,
         engineeringProjects,
         engineeringEnabled,
+        tradingEnabled,
       }),
-    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled]
+    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled]
   );
 
   // Persist today's snapshot so we can show day-over-day trend

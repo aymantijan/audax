@@ -10,16 +10,23 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // All five domain scores are 0-100. Weighted composite = primary*0.75 + avg(others)*0.25.
 // Note: the raw spec formulas divided each weighted sum by 3, which caps scores near 33 —
 // implemented here as proper 0-100 weighted averages instead so color thresholds work.
-export function calculateSynergies({ trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras, labEntries, engineeringProjects, engineeringEnabled }) {
+export function calculateSynergies({ trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true }) {
   const monthStart = startOfMonth(new Date());
 
   const scores = {
-    trading: tradingScore(trades, habits, habitLogs, monthStart, today),
     learning: learningScore(courses),
     finance: financeScore(journal, accountingBudgets, corrections, echeances, monthStart, today),
     health: healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras),
     growth: growthScore(skills, habits, monthStart),
   };
+  // Same reasoning as the engineering gate below, but inverted: Trading
+  // defaults to ENABLED (it's an original, always-on domain — see
+  // authStore's enabledModules default), so this only ever DROPS the score
+  // for someone who explicitly opted out during onboarding. Without this, a
+  // user who never chose Trading still had a permanent 0-ish "trading"
+  // score (an empty account, no trades) silently dragging their composite
+  // average/weighted score down for a domain they never asked to be judged on.
+  if (tradingEnabled) scores.trading = tradingScore(trades, habits, habitLogs, monthStart, today);
   // Only scored for accounts that actually turned Engineering on — otherwise
   // it would silently pull the composite average/weighted score of every
   // other user down toward 0 (an untouched, brand-new domain) the moment
@@ -29,9 +36,11 @@ export function calculateSynergies({ trades, courses, journal, accountingBudgets
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
 
-  const domain = scores[primaryDomain] !== undefined ? primaryDomain : 'trading';
+  // Fall back to whichever domain is actually scored for this account — never
+  // hardcode 'trading', which may not even be in `scores` if disabled.
+  const domain = scores[primaryDomain] !== undefined ? primaryDomain : Object.keys(scores)[0];
   const primary = scores[domain];
-  const otherAvg = (values.reduce((a, b) => a + b, 0) - primary) / (values.length - 1);
+  const otherAvg = values.length > 1 ? (values.reduce((a, b) => a + b, 0) - primary) / (values.length - 1) : primary;
   const weighted = r1(primary * 0.75 + otherAvg * 0.25);
 
   return { scores, average, weighted, primaryDomain: domain };
