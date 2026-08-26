@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Rocket, Trash2 } from 'lucide-react';
-import { useBusinessStore } from '../../store/businessStore';
-import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
+import { useBusinessStore } from '../store/businessStore';
+import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../components/common/ui';
+import BadgeList from '../components/common/BadgeList';
 
 const STATUS_OPTIONS = [
   { value: 'idea', label: 'Idée' },
@@ -15,7 +16,7 @@ const STATUS_COLOR = { idea: 'var(--text-secondary)', active: 'var(--success)', 
 const blank = () => ({ name: '', sector: '', description: '', status: 'idea' });
 
 export default function Businesses() {
-  const { businesses, addBusiness, deleteBusiness } = useBusinessStore();
+  const { businesses, addBusiness, deleteBusiness, getBadges } = useBusinessStore();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(blank());
 
@@ -51,7 +52,7 @@ export default function Businesses() {
             const donePhases = b.phases.filter((p) => p.status === 'done').length;
             return (
               <Card key={b.id} className="!p-0 overflow-hidden">
-                <Link to={`/deals/business/${b.id}`} className="block p-4 hover:bg-surface/50">
+                <Link to={`/businesses/${b.id}`} className="block p-4 hover:bg-surface/50">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
                       <div className="font-medium">{b.name}</div>
@@ -81,6 +82,8 @@ export default function Businesses() {
           <EmptyState><Rocket className="mx-auto mb-2 text-mute" size={26} />Aucun business suivi. Créez le premier pour commencer.</EmptyState>
         </Card>
       )}
+
+      <BadgeList badges={getBadges()} />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Nouveau business">
         <form onSubmit={submit} className="space-y-3">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, GitBranch, Trophy, Settings, FlaskConical } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -20,6 +20,7 @@ const MORE_ITEMS = [
   { to: '/learning', label: 'Learning', icon: BookOpen },
   { to: '/habits', label: 'Habits', icon: Flame },
   { to: '/deals', label: 'Deals', icon: Handshake },
+  { to: '/businesses', label: 'Business', icon: Rocket },
   { to: '/engineering', label: 'Engineering', icon: FlaskConical },
   { to: '/skills', label: 'Skill Tree', icon: GitBranch },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
@@ -31,10 +32,13 @@ export default function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const tradingEnabled = user?.enabledModules?.trading ?? true;
-  const dealsEnabled = user?.enabledModules?.deals ?? true;
+  const peEnabled = user?.enabledModules?.pe ?? true;
+  const businessEnabled = user?.enabledModules?.business ?? true;
   const engineeringEnabled = user?.enabledModules?.engineering ?? false;
   const primaryTabs = PRIMARY_TABS.filter((t) => t.to !== '/trading' || tradingEnabled);
-  const moreItems = MORE_ITEMS.filter((t) => (t.to !== '/deals' || dealsEnabled) && (t.to !== '/engineering' || engineeringEnabled));
+  const moreItems = MORE_ITEMS.filter(
+    (t) => (t.to !== '/deals' || peEnabled) && (t.to !== '/businesses' || businessEnabled) && (t.to !== '/engineering' || engineeringEnabled)
+  );
 
   const tabClass = ({ isActive }) =>
     `flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-[10px] cursor-pointer ${

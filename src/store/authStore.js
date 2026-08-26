@@ -32,9 +32,15 @@ function withDefaults(user) {
     // behavior to preserve, so it defaults to false for accounts that
     // predate it — it only turns on for someone who explicitly asks for it,
     // never as silent nav clutter for an existing business-track user.
+    //
+    // `deals` split into `pe`/`business` (2026-08-26, Deals/Business Projects
+    // page split) — each falls back to the old combined `deals` flag first so
+    // an existing account's single on/off choice carries over to BOTH new
+    // pages unchanged, then to `true` for anyone who somehow has neither.
     enabledModules: {
       trading: user.enabledModules?.trading ?? true,
-      deals: user.enabledModules?.deals ?? true,
+      pe: user.enabledModules?.pe ?? user.enabledModules?.deals ?? true,
+      business: user.enabledModules?.business ?? user.enabledModules?.deals ?? true,
       engineering: user.enabledModules?.engineering ?? false,
     },
   };
@@ -62,7 +68,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, deals: true, engineering: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, pe: true, business: true, engineering: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

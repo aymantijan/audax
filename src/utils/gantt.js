@@ -1,5 +1,5 @@
 // Scheduling engine for the business Gantt chart — shared between the
-// interactive chart (pages/deals/GanttChart.jsx) and its PDF export, both
+// interactive chart (pages/BusinessGanttChart.jsx) and its PDF export, both
 // keyed on plain 'yyyy-MM-dd' date strings like the rest of the app.
 //
 // This is what makes it an actual Gantt rather than a row of colored bars:

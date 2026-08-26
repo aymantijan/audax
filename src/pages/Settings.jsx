@@ -341,14 +341,14 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="Sections visibles">
-        <p className="text-sm text-mute mb-3">Trading, Deals et Ingénierie peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
+        <p className="text-sm text-mute mb-3">Trading, Deals, Business et Ingénierie peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
         <div className="flex flex-wrap gap-3">
-          {[{ key: 'trading', label: 'Trading', default: true }, { key: 'deals', label: 'Deals', default: true }, { key: 'engineering', label: 'Ingénierie', default: false }].map((m) => (
+          {[{ key: 'trading', label: 'Trading', default: true }, { key: 'pe', label: 'Deals (Private Equity)', default: true }, { key: 'business', label: 'Business Projects', default: true }, { key: 'engineering', label: 'Ingénierie', default: false }].map((m) => (
             <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={user?.enabledModules?.[m.key] ?? m.default}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, deals: true, engineering: false }), [m.key]: e.target.checked } })}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false }), [m.key]: e.target.checked } })}
                 className="cursor-pointer"
               />
               {m.label}

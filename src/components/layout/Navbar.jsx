@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/habits', label: 'Habits' },
   { to: '/health', label: 'Health' },
   { to: '/deals', label: 'Deals' },
+  { to: '/businesses', label: 'Business' },
   { to: '/engineering', label: 'Engineering' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },
@@ -24,12 +25,14 @@ export default function Navbar() {
   const { user, updateProfile, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = user?.theme || 'dark';
-  // Trading/Deals are the only two sections a user can opt out of (chosen at
+  // Trading/Deals/Business are sections a user can opt out of (chosen at
   // signup in Onboarding.jsx, editable in Settings) — `?? true` so accounts
-  // that predate this preference still see them.
+  // that predate this preference still see them. Deals and Business used to
+  // be one combined toggle/page — kept separately gate-able since the split.
   const navItems = NAV_ITEMS.filter((item) => {
     if (item.to === '/trading') return user?.enabledModules?.trading ?? true;
-    if (item.to === '/deals') return user?.enabledModules?.deals ?? true;
+    if (item.to === '/deals') return user?.enabledModules?.pe ?? true;
+    if (item.to === '/businesses') return user?.enabledModules?.business ?? true;
     if (item.to === '/engineering') return user?.enabledModules?.engineering ?? false;
     return true;
   });

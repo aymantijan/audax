@@ -5,6 +5,8 @@ import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useHealthStore } from '../store/healthStore';
 import { useEngineeringStore } from '../store/engineeringStore';
+import { useDealsStore } from '../store/dealsStore';
+import { useBusinessStore } from '../store/businessStore';
 import { useSkillStore } from '../store/skillStore';
 import { useAuthStore } from '../store/authStore';
 import { calculateSynergies } from '../utils/synergy';
@@ -42,6 +44,11 @@ export function useSynergy() {
   const tradingEnabled = useAuthStore((s) => s.user?.enabledModules?.trading ?? true);
   const labEntries = useEngineeringStore((s) => s.labEntries);
   const engineeringProjects = useEngineeringStore((s) => s.projects);
+  const deals = useDealsStore((s) => s.deals);
+  const businesses = useBusinessStore((s) => s.businesses);
+  const peEnabled = useAuthStore((s) => s.user?.enabledModules?.pe ?? s.user?.enabledModules?.deals ?? true);
+  const businessEnabled = useAuthStore((s) => s.user?.enabledModules?.business ?? s.user?.enabledModules?.deals ?? true);
+  const dealsEnabled = peEnabled || businessEnabled;
 
   // Raw slices only (never a store getter returning a fresh object) — see the
   // useSyncExternalStore infinite-loop note in project memory. Derived values
@@ -91,8 +98,11 @@ export function useSynergy() {
         engineeringProjects,
         engineeringEnabled,
         tradingEnabled,
+        deals,
+        businesses,
+        dealsEnabled,
       }),
-    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled]
+    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, deals, businesses, dealsEnabled]
   );
 
   // Persist today's snapshot so we can show day-over-day trend

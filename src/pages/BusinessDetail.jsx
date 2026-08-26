@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Trash2, Pencil, Lightbulb, CheckCircle2, Target, Landmark,
-  LayoutList, TrendingUp, BookOpen, GanttChartSquare,
+  LayoutList, TrendingUp, BookOpen, GanttChartSquare, ArrowLeftRight,
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { useBusinessStore } from '../../store/businessStore';
-import GanttTab from './GanttChart';
-import { BUSINESS_CHART_OF_ACCOUNTS, BUSINESS_ACCOUNT_CLASSES, BUSINESS_ENTRY_TEMPLATES } from '../../utils/business-accounts';
-import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
-import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
+import { useBusinessStore } from '../store/businessStore';
+import GanttTab from './BusinessGanttChart';
+import { BUSINESS_CHART_OF_ACCOUNTS, BUSINESS_ACCOUNT_CLASSES, BUSINESS_ENTRY_TEMPLATES } from '../utils/business-accounts';
+import { fmtMAD, fmtDate, todayKey } from '../utils/formatters';
+import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
@@ -135,10 +135,13 @@ export default function BusinessDetail() {
   const tpl = BUSINESS_ENTRY_TEMPLATES.find((t) => t.id === templateId);
   const [entryForm, setEntryForm] = useState({ date: todayKey(), label: '', amount: '', debitAccount: '511', creditAccount: '611' });
 
+  const [transferModal, setTransferModal] = useState(false);
+  const [transferForm, setTransferForm] = useState({ direction: 'from-personal', amount: '', date: todayKey(), label: '' });
+
   if (!business) {
     return (
       <div className="max-w-3xl mx-auto">
-        <Card><EmptyState>Business introuvable. <Link to="/deals" className="text-accent">Retour à Deals</Link></EmptyState></Card>
+        <Card><EmptyState>Business introuvable. <Link to="/businesses" className="text-accent">Retour aux Business Projects</Link></EmptyState></Card>
       </div>
     );
   }
@@ -194,9 +197,28 @@ export default function BusinessDetail() {
     setEntryForm({ date: todayKey(), label: '', amount: '', debitAccount: tpl.debit.default, creditAccount: tpl.credit.default });
   };
 
+  const submitTransfer = (e) => {
+    e.preventDefault();
+    const res = store.transferCash(business.id, transferForm);
+    if (!res.ok) return alert(res.error);
+    setTransferModal(false);
+    setTransferForm({ direction: 'from-personal', amount: '', date: todayKey(), label: '' });
+  };
+
   const bs = store.getBalanceSheet(business.id);
   const cpcData = store.getCPC(business.id, todayKey().slice(0, 7));
   const treso = store.getTreasuryBalance(business.id);
+
+  // Runway indicatif : trésorerie / charge moyenne mensuelle (classe 6) sur
+  // les 90 derniers jours — 0 charge loggée => pas de runway calculable.
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  const recentCharges = business.journal
+    .filter((e) => e.date >= ninetyDaysAgo)
+    .flatMap((e) => e.lines)
+    .filter((l) => String(l.account)[0] === '6')
+    .reduce((a, l) => a + l.debit, 0);
+  const avgMonthlyBurn = recentCharges / 3;
+  const runwayMonths = avgMonthlyBurn > 0 ? treso / avgMonthlyBurn : null;
 
   const TABS = [
     { key: 'overview', label: 'Vue d\'ensemble', icon: LayoutList },
@@ -209,8 +231,8 @@ export default function BusinessDetail() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <Link to="/deals" className="flex items-center gap-1.5 text-sm text-mute hover:text-ink w-fit">
-        <ArrowLeft size={14} /> Deals
+      <Link to="/businesses" className="flex items-center gap-1.5 text-sm text-mute hover:text-ink w-fit">
+        <ArrowLeft size={14} /> Business Projects
       </Link>
 
       <div className="flex items-start justify-between gap-3">
@@ -245,6 +267,12 @@ export default function BusinessDetail() {
             <Stat label="Événements" value={business.events.length} sub={`${business.events.filter((e) => e.type === 'idea').length} idées · ${business.events.filter((e) => e.type === 'fact').length} faits`} />
             <Stat label="Trésorerie" value={fmtMAD(treso)} color={treso >= 0 ? undefined : 'var(--error)'} />
             <Stat label="KPIs suivis" value={business.kpis.length} />
+            <Stat
+              label="Runway"
+              value={runwayMonths == null ? '—' : `${runwayMonths.toFixed(1)} mois`}
+              sub={runwayMonths == null ? "pas de charges loggées" : `${fmtMAD(avgMonthlyBurn)}/mois`}
+              color={runwayMonths == null ? undefined : runwayMonths < 2 ? 'var(--error)' : runwayMonths < 6 ? 'var(--warning)' : 'var(--success)'}
+            />
           </div>
           <Card title="Timeline">
             <Timeline business={business} />
@@ -311,13 +339,19 @@ export default function BusinessDetail() {
                 {business.kpis.map((k) => {
                   const series = store.getKpiSeries(business.id, k.id);
                   const latest = series[series.length - 1];
+                  // Vert si la cible est atteinte, orange à 70%+, rouge en dessous —
+                  // pas de couleur sans cible définie (rien à comparer).
+                  const targetRatio = k.target && latest ? latest.value / k.target : null;
+                  const targetColor = targetRatio == null ? undefined : targetRatio >= 1 ? 'var(--success)' : targetRatio >= 0.7 ? 'var(--warning)' : 'var(--error)';
                   return (
                     <div key={k.id} className="bg-surface border border-line rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">{k.name}</span>
                         <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer le KPI "${k.name}" ?`)) store.deleteKpi(business.id, k.id); }}><Trash2 size={13} /></button>
                       </div>
-                      <div className="text-xl font-bold mb-2">{latest ? latest.value : '—'} <span className="text-xs text-mute font-normal">{k.unit}</span>{k.target != null && <span className="text-xs text-mute font-normal"> / {k.target} cible</span>}</div>
+                      <div className="text-xl font-bold mb-2" style={targetColor ? { color: targetColor } : undefined}>
+                        {latest ? latest.value : '—'} <span className="text-xs text-mute font-normal">{k.unit}</span>{k.target != null && <span className="text-xs text-mute font-normal"> / {k.target} cible</span>}
+                      </div>
                       {series.length > 1 && (
                         <ResponsiveContainer width="100%" height={100}>
                           <LineChart data={series}>
@@ -353,7 +387,10 @@ export default function BusinessDetail() {
             <Stat label="Produits (mois)" value={fmtMAD(cpcData.produitsCourants)} color="var(--success)" />
             <Stat label="Charges (mois)" value={fmtMAD(cpcData.chargesCourantes)} />
           </div>
-          <Button onClick={() => setEntryModal(true)}><span className="flex items-center gap-2"><BookOpen size={15} /> Nouvelle écriture</span></Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setEntryModal(true)}><span className="flex items-center gap-2"><BookOpen size={15} /> Nouvelle écriture</span></Button>
+            <Button variant="secondary" onClick={() => setTransferModal(true)}><span className="flex items-center gap-2"><ArrowLeftRight size={15} /> Virement avec mes finances perso</span></Button>
+          </div>
           <Card title={`Journal (${business.journal.length})`}>
             {business.journal.length ? (
               <div className="overflow-x-auto">
@@ -500,6 +537,42 @@ export default function BusinessDetail() {
           </div>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setEntryModal(false)}>Annuler</Button>
+            <Button type="submit">Enregistrer</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={transferModal} onClose={() => setTransferModal(false)} title="Virement avec mes finances perso">
+        <form onSubmit={submitTransfer} className="space-y-3">
+          <p className="text-xs text-mute">Enregistre un virement réel entre ta trésorerie personnelle (Finance) et celle de ce business — une écriture équilibrée est créée des deux côtés.</p>
+          <div className="flex gap-2">
+            {[
+              { value: 'from-personal', label: 'Apport → business' },
+              { value: 'to-personal', label: 'Retrait ← business' },
+            ].map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => setTransferForm({ ...transferForm, direction: d.value })}
+                className={`px-3 py-1.5 rounded-lg text-xs border cursor-pointer ${transferForm.direction === d.value ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute'}`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date">
+              <Input type="date" value={transferForm.date} onChange={(e) => setTransferForm({ ...transferForm, date: e.target.value })} />
+            </Field>
+            <Field label="Montant (DH)">
+              <Input type="number" step="any" min="0" value={transferForm.amount} onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Libellé (optionnel)">
+            <Input value={transferForm.label} onChange={(e) => setTransferForm({ ...transferForm, label: e.target.value })} placeholder={transferForm.direction === 'from-personal' ? `Apport à ${business.name}` : `Retrait de ${business.name}`} />
+          </Field>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setTransferModal(false)}>Annuler</Button>
             <Button type="submit">Enregistrer</Button>
           </div>
         </form>

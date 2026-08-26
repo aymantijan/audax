@@ -38,7 +38,15 @@ export default function Onboarding() {
   const addHabit = useHabitStore((s) => s.addHabit);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(() => new Set(STARTER_HABITS.slice(0, 4).map((h) => h.name)));
-  const [modules, setModules] = useState(() => ({ trading: user?.enabledModules?.trading ?? true, deals: user?.enabledModules?.deals ?? true, engineering: user?.enabledModules?.engineering ?? true }));
+  // pe/business both seed from the same first choice — Onboarding asks one
+  // combined "Deals & Business" question; independent on/off per page lives
+  // in Settings for anyone who later wants just one of the two.
+  const [modules, setModules] = useState(() => ({
+    trading: user?.enabledModules?.trading ?? true,
+    pe: user?.enabledModules?.pe ?? user?.enabledModules?.deals ?? true,
+    business: user?.enabledModules?.business ?? user?.enabledModules?.deals ?? true,
+    engineering: user?.enabledModules?.engineering ?? true,
+  }));
 
   const toggle = (name) =>
     setSelected((s) => {
@@ -97,15 +105,19 @@ export default function Onboarding() {
             <div className="space-y-2">
               {[
                 { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Multi-account journal, risk management, psychology tracking.' },
-                { key: 'deals', icon: Handshake, title: 'Deals', text: 'Pipeline/deal tracking for PE, GE, VC, RBF work.' },
+                // One combined question toggles BOTH `pe`/`business` at once — the two
+                // pages (Deals split from Business Projects, 2026-08-26) can be turned
+                // on/off independently later in Settings, but onboarding stays one step.
+                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Deals & Business', text: 'PE/GE/VC deal pipeline, plus end-to-end business project tracking (phases, KPIs, accounting).' },
                 { key: 'engineering', icon: FlaskConical, title: 'Engineering', text: 'Lab journal + design-project pipeline — chemical engineering & related.' },
               ].map((m) => {
-                const on = modules[m.key];
+                const keys = m.keys || [m.key];
+                const on = keys.every((k) => modules[k]);
                 return (
                   <button
                     key={m.key}
                     type="button"
-                    onClick={() => setModules((s) => ({ ...s, [m.key]: !s[m.key] }))}
+                    onClick={() => setModules((s) => { const next = { ...s }; for (const k of keys) next[k] = !on; return next; })}
                     className={`w-full flex items-start gap-3 text-left border rounded-lg px-4 py-3 cursor-pointer transition-colors ${
                       on ? 'border-accent bg-accent/10' : 'border-line hover:text-ink'
                     }`}

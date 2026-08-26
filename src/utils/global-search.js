@@ -4,6 +4,7 @@ import { useHabitStore } from '../store/habitStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useBusinessStore } from '../store/businessStore';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { SKILL_MAP } from '../utils/constants';
 
@@ -49,6 +50,13 @@ export function buildSearchIndex() {
   const deals = useDealsStore.getState().deals;
   for (const d of deals) {
     items.push({ id: `deal-${d.id}`, domain: 'Deals', label: d.name, sub: d.stageStatus, to: `/deals/${d.id}` });
+  }
+
+  // Never indexed before the Deals/Business Projects page split (2026-08-26) —
+  // Business Projects had no global-search presence at all.
+  const businesses = useBusinessStore.getState().businesses;
+  for (const b of businesses) {
+    items.push({ id: `biz-${b.id}`, domain: 'Business', label: b.name, sub: b.sector || b.status, to: `/businesses/${b.id}` });
   }
 
   const { labEntries, projects: engProjects } = useEngineeringStore.getState();

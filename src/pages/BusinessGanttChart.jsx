@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2, FileDown, FileText, ZoomIn, ZoomOut, ChevronDown, ChevronRight, Link2, Diamond, AlertTriangle } from 'lucide-react';
-import { diffDays, addDaysKey, toDate, monthGroups, durationDays, computeCriticalPath, wouldCreateCycle } from '../../utils/gantt';
-import { todayKey } from '../../utils/formatters';
-import { toast } from '../../store/uiStore';
-import { Card, Button, Field, Input, Select, Modal, EmptyState } from '../../components/common/ui';
+import { diffDays, addDaysKey, toDate, monthGroups, durationDays, computeCriticalPath, wouldCreateCycle } from '../utils/gantt';
+import { todayKey } from '../utils/formatters';
+import { toast } from '../store/uiStore';
+import { Card, Button, Field, Input, Select, Modal, EmptyState } from '../components/common/ui';
 
 export const TASK_STATUS = [
   { value: 'todo', label: 'À faire', color: 'var(--text-secondary)' },

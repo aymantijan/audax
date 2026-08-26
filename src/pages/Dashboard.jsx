@@ -10,6 +10,7 @@ import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
+import { useBusinessStore } from '../store/businessStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
@@ -33,12 +34,14 @@ export default function Dashboard() {
   // stats, the equity curve, and a "Deals" life-balance bar for modules
   // they explicitly turned off.
   const tradingEnabled = user?.enabledModules?.trading ?? true;
-  const dealsEnabled = user?.enabledModules?.deals ?? true;
+  const peEnabled = user?.enabledModules?.pe ?? true;
+  const businessEnabled = user?.enabledModules?.business ?? true;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
   const skills = useSkillStore((s) => s.skills);
   const deals = useDealsStore((s) => s.deals);
+  const businesses = useBusinessStore((s) => s.businesses);
   const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
@@ -98,7 +101,8 @@ export default function Dashboard() {
     { label: 'Skills', value: Math.round((Object.values(skills).filter((s) => !s.locked).length / Object.values(skills).length) * 100), sub: `${Object.values(skills).filter((s) => !s.locked).length}/${Object.values(skills).length} unlocked`, color: 'var(--accent-primary)' },
     { label: 'Courses', value: courses.length ? Math.round((courses.filter((c) => c.status === 'completed').length / courses.length) * 100) : 0, sub: `${courses.filter((c) => c.status === 'completed').length}/${courses.length} completed`, color: 'var(--accent-secondary)' },
     { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
-    ...(dealsEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
+    ...(peEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
+    ...(businessEnabled ? [{ label: 'Business', value: Math.min(100, businesses.reduce((a, b) => a + b.phases.filter((p) => p.status === 'done').length, 0) * 20), sub: businesses.length ? `${businesses.length} suivi${businesses.length > 1 ? 's' : ''}` : 'A-to-Z tracking', color: 'var(--accent-secondary)' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -476,5 +480,5 @@ export default function Dashboard() {
 }
 
 function domainRoute(domain) {
-  return { trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering' }[domain] || '/';
+  return { trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', deals: '/deals' }[domain] || '/';
 }

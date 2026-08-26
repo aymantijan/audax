@@ -5,9 +5,36 @@ import { validateEntry, accountBalances, balanceSheet, cpc, financialAnalysis, t
 import { BUSINESS_ACCOUNT_MAP } from '../utils/business-accounts';
 import { cascadeSchedule, pruneDependencies } from '../utils/gantt';
 import { useSkillStore } from './skillStore';
+import { useAccountingStore } from './accountingStore';
 import { toast } from './uiStore';
+import { evaluateBadges } from '../utils/badges';
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
+
+// General "founder/operator" skills — Growth Equity track ids read as
+// scaling/GTM competencies for someone RUNNING a business, unlike the
+// Private Equity ids (pe-deal-sourcing/pe-acquisition-valuation) used to be
+// reused here — those are about investing in other people's companies, not
+// building your own, and made no sense once Business Projects became its own
+// page (2026-08-26) distinct from Deals/PE. 'ge-thesis' has no prereqs (starts
+// unlocked, like dealsStore's flat award-on-log skill); 'ge-scaling-strategy'
+// requires ge-thesis at Lv2 (locked at first — same intentional gating as the
+// rest of the skill tree, not a bug).
+const EFFORT_SKILL = 'ge-thesis';
+const MILESTONE_SKILL = 'ge-scaling-strategy';
+
+// Same shape/mechanism as dealsStore's/healthStore's BADGE_DEFS.
+const BADGE_DEFS = [
+  { id: 'first-business', name: 'First Business', tier: 'bronze', check: (s) => s.businesses.length >= 1 },
+  { id: 'idea-machine', name: 'Idea Machine', tier: 'bronze', check: (s) => s.businesses.flatMap((b) => b.events).filter((e) => e.type === 'idea').length >= 10 },
+  { id: 'milestone-hitter', name: 'Milestone Hitter', tier: 'bronze', check: (s) => s.businesses.some((b) => b.phases.some((p) => p.status === 'done')) },
+  { id: 'kpi-tracker', name: 'KPI Tracker', tier: 'silver', check: (s) => s.businesses.reduce((a, b) => a + b.kpiLogs.length, 0) >= 15 },
+  { id: 'bookkeeper', name: 'Bookkeeper', tier: 'silver', check: (s) => s.businesses.reduce((a, b) => a + b.journal.length, 0) >= 25 },
+  { id: 'serial-founder', name: 'Serial Founder', tier: 'silver', check: (s) => s.businesses.length >= 3 },
+  { id: 'fully-planned', name: 'Fully Planned', tier: 'silver', check: (s) => s.businesses.some((b) => (b.tasks || []).length >= 8) },
+  { id: 'cash-positive', name: 'Cash Positive', tier: 'gold', check: (s) => s.businesses.some((b) => treasuryBalance(b.journal) > 0) },
+  { id: 'operator', name: 'Operator', tier: 'gold', check: (s) => s.businesses.some((b) => b.status === 'active' && b.phases.filter((p) => p.status === 'done').length >= 3) },
+];
 
 // Suivi de business "de A à Z" : phases (jalons datés), événements (idées &
 // faits horodatés — la matière première de la timeline), KPIs + leurs relevés,
@@ -19,6 +46,13 @@ export const useBusinessStore = create(
   persist(
     (set, get) => ({
       businesses: [], // [{ id, name, sector, description, status, createdAt, updatedAt, phases:[], tasks:[], events:[], kpis:[], kpiLogs:[], journal:[] }]
+      awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
+
+      checkBadges: () => {
+        const awardedBadges = evaluateBadges(BADGE_DEFS, get(), MILESTONE_SKILL);
+        if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
+      },
+      getBadges: () => BADGE_DEFS.map((b) => ({ id: b.id, name: b.name, tier: b.tier, earned: get().awardedBadges.includes(b.id) })),
 
       // ─────────── Businesses ───────────
       addBusiness: (data) => {
@@ -39,8 +73,9 @@ export const useBusinessStore = create(
           tasks: [],
         };
         set({ businesses: [...get().businesses, biz] });
-        useSkillStore.getState().awardXP('pe-deal-sourcing', 5, `business créé : ${biz.name}`);
+        useSkillStore.getState().awardXP(EFFORT_SKILL, 5, `business créé : ${biz.name}`);
         toast(`Business créé : ${biz.name}`, 'success');
+        get().checkBadges();
         return { ok: true, id: biz.id };
       },
       editBusiness: (id, updates) => set({ businesses: get().businesses.map((b) => (b.id === id ? stamp({ ...b, ...updates }) : b)) }),
@@ -77,9 +112,10 @@ export const useBusinessStore = create(
         // XP au passage à 'done' — un jalon franchi, comparable à une phase Prop
         // Firm passée (Trading) : effort et rareté similaires pour un business.
         if (updates.status === 'done' && !wasDone && biz) {
-          useSkillStore.getState().awardXP('pe-acquisition-valuation', 15, `phase franchie : ${phase?.name} (${biz.name})`);
+          useSkillStore.getState().awardXP(MILESTONE_SKILL, 15, `phase franchie : ${phase?.name} (${biz.name})`);
           toast(`Phase franchie : ${phase?.name} · +15 XP`, 'success');
         }
+        get().checkBadges();
       },
       deletePhase: (bizId, phaseId) =>
         set({
@@ -123,6 +159,7 @@ export const useBusinessStore = create(
         };
         const next = cascadeSchedule([...(biz.tasks || []), task]);
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: next }) : b)) });
+        get().checkBadges();
         return { ok: true, id: task.id };
       },
       editTask: (bizId, taskId, updates) => {
@@ -139,10 +176,13 @@ export const useBusinessStore = create(
         const next = cascadeSchedule((biz.tasks || []).map((t) => (t.id === taskId ? merged : t)));
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: next }) : b)) });
         if (clean.status === 'done' && !wasDone) {
-          useSkillStore.getState().awardXP('pe-deal-sourcing', 5, `tâche terminée : ${task.name} (${biz.name})`);
+          useSkillStore.getState().awardXP(EFFORT_SKILL, 5, `tâche terminée : ${task.name} (${biz.name})`);
           toast(`Tâche terminée : ${task.name} · +5 XP`, 'success');
         }
       },
+      // NOTE: task completion isn't stamped with a `completedAt` (unlike
+      // dealsStore's tasks) — see synergy.js's dealsScore, which relies on
+      // events/kpiLogs/journal timestamps for Business's monthly signal instead.
       deleteTask: (bizId, taskId) =>
         set({
           businesses: get().businesses.map((b) =>
@@ -165,7 +205,8 @@ export const useBusinessStore = create(
           createdAt: Date.now(),
         };
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, events: [...b.events, event] }) : b)) });
-        useSkillStore.getState().awardXP('pe-deal-sourcing', 2, `${event.type === 'idea' ? 'idée' : 'fait'} loggé : ${event.title}`);
+        useSkillStore.getState().awardXP(EFFORT_SKILL, 2, `${event.type === 'idea' ? 'idée' : 'fait'} loggé : ${event.title}`);
+        get().checkBadges();
         return { ok: true, id: event.id };
       },
       editEvent: (bizId, eventId, updates) =>
@@ -189,6 +230,7 @@ export const useBusinessStore = create(
       logKpiValue: (bizId, kpiId, date, value) => {
         const log = { id: uid(), kpiId, date: date || new Date().toISOString().slice(0, 10), value: Number(value) || 0, createdAt: Date.now() };
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, kpiLogs: [...b.kpiLogs.filter((l) => !(l.kpiId === kpiId && l.date === log.date)), log] }) : b)) });
+        get().checkBadges();
       },
       deleteKpiLog: (bizId, logId) =>
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, kpiLogs: b.kpiLogs.filter((l) => l.id !== logId) }) : b)) }),
@@ -215,10 +257,56 @@ export const useBusinessStore = create(
         award('double-entry-lv1', 2, `écriture business : ${clean.label}`);
         award('journal-keeper-lv1', 1, `écriture business : ${clean.label}`);
         toast(`Écriture enregistrée : ${clean.label}`, 'success');
+        get().checkBadges();
         return { ok: true, id: clean.id };
       },
       deleteEntry: (bizId, entryId) =>
         set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, journal: b.journal.filter((e) => e.id !== entryId) }) : b)) }),
+
+      // ─────────── Trésorerie perso ↔ business ───────────
+      // Un business n'existait jusqu'ici que dans son propre journal isolé —
+      // un virement réel (apport personnel → business, ou retrait business →
+      // perso) ne touchait jamais accountingStore, donc n'apparaissait ni dans
+      // le net worth ni dans la trésorerie perso (contrairement à Trading, dont
+      // la valeur de compte alimente déjà Dashboard). Cette action écrit DEUX
+      // écritures en partie double équilibrées, une de chaque côté, contre le
+      // compte 111 (Capital / apports) — présent dans les deux plans comptables
+      // (business-accounts.js et chart-of-accounts.js) — la même simplification
+      // que le reste de cette compta "légère" : pas de compte "participation"
+      // dédié, juste un mouvement de capital.
+      transferCash: (bizId, { direction, amount, date, label }) => {
+        const amt = Number(amount);
+        const biz = get().getBusiness(bizId);
+        if (!biz) return { ok: false, error: 'Business introuvable.' };
+        if (!amt || amt <= 0) return { ok: false, error: 'Montant invalide.' };
+        const d = date || new Date().toISOString().slice(0, 10);
+        const lbl = label?.trim() || (direction === 'to-personal' ? `Retrait de ${biz.name}` : `Apport à ${biz.name}`);
+
+        // Côté business : 'to-personal' réduit sa trésorerie et son capital ;
+        // 'from-personal' augmente les deux.
+        const bizLines =
+          direction === 'to-personal'
+            ? [{ account: '111', debit: amt, credit: 0 }, { account: '511', debit: 0, credit: amt }]
+            : [{ account: '511', debit: amt, credit: 0 }, { account: '111', debit: 0, credit: amt }];
+        const bizRes = get().addEntry(bizId, { date: d, label: lbl, lines: bizLines });
+        if (!bizRes.ok) return bizRes;
+
+        // Côté perso (accountingStore) : symétrique — l'argent qui sort du
+        // business arrive dans ma trésorerie perso (et inversement).
+        const personalLines =
+          direction === 'to-personal'
+            ? [{ account: '511', debit: amt, credit: 0 }, { account: '111', debit: 0, credit: amt }]
+            : [{ account: '111', debit: amt, credit: 0 }, { account: '511', debit: 0, credit: amt }];
+        const personalRes = useAccountingStore.getState().addEntry({ date: d, label: `${lbl} (${biz.name})`, lines: personalLines });
+        if (!personalRes.ok) {
+          // Rare (perso account map rejects 111/511 — shouldn't happen since
+          // both are base accounts) — undo the business-side entry so the two
+          // ledgers never drift out of sync with each other.
+          get().deleteEntry(bizId, bizRes.id);
+          return personalRes;
+        }
+        return { ok: true };
+      },
 
       getBalances: (bizId) => accountBalances(get().getBusiness(bizId)?.journal || []),
       getBalanceSheet: (bizId, until) => balanceSheet(get().getBusiness(bizId)?.journal || [], until, BUSINESS_ACCOUNT_MAP),
@@ -226,7 +314,7 @@ export const useBusinessStore = create(
       getAnalysis: (bizId, until) => financialAnalysis(get().getBusiness(bizId)?.journal || [], until, BUSINESS_ACCOUNT_MAP),
       getTreasuryBalance: (bizId, until) => treasuryBalance(get().getBusiness(bizId)?.journal || [], until),
 
-      resetAll: () => set({ businesses: [] }),
+      resetAll: () => set({ businesses: [], awardedBadges: [] }),
     }),
     { name: 'audax-business' }
   )

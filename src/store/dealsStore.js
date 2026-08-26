@@ -62,12 +62,15 @@ export const useDealsStore = create(
       deals: [],
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
 
-      // NOTE: 'three-statement-modeling-lv1' (not e.g. 'pe-deal-sourcing') —
-      // dealLogAwards() above references several skill ids that don't exist
-      // in skill-tree-data.js (pe-deal-sourcing, pe-acquisition-valuation),
-      // a pre-existing bug where those awardXP calls silently no-op. This one
-      // is confirmed real and unlocked from the start, so badge XP here
-      // actually lands instead of quietly doing nothing.
+      // NOTE (corrected 2026-08-26 — the prior comment here was wrong):
+      // 'pe-deal-sourcing' and 'pe-acquisition-valuation' ARE real ids
+      // (professional-skills.js, merged into SKILL_MAP) — dealLogAwards()'s
+      // awards aren't dropped. 'three-statement-modeling-lv1' and
+      // 'pe-deal-sourcing' both start unlocked (empty prereqs); only
+      // 'pe-acquisition-valuation' starts locked (needs dcf-analysis-lv1 +
+      // comparables-lv1 at Lv2) and silently no-ops its award until then —
+      // same intentional locked-skill behavior as everywhere else in the app,
+      // not a bug. Badge XP below always uses an unlocked-from-start id.
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'three-statement-modeling-lv1');
         if (awardedBadges !== get().awardedBadges) set({ awardedBadges });
@@ -86,6 +89,11 @@ export const useDealsStore = create(
       },
 
       editDeal: (id, updates) => set({ deals: get().deals.map((d) => (d.id === id ? { ...d, ...updates, size: Number(updates.size ?? d.size), updatedAt: Date.now() } : d)) }),
+
+      // Simplified LBO/growth returns model — see utils/deal-valuation.js. Stored
+      // as-is (raw form values, not the computed returns) so the Modeling section
+      // recomputes live and never goes stale relative to what's on screen.
+      setDealModel: (id, model) => set({ deals: get().deals.map((d) => (d.id === id ? { ...d, model, updatedAt: Date.now() } : d)) }),
 
       // Jumping to a stage always resets its status to 'not-started' (a fresh
       // gate to clear) unless a status is passed explicitly — e.g. the stepper

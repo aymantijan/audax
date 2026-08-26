@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Pencil, Plus, Trash2, ListChecks, CalendarPlus, CalendarCheck, Clock, ArrowRight, Check } from 'lucide-react';
 import { useDealsStore, suggestTaskAward } from '../store/dealsStore';
+import { computeDealReturns, blankDealModel } from '../utils/deal-valuation';
 import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_STAGES, DEAL_STAGE_STATUS, SKILL_MAP } from '../utils/constants';
-import { fmtMoney, fmtDateShort } from '../utils/formatters';
+import { fmtMoney, fmtDateShort, fmtPct } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -39,6 +40,49 @@ function StageStepper({ deal, onJump }) {
   );
 }
 
+// Simplified, indicative LBO/growth returns model — see utils/deal-valuation.js
+// for the math. Debt/paydown fields only make sense for a leveraged deal
+// (LBO); Growth/VC are shown as an all-equity calc (entryDebtPct locked at 0).
+function DealModeling({ deal, form, setForm, onSave }) {
+  const isLbo = deal.type === 'LBO';
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const returns = computeDealReturns({
+    entryEbitda: Number(form.entryEbitda) || 0,
+    entryMultiple: Number(form.entryMultiple) || 0,
+    entryDebtPct: isLbo ? Number(form.entryDebtPct) || 0 : 0,
+    exitMultiple: Number(form.exitMultiple) || Number(form.entryMultiple) || 0,
+    ebitdaGrowthPct: Number(form.ebitdaGrowthPct) || 0,
+    debtPaydownPct: isLbo ? Number(form.debtPaydownPct) || 0 : 0,
+    holdYears: Number(form.holdYears) || 1,
+  });
+  const hasInputs = Number(form.entryEbitda) > 0 && Number(form.entryMultiple) > 0;
+
+  return (
+    <Card title={isLbo ? 'Modeling — LBO' : 'Modeling — Valuation'} action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => onSave(form)}>Save model</Button>}>
+      <p className="text-xs text-mute mb-3">Indicative only — a simplified entry/exit bridge, not a full 3-statement model. Enter your assumptions to get a directional IRR/MOIC.</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <Field label="Entry EBITDA ($)"><Input type="number" step="any" value={form.entryEbitda} onChange={set('entryEbitda')} /></Field>
+        <Field label="Entry multiple (x)"><Input type="number" step="any" value={form.entryMultiple} onChange={set('entryMultiple')} /></Field>
+        {isLbo && <Field label="Debt (% of EV)"><Input type="number" step="any" min="0" max="100" value={form.entryDebtPct} onChange={set('entryDebtPct')} /></Field>}
+        <Field label="Hold period (years)"><Input type="number" step="any" min="0.25" value={form.holdYears} onChange={set('holdYears')} /></Field>
+        <Field label="EBITDA growth (%/yr)"><Input type="number" step="any" value={form.ebitdaGrowthPct} onChange={set('ebitdaGrowthPct')} /></Field>
+        <Field label="Exit multiple (x)"><Input type="number" step="any" placeholder="= entry" value={form.exitMultiple} onChange={set('exitMultiple')} /></Field>
+        {isLbo && <Field label="Debt paydown (% of entry debt)"><Input type="number" step="any" min="0" max="100" value={form.debtPaydownPct} onChange={set('debtPaydownPct')} /></Field>}
+      </div>
+      {hasInputs ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-line">
+          <Stat label="Entry EV" value={fmtMoney(returns.entryEV)} />
+          <Stat label="Entry equity" value={fmtMoney(returns.entryEquity)} sub={isLbo ? `${fmtMoney(returns.entryDebt)} debt` : undefined} />
+          <Stat label="Exit equity" value={fmtMoney(returns.exitEquity)} />
+          <Stat label="MOIC / IRR" value={returns.moic != null ? `${returns.moic.toFixed(2)}x` : '—'} sub={returns.irr != null ? `${fmtPct(returns.irr * 100, 1)} IRR` : undefined} color="var(--success)" />
+        </div>
+      ) : (
+        <p className="text-xs text-mute">Fill in entry EBITDA and multiple to see indicative returns.</p>
+      )}
+    </Card>
+  );
+}
+
 const dealFields = [
   { name: 'name', label: 'Deal name', type: 'text' },
   { name: 'type', label: 'Type', type: 'select', options: DEAL_TYPES },
@@ -53,15 +97,20 @@ const dealFields = [
 export default function DealDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { deals, editDeal, deleteDeal, setDealStage, addTask, updateTask, setTaskStatus, deleteTask, setTaskCalendarEvent } = useDealsStore();
+  const { deals, editDeal, deleteDeal, setDealStage, addTask, updateTask, setTaskStatus, deleteTask, setTaskCalendarEvent, setDealModel } = useDealsStore();
   const [editDealModal, setEditDealModal] = useState(false);
   const [taskModal, setTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(blankTask());
   const [touchedSkill, setTouchedSkill] = useState(false);
   const [schedulingTask, setSchedulingTask] = useState(null);
-
   const deal = deals.find((d) => d.id === id);
+  const [modelForm, setModelForm] = useState(() => deal?.model || blankDealModel());
+  // Re-seed the form when navigating between deals (id changes) — DealDetail
+  // doesn't remount on a param-only route change, so without this the form
+  // would silently keep showing the previous deal's model values.
+  useEffect(() => { setModelForm(deal?.model || blankDealModel()); }, [deal?.id]);
+
   if (!deal) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -156,6 +205,8 @@ export default function DealDetail() {
           )}
         </div>
       </Card>
+
+      <DealModeling deal={deal} form={modelForm} setForm={setModelForm} onSave={(m) => setDealModel(deal.id, m)} />
 
       {tasks.length > 0 && (
         <Card title="Progress">
