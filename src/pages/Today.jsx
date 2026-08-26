@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
+  Handshake, Rocket,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -10,6 +11,8 @@ import { useTradingStore } from '../store/tradingStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
 import { useEngineeringStore } from '../store/engineeringStore';
+import { useDealsStore } from '../store/dealsStore';
+import { useBusinessStore } from '../store/businessStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { isHabitDueOn, habitStreak } from '../utils/calculations';
@@ -64,6 +67,15 @@ export default function Today() {
   const { labEntries, projects: engProjects } = useEngineeringStore();
   const loggedLabToday = labEntries.some((e) => e.date === today);
   const activeEngProjects = engProjects.filter((p) => !(p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done'));
+
+  // ---- Deals & Business ---- (added 2026-08-26, same session as the
+  // Deals/Business Projects page split — Today.jsx had a card for every other
+  // gate-able domain except this one).
+  const deals = useDealsStore((s) => s.deals);
+  const businesses = useBusinessStore((s) => s.businesses);
+  const ongoingDeals = deals.filter((d) => d.status === 'ongoing');
+  const openDealTasks = ongoingDeals.reduce((a, d) => a + (d.tasks || []).filter((t) => t.status !== 'done').length, 0);
+  const activeBusinesses = businesses.filter((b) => b.status === 'active');
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -161,6 +173,12 @@ export default function Today() {
       </Card>
 
       {/* ---- Trading ---- */}
+      {/* BUGFIX (2026-08-26): same module-gating bug already fixed on Dashboard.jsx
+          and Navbar/MobileTabBar — this card rendered unconditionally, showing the
+          account/P&L/risk banners to a user who explicitly turned Trading off in
+          Settings/Onboarding. Today.jsx already gates its Engineering section this
+          way (see below); Trading never had the equivalent check. */}
+      {(user?.enabledModules?.trading ?? true) && (
       <Card
         title="Trading"
         action={
@@ -197,6 +215,7 @@ export default function Today() {
           </div>
         )}
       </Card>
+      )}
 
       {/* ---- Finance: échéances ---- */}
       {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
@@ -279,6 +298,26 @@ export default function Today() {
               ))}
             </ul>
           )}
+        </Card>
+      )}
+
+      {/* ---- Deals & Business ---- */}
+      {((user?.enabledModules?.pe ?? true) || (user?.enabledModules?.business ?? true)) && (ongoingDeals.length > 0 || businesses.length > 0) && (
+        <Card title="Deals & Business">
+          <div className="flex items-center gap-6 text-sm flex-wrap">
+            {(user?.enabledModules?.pe ?? true) && (
+              <Link to="/deals" className="flex items-center gap-1.5 hover:text-accent">
+                <Handshake size={15} className="text-mute" />
+                <span>{ongoingDeals.length} deal{ongoingDeals.length !== 1 ? 's' : ''} en cours{openDealTasks > 0 ? ` · ${openDealTasks} tâche${openDealTasks !== 1 ? 's' : ''} ouverte${openDealTasks !== 1 ? 's' : ''}` : ''}</span>
+              </Link>
+            )}
+            {(user?.enabledModules?.business ?? true) && (
+              <Link to="/businesses" className="flex items-center gap-1.5 hover:text-accent">
+                <Rocket size={15} className="text-mute" />
+                <span>{activeBusinesses.length} business actif{activeBusinesses.length !== 1 ? 's' : ''} ({businesses.length} suivi{businesses.length !== 1 ? 's' : ''})</span>
+              </Link>
+            )}
+          </div>
         </Card>
       )}
 
