@@ -22,13 +22,17 @@ const DIRECT_ITEMS = [
 const NAV_GROUPS = [
   {
     label: 'Deals',
-    items: [{ to: '/deals', label: 'Deals (PE)', enabledKey: 'pe', defaultEnabled: true }],
+    items: [
+      { to: '/deals', label: 'Deals (PE)', enabledKey: 'pe', defaultEnabled: true },
+      { to: '/fundraising', label: 'Fundraising', enabledKey: 'fundraising', defaultEnabled: false },
+    ],
   },
   {
     label: 'Growth',
     items: [
       { to: '/learning', label: 'Learning' },
       { to: '/focus', label: 'Deep Work', enabledKey: 'focus', defaultEnabled: false },
+      { to: '/creative', label: 'Creative', enabledKey: 'creative', defaultEnabled: false },
     ],
   },
   {
@@ -41,6 +45,7 @@ const NAV_GROUPS = [
       { to: '/networking', label: 'Networking', enabledKey: 'networking', defaultEnabled: false },
       { to: '/content', label: 'Content', enabledKey: 'content', defaultEnabled: false },
       { to: '/projects', label: 'Projects', enabledKey: 'projects', defaultEnabled: false },
+      { to: '/freelance', label: 'Freelance', enabledKey: 'freelance', defaultEnabled: false },
     ],
   },
   {
@@ -49,6 +54,7 @@ const NAV_GROUPS = [
       { to: '/habits', label: 'Habits' },
       { to: '/health', label: 'Health' },
       { to: '/finance', label: 'Finance' },
+      { to: '/real-estate', label: 'Real Estate', enabledKey: 'realEstate', defaultEnabled: false },
     ],
   },
   {

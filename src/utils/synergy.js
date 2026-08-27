@@ -15,6 +15,8 @@ export function calculateSynergies({
   healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, businesses, businessEnabled = true,
   contacts, applications, posts, personalProjects, networkingEnabled = false, careerEnabled = false, contentEnabled = false, projectsEnabled = false,
   focusSessions, focusEnabled = false,
+  investors, engagements, creativeWorks, creativeShowcases, properties,
+  fundraisingEnabled = false, freelanceEnabled = false, creativeEnabled = false, realEstateEnabled = false,
 }) {
   const monthStart = startOfMonth(new Date());
 
@@ -50,6 +52,12 @@ export function calculateSynergies({
   if (contentEnabled) scores.content = contentScore(posts || [], monthStart);
   if (projectsEnabled) scores.projects = projectsScore(personalProjects || [], monthStart);
   if (focusEnabled) scores.focus = focusScore(focusSessions || [], monthStart);
+  // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — four
+  // persona-oriented domains, same opt-in-aware gating as the block above.
+  if (fundraisingEnabled) scores.fundraising = fundraisingScore(investors || [], monthStart);
+  if (freelanceEnabled) scores.freelance = freelanceScore(engagements || [], monthStart);
+  if (creativeEnabled) scores.creative = creativeScore(creativeWorks || [], creativeShowcases || [], monthStart);
+  if (realEstateEnabled) scores.realEstate = realEstateScore(properties || [], monthStart);
 
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
@@ -297,6 +305,48 @@ function focusScore(sessions, monthStart) {
   const monthStartMs = monthStart.getTime();
   const monthMinutes = sessions.filter((s) => s.createdAt >= monthStartMs).reduce((a, s) => a + s.durationMinutes, 0);
   return r1(clamp(monthMinutes / 3));
+}
+
+// New investor contacts this month (outreach) + stage advances this month
+// (real progress through the raise funnel) — same shape as careerScore.
+function fundraisingScore(investors, monthStart) {
+  if (!investors.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthNew = investors.filter((i) => i.createdAt >= monthStartMs).length;
+  const monthAdvances = investors
+    .flatMap((i) => i.stageHistory || [])
+    .filter((h) => h.stage !== 'Contacted' && new Date(`${h.date}T00:00:00`).getTime() >= monthStartMs).length;
+  return r1(clamp(clamp(monthNew * 15) * 0.4 + clamp(monthAdvances * 20) * 0.6));
+}
+
+// Hours logged this month + payments received this month — same
+// effort/outcome split as projectsScore's tasks/new-projects shape.
+function freelanceScore(engagements, monthStart) {
+  if (!engagements.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthHours = engagements.flatMap((e) => e.timeLogs || []).filter((t) => t.createdAt >= monthStartMs).reduce((a, t) => a + t.hours, 0);
+  const monthPayments = engagements.flatMap((e) => e.payments || []).filter((p) => p.createdAt >= monthStartMs).length;
+  return r1(clamp(clamp(monthHours * 4) * 0.6 + clamp(monthPayments * 20) * 0.4));
+}
+
+// Works completed this month + showcases this month — mirrors
+// projectsScore/contentScore's "effort + output" shape.
+function creativeScore(works, showcases, monthStart) {
+  if (!works.length && !showcases.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthCompleted = works.filter((w) => w.status === 'Terminé' && w.updatedAt >= monthStartMs).length;
+  const monthShowcases = showcases.filter((s) => s.createdAt >= monthStartMs).length;
+  return r1(clamp(clamp(monthCompleted * 20) * 0.5 + clamp(monthShowcases * 25) * 0.5));
+}
+
+// Rent logged this month + any property acquired this month — same monthly-
+// activity shape as businessScore.
+function realEstateScore(properties, monthStart) {
+  if (!properties.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthRentLogs = properties.flatMap((p) => p.rentLogs || []).filter((l) => l.createdAt >= monthStartMs).length;
+  const monthAcquired = properties.filter((p) => (p.status === 'Acquis' || p.status === 'Loué') && p.updatedAt >= monthStartMs).length;
+  return r1(clamp(clamp(monthRentLogs * 15) * 0.6 + clamp(monthAcquired * 30) * 0.4));
 }
 
 export function synergyColor(score) {

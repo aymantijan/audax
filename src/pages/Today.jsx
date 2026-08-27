@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
-  Handshake, Rocket, Users, Briefcase, Megaphone, FolderKanban, Timer,
+  Handshake, Rocket, Users, Briefcase, Megaphone, FolderKanban, Timer, Palette, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -18,6 +18,10 @@ import { useCareerStore } from '../store/careerStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useContentStore } from '../store/contentStore';
 import { useFocusStore } from '../store/focusStore';
+import { useFundraisingStore } from '../store/fundraisingStore';
+import { useFreelanceStore } from '../store/freelanceStore';
+import { useCreativeStore } from '../store/creativeStore';
+import { useRealEstateStore } from '../store/realEstateStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { isHabitDueOn, habitStreak } from '../utils/calculations';
@@ -99,6 +103,18 @@ export default function Today() {
   const activePersonalProjects = personalProjects.filter((p) => p.status === 'active');
   const focusStore = useFocusStore();
   const todayFocusMinutes = useMemo(() => focusStore.getTodayMinutes(today), [focusStore.sessions, today]);
+
+  // ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) —
+  // same combined-card reasoning as Networking/Career/Content/Projects above.
+  const investors = useFundraisingStore((s) => s.investors);
+  const openInvestors = investors.filter((i) => !['Closed', 'Passed'].includes(i.stage));
+  const engagements = useFreelanceStore((s) => s.engagements);
+  const activeEngagements = engagements.filter((e) => e.status === 'Actif');
+  const creativeStore = useCreativeStore();
+  const creativeWorks = creativeStore.works;
+  const inProgressWorks = creativeWorks.filter((w) => w.status === 'En cours');
+  const properties = useRealEstateStore((s) => s.properties);
+  const ownedProperties = properties.filter((p) => p.status === 'Acquis' || p.status === 'Loué');
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -410,6 +426,47 @@ export default function Today() {
                 ))}
               </div>
             )}
+          </Card>
+        );
+      })()}
+
+      {/* ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) */}
+      {(() => {
+        const fundraisingOn = user?.enabledModules?.fundraising ?? false;
+        const freelanceOn = user?.enabledModules?.freelance ?? false;
+        const creativeOn = user?.enabledModules?.creative ?? false;
+        const realEstateOn = user?.enabledModules?.realEstate ?? false;
+        const anyOn = fundraisingOn || freelanceOn || creativeOn || realEstateOn;
+        const anyData = investors.length > 0 || engagements.length > 0 || creativeWorks.length > 0 || properties.length > 0;
+        if (!anyOn || !anyData) return null;
+        return (
+          <Card title="Fundraising, Freelance, Creative & Real Estate">
+            <div className="flex items-center gap-6 text-sm flex-wrap">
+              {fundraisingOn && investors.length > 0 && (
+                <Link to="/fundraising" className="flex items-center gap-1.5 hover:text-accent">
+                  <Rocket size={15} className="text-mute" />
+                  <span>{openInvestors.length} investisseur{openInvestors.length !== 1 ? 's' : ''} en cours</span>
+                </Link>
+              )}
+              {freelanceOn && engagements.length > 0 && (
+                <Link to="/freelance" className="flex items-center gap-1.5 hover:text-accent">
+                  <Briefcase size={15} className="text-mute" />
+                  <span>{activeEngagements.length} client{activeEngagements.length !== 1 ? 's' : ''} actif{activeEngagements.length !== 1 ? 's' : ''}</span>
+                </Link>
+              )}
+              {creativeOn && creativeWorks.length > 0 && (
+                <Link to="/creative" className="flex items-center gap-1.5 hover:text-accent">
+                  <Palette size={15} className="text-mute" />
+                  <span>{inProgressWorks.length} œuvre{inProgressWorks.length !== 1 ? 's' : ''} en cours</span>
+                </Link>
+              )}
+              {realEstateOn && properties.length > 0 && (
+                <Link to="/real-estate" className="flex items-center gap-1.5 hover:text-accent">
+                  <Building2 size={15} className="text-mute" />
+                  <span>{ownedProperties.length} bien{ownedProperties.length !== 1 ? 's' : ''} possédé{ownedProperties.length !== 1 ? 's' : ''}</span>
+                </Link>
+              )}
+            </div>
           </Card>
         );
       })()}

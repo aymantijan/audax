@@ -46,6 +46,10 @@ const Content = lazy(lazyWithRetry(() => import('./pages/Content'), 'Content'));
 const Projects = lazy(lazyWithRetry(() => import('./pages/Projects'), 'Projects'));
 const ProjectDetail = lazy(lazyWithRetry(() => import('./pages/ProjectDetail'), 'ProjectDetail'));
 const FocusSessions = lazy(lazyWithRetry(() => import('./pages/FocusSessions'), 'FocusSessions'));
+const Fundraising = lazy(lazyWithRetry(() => import('./pages/Fundraising'), 'Fundraising'));
+const Freelance = lazy(lazyWithRetry(() => import('./pages/Freelance'), 'Freelance'));
+const Creative = lazy(lazyWithRetry(() => import('./pages/Creative'), 'Creative'));
+const RealEstate = lazy(lazyWithRetry(() => import('./pages/RealEstate'), 'RealEstate'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
@@ -181,6 +185,10 @@ export default function App() {
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/focus" element={<FocusSessions />} />
+        <Route path="/fundraising" element={<Fundraising />} />
+        <Route path="/freelance" element={<Freelance />} />
+        <Route path="/creative" element={<Creative />} />
+        <Route path="/real-estate" element={<RealEstate />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />

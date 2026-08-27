@@ -17,6 +17,10 @@ import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useFocusStore } from '../store/focusStore';
+import { useFundraisingStore } from '../store/fundraisingStore';
+import { useFreelanceStore } from '../store/freelanceStore';
+import { useCreativeStore } from '../store/creativeStore';
+import { useRealEstateStore } from '../store/realEstateStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
@@ -48,6 +52,10 @@ export default function Dashboard() {
   const contentEnabled = user?.enabledModules?.content ?? false;
   const projectsEnabled = user?.enabledModules?.projects ?? false;
   const focusEnabled = user?.enabledModules?.focus ?? false;
+  const fundraisingEnabled = user?.enabledModules?.fundraising ?? false;
+  const freelanceEnabled = user?.enabledModules?.freelance ?? false;
+  const creativeEnabled = user?.enabledModules?.creative ?? false;
+  const realEstateEnabled = user?.enabledModules?.realEstate ?? false;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
@@ -61,6 +69,10 @@ export default function Dashboard() {
   const posts = useContentStore((s) => s.posts);
   const personalProjects = useProjectsStore((s) => s.projects);
   const focusSessions = useFocusStore((s) => s.sessions);
+  const investors = useFundraisingStore((s) => s.investors);
+  const engagements = useFreelanceStore((s) => s.engagements);
+  const creativeWorks = useCreativeStore((s) => s.works);
+  const properties = useRealEstateStore((s) => s.properties);
   const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
@@ -135,6 +147,11 @@ export default function Dashboard() {
     ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.scores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
     ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.scores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
     ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.scores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h loggées`, color: '#ffa94d' }] : []),
+    // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — same pattern.
+    ...(fundraisingEnabled && investors.length ? [{ label: 'Fundraising', value: synergy.scores.fundraising ?? 0, sub: `${investors.length} investisseur${investors.length !== 1 ? 's' : ''}`, color: '#845ef7' }] : []),
+    ...(freelanceEnabled && engagements.length ? [{ label: 'Freelance', value: synergy.scores.freelance ?? 0, sub: `${engagements.length} client${engagements.length !== 1 ? 's' : ''}`, color: '#20c997' }] : []),
+    ...(creativeEnabled && creativeWorks.length ? [{ label: 'Creative', value: synergy.scores.creative ?? 0, sub: `${creativeWorks.length} œuvre${creativeWorks.length !== 1 ? 's' : ''}`, color: '#e05e5e' }] : []),
+    ...(realEstateEnabled && properties.length ? [{ label: 'Real Estate', value: synergy.scores.realEstate ?? 0, sub: `${properties.length} bien${properties.length !== 1 ? 's' : ''}`, color: '#94a3b8' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -515,5 +532,6 @@ function domainRoute(domain) {
   return {
     trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', business: '/businesses',
     networking: '/networking', career: '/career', content: '/content', projects: '/projects', focus: '/focus',
+    fundraising: '/fundraising', freelance: '/freelance', creative: '/creative', realEstate: '/real-estate',
   }[domain] || '/';
 }

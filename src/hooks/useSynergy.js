@@ -11,6 +11,10 @@ import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useFocusStore } from '../store/focusStore';
+import { useFundraisingStore } from '../store/fundraisingStore';
+import { useFreelanceStore } from '../store/freelanceStore';
+import { useCreativeStore } from '../store/creativeStore';
+import { useRealEstateStore } from '../store/realEstateStore';
 import { useSkillStore } from '../store/skillStore';
 import { useAuthStore } from '../store/authStore';
 import { calculateSynergies } from '../utils/synergy';
@@ -62,6 +66,15 @@ export function useSynergy() {
   const projectsEnabled = useAuthStore((s) => s.user?.enabledModules?.projects ?? false);
   const focusSessions = useFocusStore((s) => s.sessions);
   const focusEnabled = useAuthStore((s) => s.user?.enabledModules?.focus ?? false);
+  const investors = useFundraisingStore((s) => s.investors);
+  const engagements = useFreelanceStore((s) => s.engagements);
+  const creativeWorks = useCreativeStore((s) => s.works);
+  const creativeShowcases = useCreativeStore((s) => s.showcases);
+  const properties = useRealEstateStore((s) => s.properties);
+  const fundraisingEnabled = useAuthStore((s) => s.user?.enabledModules?.fundraising ?? false);
+  const freelanceEnabled = useAuthStore((s) => s.user?.enabledModules?.freelance ?? false);
+  const creativeEnabled = useAuthStore((s) => s.user?.enabledModules?.creative ?? false);
+  const realEstateEnabled = useAuthStore((s) => s.user?.enabledModules?.realEstate ?? false);
 
   // Raw slices only (never a store getter returning a fresh object) — see the
   // useSyncExternalStore infinite-loop note in project memory. Derived values
@@ -123,12 +136,23 @@ export function useSynergy() {
         projectsEnabled,
         focusSessions,
         focusEnabled,
+        investors,
+        engagements,
+        creativeWorks,
+        creativeShowcases,
+        properties,
+        fundraisingEnabled,
+        freelanceEnabled,
+        creativeEnabled,
+        realEstateEnabled,
       }),
     [
       trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
       labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, businesses, businessEnabled,
       contacts, applications, posts, personalProjects, networkingEnabled, careerEnabled, contentEnabled, projectsEnabled,
       focusSessions, focusEnabled,
+      investors, engagements, creativeWorks, creativeShowcases, properties,
+      fundraisingEnabled, freelanceEnabled, creativeEnabled, realEstateEnabled,
     ]
   );
 

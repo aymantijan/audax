@@ -10,6 +10,10 @@ import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
 import { useProjectsStore } from '../store/projectsStore';
+import { useFundraisingStore } from '../store/fundraisingStore';
+import { useFreelanceStore } from '../store/freelanceStore';
+import { useCreativeStore } from '../store/creativeStore';
+import { useRealEstateStore } from '../store/realEstateStore';
 import { SKILL_MAP } from '../utils/constants';
 
 // Reads every store via `.getState()` — a one-shot imperative snapshot, NOT a
@@ -89,6 +93,29 @@ export function buildSearchIndex() {
   const personalProjects = useProjectsStore.getState().projects;
   for (const p of personalProjects) {
     items.push({ id: `proj-${p.id}`, domain: 'Projects', label: p.name, sub: p.domain, to: `/projects/${p.id}` });
+  }
+
+  const investors = useFundraisingStore.getState().investors;
+  for (const i of investors) {
+    items.push({ id: `investor-${i.id}`, domain: 'Fundraising', label: i.name, sub: [i.firm, i.stage].filter(Boolean).join(' · '), to: '/fundraising' });
+  }
+
+  const engagements = useFreelanceStore.getState().engagements;
+  for (const e of engagements) {
+    items.push({ id: `engagement-${e.id}`, domain: 'Freelance', label: e.clientName, sub: e.status, to: '/freelance' });
+  }
+
+  const { works: creativeWorks, showcases } = useCreativeStore.getState();
+  for (const w of creativeWorks) {
+    items.push({ id: `work-${w.id}`, domain: 'Creative', label: w.title, sub: `${w.medium} · ${w.status}`, to: '/creative' });
+  }
+  for (const s of showcases) {
+    items.push({ id: `showcase-${s.id}`, domain: 'Creative', label: s.title, sub: `${s.type}${s.venue ? ` · ${s.venue}` : ''}`, to: '/creative' });
+  }
+
+  const properties = useRealEstateStore.getState().properties;
+  for (const p of properties) {
+    items.push({ id: `property-${p.id}`, domain: 'Real Estate', label: p.name, sub: `${p.type} · ${p.status}`, to: '/real-estate' });
   }
 
   for (const skill of Object.values(SKILL_MAP)) {

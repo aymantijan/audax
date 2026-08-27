@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
-  Users, Briefcase, Megaphone, FolderKanban, Timer,
+  Users, Briefcase, Megaphone, FolderKanban, Timer, Rocket, Palette, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -52,6 +52,10 @@ export default function Onboarding() {
     content: user?.enabledModules?.content ?? true,
     projects: user?.enabledModules?.projects ?? true,
     focus: user?.enabledModules?.focus ?? true,
+    fundraising: user?.enabledModules?.fundraising ?? true,
+    freelance: user?.enabledModules?.freelance ?? true,
+    creative: user?.enabledModules?.creative ?? true,
+    realEstate: user?.enabledModules?.realEstate ?? true,
   }));
 
   const toggle = (name) =>
@@ -121,6 +125,10 @@ export default function Onboarding() {
                 { key: 'content', icon: Megaphone, title: 'Content', text: 'Publications and engagement — LinkedIn, blog, portfolio.' },
                 { key: 'projects', icon: FolderKanban, title: 'Projects', text: 'Personal projects and side-hustles, outside the Deals/Business flow.' },
                 { key: 'focus', icon: Timer, title: 'Deep Work', text: 'A focus timer + session log, feeding XP into whichever domain you were concentrating on.' },
+                { key: 'fundraising', icon: Rocket, title: 'Fundraising', text: 'Investor pipeline for founders raising capital — contacted → term sheet → closed.' },
+                { key: 'freelance', icon: Briefcase, title: 'Freelance', text: 'Clients, hours, invoices — for freelancers and consultants.' },
+                { key: 'creative', icon: Palette, title: 'Creative', text: 'Works, practice, and showcases — for artists, musicians, and writers.' },
+                { key: 'realEstate', icon: Building2, title: 'Real Estate', text: 'Rental property portfolio — cash flow and cap rate per property.' },
               ].map((m) => {
                 const keys = m.keys || [m.key];
                 const on = keys.every((k) => modules[k]);

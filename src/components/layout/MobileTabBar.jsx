@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban, Timer } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban, Timer, Palette, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -27,6 +27,10 @@ const MORE_ITEMS = [
   { to: '/content', label: 'Content', icon: Megaphone },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
   { to: '/focus', label: 'Deep Work', icon: Timer },
+  { to: '/fundraising', label: 'Fundraising', icon: Rocket },
+  { to: '/freelance', label: 'Freelance', icon: Briefcase },
+  { to: '/creative', label: 'Creative', icon: Palette },
+  { to: '/real-estate', label: 'Real Estate', icon: Building2 },
   { to: '/skills', label: 'Skill Tree', icon: GitBranch },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/dashboard', label: 'Dashboard', icon: TrendingUp },
@@ -45,6 +49,10 @@ export default function MobileTabBar() {
   const contentEnabled = user?.enabledModules?.content ?? false;
   const projectsEnabled = user?.enabledModules?.projects ?? false;
   const focusEnabled = user?.enabledModules?.focus ?? false;
+  const fundraisingEnabled = user?.enabledModules?.fundraising ?? false;
+  const freelanceEnabled = user?.enabledModules?.freelance ?? false;
+  const creativeEnabled = user?.enabledModules?.creative ?? false;
+  const realEstateEnabled = user?.enabledModules?.realEstate ?? false;
   const primaryTabs = PRIMARY_TABS.filter((t) => t.to !== '/trading' || tradingEnabled);
   const moreItems = MORE_ITEMS.filter(
     (t) =>
@@ -55,7 +63,11 @@ export default function MobileTabBar() {
       (t.to !== '/career' || careerEnabled) &&
       (t.to !== '/content' || contentEnabled) &&
       (t.to !== '/focus' || focusEnabled) &&
-      (t.to !== '/projects' || projectsEnabled)
+      (t.to !== '/projects' || projectsEnabled) &&
+      (t.to !== '/fundraising' || fundraisingEnabled) &&
+      (t.to !== '/freelance' || freelanceEnabled) &&
+      (t.to !== '/creative' || creativeEnabled) &&
+      (t.to !== '/real-estate' || realEstateEnabled)
   );
 
   const tabClass = ({ isActive }) =>

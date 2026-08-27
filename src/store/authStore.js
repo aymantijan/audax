@@ -41,6 +41,10 @@ function withDefaults(user) {
     // networking/career/content/projects (2026-08-27): four more genuinely
     // new sections, same "default false for existing accounts" rule as
     // engineering above — never silently added to an existing user's nav.
+    //
+    // fundraising/freelance/creative/realEstate (2026-08-27): four
+    // persona-oriented sections (founders raising capital, freelancers/
+    // consultants, creatives, landlords) — same default-false rule.
     enabledModules: {
       trading: user.enabledModules?.trading ?? true,
       pe: user.enabledModules?.pe ?? user.enabledModules?.deals ?? true,
@@ -51,6 +55,10 @@ function withDefaults(user) {
       content: user.enabledModules?.content ?? false,
       projects: user.enabledModules?.projects ?? false,
       focus: user.enabledModules?.focus ?? false,
+      fundraising: user.enabledModules?.fundraising ?? false,
+      freelance: user.enabledModules?.freelance ?? false,
+      creative: user.enabledModules?.creative ?? false,
+      realEstate: user.enabledModules?.realEstate ?? false,
     },
   };
 }
@@ -77,7 +85,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true, focus: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true, focus: true, fundraising: true, freelance: true, creative: true, realEstate: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

@@ -128,7 +128,7 @@ export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement
 // Every id here is a real, unlocked-from-start skill (verified against
 // skill-tree-data.js / life-skills.js / professional-skills.js) — same
 // mistake-avoidance as ENGINEERING_STAGE_SKILL/CAREER_STAGE_SKILL above.
-export const FOCUS_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Learning', 'Health', 'Networking', 'Career', 'Content', 'Projects', 'General'];
+export const FOCUS_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Learning', 'Health', 'Networking', 'Career', 'Content', 'Projects', 'Creative', 'General'];
 export const FOCUS_DOMAIN_SKILL = {
   Trading: 'trading-discipline-lv1',
   PE: 'three-statement-modeling-lv1',
@@ -140,8 +140,36 @@ export const FOCUS_DOMAIN_SKILL = {
   Career: 'written-communication-lv1',
   Content: 'written-communication-lv1',
   Projects: 'ge-thesis',
+  Creative: 'deep-focus-lv1',
   General: 'deep-focus-lv1',
 };
+
+// ── Fundraising (founders raising capital) — 2026-08-27 ─────────────────────
+// Symmetric to Career's applicant pipeline, but from the other side of the
+// table: an investor pipeline instead of a job pipeline. Every stage-skill id
+// verified real + unlocked-from-start in skill-tree-data.js.
+export const FUNDRAISING_STAGES = ['Contacted', 'Meeting', 'Diligence', 'Term Sheet', 'Closed', 'Passed'];
+export const FUNDRAISING_STAGE_SKILL = {
+  Contacted: 'written-communication-lv1',
+  Meeting: 'presentation-skills-lv1',
+  Diligence: 'written-communication-lv1',
+  'Term Sheet': 'negotiation-lv1',
+  Closed: 'ipo-capital-raising-lv1',
+  Passed: 'presentation-skills-lv1',
+};
+export const INVESTOR_TYPES = ['Angel', 'VC', 'Family Office', 'Corporate VC', 'Crowdfunding', 'Accelerator', 'Autre'];
+
+// ── Freelance / Consulting — 2026-08-27 ──────────────────────────────────────
+export const ENGAGEMENT_STATUSES = ['Prospect', 'Actif', 'En pause', 'Terminé'];
+
+// ── Creative practice (artists, musicians, writers) — 2026-08-27 ────────────
+export const CREATIVE_MEDIUMS = ['Peinture', 'Musique', 'Écriture', 'Photographie', 'Sculpture', 'Design', 'Autre'];
+export const CREATIVE_WORK_STATUSES = ['Idée', 'En cours', 'Terminé'];
+export const SHOWCASE_TYPES = ['Exposition', 'Concert', 'Publication', 'Festival', 'Autre'];
+
+// ── Real estate portfolio — 2026-08-27 ───────────────────────────────────────
+export const PROPERTY_TYPES = ['Appartement', 'Maison', 'Immeuble', 'Local commercial', 'Terrain', 'Autre'];
+export const PROPERTY_STATUSES = ['Recherche', 'Sous offre', 'Acquis', 'Loué', 'Vendu'];
 
 export const INITIAL_ACCOUNT_VALUE = 52000;
 
