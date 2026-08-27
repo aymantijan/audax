@@ -16,6 +16,10 @@ const NAV_ITEMS = [
   { to: '/deals', label: 'Deals' },
   { to: '/businesses', label: 'Business' },
   { to: '/engineering', label: 'Engineering' },
+  { to: '/networking', label: 'Networking' },
+  { to: '/career', label: 'Career' },
+  { to: '/content', label: 'Content' },
+  { to: '/projects', label: 'Projects' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },
 ];
@@ -34,6 +38,10 @@ export default function Navbar() {
     if (item.to === '/deals') return user?.enabledModules?.pe ?? true;
     if (item.to === '/businesses') return user?.enabledModules?.business ?? true;
     if (item.to === '/engineering') return user?.enabledModules?.engineering ?? false;
+    if (item.to === '/networking') return user?.enabledModules?.networking ?? false;
+    if (item.to === '/career') return user?.enabledModules?.career ?? false;
+    if (item.to === '/content') return user?.enabledModules?.content ?? false;
+    if (item.to === '/projects') return user?.enabledModules?.projects ?? false;
     return true;
   });
 

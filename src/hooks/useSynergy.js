@@ -7,6 +7,10 @@ import { useHealthStore } from '../store/healthStore';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useContentStore } from '../store/contentStore';
+import { useProjectsStore } from '../store/projectsStore';
 import { useSkillStore } from '../store/skillStore';
 import { useAuthStore } from '../store/authStore';
 import { calculateSynergies } from '../utils/synergy';
@@ -49,6 +53,14 @@ export function useSynergy() {
   const peEnabled = useAuthStore((s) => s.user?.enabledModules?.pe ?? s.user?.enabledModules?.deals ?? true);
   const businessEnabled = useAuthStore((s) => s.user?.enabledModules?.business ?? s.user?.enabledModules?.deals ?? true);
   const dealsEnabled = peEnabled || businessEnabled;
+  const contacts = useNetworkingStore((s) => s.contacts);
+  const applications = useCareerStore((s) => s.applications);
+  const posts = useContentStore((s) => s.posts);
+  const personalProjects = useProjectsStore((s) => s.projects);
+  const networkingEnabled = useAuthStore((s) => s.user?.enabledModules?.networking ?? false);
+  const careerEnabled = useAuthStore((s) => s.user?.enabledModules?.career ?? false);
+  const contentEnabled = useAuthStore((s) => s.user?.enabledModules?.content ?? false);
+  const projectsEnabled = useAuthStore((s) => s.user?.enabledModules?.projects ?? false);
 
   // Raw slices only (never a store getter returning a fresh object) — see the
   // useSyncExternalStore infinite-loop note in project memory. Derived values
@@ -101,8 +113,20 @@ export function useSynergy() {
         deals,
         businesses,
         dealsEnabled,
+        contacts,
+        applications,
+        posts,
+        personalProjects,
+        networkingEnabled,
+        careerEnabled,
+        contentEnabled,
+        projectsEnabled,
       }),
-    [trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, deals, businesses, dealsEnabled]
+    [
+      trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
+      labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, deals, businesses, dealsEnabled,
+      contacts, applications, posts, personalProjects, networkingEnabled, careerEnabled, contentEnabled, projectsEnabled,
+    ]
   );
 
   // Persist today's snapshot so we can show day-over-day trend

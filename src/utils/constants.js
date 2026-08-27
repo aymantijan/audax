@@ -89,6 +89,30 @@ export const ENGINEERING_STAGE_SKILL = {
   'Soutenance': 'engineering-discipline-lv1',
 };
 
+// ─────────── Networking / Career / Content / Projects (added 2026-08-27) ───────────
+// Shared domain tags — the app's own life domains (not CAREER_TRACKS, which is
+// PE/GE/VC/RBF-specific and doesn't cover Engineering or a general/unlabeled
+// contact/application/post).
+export const LIFE_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'General'];
+
+export const CAREER_STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+// Which skill a career-application stage advance targets — mirrors
+// ENGINEERING_STAGE_SKILL's keyed-by-stage pattern. All three ids are real,
+// unlocked-from-start Communication-category nodes (see skill-tree-data.js).
+export const CAREER_STAGE_SKILL = {
+  Applied: 'written-communication-lv1',
+  Screening: 'written-communication-lv1',
+  Interview: 'presentation-skills-lv1',
+  Offer: 'negotiation-lv1',
+  Accepted: 'negotiation-lv1',
+  Rejected: 'presentation-skills-lv1',
+  Withdrawn: 'presentation-skills-lv1',
+};
+
+export const CONTENT_PLATFORMS = ['LinkedIn', 'Blog', 'Portfolio', 'X/Twitter', 'YouTube', 'Newsletter', 'Autre'];
+
+export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement', 'Croissance', 'Pause/Fin'];
+
 export const INITIAL_ACCOUNT_VALUE = 52000;
 
 export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];

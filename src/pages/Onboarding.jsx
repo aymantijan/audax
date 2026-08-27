@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
+  Users, Briefcase, Megaphone, FolderKanban,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -46,6 +47,10 @@ export default function Onboarding() {
     pe: user?.enabledModules?.pe ?? user?.enabledModules?.deals ?? true,
     business: user?.enabledModules?.business ?? user?.enabledModules?.deals ?? true,
     engineering: user?.enabledModules?.engineering ?? true,
+    networking: user?.enabledModules?.networking ?? true,
+    career: user?.enabledModules?.career ?? true,
+    content: user?.enabledModules?.content ?? true,
+    projects: user?.enabledModules?.projects ?? true,
   }));
 
   const toggle = (name) =>
@@ -110,6 +115,10 @@ export default function Onboarding() {
                 // on/off independently later in Settings, but onboarding stays one step.
                 { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Deals & Business', text: 'PE/GE/VC deal pipeline, plus end-to-end business project tracking (phases, KPIs, accounting).' },
                 { key: 'engineering', icon: FlaskConical, title: 'Engineering', text: 'Lab journal + design-project pipeline — chemical engineering & related.' },
+                { key: 'networking', icon: Users, title: 'Networking', text: 'Contacts, follow-ups, and relationship history — recruiters, mentors, alumni.' },
+                { key: 'career', icon: Briefcase, title: 'Career', text: 'Application pipeline — applied → interview → offer.' },
+                { key: 'content', icon: Megaphone, title: 'Content', text: 'Publications and engagement — LinkedIn, blog, portfolio.' },
+                { key: 'projects', icon: FolderKanban, title: 'Projects', text: 'Personal projects and side-hustles, outside the Deals/Business flow.' },
               ].map((m) => {
                 const keys = m.keys || [m.key];
                 const on = keys.every((k) => modules[k]);

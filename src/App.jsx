@@ -40,6 +40,11 @@ const Businesses = lazy(lazyWithRetry(() => import('./pages/Businesses'), 'Busin
 const BusinessDetail = lazy(lazyWithRetry(() => import('./pages/BusinessDetail'), 'BusinessDetail'));
 const Engineering = lazy(lazyWithRetry(() => import('./pages/Engineering'), 'Engineering'));
 const EngineeringProjectDetail = lazy(lazyWithRetry(() => import('./pages/EngineeringProjectDetail'), 'EngineeringProjectDetail'));
+const Networking = lazy(lazyWithRetry(() => import('./pages/Networking'), 'Networking'));
+const Career = lazy(lazyWithRetry(() => import('./pages/Career'), 'Career'));
+const Content = lazy(lazyWithRetry(() => import('./pages/Content'), 'Content'));
+const Projects = lazy(lazyWithRetry(() => import('./pages/Projects'), 'Projects'));
+const ProjectDetail = lazy(lazyWithRetry(() => import('./pages/ProjectDetail'), 'ProjectDetail'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
@@ -169,6 +174,11 @@ export default function App() {
         <Route path="/businesses/:id" element={<BusinessDetail />} />
         <Route path="/engineering" element={<Engineering />} />
         <Route path="/engineering/:id" element={<EngineeringProjectDetail />} />
+        <Route path="/networking" element={<Networking />} />
+        <Route path="/career" element={<Career />} />
+        <Route path="/content" element={<Content />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />

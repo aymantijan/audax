@@ -11,7 +11,11 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // All five domain scores are 0-100. Weighted composite = primary*0.75 + avg(others)*0.25.
 // Note: the raw spec formulas divided each weighted sum by 3, which caps scores near 33 —
 // implemented here as proper 0-100 weighted averages instead so color thresholds work.
-export function calculateSynergies({ trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today, healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, deals, businesses, dealsEnabled = true }) {
+export function calculateSynergies({
+  trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today,
+  healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, deals, businesses, dealsEnabled = true,
+  contacts, applications, posts, personalProjects, networkingEnabled = false, careerEnabled = false, contentEnabled = false, projectsEnabled = false,
+}) {
   const monthStart = startOfMonth(new Date());
 
   const scores = {
@@ -38,6 +42,13 @@ export function calculateSynergies({ trades, courses, journal, accountingBudgets
   // moved the composite score. `dealsEnabled` = pe OR business turned on (see
   // useSynergy.js), same opt-out-aware gating as Trading/Engineering above.
   if (dealsEnabled) scores.deals = dealsScore(deals || [], businesses || [], monthStart, today);
+  // Networking/Career/Content/Projects (2026-08-27) — four new domains, same
+  // opt-in-aware gating as Engineering (default false: never silently pulls
+  // an existing/uninterested user's composite score toward 0).
+  if (networkingEnabled) scores.networking = networkingScore(contacts || [], monthStart);
+  if (careerEnabled) scores.career = careerScore(applications || [], monthStart);
+  if (contentEnabled) scores.content = contentScore(posts || [], monthStart);
+  if (projectsEnabled) scores.projects = projectsScore(personalProjects || [], monthStart);
 
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
@@ -237,6 +248,56 @@ function dealsScore(deals, businesses, monthStart, today) {
 
   if (deals.length && businesses.length) return r1((peComponent + bizComponent) / 2);
   return deals.length ? peComponent : bizComponent;
+}
+
+// 0 if truly nothing logged yet (same convention as every other domain).
+// Two signals: this month's new contacts (outreach) and this month's logged
+// touches (actually following up) — the latter weighted higher since a
+// contact you never talk to isn't really "networking".
+function networkingScore(contacts, monthStart) {
+  if (!contacts.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthTouches = contacts.flatMap((c) => c.touches || []).filter((t) => t.createdAt >= monthStartMs).length;
+  const monthNewContacts = contacts.filter((c) => c.createdAt >= monthStartMs).length;
+  const touchComponent = clamp(monthTouches * 10);
+  const contactComponent = clamp(monthNewContacts * 20);
+  return r1(clamp(touchComponent * 0.6 + contactComponent * 0.4));
+}
+
+// New applications this month (outreach) + stage advances this month
+// (real progress through a funnel, weighted higher than just applying).
+function careerScore(applications, monthStart) {
+  if (!applications.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthNew = applications.filter((a) => a.createdAt >= monthStartMs).length;
+  const monthAdvances = applications
+    .flatMap((a) => a.stageHistory || [])
+    .filter((h) => h.stage !== 'Applied' && new Date(`${h.date}T00:00:00`).getTime() >= monthStartMs).length;
+  const newComponent = clamp(monthNew * 15);
+  const advanceComponent = clamp(monthAdvances * 20);
+  return r1(clamp(newComponent * 0.4 + advanceComponent * 0.6));
+}
+
+// Posts published this month — publication cadence is the whole signal here,
+// engagement (likes/comments) is outside the user's direct control so isn't
+// scored (same reasoning healthScore avoids scoring raw outcomes over effort).
+function contentScore(posts, monthStart) {
+  if (!posts.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthPosts = posts.filter((p) => p.createdAt >= monthStartMs).length;
+  return r1(clamp(monthPosts * 20));
+}
+
+// New projects started this month + tasks completed this month across all
+// projects — same shape as engineeringScore's lab/task split.
+function projectsScore(projects, monthStart) {
+  if (!projects.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthNew = projects.filter((p) => p.createdAt >= monthStartMs).length;
+  const monthTasksDone = projects.flatMap((p) => p.tasks || []).filter((t) => t.status === 'done' && t.completedAt >= monthStartMs).length;
+  const newComponent = clamp(monthNew * 20);
+  const taskComponent = clamp(monthTasksDone * 12);
+  return r1(clamp(taskComponent * 0.6 + newComponent * 0.4));
 }
 
 export function synergyColor(score) {

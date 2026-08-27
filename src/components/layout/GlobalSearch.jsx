@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical } from 'lucide-react';
+import { Search, X, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
 import { buildSearchIndex, searchIndex } from '../../utils/global-search';
 
-const DOMAIN_ICON = { Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Business: Rocket, Skills: GitBranch, Engineering: FlaskConical };
+const DOMAIN_ICON = {
+  Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Business: Rocket,
+  Skills: GitBranch, Engineering: FlaskConical, Networking: Users, Career: Briefcase, Content: Megaphone, Projects: FolderKanban,
+};
 
 // Global command-palette search — Ctrl/Cmd+K anywhere, or the search icon in
 // the navbar. Reads a fresh index from every relevant store on each open

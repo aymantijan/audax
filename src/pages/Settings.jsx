@@ -20,12 +20,16 @@ import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
 import { useBusinessStore } from '../store/businessStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useContentStore } from '../store/contentStore';
+import { useProjectsStore } from '../store/projectsStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-projects', 'audax-synergy-history'];
 
 const FOOD_CATEGORIES = [
   { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
@@ -277,6 +281,10 @@ export default function SettingsPage() {
     useAccountingStore.getState().resetAll();
     useHealthStore.getState().resetAll();
     useBusinessStore.getState().resetAll();
+    useNetworkingStore.getState().resetAll();
+    useCareerStore.getState().resetAll();
+    useContentStore.getState().resetAll();
+    useProjectsStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
     toast('All data reset', 'warning');
   };
@@ -341,14 +349,23 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="Sections visibles">
-        <p className="text-sm text-mute mb-3">Trading, Deals, Business et Ingénierie peuvent être masqués de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
+        <p className="text-sm text-mute mb-3">Chaque section peut être masquée de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
         <div className="flex flex-wrap gap-3">
-          {[{ key: 'trading', label: 'Trading', default: true }, { key: 'pe', label: 'Deals (Private Equity)', default: true }, { key: 'business', label: 'Business Projects', default: true }, { key: 'engineering', label: 'Ingénierie', default: false }].map((m) => (
+          {[
+            { key: 'trading', label: 'Trading', default: true },
+            { key: 'pe', label: 'Deals (Private Equity)', default: true },
+            { key: 'business', label: 'Business Projects', default: true },
+            { key: 'engineering', label: 'Ingénierie', default: false },
+            { key: 'networking', label: 'Networking', default: false },
+            { key: 'career', label: 'Career', default: false },
+            { key: 'content', label: 'Content', default: false },
+            { key: 'projects', label: 'Projects', default: false },
+          ].map((m) => (
             <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
                 checked={user?.enabledModules?.[m.key] ?? m.default}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false }), [m.key]: e.target.checked } })}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, projects: false }), [m.key]: e.target.checked } })}
                 className="cursor-pointer"
               />
               {m.label}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -22,6 +22,10 @@ const MORE_ITEMS = [
   { to: '/deals', label: 'Deals', icon: Handshake },
   { to: '/businesses', label: 'Business', icon: Rocket },
   { to: '/engineering', label: 'Engineering', icon: FlaskConical },
+  { to: '/networking', label: 'Networking', icon: Users },
+  { to: '/career', label: 'Career', icon: Briefcase },
+  { to: '/content', label: 'Content', icon: Megaphone },
+  { to: '/projects', label: 'Projects', icon: FolderKanban },
   { to: '/skills', label: 'Skill Tree', icon: GitBranch },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/dashboard', label: 'Dashboard', icon: TrendingUp },
@@ -35,9 +39,20 @@ export default function MobileTabBar() {
   const peEnabled = user?.enabledModules?.pe ?? true;
   const businessEnabled = user?.enabledModules?.business ?? true;
   const engineeringEnabled = user?.enabledModules?.engineering ?? false;
+  const networkingEnabled = user?.enabledModules?.networking ?? false;
+  const careerEnabled = user?.enabledModules?.career ?? false;
+  const contentEnabled = user?.enabledModules?.content ?? false;
+  const projectsEnabled = user?.enabledModules?.projects ?? false;
   const primaryTabs = PRIMARY_TABS.filter((t) => t.to !== '/trading' || tradingEnabled);
   const moreItems = MORE_ITEMS.filter(
-    (t) => (t.to !== '/deals' || peEnabled) && (t.to !== '/businesses' || businessEnabled) && (t.to !== '/engineering' || engineeringEnabled)
+    (t) =>
+      (t.to !== '/deals' || peEnabled) &&
+      (t.to !== '/businesses' || businessEnabled) &&
+      (t.to !== '/engineering' || engineeringEnabled) &&
+      (t.to !== '/networking' || networkingEnabled) &&
+      (t.to !== '/career' || careerEnabled) &&
+      (t.to !== '/content' || contentEnabled) &&
+      (t.to !== '/projects' || projectsEnabled)
   );
 
   const tabClass = ({ isActive }) =>

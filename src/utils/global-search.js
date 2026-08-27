@@ -6,6 +6,10 @@ import { useReadingsStore } from '../store/readingsStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useEngineeringStore } from '../store/engineeringStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useContentStore } from '../store/contentStore';
+import { useProjectsStore } from '../store/projectsStore';
 import { SKILL_MAP } from '../utils/constants';
 
 // Reads every store via `.getState()` — a one-shot imperative snapshot, NOT a
@@ -65,6 +69,26 @@ export function buildSearchIndex() {
   }
   for (const e of labEntries.slice(-300)) {
     items.push({ id: `eng-lab-${e.id}`, domain: 'Engineering', label: e.title, sub: `${e.date}${e.course ? ` · ${e.course}` : ''}`, to: '/engineering' });
+  }
+
+  const contacts = useNetworkingStore.getState().contacts;
+  for (const c of contacts) {
+    items.push({ id: `contact-${c.id}`, domain: 'Networking', label: c.name, sub: [c.role, c.org].filter(Boolean).join(' · '), to: '/networking' });
+  }
+
+  const applications = useCareerStore.getState().applications;
+  for (const a of applications) {
+    items.push({ id: `app-${a.id}`, domain: 'Career', label: `${a.role} @ ${a.company}`, sub: a.stage, to: '/career' });
+  }
+
+  const posts = useContentStore.getState().posts;
+  for (const p of posts) {
+    items.push({ id: `post-${p.id}`, domain: 'Content', label: p.title, sub: `${p.platform} · ${p.publishedDate}`, to: '/content' });
+  }
+
+  const personalProjects = useProjectsStore.getState().projects;
+  for (const p of personalProjects) {
+    items.push({ id: `proj-${p.id}`, domain: 'Projects', label: p.name, sub: p.domain, to: `/projects/${p.id}` });
   }
 
   for (const skill of Object.values(SKILL_MAP)) {

@@ -37,11 +37,19 @@ function withDefaults(user) {
     // page split) — each falls back to the old combined `deals` flag first so
     // an existing account's single on/off choice carries over to BOTH new
     // pages unchanged, then to `true` for anyone who somehow has neither.
+    //
+    // networking/career/content/projects (2026-08-27): four more genuinely
+    // new sections, same "default false for existing accounts" rule as
+    // engineering above — never silently added to an existing user's nav.
     enabledModules: {
       trading: user.enabledModules?.trading ?? true,
       pe: user.enabledModules?.pe ?? user.enabledModules?.deals ?? true,
       business: user.enabledModules?.business ?? user.enabledModules?.deals ?? true,
       engineering: user.enabledModules?.engineering ?? false,
+      networking: user.enabledModules?.networking ?? false,
+      career: user.enabledModules?.career ?? false,
+      content: user.enabledModules?.content ?? false,
+      projects: user.enabledModules?.projects ?? false,
     },
   };
 }
@@ -68,7 +76,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, pe: true, business: true, engineering: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
-  Handshake, Rocket,
+  Handshake, Rocket, Users, Briefcase, Megaphone, FolderKanban,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -13,6 +13,10 @@ import { useHealthStore } from '../store/healthStore';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useProjectsStore } from '../store/projectsStore';
+import { useContentStore } from '../store/contentStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { isHabitDueOn, habitStreak } from '../utils/calculations';
@@ -80,6 +84,18 @@ export default function Today() {
   const ongoingDeals = deals.filter((d) => d.status === 'ongoing');
   const openDealTasks = ongoingDeals.reduce((a, d) => a + (d.tasks || []).filter((t) => t.status !== 'done').length, 0);
   const activeBusinesses = businesses.filter((b) => b.status === 'active');
+
+  // ---- Networking / Career / Content / Projects ---- (added 2026-08-27) —
+  // one combined card, same reasoning as Deals & Business above: four small
+  // domains, not worth a full card each on the daily view.
+  const networkingStore = useNetworkingStore();
+  const contacts = networkingStore.contacts;
+  const followUpAlerts = useMemo(() => networkingStore.getFollowUpAlerts(3, today), [contacts, today]);
+  const applications = useCareerStore((s) => s.applications);
+  const openApplications = applications.filter((a) => ['Applied', 'Screening', 'Interview', 'Offer'].includes(a.stage));
+  const contentPosts = useContentStore((s) => s.posts);
+  const personalProjects = useProjectsStore((s) => s.projects);
+  const activePersonalProjects = personalProjects.filter((p) => p.status === 'active');
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -335,6 +351,58 @@ export default function Today() {
           </div>
         </Card>
       )}
+
+      {/* ---- Networking / Career / Content / Projects ---- */}
+      {(() => {
+        const netOn = user?.enabledModules?.networking ?? false;
+        const careerOn = user?.enabledModules?.career ?? false;
+        const contentOn = user?.enabledModules?.content ?? false;
+        const projectsOn = user?.enabledModules?.projects ?? false;
+        const anyOn = netOn || careerOn || contentOn || projectsOn;
+        const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || personalProjects.length > 0;
+        if (!anyOn || !anyData) return null;
+        return (
+          <Card title="Networking, Career & Projects">
+            <div className="flex items-center gap-6 text-sm flex-wrap">
+              {netOn && contacts.length > 0 && (
+                <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
+                  <Users size={15} className="text-mute" />
+                  <span>{contacts.length} contact{contacts.length !== 1 ? 's' : ''}{followUpAlerts.length > 0 ? ` · ${followUpAlerts.length} relance${followUpAlerts.length !== 1 ? 's' : ''}` : ''}</span>
+                </Link>
+              )}
+              {careerOn && applications.length > 0 && (
+                <Link to="/career" className="flex items-center gap-1.5 hover:text-accent">
+                  <Briefcase size={15} className="text-mute" />
+                  <span>{openApplications.length} candidature{openApplications.length !== 1 ? 's' : ''} en cours</span>
+                </Link>
+              )}
+              {contentOn && contentPosts.length > 0 && (
+                <Link to="/content" className="flex items-center gap-1.5 hover:text-accent">
+                  <Megaphone size={15} className="text-mute" />
+                  <span>{contentPosts.length} publication{contentPosts.length !== 1 ? 's' : ''}</span>
+                </Link>
+              )}
+              {projectsOn && personalProjects.length > 0 && (
+                <Link to="/projects" className="flex items-center gap-1.5 hover:text-accent">
+                  <FolderKanban size={15} className="text-mute" />
+                  <span>{activePersonalProjects.length} projet{activePersonalProjects.length !== 1 ? 's' : ''} actif{activePersonalProjects.length !== 1 ? 's' : ''}</span>
+                </Link>
+              )}
+            </div>
+            {followUpAlerts.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {followUpAlerts.map(({ contact, overdue }) => (
+                  <div key={contact.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
+                    <AlertTriangle size={13} />
+                    <Link to="/networking" className="hover:underline">{contact.name}</Link>
+                    {overdue ? ' — relance en retard' : ' — relance à venir'}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      })()}
 
       {/* ---- Learning & reading ---- */}
       {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (

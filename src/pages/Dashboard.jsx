@@ -12,6 +12,10 @@ import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useEngineeringStore } from '../store/engineeringStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useContentStore } from '../store/contentStore';
+import { useProjectsStore } from '../store/projectsStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
@@ -38,6 +42,10 @@ export default function Dashboard() {
   const peEnabled = user?.enabledModules?.pe ?? true;
   const businessEnabled = user?.enabledModules?.business ?? true;
   const engineeringEnabled = user?.enabledModules?.engineering ?? false;
+  const networkingEnabled = user?.enabledModules?.networking ?? false;
+  const careerEnabled = user?.enabledModules?.career ?? false;
+  const contentEnabled = user?.enabledModules?.content ?? false;
+  const projectsEnabled = user?.enabledModules?.projects ?? false;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
@@ -46,6 +54,10 @@ export default function Dashboard() {
   const businesses = useBusinessStore((s) => s.businesses);
   const labEntries = useEngineeringStore((s) => s.labEntries);
   const engProjects = useEngineeringStore((s) => s.projects);
+  const contacts = useNetworkingStore((s) => s.contacts);
+  const applications = useCareerStore((s) => s.applications);
+  const posts = useContentStore((s) => s.posts);
+  const personalProjects = useProjectsStore((s) => s.projects);
   const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
@@ -113,6 +125,12 @@ export default function Dashboard() {
     // only curated "highlights" row on Dashboard that didn't include
     // Engineering despite it having its own gate, badges, and synergy domain.
     ...(engineeringEnabled ? [{ label: 'Engineering', value: synergy.scores.engineering ?? 0, sub: `${labEntries.length} labo · ${engProjects.length} projet${engProjects.length !== 1 ? 's' : ''}`, color: 'var(--warning)' }] : []),
+    // Networking/Career/Content/Projects (2026-08-27) — same pattern: reuse
+    // the already-computed synergy score rather than a separate formula.
+    ...(networkingEnabled && contacts.length ? [{ label: 'Networking', value: synergy.scores.networking ?? 0, sub: `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`, color: '#0a66c2' }] : []),
+    ...(careerEnabled && applications.length ? [{ label: 'Career', value: synergy.scores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
+    ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.scores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
+    ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.scores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -490,5 +508,8 @@ export default function Dashboard() {
 }
 
 function domainRoute(domain) {
-  return { trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', deals: '/deals' }[domain] || '/';
+  return {
+    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', deals: '/deals',
+    networking: '/networking', career: '/career', content: '/content', projects: '/projects',
+  }[domain] || '/';
 }
