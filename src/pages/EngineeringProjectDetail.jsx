@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check, CalendarPlus, CalendarCheck, FileDown } from 'lucide-react';
+import { Pencil, Plus, Trash2, ListChecks, Clock, ArrowRight, Check, CalendarPlus, CalendarCheck, FileDown, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useEngineeringStore } from '../store/engineeringStore';
-import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES, ENGINEERING_PROJECT_STATUS } from '../utils/constants';
+import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES, ENGINEERING_PROJECT_STATUS, ENGINEERING_PROJECT_GRADES, HAZOP_GUIDEWORDS, HAZOP_SEVERITY, HAZOP_LIKELIHOOD } from '../utils/constants';
 import { fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -26,7 +26,7 @@ async function exportProjectPDF(project) {
   doc.setTextColor(120);
   doc.text(`${project.type}${project.deadline ? ` · échéance ${project.deadline}` : ''}`, 14, y);
   y += 6;
-  doc.text(`Étape : ${ENGINEERING_PROJECT_STAGES[project.stageIndex]} (${project.stageIndex + 1}/${ENGINEERING_PROJECT_STAGES.length})`, 14, y);
+  doc.text(`Étape : ${ENGINEERING_PROJECT_STAGES[project.stageIndex]} (${project.stageIndex + 1}/${ENGINEERING_PROJECT_STAGES.length})${project.grade ? ` · Note : ${project.grade}` : ''}`, 14, y);
   y += 10;
   doc.setTextColor(0);
 
@@ -56,6 +56,20 @@ async function exportProjectPDF(project) {
     for (const t of tasks) {
       if (y > 280) { doc.addPage(); y = 20; }
       doc.text(`${t.status === 'done' ? '[x]' : '[ ]'} ${t.title}${t.stage ? ` (${t.stage})` : ''}`, 14, y);
+      y += 6;
+    }
+    y += 4;
+  }
+
+  const hazop = project.hazop || [];
+  if (hazop.length) {
+    doc.setFontSize(12);
+    doc.text(`HAZOP (${hazop.length} déviation${hazop.length > 1 ? 's' : ''})`, 14, y);
+    y += 7;
+    doc.setFontSize(10);
+    for (const r of hazop) {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(`• [${r.guideWord}] ${r.parameter}${r.deviation ? ` — ${r.deviation}` : ''}${r.severity ? ` (${r.severity})` : ''}`, 14, y);
       y += 6;
     }
     y += 4;
@@ -91,10 +105,98 @@ function StageStepper({ project, onJump }) {
   );
 }
 
+const blankHazopRow = () => ({ guideWord: HAZOP_GUIDEWORDS[0], parameter: '', deviation: '', causes: '', consequences: '', safeguards: '', actions: '', severity: '', likelihood: '' });
+const HAZOP_SEVERITY_COLOR = { Faible: 'var(--text-secondary)', Modérée: 'var(--warning)', Élevée: 'var(--error)', Critique: 'var(--error)' };
+
+// Structured deviation worksheet (IEC 61882 guide words) — added 2026-08-27
+// so "Analyse de sécurité (HAZOP)" is an actual safety-review artifact per
+// project, not just another pipeline stage checkbox. Each row is its own
+// modal (a real HAZOP row has ~8 fields — a table full of always-visible
+// textareas would be unreadable) — the table itself stays a scannable summary.
+function HazopSection({ project, addHazopRow, updateHazopRow, deleteHazopRow }) {
+  const rows = project.hazop || [];
+  const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(blankHazopRow());
+
+  const openAdd = () => { setEditing(null); setForm(blankHazopRow()); setModal(true); };
+  const openEdit = (r) => { setEditing(r); setForm({ ...blankHazopRow(), ...r }); setModal(true); };
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.parameter.trim() && !form.deviation.trim()) return;
+    if (editing) updateHazopRow(project.id, editing.id, form);
+    else addHazopRow(project.id, form);
+    setModal(false);
+  };
+
+  return (
+    <Card
+      title={`HAZOP (${rows.length})`}
+      action={<Button onClick={openAdd}><span className="flex items-center gap-2"><Plus size={16} /> Nouvelle déviation</span></Button>}
+    >
+      {rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-mute border-b border-line">
+                <th className="py-2 pr-4">Mot-guide</th>
+                <th className="py-2 pr-4">Paramètre / déviation</th>
+                <th className="py-2 pr-4">Conséquences</th>
+                <th className="py-2 pr-4">Sévérité</th>
+                <th className="py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-line/50 hover:bg-surface/50 cursor-pointer" onClick={() => openEdit(r)}>
+                  <td className="py-2.5 pr-4"><Badge color="var(--accent-secondary)">{r.guideWord}</Badge></td>
+                  <td className="py-2.5 pr-4">{r.parameter}{r.deviation ? ` — ${r.deviation}` : ''}</td>
+                  <td className="py-2.5 pr-4 text-mute truncate max-w-xs">{r.consequences || '—'}</td>
+                  <td className="py-2.5 pr-4">{r.severity ? <Badge color={HAZOP_SEVERITY_COLOR[r.severity]}>{r.severity}</Badge> : '—'}</td>
+                  <td className="py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Supprimer cette déviation HAZOP ?')) deleteHazopRow(project.id, r.id); }}><Trash2 size={14} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState><ShieldAlert className="mx-auto mb-2 text-mute" size={26} />Aucune déviation analysée. Passe en revue chaque paramètre du procédé avec les mots-guides IEC 61882 (No/Not, More, Less…).</EmptyState>
+      )}
+
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Éditer la déviation' : 'Nouvelle déviation HAZOP'} wide>
+        <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Mot-guide"><Select value={form.guideWord} onChange={(e) => setForm({ ...form, guideWord: e.target.value })} options={HAZOP_GUIDEWORDS} /></Field>
+            <Field label="Paramètre étudié"><Input value={form.parameter} onChange={(e) => setForm({ ...form, parameter: e.target.value })} placeholder="ex. Débit d'alimentation" /></Field>
+          </div>
+          <Field label="Déviation" hint="Mot-guide + paramètre = la déviation étudiée (ex. « Pas de débit »)."><Input value={form.deviation} onChange={(e) => setForm({ ...form, deviation: e.target.value })} placeholder="ex. Pas de débit d'alimentation" /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Causes possibles"><Textarea rows={2} value={form.causes} onChange={(e) => setForm({ ...form, causes: e.target.value })} /></Field>
+            <Field label="Conséquences"><Textarea rows={2} value={form.consequences} onChange={(e) => setForm({ ...form, consequences: e.target.value })} /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Sévérité"><Select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })} options={[{ value: '', label: '—' }, ...HAZOP_SEVERITY.map((s) => ({ value: s, label: s }))]} /></Field>
+            <Field label="Probabilité"><Select value={form.likelihood} onChange={(e) => setForm({ ...form, likelihood: e.target.value })} options={[{ value: '', label: '—' }, ...HAZOP_LIKELIHOOD.map((l) => ({ value: l, label: l }))]} /></Field>
+          </div>
+          <Field label="Sauvegardes existantes"><Textarea rows={2} value={form.safeguards} onChange={(e) => setForm({ ...form, safeguards: e.target.value })} /></Field>
+          <Field label="Actions recommandées"><Textarea rows={2} value={form.actions} onChange={(e) => setForm({ ...form, actions: e.target.value })} /></Field>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
+            <Button type="submit">{editing ? 'Enregistrer' : 'Ajouter'}</Button>
+          </div>
+        </form>
+      </Modal>
+    </Card>
+  );
+}
+
 const projectFields = [
   { name: 'name', label: 'Nom du projet', type: 'text' },
   { name: 'type', label: 'Type', type: 'select', options: ENGINEERING_PROJECT_TYPES },
   { name: 'deadline', label: 'Échéance', type: 'date' },
+  { name: 'grade', label: 'Note (une fois soutenu/rendu)', type: 'select', options: [{ value: '', label: 'Pas encore noté' }, ...ENGINEERING_PROJECT_GRADES.map((g) => ({ value: g, label: g }))] },
   { name: 'description', label: 'Description', type: 'textarea' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
@@ -102,7 +204,7 @@ const projectFields = [
 export default function EngineeringProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { projects, editProject, deleteProject, setProjectStage, addTask, updateTask, setTaskStatus, deleteTask, setTaskCalendarEvent } = useEngineeringStore();
+  const { projects, editProject, deleteProject, setProjectStage, addTask, updateTask, setTaskStatus, deleteTask, setTaskCalendarEvent, addHazopRow, updateHazopRow, deleteHazopRow } = useEngineeringStore();
   const [editModal, setEditModal] = useState(false);
   const [taskModal, setTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -120,6 +222,10 @@ export default function EngineeringProjectDetail() {
 
   const tasks = project.tasks || [];
   const done = tasks.filter((t) => t.status === 'done');
+  const isFinished = project.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && project.stageStatus === 'done';
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = !isFinished && project.deadline && project.deadline < today;
+  const dueSoon = !isFinished && !overdue && project.deadline && project.deadline <= new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
 
   const openAddTask = () => {
     setEditingTask(null);
@@ -153,9 +259,15 @@ export default function EngineeringProjectDetail() {
           <div className="flex items-center gap-2 mb-1">
             <Badge color="var(--accent-secondary)">{project.type}</Badge>
             <Badge color={STAGE_STATUS_COLOR[project.stageStatus]}>{ENGINEERING_PROJECT_STAGES[project.stageIndex]} · {STAGE_STATUS_LABEL[project.stageStatus]}</Badge>
+            {project.grade && <Badge color="var(--success)">Note : {project.grade}</Badge>}
           </div>
           <h1 className="text-2xl font-bold">{project.name}</h1>
-          {project.deadline && <p className="text-mute text-sm mt-1">Échéance : {fmtDateShort(project.deadline)}</p>}
+          {project.deadline && (
+            <p className={`text-sm mt-1 ${overdue ? 'text-bad' : dueSoon ? 'text-warn' : 'text-mute'}`}>
+              {(overdue || dueSoon) && <AlertTriangle size={13} className="inline mr-1 -mt-0.5" />}
+              Échéance : {fmtDateShort(project.deadline)}{overdue ? ' — dépassée' : dueSoon ? ' — bientôt' : ''}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => exportProjectPDF(project)}><span className="flex items-center gap-2"><FileDown size={14} /> Exporter en PDF</span></Button>
@@ -164,11 +276,12 @@ export default function EngineeringProjectDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Stat label="Tâches" value={`${done.length}/${tasks.length}`} sub="terminées" />
         <Stat label="Étape" value={`${project.stageIndex + 1}/${ENGINEERING_PROJECT_STAGES.length}`} />
         <Stat label="Type" value={project.type} />
-        <Stat label="Échéance" value={project.deadline ? fmtDateShort(project.deadline) : '—'} />
+        <Stat label="Échéance" value={project.deadline ? fmtDateShort(project.deadline) : '—'} color={overdue ? 'var(--error)' : dueSoon ? 'var(--warning)' : undefined} />
+        <Stat label="HAZOP" value={(project.hazop || []).length} sub="déviations" />
       </div>
 
       <Card title="Étape du projet">
@@ -201,6 +314,8 @@ export default function EngineeringProjectDetail() {
       )}
 
       {tasks.length > 0 && <EngineeringGanttChart project={project} updateTask={updateTask} deleteTask={deleteTask} />}
+
+      <HazopSection project={project} addHazopRow={addHazopRow} updateHazopRow={updateHazopRow} deleteHazopRow={deleteHazopRow} />
 
       <Card
         title={`Tâches (${tasks.length})`}

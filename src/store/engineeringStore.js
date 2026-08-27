@@ -7,7 +7,7 @@ import { useLearningStore } from './learningStore';
 import { toast } from './uiStore';
 import { deleteCalendarEvent } from '../services/google-calendar';
 import { evaluateBadges } from '../utils/badges';
-import { cascadeSchedule, pruneDependencies } from '../utils/gantt';
+import { cascadeSchedule, pruneDependencies, addDaysKey } from '../utils/gantt';
 
 const HAZOP_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.indexOf('Analyse de sécurité (HAZOP)');
 const LAST_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.length - 1;
@@ -26,6 +26,7 @@ const BADGE_DEFS = [
   { id: 'multi-project', name: 'Multi-Project', tier: 'silver', check: (s) => s.projects.length >= 5 },
   { id: 'safety-first', name: 'Safety First', tier: 'silver', check: (s) => s.projects.some((p) => p.stageIndex > HAZOP_STAGE_INDEX || (p.stageIndex === HAZOP_STAGE_INDEX && p.stageStatus === 'done')) },
   { id: 'process-master', name: 'Process Master', tier: 'gold', check: (s) => s.projects.some((p) => p.stageIndex === LAST_STAGE_INDEX && p.stageStatus === 'done') },
+  { id: 'hazop-thorough', name: 'HAZOP Thorough', tier: 'silver', check: (s) => s.projects.some((p) => (p.hazop || []).length >= 5) },
 ];
 
 // Fixed XP a lab entry awards — cross-cutting "did the work" credit, same
@@ -36,6 +37,10 @@ const LAB_ENTRY_XP = 3;
 // Flat per-task XP on completion — deliberately not tunable per-task like
 // dealsStore's tasks (no real basis to vary it without inventing numbers).
 const TASK_XP = 8;
+// Per HAZOP deviation row logged — same "did the real work" role as
+// LAB_ENTRY_XP, always to process-safety-lv1 (that's the whole point of a
+// HAZOP worksheet, unlike a generic task whose skill depends on its stage).
+const HAZOP_ROW_XP = 5;
 
 // Two structures, mirroring the two patterns already established elsewhere:
 // - labEntries: a flat dated log, same shape philosophy as tradingStore's
@@ -93,12 +98,53 @@ export const useEngineeringStore = create(
       },
 
       addProject: (data) => {
-        const project = { ...data, id: uid(), tasks: [], stageIndex: 0, stageStatus: 'not-started', createdAt: Date.now(), updatedAt: Date.now() };
+        const project = { ...data, id: uid(), tasks: [], hazop: [], stageIndex: 0, stageStatus: 'not-started', createdAt: Date.now(), updatedAt: Date.now() };
         set({ projects: [...get().projects, project] });
         toast(`Projet créé : ${project.name}`, 'success');
         return project.id;
       },
       editProject: (id, updates) => set({ projects: get().projects.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p)) }),
+
+      // ─────────── HAZOP worksheet (IEC 61882 guide words) ───────────
+      // Structured deviation rows per project — what actually makes the
+      // "Analyse de sécurité (HAZOP)" stage a real safety review instead of
+      // just another checkbox. Each row earns process-safety-lv1 XP once
+      // (on creation, not on every edit) — same "reward the real work"
+      // pattern as lab entries.
+      addHazopRow: (projectId, data) => {
+        const project = get().projects.find((p) => p.id === projectId);
+        if (!project) return;
+        const row = {
+          id: uid(),
+          guideWord: data.guideWord || '',
+          parameter: data.parameter || '',
+          deviation: data.deviation || '',
+          causes: data.causes || '',
+          consequences: data.consequences || '',
+          safeguards: data.safeguards || '',
+          actions: data.actions || '',
+          severity: data.severity || '',
+          likelihood: data.likelihood || '',
+          createdAt: Date.now(),
+        };
+        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, hazop: [...(p.hazop || []), row], updatedAt: Date.now() } : p)) });
+        useSkillStore.getState().awardXP('process-safety-lv1', HAZOP_ROW_XP, `HAZOP: ${row.guideWord} ${row.parameter} (${project.name})`);
+        toast(`Déviation HAZOP ajoutée · +${HAZOP_ROW_XP} XP`, 'success');
+        get().checkBadges();
+        return row.id;
+      },
+      updateHazopRow: (projectId, rowId, updates) =>
+        set({
+          projects: get().projects.map((p) =>
+            p.id === projectId ? { ...p, hazop: (p.hazop || []).map((r) => (r.id === rowId ? { ...r, ...updates } : r)), updatedAt: Date.now() } : p
+          ),
+        }),
+      deleteHazopRow: (projectId, rowId) => {
+        const project = get().projects.find((p) => p.id === projectId);
+        const row = project?.hazop?.find((r) => r.id === rowId);
+        if (row) useSkillStore.getState().removeXP('process-safety-lv1', HAZOP_ROW_XP, 'HAZOP row deleted');
+        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, hazop: (p.hazop || []).filter((r) => r.id !== rowId), updatedAt: Date.now() } : p)) });
+      },
 
       // Same convention as dealsStore.setDealStage: jumping to a new stage
       // resets its status to 'not-started' unless a status is passed
@@ -233,11 +279,29 @@ export const useEngineeringStore = create(
         };
       },
 
+      // Deadline urgency — projects that aren't finished yet (stage < last,
+      // or last stage but not done) with a deadline that's already passed or
+      // within `days`. Same convention as Finance's échéances/Trading's risk
+      // banners: computed here once, consumed by both Today.jsx and
+      // Engineering.jsx rather than two divergent implementations. NOTE:
+      // returns a fresh array — call via getState() inside a useMemo/effect,
+      // never as a bare `useEngineeringStore(s => s.getDeadlineAlerts())`
+      // selector (see the useSyncExternalStore infinite-loop note in project
+      // memory).
+      getDeadlineAlerts: (days = 14, today = todayKey()) => {
+        const unfinished = get().projects.filter((p) => !(p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done') && p.deadline);
+        const cutoff = addDaysKey(today, days);
+        return unfinished
+          .filter((p) => p.deadline <= cutoff)
+          .map((p) => ({ project: p, overdue: p.deadline < today }))
+          .sort((a, b) => (a.project.deadline < b.project.deadline ? -1 : 1));
+      },
+
       resetAll: () => set({ labEntries: [], projects: [], awardedBadges: [] }),
     }),
     {
       name: 'audax-engineering',
-      version: 2,
+      version: 3,
       // v1 tasks predate the Gantt fields (startDate/endDate/dependencies/
       // milestone/progress/order) — backfill from each task's existing
       // `createdAt` so every task lands somewhere sane on the timeline
@@ -263,6 +327,11 @@ export const useEngineeringStore = create(
               }),
             })),
           };
+        }
+        // v2 projects predate the HAZOP worksheet — every existing project
+        // just gets an empty one, same "backfill, don't break" convention.
+        if (version < 3) {
+          state = { ...state, projects: (state.projects || []).map((p) => ({ ...p, hazop: p.hazop || [] })) };
         }
         return state;
       },

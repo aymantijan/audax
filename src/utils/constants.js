@@ -61,6 +61,18 @@ export const ENGINEERING_PROJECT_STAGES = [
 ];
 export const ENGINEERING_PROJECT_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
 
+// Standard IEC 61882 HAZOP guide words — used to structure a real deviation
+// worksheet per project (added 2026-08-27) instead of leaving "Analyse de
+// sécurité (HAZOP)" as just another stage checkbox with no actual content.
+export const HAZOP_GUIDEWORDS = ['No/Not', 'More', 'Less', 'As Well As', 'Part Of', 'Reverse', 'Other Than', 'Early', 'Late'];
+export const HAZOP_SEVERITY = ['Faible', 'Modérée', 'Élevée', 'Critique'];
+export const HAZOP_LIKELIHOOD = ['Rare', 'Possible', 'Probable', 'Fréquente'];
+
+// Reuses Learning's GRADE_POINTS scale (below) so a project grade means the
+// same thing app-wide — a PFE/stage is graded in real life just like a
+// course is, and Engineering never had anywhere to record that.
+export const ENGINEERING_PROJECT_GRADES = ['A', 'B+', 'B', 'C+', 'C', 'D', 'F'];
+
 // Which skill-tree node a completed task's XP goes to, keyed by the project
 // stage it belongs to (see engineeringStore.setTaskStatus) — stages without
 // a distinct technical skill (spec, lit review, report, defense) fall back

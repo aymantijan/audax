@@ -1,11 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown, Send, BookMarked } from 'lucide-react';
+import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown, Send, BookMarked, AlertTriangle } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { useLearningStore } from '../store/learningStore';
 import { useAuthStore } from '../store/authStore';
-import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
+import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES, GRADE_POINTS } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -108,7 +108,7 @@ async function exportPortfolioPDF({ projects, labEntries, userName }) {
       doc.setTextColor(120);
       const tasks = p.tasks || [];
       const done = tasks.filter((t) => t.status === 'done').length;
-      doc.text(`${p.type} · ${ENGINEERING_PROJECT_STAGES[p.stageIndex ?? 0]}${p.deadline ? ` · échéance ${p.deadline}` : ''}${tasks.length ? ` · ${done}/${tasks.length} tâches` : ''}`, 14, y);
+      doc.text(`${p.type} · ${ENGINEERING_PROJECT_STAGES[p.stageIndex ?? 0]}${p.grade ? ` · note ${p.grade}` : ''}${p.deadline ? ` · échéance ${p.deadline}` : ''}${tasks.length ? ` · ${done}/${tasks.length} tâches` : ''}${(p.hazop || []).length ? ` · ${p.hazop.length} déviation(s) HAZOP` : ''}`, 14, y);
       y += 6;
       doc.setTextColor(0);
       section('Description', p.description);
@@ -258,14 +258,30 @@ function LabJournal() {
     setForm(blankEntry());
   };
 
+  const [yieldCourseFilter, setYieldCourseFilter] = useState('all');
+  const yieldedEntries = useMemo(() => labEntries.filter((e) => e.yieldPercent !== '' && e.yieldPercent != null), [labEntries]);
+  const yieldCourses = useMemo(() => [...new Set(yieldedEntries.map((e) => e.course).filter(Boolean))], [yieldedEntries]);
   const yieldTrend = useMemo(
     () =>
-      [...labEntries]
-        .filter((e) => e.yieldPercent !== '' && e.yieldPercent != null)
+      yieldedEntries
+        .filter((e) => yieldCourseFilter === 'all' || e.course === yieldCourseFilter)
         .sort((a, b) => (a.date < b.date ? -1 : 1))
         .map((e) => ({ date: e.date.slice(5), yield: Number(e.yieldPercent), title: e.title })),
-    [labEntries]
+    [yieldedEntries, yieldCourseFilter]
   );
+  // Rendement moyen par cours — le graphique "dans le temps" mélangeait tout
+  // (un TP de distillation et un TP de cinétique n'ont pas le même rendement
+  // "normal"), donc impossible de voir si UN cours en particulier se dégrade.
+  const yieldByCourse = useMemo(() => {
+    const groups = {};
+    for (const e of yieldedEntries) {
+      const key = e.course || 'Sans cours';
+      (groups[key] ??= []).push(Number(e.yieldPercent));
+    }
+    return Object.entries(groups)
+      .map(([course, values]) => ({ course, avg: Math.round((values.reduce((a, v) => a + v, 0) / values.length) * 10) / 10, count: values.length }))
+      .sort((a, b) => b.avg - a.avg);
+  }, [yieldedEntries]);
 
   return (
     <div className="space-y-6">
@@ -280,18 +296,50 @@ function LabJournal() {
         <Stat label="Cours couverts" value={new Set(labEntries.map((e) => e.course).filter(Boolean)).size} />
       </div>
 
-      {yieldTrend.length > 1 && (
-        <Card title="Rendement dans le temps">
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={yieldTrend}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-              <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} unit="%" />
-              <Tooltip {...tooltipStyle} formatter={(v, n, p) => [`${v}%`, p.payload.title]} />
-              <Line type="monotone" dataKey="yield" stroke="#66ccff" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
+      {yieldedEntries.length > 1 && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card
+            title="Rendement dans le temps"
+            action={
+              yieldCourses.length > 1 ? (
+                <Select
+                  value={yieldCourseFilter}
+                  onChange={(e) => setYieldCourseFilter(e.target.value)}
+                  options={[{ value: 'all', label: 'Tous les cours' }, ...yieldCourses.map((c) => ({ value: c, label: c }))]}
+                  className="!py-1 !px-2 text-xs w-40"
+                />
+              ) : undefined
+            }
+          >
+            {yieldTrend.length > 1 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={yieldTrend}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                  <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} unit="%" />
+                  <Tooltip {...tooltipStyle} formatter={(v, n, p) => [`${v}%`, p.payload.title]} />
+                  <Line type="monotone" dataKey="yield" stroke="#66ccff" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState>Pas assez d'entrées avec rendement pour ce cours.</EmptyState>
+            )}
+          </Card>
+
+          {yieldByCourse.length > 1 && (
+            <Card title="Rendement moyen par cours">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={yieldByCourse} layout="vertical" margin={{ left: 8 }}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" unit="%" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                  <YAxis type="category" dataKey="course" width={110} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
+                  <Tooltip {...tooltipStyle} formatter={(v, n, p) => [`${v}% (${p.payload.count} essai${p.payload.count > 1 ? 's' : ''})`, p.payload.course]} />
+                  <Bar dataKey="avg" radius={[0, 4, 4, 0]} fill="#66ccff" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+        </div>
       )}
 
       <Card title={`Journal (${labEntries.length})`}>
@@ -367,7 +415,7 @@ function LabJournal() {
 }
 
 function Projects() {
-  const { projects, addProject, deleteProject } = useEngineeringStore();
+  const { projects, addProject, deleteProject, getDeadlineAlerts } = useEngineeringStore();
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(blankProject());
 
@@ -375,6 +423,12 @@ function Projects() {
     () => ENGINEERING_PROJECT_TYPES.map((t) => ({ name: t, count: projects.filter((p) => p.type === t).length })).filter((p) => p.count > 0),
     [projects]
   );
+  // getDeadlineAlerts() allocates a fresh array — called inside this useMemo
+  // (keyed on the raw `projects` slice), never as a bare store selector (see
+  // the useSyncExternalStore infinite-loop note in project memory).
+  const deadlineAlerts = useMemo(() => getDeadlineAlerts(), [projects]);
+  const gradedProjects = useMemo(() => projects.filter((p) => p.grade && GRADE_POINTS[p.grade] !== undefined), [projects]);
+  const avgGrade = gradedProjects.length ? gradedProjects.reduce((a, p) => a + GRADE_POINTS[p.grade], 0) / gradedProjects.length : null;
 
   const submit = (e) => {
     e.preventDefault();
@@ -391,12 +445,25 @@ function Projects() {
         <Button onClick={() => setModal(true)}><span className="flex items-center gap-2"><Plus size={16} /> Nouveau projet</span></Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Stat label="Projets" value={projects.length} />
         <Stat label="En cours" value={projects.filter((p) => p.stageStatus !== 'done' || p.stageIndex < ENGINEERING_PROJECT_STAGES.length - 1).length} />
         <Stat label="Terminés" value={projects.filter((p) => p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done').length} />
         <Stat label="Types utilisés" value={byType.length} sub={`sur ${ENGINEERING_PROJECT_TYPES.length}`} />
+        <Stat label="Moyenne" value={avgGrade != null ? avgGrade.toFixed(2) : '—'} sub={gradedProjects.length ? `${gradedProjects.length} noté${gradedProjects.length > 1 ? 's' : ''}` : 'aucun projet noté'} />
       </div>
+
+      {deadlineAlerts.length > 0 && (
+        <div className="space-y-1.5">
+          {deadlineAlerts.map(({ project, overdue }) => (
+            <div key={project.id} className={`flex items-center gap-2 text-sm border rounded-lg px-4 py-2.5 ${overdue ? 'border-bad/50 bg-bad/10 text-bad' : 'border-warn/50 bg-warn/10 text-warn'}`}>
+              <AlertTriangle size={14} className="shrink-0" />
+              <Link to={`/engineering/${project.id}`} className="hover:underline font-medium">{project.name}</Link>
+              <span>{overdue ? `— échéance dépassée (${fmtDateShort(project.deadline)})` : `— échéance le ${fmtDateShort(project.deadline)}`}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {byType.length > 1 && (
         <Card title="Projets par type">
@@ -423,6 +490,7 @@ function Projects() {
                   <th className="py-2 pr-4">Étape</th>
                   <th className="py-2 pr-4">Tâches</th>
                   <th className="py-2 pr-4">Échéance</th>
+                  <th className="py-2 pr-4">Note</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -437,6 +505,7 @@ function Projects() {
                       <td className="py-2.5 pr-4"><Badge color={STAGE_STATUS_COLOR[p.stageStatus] || 'var(--text-secondary)'}>{ENGINEERING_PROJECT_STAGES[p.stageIndex ?? 0]}</Badge></td>
                       <td className="py-2.5 pr-4 text-mute">{tasks.length ? `${done}/${tasks.length}` : '—'}</td>
                       <td className="py-2.5 pr-4 text-mute">{p.deadline ? fmtDateShort(p.deadline) : '—'}</td>
+                      <td className="py-2.5 pr-4 text-mute">{p.grade || '—'}</td>
                       <td className="py-2.5 text-right">
                         <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer "${p.name}" ?`)) deleteProject(p.id); }}><Trash2 size={14} /></button>
                       </td>

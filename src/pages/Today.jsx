@@ -64,9 +64,13 @@ export default function Today() {
   const loggedMealToday = nutritionLogs.some((n) => n.date === today);
 
   // ---- Engineering ----
-  const { labEntries, projects: engProjects } = useEngineeringStore();
+  const { labEntries, projects: engProjects, getDeadlineAlerts } = useEngineeringStore();
   const loggedLabToday = labEntries.some((e) => e.date === today);
   const activeEngProjects = engProjects.filter((p) => !(p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done'));
+  // getDeadlineAlerts() allocates a fresh array — only ever called inside this
+  // useMemo (keyed on the raw `engProjects` slice), never as a bare store
+  // selector (see the useSyncExternalStore infinite-loop note in project memory).
+  const deadlineAlerts = useMemo(() => getDeadlineAlerts(14, today), [engProjects, today]);
 
   // ---- Deals & Business ---- (added 2026-08-26, same session as the
   // Deals/Business Projects page split — Today.jsx had a card for every other
@@ -297,6 +301,17 @@ export default function Today() {
                 </li>
               ))}
             </ul>
+          )}
+          {deadlineAlerts.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {deadlineAlerts.map(({ project, overdue }) => (
+                <div key={project.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
+                  <AlertTriangle size={13} />
+                  <Link to={`/engineering/${project.id}`} className="hover:underline">{project.name}</Link>
+                  {overdue ? ` — échéance dépassée (${fmtDate(project.deadline)})` : ` — échéance le ${fmtDate(project.deadline)}`}
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       )}

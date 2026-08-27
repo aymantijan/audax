@@ -1,8 +1,163 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, ZoomIn, ZoomOut, Diamond, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, ZoomIn, ZoomOut, Diamond, AlertTriangle, FileDown } from 'lucide-react';
 import { diffDays, addDaysKey, toDate, monthGroups, durationDays, computeCriticalPath, wouldCreateCycle } from '../utils/gantt';
 import { todayKey } from '../utils/formatters';
 import { Card, Button, Field, Input, Modal, EmptyState } from '../components/common/ui';
+
+// Graphical PDF export — flat sibling of BusinessGanttChart's exportGanttPDF
+// (no phase grouping, since engineering projects don't have Business's
+// sub-phases). Same dynamic-import jsPDF pattern as every other export.
+const PDF_ACCENT = [13, 148, 166];
+const PDF_GRID = [225, 228, 231];
+const PDF_MUTE = [123, 129, 135];
+const PDF_STATUS = {
+  todo: { fill: [150, 155, 161], dark: [96, 100, 105] },
+  'in-progress': { fill: [219, 158, 42], dark: [163, 112, 20] },
+  done: { fill: [36, 168, 113], dark: [20, 118, 78] },
+};
+const PDF_CRITICAL = [214, 62, 62];
+
+function pdfDiamond(doc, cx, cy, r, color) {
+  doc.setFillColor(...color);
+  doc.triangle(cx, cy - r, cx + r, cy, cx, cy + r, 'F');
+  doc.triangle(cx, cy - r, cx - r, cy, cx, cy + r, 'F');
+}
+
+async function exportGanttPDF(project, tasks) {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginL = 14, marginR = 14, marginB = 16;
+  const chartXmm = 80;
+  const chartWidth = pageW - marginR - chartXmm;
+  const fileBase = project.name.replace(/\s+/g, '-').toLowerCase();
+
+  if (!tasks.length) {
+    doc.setFontSize(11);
+    doc.text(`${project.name} — aucune tâche planifiée.`, marginL, 20);
+    doc.save(`gantt-${fileBase}.pdf`);
+    return;
+  }
+
+  const min = [...tasks.map((t) => t.startDate)].sort()[0];
+  const max = [...tasks.map((t) => t.endDate)].sort().slice(-1)[0];
+  const totalDays = Math.max(1, diffDays(min, max) + 1);
+  const dayW = chartWidth / totalDays;
+  const xFor = (dateKey) => chartXmm + diffDays(min, dateKey) * dayW;
+  const critical = computeCriticalPath(tasks);
+  const doneCount = tasks.filter((t) => t.status === 'done').length;
+
+  function drawBanner() {
+    doc.setFillColor(...PDF_ACCENT);
+    doc.rect(0, 0, pageW, 22, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(15);
+    doc.text(project.name, marginL, 13);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    doc.text(`Diagramme de Gantt · ${tasks.length} tâche${tasks.length > 1 ? 's' : ''} · ${doneCount} terminée${doneCount > 1 ? 's' : ''} · ${critical.size} critique${critical.size > 1 ? 's' : ''}`, marginL, 19);
+    doc.setFontSize(7.5);
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageW - marginR, 12, { align: 'right' });
+    doc.setTextColor(0);
+  }
+
+  function drawMonthRuler(y) {
+    doc.setFillColor(246, 247, 248);
+    doc.rect(chartXmm, y - 5, chartWidth, 6, 'F');
+    let mx = chartXmm;
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(...PDF_MUTE);
+    for (const g of monthGroups(min, max)) {
+      const w = g.days * dayW;
+      doc.text(g.label.toUpperCase(), mx + w / 2, y - 1, { align: 'center' });
+      if (mx > chartXmm) { doc.setDrawColor(...PDF_GRID); doc.line(mx, y - 5, mx, y + 1); }
+      mx += w;
+    }
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0);
+    doc.setDrawColor(...PDF_GRID);
+    doc.line(marginL, y + 1, pageW - marginR, y + 1);
+  }
+
+  drawBanner();
+  drawMonthRuler(34);
+  const chartTop = 40;
+  const bodyBottom = pageH - marginB - 4;
+  let y = chartTop;
+  let page = 1;
+  const layout = {};
+  let zebra = 0;
+
+  for (const t of tasks) {
+    if (y > bodyBottom) { doc.addPage('a4', 'landscape'); page += 1; drawBanner(); drawMonthRuler(34); y = chartTop; }
+    const isCritical = critical.has(t.id);
+    if (zebra % 2 === 1) { doc.setFillColor(250, 250, 251); doc.rect(marginL, y - 4.6, pageW - marginL - marginR, 6.4, 'F'); }
+    zebra++;
+
+    doc.setFontSize(7.2);
+    doc.setTextColor(...(isCritical ? PDF_CRITICAL : [28, 32, 36]));
+    const label = doc.getTextWidth(t.title) > chartXmm - marginL - 6 ? `${t.title.slice(0, 28)}…` : t.title;
+    doc.text(label, marginL + 2, y);
+    doc.setFontSize(6.4);
+    doc.setTextColor(...PDF_MUTE);
+    doc.text(`${t.progress ?? 0}%`, chartXmm - 4, y, { align: 'right' });
+    doc.setTextColor(0);
+
+    const x1 = xFor(t.startDate);
+    const w = Math.max(1.2, (diffDays(t.startDate, t.endDate) + 1) * dayW);
+    const status = PDF_STATUS[t.status] || PDF_STATUS.todo;
+    const fillColor = isCritical ? PDF_CRITICAL : status.fill;
+    const darkColor = isCritical ? [150, 30, 30] : status.dark;
+    if (t.milestone) {
+      pdfDiamond(doc, x1 + 1, y - 1.8, 1.6, fillColor);
+    } else {
+      doc.setFillColor(...fillColor);
+      doc.roundedRect(x1, y - 3.6, w, 3.4, 0.7, 0.7, 'F');
+      const pct = t.progress ?? 0;
+      if (pct > 0) {
+        doc.setFillColor(...darkColor);
+        const pw = Math.min(w, (w * pct) / 100);
+        doc.rect(x1, y - 3.6, pw, 3.4, 'F');
+      }
+    }
+    layout[t.id] = { x1, x2: t.milestone ? x1 + 1 : x1 + w, y: y - 1.9, page };
+    y += 6.4;
+  }
+
+  for (const t of tasks) {
+    const succ = layout[t.id];
+    if (!succ) continue;
+    for (const depId of t.dependencies || []) {
+      const pred = layout[depId];
+      if (!pred || pred.page !== succ.page) continue;
+      doc.setPage(pred.page);
+      const isCritical = critical.has(depId) && critical.has(t.id);
+      const c = isCritical ? PDF_CRITICAL : [172, 176, 180];
+      doc.setDrawColor(...c);
+      doc.setLineWidth(isCritical ? 0.35 : 0.18);
+      const midX = pred.x2 + 1.6;
+      doc.line(pred.x2, pred.y, midX, pred.y);
+      doc.line(midX, pred.y, midX, succ.y);
+      doc.line(midX, succ.y, succ.x1 - 0.6, succ.y);
+      doc.setFillColor(...c);
+      doc.triangle(succ.x1 - 1.3, succ.y - 0.65, succ.x1 - 1.3, succ.y + 0.65, succ.x1, succ.y, 'F');
+    }
+  }
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_MUTE);
+    doc.text(`Page ${p} / ${totalPages}`, pageW - marginR, pageH - 7, { align: 'right' });
+    doc.setTextColor(0);
+  }
+
+  doc.save(`gantt-${fileBase}-${todayKey()}.pdf`);
+}
 
 const STATUS_COLOR = { todo: 'var(--text-secondary)', 'in-progress': 'var(--warning)', done: 'var(--success)' };
 const STATUS_LABEL = { todo: 'À faire', 'in-progress': 'En cours', done: 'Terminée' };
@@ -139,10 +294,13 @@ export default function EngineeringGanttChart({ project, updateTask, deleteTask 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center border border-line rounded-lg overflow-hidden">
-          <button className="text-mute hover:text-ink hover:bg-surface p-1.5 cursor-pointer" title="Zoom arrière" onClick={() => setDayWidth((w) => Math.max(10, w - 4))}><ZoomOut size={14} /></button>
-          <div className="w-px h-4 bg-line" />
-          <button className="text-mute hover:text-ink hover:bg-surface p-1.5 cursor-pointer" title="Zoom avant" onClick={() => setDayWidth((w) => Math.min(44, w + 4))}><ZoomIn size={14} /></button>
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center border border-line rounded-lg overflow-hidden">
+            <button className="text-mute hover:text-ink hover:bg-surface p-1.5 cursor-pointer" title="Zoom arrière" onClick={() => setDayWidth((w) => Math.max(10, w - 4))}><ZoomOut size={14} /></button>
+            <div className="w-px h-4 bg-line" />
+            <button className="text-mute hover:text-ink hover:bg-surface p-1.5 cursor-pointer" title="Zoom avant" onClick={() => setDayWidth((w) => Math.min(44, w + 4))}><ZoomIn size={14} /></button>
+          </div>
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportGanttPDF(project, tasks)}><span className="flex items-center gap-2"><FileDown size={13} /> Gantt (PDF)</span></Button>
         </div>
         <div className="flex flex-wrap gap-2">
           <StatPill label="tâches" value={tasks.length} />

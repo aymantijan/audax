@@ -103,6 +103,7 @@ export const HABIT_TEMPLATES = [
       h('Advance a project task', 'engineering', 8, 'engineering-discipline-lv2', { duration: 30 }),
       h('Weekly project review', 'engineering', 12, 'engineering-discipline-lv2', { frequency: 'weekly', duration: 30 }),
       h('Practice a simulation tool (Aspen/HYSYS)', 'engineering', 8, 'process-simulation-lv1', { frequency: 'weekly', duration: 45 }),
+      h('Review HAZOP deviations', 'engineering', 10, 'process-safety-lv1', { frequency: 'weekly', duration: 20 }),
     ],
   },
 ];
