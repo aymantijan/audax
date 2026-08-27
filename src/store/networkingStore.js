@@ -77,7 +77,7 @@ export const useNetworkingStore = create(
       logTouch: (contactId, data) => {
         const contact = get().getContact(contactId);
         if (!contact) return;
-        const touch = { id: uid(), date: data.date || todayKey(), note: data.note || '', createdAt: Date.now() };
+        const touch = { id: uid(), date: data.date || todayKey(), type: data.type || 'Autre', note: data.note || '', createdAt: Date.now() };
         set({
           contacts: get().contacts.map((c) =>
             c.id === contactId ? { ...c, touches: [...(c.touches || []), touch], nextFollowUpDate: data.nextFollowUpDate ?? c.nextFollowUpDate, updatedAt: Date.now() } : c
@@ -105,6 +105,34 @@ export const useNetworkingStore = create(
           .filter((c) => c.nextFollowUpDate && c.nextFollowUpDate <= cutoff)
           .map((c) => ({ contact: c, overdue: c.nextFollowUpDate < today }))
           .sort((a, b) => (a.contact.nextFollowUpDate < b.contact.nextFollowUpDate ? -1 : 1));
+      },
+
+      // Relationship tier — "who am I neglecting" at a glance, derived from
+      // the most recent touch (falling back to createdAt if never touched
+      // yet, so a brand-new contact reads as warm, not cold). hot ≤14d,
+      // warm ≤45d, else cold. Returns a fresh value each call — safe here
+      // since it's called per-row in a render loop, never as a bare
+      // `useNetworkingStore(s => s.getContactTier(...))` selector.
+      getContactTier: (contact, today = todayKey()) => {
+        const lastTouch = [...(contact.touches || [])].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        const lastDate = lastTouch?.date || new Date(contact.createdAt).toISOString().slice(0, 10);
+        const days = Math.floor((new Date(`${today}T00:00:00`) - new Date(`${lastDate}T00:00:00`)) / 86400000);
+        if (days <= 14) return 'hot';
+        if (days <= 45) return 'warm';
+        return 'cold';
+      },
+
+      // Nudges a contact's next-follow-up date forward — called by
+      // careerStore when a referred application advances a stage, so the
+      // referrer doesn't go silent right when they'd want a "thanks, moving
+      // to interview" update. Never pulls a date CLOSER than one already set.
+      nudgeFollowUp: (contactId, days = 3) => {
+        const contact = get().getContact(contactId);
+        if (!contact) return;
+        const candidate = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+        if (contact.nextFollowUpDate && contact.nextFollowUpDate <= candidate) return;
+        set({ contacts: get().contacts.map((c) => (c.id === contactId ? { ...c, nextFollowUpDate: candidate, updatedAt: Date.now() } : c)) });
+        toast(`Relance planifiée pour ${contact.name} suite à l'avancement d'une candidature référée`, 'info');
       },
 
       resetAll: () => set({ contacts: [], awardedBadges: [] }),

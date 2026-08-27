@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check, Globe } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check, Globe, UserRound } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSkillStore } from '../store/skillStore';
+import { useNetworkingStore } from '../store/networkingStore';
 import { useSynergy } from '../hooks/useSynergy';
-import { LEADERBOARD, PERSONALITY_DOMAINS, PERSONALITY_COUNTRIES } from '../utils/personalities';
+import { LEADERBOARD, PERSONALITIES, PERSONALITY_DOMAINS, PERSONALITY_COUNTRIES } from '../utils/personalities';
 import { gradeFor, gradeForXpOnly, GRADES_LADDER, GRADE_ERAS } from '../utils/grades';
 import { preview, CONSISTENCY_CONFIG } from '../utils/momentum';
 import { XP_DOMAINS, XP_DOMAIN_LABELS, domainXpBreakdown } from '../utils/xp-domains';
@@ -90,9 +92,48 @@ function DomainBalanceCard({ domainXP }) {
   );
 }
 
+// Networking cross-link (2026-08-27): a networkingStore contact can carry a
+// `linkedPersonalityName` tag — this surfaces the aggregate ("who do my
+// real-world contacts remind me of") as motivation, and lets each ranking
+// row that has ≥1 linked contact jump straight to them filtered on Networking.
+function RealWorldNetworkCard({ contacts }) {
+  // Plain computation, not useMemo — this is cheap (contacts lists are small)
+  // and an early return below would otherwise violate the rules of hooks by
+  // making a hook call conditional.
+  const linked = contacts.filter((c) => c.linkedPersonalityName);
+  if (!linked.length) return null;
+  const counts = {};
+  for (const c of linked) {
+    const p = PERSONALITIES.find((p) => p.name === c.linkedPersonalityName);
+    const domain = p?.domain || 'Autre';
+    counts[domain] = (counts[domain] || 0) + 1;
+  }
+  const byDomain = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <Card title="Real-World Network">
+      <p className="text-xs text-mute mb-3">Vos contacts Networking liés à des figures du Leaderboard, par domaine.</p>
+      <div className="flex flex-wrap gap-2">
+        {byDomain.map(([domain, count]) => (
+          <span key={domain} className="text-xs bg-surface border border-line rounded-full px-3 py-1.5 flex items-center gap-1.5">
+            <UserRound size={12} className="text-accent" /> {count} lié{count > 1 ? 's' : ''} · {domain}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function RankingView() {
   const user = useAuthStore((s) => s.user);
   const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
+  const navigate = useNavigate();
+  const contacts = useNetworkingStore((s) => s.contacts);
+  const linkedCounts = useMemo(() => {
+    const counts = {};
+    for (const c of contacts) if (c.linkedPersonalityName) counts[c.linkedPersonalityName] = (counts[c.linkedPersonalityName] || 0) + 1;
+    return counts;
+  }, [contacts]);
 
   const [search, setSearch] = useState('');
   const [domain, setDomain] = useState('all');
@@ -241,6 +282,15 @@ function RankingView() {
                         {r.isYou && <Star size={13} className="text-accent shrink-0" fill="currentColor" />}
                         {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Real AUDAX user" />}
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
+                        {!r.isYou && !r.isRealUser && linkedCounts[r.name] > 0 && (
+                          <button
+                            className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 rounded-full px-1.5 py-0.5 cursor-pointer shrink-0"
+                            title={`${linkedCounts[r.name]} contact(s) Networking lié(s)`}
+                            onClick={() => navigate(`/networking?personality=${encodeURIComponent(r.name)}`)}
+                          >
+                            <UserRound size={10} /> {linkedCounts[r.name]}
+                          </button>
+                        )}
                       </div>
                       {r.note && <div className="text-[11px] text-mute mt-0.5 max-w-md truncate">{r.note}</div>}
                     </td>
@@ -410,6 +460,7 @@ export default function Leaderboard() {
   const consistencyRaw = useSkillStore((s) => s.consistency);
   const consistency = useMemo(() => preview(consistencyRaw, todayKey(), CONSISTENCY_CONFIG), [consistencyRaw]);
   const synergy = useSynergy();
+  const contacts = useNetworkingStore((s) => s.contacts);
   const [tab, setTab] = useState('ranking');
 
   const grade = gradeFor(lifetimeXP, synergy.weighted);
@@ -429,6 +480,7 @@ export default function Leaderboard() {
       </div>
 
       <DomainBalanceCard domainXP={domainXP} />
+      <RealWorldNetworkCard contacts={contacts} />
 
       <div className="flex gap-1 border-b border-line">
         <button

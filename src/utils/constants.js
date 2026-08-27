@@ -95,6 +95,10 @@ export const ENGINEERING_STAGE_SKILL = {
 // contact/application/post).
 export const LIFE_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'General'];
 
+// How a networking touch actually happened — was a freeform note only until
+// 2026-08-27 despite networkingStore's own comment promising this distinction.
+export const TOUCH_TYPES = ['Appel', 'Café', 'Email', 'Message', 'Événement', 'Autre'];
+
 export const CAREER_STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
 // Which skill a career-application stage advance targets — mirrors
 // ENGINEERING_STAGE_SKILL's keyed-by-stage pattern. All three ids are real,

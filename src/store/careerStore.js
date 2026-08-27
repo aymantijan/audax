@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
 import { CAREER_STAGES, CAREER_STAGE_SKILL } from '../utils/constants';
 import { useSkillStore } from './skillStore';
+import { useNetworkingStore } from './networkingStore';
 import { toast } from './uiStore';
 import { evaluateBadges } from '../utils/badges';
 
@@ -47,6 +48,7 @@ export const useCareerStore = create(
           salary: data.salary || '',
           url: data.url || '',
           notes: data.notes || '',
+          referralContactId: data.referralContactId || '', // links to a networkingStore contact — see setStage
           stageHistory: [{ stage: 'Applied', date: todayKey() }],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -88,7 +90,48 @@ export const useCareerStore = create(
           useSkillStore.getState().awardXP(skillId, STAGE_XP, `${stage}: ${app.company}`);
           toast(`${app.company} → ${stage} · +${STAGE_XP} XP`, 'success');
         }
+        // Real progress on a referred application is exactly when a referrer
+        // deserves an update — nudge their next-follow-up date so they don't
+        // fall off the radar right as the referral pays off.
+        if (app.referralContactId && stage !== 'Applied' && stage !== 'Rejected' && stage !== 'Withdrawn') {
+          useNetworkingStore.getState().nudgeFollowUp(app.referralContactId);
+        }
         get().checkBadges();
+      },
+
+      // Applications sitting in an open stage with no movement in `days` —
+      // same shape/convention as networkingStore.getFollowUpAlerts and
+      // engineeringStore.getDeadlineAlerts. "No movement" = the last
+      // stageHistory entry (or appliedDate, if somehow empty) is older than
+      // the cutoff. Closed stages (Accepted/Rejected/Withdrawn) never stall.
+      getStaleApplications: (days = 14, today = todayKey()) => {
+        const cutoffMs = new Date(`${today}T00:00:00`).getTime() - days * 86400000;
+        return get()
+          .applications.filter((a) => !['Accepted', 'Rejected', 'Withdrawn'].includes(a.stage))
+          .map((a) => {
+            const lastMoveDate = a.stageHistory?.length ? a.stageHistory[a.stageHistory.length - 1].date : a.appliedDate;
+            return { app: a, lastMoveDate, staleMs: cutoffMs - new Date(`${lastMoveDate}T00:00:00`).getTime() };
+          })
+          .filter((x) => x.staleMs >= 0)
+          .sort((a, b) => b.staleMs - a.staleMs);
+      },
+
+      // Real funnel conversion — "ever reached this stage" from stageHistory,
+      // not just current stage, so an application that got an offer and was
+      // later marked Accepted still counts toward the Interview→Offer rate.
+      getConversionStats: () => {
+        const apps = get().applications;
+        const reached = (stage) => apps.filter((a) => (a.stageHistory || []).some((h) => h.stage === stage)).length;
+        const applied = apps.length;
+        const interview = reached('Interview');
+        const offer = apps.filter((a) => (a.stageHistory || []).some((h) => h.stage === 'Offer' || h.stage === 'Accepted')).length;
+        return {
+          applied,
+          interview,
+          offer,
+          appliedToInterviewPct: applied ? Math.round((interview / applied) * 100) : 0,
+          interviewToOfferPct: interview ? Math.round((offer / interview) * 100) : 0,
+        };
       },
 
       resetAll: () => set({ applications: [], awardedBadges: [] }),
