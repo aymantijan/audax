@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
-  Users, Briefcase, Megaphone, FolderKanban,
+  Users, Briefcase, Megaphone, FolderKanban, Timer,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -51,6 +51,7 @@ export default function Onboarding() {
     career: user?.enabledModules?.career ?? true,
     content: user?.enabledModules?.content ?? true,
     projects: user?.enabledModules?.projects ?? true,
+    focus: user?.enabledModules?.focus ?? true,
   }));
 
   const toggle = (name) =>
@@ -119,6 +120,7 @@ export default function Onboarding() {
                 { key: 'career', icon: Briefcase, title: 'Career', text: 'Application pipeline — applied → interview → offer.' },
                 { key: 'content', icon: Megaphone, title: 'Content', text: 'Publications and engagement — LinkedIn, blog, portfolio.' },
                 { key: 'projects', icon: FolderKanban, title: 'Projects', text: 'Personal projects and side-hustles, outside the Deals/Business flow.' },
+                { key: 'focus', icon: Timer, title: 'Deep Work', text: 'A focus timer + session log, feeding XP into whichever domain you were concentrating on.' },
               ].map((m) => {
                 const keys = m.keys || [m.key];
                 const on = keys.every((k) => modules[k]);

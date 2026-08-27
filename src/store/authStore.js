@@ -50,6 +50,7 @@ function withDefaults(user) {
       career: user.enabledModules?.career ?? false,
       content: user.enabledModules?.content ?? false,
       projects: user.enabledModules?.projects ?? false,
+      focus: user.enabledModules?.focus ?? false,
     },
   };
 }
@@ -76,7 +77,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true, focus: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban, Timer } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -26,6 +26,7 @@ const MORE_ITEMS = [
   { to: '/career', label: 'Career', icon: Briefcase },
   { to: '/content', label: 'Content', icon: Megaphone },
   { to: '/projects', label: 'Projects', icon: FolderKanban },
+  { to: '/focus', label: 'Deep Work', icon: Timer },
   { to: '/skills', label: 'Skill Tree', icon: GitBranch },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/dashboard', label: 'Dashboard', icon: TrendingUp },
@@ -43,6 +44,7 @@ export default function MobileTabBar() {
   const careerEnabled = user?.enabledModules?.career ?? false;
   const contentEnabled = user?.enabledModules?.content ?? false;
   const projectsEnabled = user?.enabledModules?.projects ?? false;
+  const focusEnabled = user?.enabledModules?.focus ?? false;
   const primaryTabs = PRIMARY_TABS.filter((t) => t.to !== '/trading' || tradingEnabled);
   const moreItems = MORE_ITEMS.filter(
     (t) =>
@@ -52,6 +54,7 @@ export default function MobileTabBar() {
       (t.to !== '/networking' || networkingEnabled) &&
       (t.to !== '/career' || careerEnabled) &&
       (t.to !== '/content' || contentEnabled) &&
+      (t.to !== '/focus' || focusEnabled) &&
       (t.to !== '/projects' || projectsEnabled)
   );
 

@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { to: '/career', label: 'Career' },
   { to: '/content', label: 'Content' },
   { to: '/projects', label: 'Projects' },
+  { to: '/focus', label: 'Deep Work' },
   { to: '/skills', label: 'Skill Tree' },
   { to: '/leaderboard', label: 'Leaderboard' },
 ];
@@ -42,6 +43,7 @@ export default function Navbar() {
     if (item.to === '/career') return user?.enabledModules?.career ?? false;
     if (item.to === '/content') return user?.enabledModules?.content ?? false;
     if (item.to === '/projects') return user?.enabledModules?.projects ?? false;
+    if (item.to === '/focus') return user?.enabledModules?.focus ?? false;
     return true;
   });
 

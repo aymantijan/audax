@@ -113,6 +113,27 @@ export const CONTENT_PLATFORMS = ['LinkedIn', 'Blog', 'Portfolio', 'X/Twitter', 
 
 export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement', 'Croissance', 'Pause/Fin'];
 
+// Deep-work sessions — a cross-cutting focus timer, not its own life domain
+// (see focusStore.js). Broader than LIFE_DOMAINS since a focus session can
+// target Learning or Health too, not just the four "career" domains above.
+// Every id here is a real, unlocked-from-start skill (verified against
+// skill-tree-data.js / life-skills.js / professional-skills.js) — same
+// mistake-avoidance as ENGINEERING_STAGE_SKILL/CAREER_STAGE_SKILL above.
+export const FOCUS_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Learning', 'Health', 'Networking', 'Career', 'Content', 'Projects', 'General'];
+export const FOCUS_DOMAIN_SKILL = {
+  Trading: 'trading-discipline-lv1',
+  PE: 'three-statement-modeling-lv1',
+  Engineering: 'engineering-discipline-lv1',
+  Business: 'ge-thesis',
+  Learning: 'deep-focus-lv1',
+  Health: 'stress-management-lv1',
+  Networking: 'networking-lv1',
+  Career: 'written-communication-lv1',
+  Content: 'written-communication-lv1',
+  Projects: 'ge-thesis',
+  General: 'deep-focus-lv1',
+};
+
 export const INITIAL_ACCOUNT_VALUE = 52000;
 
 export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];

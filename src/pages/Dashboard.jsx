@@ -16,6 +16,7 @@ import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
 import { useProjectsStore } from '../store/projectsStore';
+import { useFocusStore } from '../store/focusStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
@@ -46,6 +47,7 @@ export default function Dashboard() {
   const careerEnabled = user?.enabledModules?.career ?? false;
   const contentEnabled = user?.enabledModules?.content ?? false;
   const projectsEnabled = user?.enabledModules?.projects ?? false;
+  const focusEnabled = user?.enabledModules?.focus ?? false;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
@@ -58,6 +60,7 @@ export default function Dashboard() {
   const applications = useCareerStore((s) => s.applications);
   const posts = useContentStore((s) => s.posts);
   const personalProjects = useProjectsStore((s) => s.projects);
+  const focusSessions = useFocusStore((s) => s.sessions);
   const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
@@ -131,6 +134,7 @@ export default function Dashboard() {
     ...(careerEnabled && applications.length ? [{ label: 'Career', value: synergy.scores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
     ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.scores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
     ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.scores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
+    ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.scores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h loggées`, color: '#ffa94d' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -510,6 +514,6 @@ export default function Dashboard() {
 function domainRoute(domain) {
   return {
     trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', deals: '/deals',
-    networking: '/networking', career: '/career', content: '/content', projects: '/projects',
+    networking: '/networking', career: '/career', content: '/content', projects: '/projects', focus: '/focus',
   }[domain] || '/';
 }

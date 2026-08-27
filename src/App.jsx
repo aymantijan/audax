@@ -45,6 +45,7 @@ const Career = lazy(lazyWithRetry(() => import('./pages/Career'), 'Career'));
 const Content = lazy(lazyWithRetry(() => import('./pages/Content'), 'Content'));
 const Projects = lazy(lazyWithRetry(() => import('./pages/Projects'), 'Projects'));
 const ProjectDetail = lazy(lazyWithRetry(() => import('./pages/ProjectDetail'), 'ProjectDetail'));
+const FocusSessions = lazy(lazyWithRetry(() => import('./pages/FocusSessions'), 'FocusSessions'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
@@ -179,6 +180,7 @@ export default function App() {
         <Route path="/content" element={<Content />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/focus" element={<FocusSessions />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />

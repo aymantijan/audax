@@ -15,6 +15,7 @@ export function calculateSynergies({
   trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today,
   healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, deals, businesses, dealsEnabled = true,
   contacts, applications, posts, personalProjects, networkingEnabled = false, careerEnabled = false, contentEnabled = false, projectsEnabled = false,
+  focusSessions, focusEnabled = false,
 }) {
   const monthStart = startOfMonth(new Date());
 
@@ -49,6 +50,7 @@ export function calculateSynergies({
   if (careerEnabled) scores.career = careerScore(applications || [], monthStart);
   if (contentEnabled) scores.content = contentScore(posts || [], monthStart);
   if (projectsEnabled) scores.projects = projectsScore(personalProjects || [], monthStart);
+  if (focusEnabled) scores.focus = focusScore(focusSessions || [], monthStart);
 
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
@@ -298,6 +300,17 @@ function projectsScore(projects, monthStart) {
   const newComponent = clamp(monthNew * 20);
   const taskComponent = clamp(monthTasksDone * 12);
   return r1(clamp(taskComponent * 0.6 + newComponent * 0.4));
+}
+
+// Minutes of deep work logged this month — ~5 hours (300 min) reaches 100.
+// Unlike the other new domains, focus sessions target a real timestamp
+// (createdAt) rather than a free-text date, so "this month" here means
+// actually logged this month, not backdated into it.
+function focusScore(sessions, monthStart) {
+  if (!sessions.length) return 0;
+  const monthStartMs = monthStart.getTime();
+  const monthMinutes = sessions.filter((s) => s.createdAt >= monthStartMs).reduce((a, s) => a + s.durationMinutes, 0);
+  return r1(clamp(monthMinutes / 3));
 }
 
 export function synergyColor(score) {

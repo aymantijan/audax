@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
-  Handshake, Rocket, Users, Briefcase, Megaphone, FolderKanban,
+  Handshake, Rocket, Users, Briefcase, Megaphone, FolderKanban, Timer,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -17,6 +17,7 @@ import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useProjectsStore } from '../store/projectsStore';
 import { useContentStore } from '../store/contentStore';
+import { useFocusStore } from '../store/focusStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { isHabitDueOn, habitStreak } from '../utils/calculations';
@@ -96,6 +97,8 @@ export default function Today() {
   const contentPosts = useContentStore((s) => s.posts);
   const personalProjects = useProjectsStore((s) => s.projects);
   const activePersonalProjects = personalProjects.filter((p) => p.status === 'active');
+  const focusStore = useFocusStore();
+  const todayFocusMinutes = useMemo(() => focusStore.getTodayMinutes(today), [focusStore.sessions, today]);
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -358,11 +361,12 @@ export default function Today() {
         const careerOn = user?.enabledModules?.career ?? false;
         const contentOn = user?.enabledModules?.content ?? false;
         const projectsOn = user?.enabledModules?.projects ?? false;
-        const anyOn = netOn || careerOn || contentOn || projectsOn;
-        const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || personalProjects.length > 0;
+        const focusOn = user?.enabledModules?.focus ?? false;
+        const anyOn = netOn || careerOn || contentOn || projectsOn || focusOn;
+        const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || personalProjects.length > 0 || focusStore.sessions.length > 0;
         if (!anyOn || !anyData) return null;
         return (
-          <Card title="Networking, Career & Projects">
+          <Card title="Networking, Career, Projects & Focus">
             <div className="flex items-center gap-6 text-sm flex-wrap">
               {netOn && contacts.length > 0 && (
                 <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
@@ -386,6 +390,12 @@ export default function Today() {
                 <Link to="/projects" className="flex items-center gap-1.5 hover:text-accent">
                   <FolderKanban size={15} className="text-mute" />
                   <span>{activePersonalProjects.length} projet{activePersonalProjects.length !== 1 ? 's' : ''} actif{activePersonalProjects.length !== 1 ? 's' : ''}</span>
+                </Link>
+              )}
+              {focusOn && focusStore.sessions.length > 0 && (
+                <Link to="/focus" className="flex items-center gap-1.5 hover:text-accent">
+                  <Timer size={15} className="text-mute" />
+                  <span>{todayFocusMinutes > 0 ? `${todayFocusMinutes} min aujourd'hui` : 'Aucune session aujourd\'hui'}</span>
                 </Link>
               )}
             </div>
