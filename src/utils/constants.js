@@ -115,6 +115,11 @@ export const CAREER_STAGE_SKILL = {
 
 export const CONTENT_PLATFORMS = ['LinkedIn', 'Blog', 'Portfolio', 'X/Twitter', 'YouTube', 'Newsletter', 'Autre'];
 
+// Editorial pipeline status — content used to be a publish-only retrospective
+// log (no way to plan ahead). 'Publié' stays the default on creation so
+// existing behavior (log something you just posted) is unchanged.
+export const CONTENT_STATUSES = ['Idée', 'Brouillon', 'Planifié', 'Publié'];
+
 export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement', 'Croissance', 'Pause/Fin'];
 
 // Deep-work sessions — a cross-cutting focus timer, not its own life domain
