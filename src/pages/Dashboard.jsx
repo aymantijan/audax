@@ -11,6 +11,7 @@ import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSynergy } from '../hooks/useSynergy';
 import { synergyColor } from '../utils/synergy';
@@ -36,12 +37,15 @@ export default function Dashboard() {
   const tradingEnabled = user?.enabledModules?.trading ?? true;
   const peEnabled = user?.enabledModules?.pe ?? true;
   const businessEnabled = user?.enabledModules?.business ?? true;
+  const engineeringEnabled = user?.enabledModules?.engineering ?? false;
   const trades = useTradingStore((s) => s.trades);
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
   const skills = useSkillStore((s) => s.skills);
   const deals = useDealsStore((s) => s.deals);
   const businesses = useBusinessStore((s) => s.businesses);
+  const labEntries = useEngineeringStore((s) => s.labEntries);
+  const engProjects = useEngineeringStore((s) => s.projects);
   const readingsStore = useReadingsStore();
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
@@ -103,6 +107,12 @@ export default function Dashboard() {
     { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
     ...(peEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
     ...(businessEnabled ? [{ label: 'Business', value: Math.min(100, businesses.reduce((a, b) => a + b.phases.filter((p) => p.status === 'done').length, 0) * 20), sub: businesses.length ? `${businesses.length} suivi${businesses.length > 1 ? 's' : ''}` : 'A-to-Z tracking', color: 'var(--accent-secondary)' }] : []),
+    // Reuses the already-computed synergy.scores.engineering (this month's lab
+    // + project-task activity, see synergy.js#engineeringScore) rather than a
+    // separate ad-hoc formula — Skills/Courses/Reading/Deals/Business is the
+    // only curated "highlights" row on Dashboard that didn't include
+    // Engineering despite it having its own gate, badges, and synergy domain.
+    ...(engineeringEnabled ? [{ label: 'Engineering', value: synergy.scores.engineering ?? 0, sub: `${labEntries.length} labo · ${engProjects.length} projet${engProjects.length !== 1 ? 's' : ''}`, color: 'var(--warning)' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);

@@ -70,6 +70,14 @@ export const useLearningStore = create(
         if (completingNow) set({ momentum: advance(get().momentum, todayKey(), LEARNING_MOMENTUM_CONFIG) });
       },
 
+      // Same momentum bump as completing a checklist item, for activity that
+      // legitimately advances a tracked course but isn't itself a checklist
+      // tick — currently: engineeringStore.addLabEntry, when a lab entry's
+      // free-text "course" field matches a real tracked course name (see the
+      // comment there). Exposed as its own action (not exported internals) so
+      // another store can record it without reaching into this one's shape.
+      recordActivity: () => set({ momentum: advance(get().momentum, todayKey(), LEARNING_MOMENTUM_CONFIG) }),
+
       // Live learning-momentum multiplier (0.4–1.0) and current streak, reflecting
       // decay accrued since the last completed task even before the next one.
       getLearningMomentum: () => preview(get().momentum, todayKey(), LEARNING_MOMENTUM_CONFIG),

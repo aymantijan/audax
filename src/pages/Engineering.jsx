@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown, Send } from 'lucide-react';
+import { FlaskConical, FolderKanban, Plus, Trash2, Pencil, FileDown, Send, BookMarked } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useEngineeringStore } from '../store/engineeringStore';
 import { useLearningStore } from '../store/learningStore';
+import { useAuthStore } from '../store/authStore';
 import { ENGINEERING_PROJECT_TYPES, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
@@ -54,6 +55,169 @@ async function exportLabEntryPDF(entry) {
   section('Conclusion', entry.conclusion);
 
   doc.save(`audax-lab-${(entry.title || 'entry').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${entry.date}.pdf`);
+}
+
+// Aggregate portfolio export — unlike exportLabEntryPDF (one experiment) and
+// EngineeringProjectDetail's exportProjectPDF (one project), this compiles a
+// CHOSEN subset of projects + lab entries into a single CV-style document —
+// what a student would actually attach to an internship/job application.
+// Same dynamic-import jsPDF pattern as every other PDF export in the app.
+async function exportPortfolioPDF({ projects, labEntries, userName }) {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF();
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 20;
+
+  doc.setFontSize(18);
+  doc.text('Portfolio Ingénierie', 14, y);
+  y += 7;
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`${userName ? `${userName} · ` : ''}Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, y);
+  y += 10;
+  doc.setTextColor(0);
+
+  const ensureRoom = (needed) => { if (y + needed > 280) { doc.addPage(); y = 20; } };
+  const section = (label, value, indent = 14) => {
+    if (!value) return;
+    ensureRoom(12);
+    doc.setFontSize(9.5);
+    doc.setTextColor(100);
+    doc.text(label, indent, y);
+    doc.setTextColor(0);
+    y += 5;
+    doc.setFontSize(9.5);
+    const lines = doc.splitTextToSize(String(value), pageW - indent - 14);
+    for (const line of lines) { ensureRoom(6); doc.text(line, indent, y); y += 5; }
+    y += 2;
+  };
+
+  if (projects.length) {
+    ensureRoom(10);
+    doc.setFontSize(13);
+    doc.text(`Projets (${projects.length})`, 14, y);
+    y += 8;
+    for (const p of projects) {
+      ensureRoom(14);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text(p.name, 14, y);
+      doc.setFont(undefined, 'normal');
+      y += 5.5;
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      const tasks = p.tasks || [];
+      const done = tasks.filter((t) => t.status === 'done').length;
+      doc.text(`${p.type} · ${ENGINEERING_PROJECT_STAGES[p.stageIndex ?? 0]}${p.deadline ? ` · échéance ${p.deadline}` : ''}${tasks.length ? ` · ${done}/${tasks.length} tâches` : ''}`, 14, y);
+      y += 6;
+      doc.setTextColor(0);
+      section('Description', p.description);
+      y += 2;
+    }
+    y += 4;
+  }
+
+  if (labEntries.length) {
+    ensureRoom(10);
+    doc.setFontSize(13);
+    doc.text(`Expériences de laboratoire (${labEntries.length})`, 14, y);
+    y += 8;
+    for (const e of labEntries) {
+      ensureRoom(12);
+      doc.setFontSize(10.5);
+      doc.setFont(undefined, 'bold');
+      doc.text(e.title, 14, y);
+      doc.setFont(undefined, 'normal');
+      y += 5;
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(`${e.date}${e.course ? ` · ${e.course}` : ''}${e.yieldPercent !== '' && e.yieldPercent != null ? ` · rendement ${e.yieldPercent}%` : ''}`, 14, y);
+      y += 6;
+      doc.setTextColor(0);
+      section('Objectif', e.objective);
+      section('Conclusion', e.conclusion);
+      y += 2;
+    }
+  }
+
+  doc.save(`audax-portfolio-ingenierie-${todayKey()}.pdf`);
+}
+
+function PortfolioExportModal({ open, onClose, projects, labEntries }) {
+  const userName = useAuthStore((s) => s.user?.name);
+  const [selProjects, setSelProjects] = useState(() => new Set(projects.map((p) => p.id)));
+  const [selLabs, setSelLabs] = useState(() => new Set(labEntries.map((e) => e.id)));
+
+  // The modal stays mounted (just visually hidden) between opens — as a
+  // Modal-open-controlled child, not remounted — so the lazy useState
+  // initializers above only ever ran once against whatever existed at first
+  // render. Without this, adding a project/lab entry after that first render
+  // left it permanently unselected (silently excluded from every export)
+  // even though the checklist correctly SHOWS the new item. Re-select
+  // everything fresh each time the modal actually opens.
+  useEffect(() => {
+    if (open) {
+      setSelProjects(new Set(projects.map((p) => p.id)));
+      setSelLabs(new Set(labEntries.map((e) => e.id)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const toggle = (set, setSet, id) => setSet((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const doExport = () => {
+    exportPortfolioPDF({
+      projects: projects.filter((p) => selProjects.has(p.id)),
+      labEntries: labEntries.filter((e) => selLabs.has(e.id)),
+      userName,
+    });
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Exporter le portfolio" wide>
+      <div className="space-y-4">
+        <p className="text-xs text-mute">Choisis ce qui figure dans le document — utile pour ne pas envoyer tes brouillons ou TP secondaires avec une candidature.</p>
+
+        {projects.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-1.5">Projets ({selProjects.size}/{projects.length})</div>
+            <div className="max-h-40 overflow-y-auto border border-line rounded-lg divide-y divide-line/50">
+              {projects.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-surface">
+                  <input type="checkbox" checked={selProjects.has(p.id)} onChange={() => toggle(selProjects, setSelProjects, p.id)} />
+                  <span className="truncate">{p.name}</span>
+                  <span className="text-mute ml-auto shrink-0">{p.type}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {labEntries.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-1.5">Expériences de laboratoire ({selLabs.size}/{labEntries.length})</div>
+            <div className="max-h-40 overflow-y-auto border border-line rounded-lg divide-y divide-line/50">
+              {labEntries.map((e) => (
+                <label key={e.id} className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-surface">
+                  <input type="checkbox" checked={selLabs.has(e.id)} onChange={() => toggle(selLabs, setSelLabs, e.id)} />
+                  <span className="truncate">{e.title}</span>
+                  <span className="text-mute ml-auto shrink-0">{fmtDateShort(e.date)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3 pt-2 border-t border-line">
+          <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
+          <Button type="button" onClick={doExport} disabled={!selProjects.size && !selLabs.size}>
+            <span className="flex items-center gap-2"><FileDown size={14} /> Exporter</span>
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 const blankEntry = () => ({
@@ -353,19 +517,27 @@ function AskEngineeringAI() {
 
 export default function Engineering() {
   const [tab, setTab] = useState('journal');
+  const [portfolioModal, setPortfolioModal] = useState(false);
   // Destructure from the whole store (not a scoped selector) so this
   // re-renders on ANY engineeringStore change — a selector keyed to just
   // `getBadges` would never re-fire since the function reference itself
   // never changes, even though the awardedBadges array it reads does.
-  const { getBadges } = useEngineeringStore();
+  const { getBadges, projects, labEntries } = useEngineeringStore();
   const badges = getBadges();
   const Active = TABS.find((t) => t.key === tab)?.Component || LabJournal;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Ingénierie</h1>
-        <p className="text-mute text-sm mt-1">Journal de laboratoire et suivi de projets — pour le génie chimique et disciplines proches.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Ingénierie</h1>
+          <p className="text-mute text-sm mt-1">Journal de laboratoire et suivi de projets — pour le génie chimique et disciplines proches.</p>
+        </div>
+        {(projects.length > 0 || labEntries.length > 0) && (
+          <Button variant="secondary" onClick={() => setPortfolioModal(true)}>
+            <span className="flex items-center gap-2"><BookMarked size={14} /> Exporter le portfolio</span>
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-line">
@@ -391,6 +563,8 @@ export default function Engineering() {
       <AskEngineeringAI />
 
       <BadgeList badges={badges} />
+
+      <PortfolioExportModal open={portfolioModal} onClose={() => setPortfolioModal(false)} projects={projects} labEntries={labEntries} />
     </div>
   );
 }

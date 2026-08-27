@@ -7,6 +7,7 @@ import { fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import ScheduleEventModal from '../components/common/ScheduleEventModal';
+import EngineeringGanttChart from './EngineeringGanttChart';
 
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 const STAGE_STATUS_LABEL = { 'not-started': 'Pas commencé', 'in-progress': 'En cours', blocked: 'Bloqué', done: 'Terminé' };
@@ -198,6 +199,8 @@ export default function EngineeringProjectDetail() {
           <ProgressBar value={done.length} max={tasks.length} color="var(--success)" />
         </Card>
       )}
+
+      {tasks.length > 0 && <EngineeringGanttChart project={project} updateTask={updateTask} deleteTask={deleteTask} />}
 
       <Card
         title={`Tâches (${tasks.length})`}

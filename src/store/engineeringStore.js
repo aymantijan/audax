@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { uid } from '../utils/formatters';
+import { uid, todayKey } from '../utils/formatters';
 import { ENGINEERING_STAGE_SKILL, ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { useSkillStore } from './skillStore';
+import { useLearningStore } from './learningStore';
 import { toast } from './uiStore';
 import { deleteCalendarEvent } from '../services/google-calendar';
 import { evaluateBadges } from '../utils/badges';
+import { cascadeSchedule, pruneDependencies } from '../utils/gantt';
 
 const HAZOP_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.indexOf('Analyse de sécurité (HAZOP)');
 const LAST_STAGE_INDEX = ENGINEERING_PROJECT_STAGES.length - 1;
@@ -60,7 +62,24 @@ export const useEngineeringStore = create(
         const entry = { ...data, id: uid(), createdAt: Date.now(), updatedAt: Date.now() };
         set({ labEntries: [...get().labEntries, entry].sort((a, b) => (a.date < b.date ? 1 : -1)) });
         useSkillStore.getState().awardXP('engineering-discipline-lv1', LAB_ENTRY_XP, `lab: ${entry.title}`);
-        toast(`Entrée loggée : ${entry.title} · +${LAB_ENTRY_XP} XP`, 'success');
+
+        // Real cross-domain link (2026-08-27) — the "course" field used to be
+        // cosmetic autocomplete only (Engineering.jsx suggests Learning's
+        // tracked course names but never fed anything back). When it matches
+        // a real tracked course exactly, this lab session now counts as a
+        // genuine learning-momentum activity event — the same mechanism a
+        // checklist tick uses (learningStore.recordActivity, mirrors
+        // toggleChecklistItem's `advance()` call) — so a course actually
+        // worked on via the lab isn't silently treated as untouched.
+        const matchedCourse = entry.course?.trim()
+          ? useLearningStore.getState().courses.find((c) => c.name.trim().toLowerCase() === entry.course.trim().toLowerCase())
+          : null;
+        if (matchedCourse) {
+          useLearningStore.getState().recordActivity();
+          toast(`Entrée loggée : ${entry.title} · +${LAB_ENTRY_XP} XP · momentum "${matchedCourse.name}" relancé`, 'success');
+        } else {
+          toast(`Entrée loggée : ${entry.title} · +${LAB_ENTRY_XP} XP`, 'success');
+        }
         get().checkBadges();
         return entry.id;
       },
@@ -102,19 +121,44 @@ export const useEngineeringStore = create(
         toast('Projet supprimé', 'info');
       },
 
+      // startDate/endDate/dependencies/progress/milestone/order: added for the
+      // project Gantt view (2026-08-27), same fields/engine as businessStore's
+      // Gantt (utils/gantt.js is store-agnostic — no change needed there).
+      // Defaults keep every pre-existing caller (the plain title/stage task
+      // form) working unchanged — a task created without dates is just a
+      // same-day, unscheduled bar until someone opens the Gantt to place it.
       addTask: (projectId, data) => {
-        const task = { id: uid(), title: data.title, stage: data.stage || null, status: 'todo', createdAt: Date.now(), completedAt: null, googleEventId: null, googleEventLink: null };
-        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: [...(p.tasks || []), task], updatedAt: Date.now() } : p)) });
+        const project = get().projects.find((p) => p.id === projectId);
+        const start = data.startDate || todayKey();
+        const milestone = !!data.milestone;
+        const end = milestone ? start : data.endDate && data.endDate >= start ? data.endDate : start;
+        const deps = Array.isArray(data.dependencies) ? data.dependencies.filter((d) => (project?.tasks || []).some((t) => t.id === d)) : [];
+        const task = {
+          id: uid(), title: data.title, stage: data.stage || null, status: 'todo',
+          startDate: start, endDate: end, milestone, dependencies: deps,
+          progress: Math.max(0, Math.min(100, Number(data.progress) || 0)),
+          order: (project?.tasks || []).length,
+          createdAt: Date.now(), completedAt: null, googleEventId: null, googleEventLink: null,
+        };
+        const next = cascadeSchedule([...(project?.tasks || []), task]);
+        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: next, updatedAt: Date.now() } : p)) });
         return task.id;
       },
-      updateTask: (projectId, taskId, { title, stage }) =>
-        set({
-          projects: get().projects.map((p) =>
-            p.id === projectId
-              ? { ...p, tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, title: title ?? t.title, stage: stage !== undefined ? (stage || null) : t.stage } : t)), updatedAt: Date.now() }
-              : p
-          ),
-        }),
+      updateTask: (projectId, taskId, updates) => {
+        const project = get().projects.find((p) => p.id === projectId);
+        const task = project?.tasks.find((t) => t.id === taskId);
+        if (!project || !task) return;
+        const clean = { ...updates };
+        if (clean.title === undefined) delete clean.title;
+        if (clean.stage !== undefined) clean.stage = clean.stage || null;
+        if (clean.progress != null) clean.progress = Math.max(0, Math.min(100, Number(clean.progress) || 0));
+        if (clean.dependencies) clean.dependencies = clean.dependencies.filter((d) => d !== taskId && project.tasks.some((t) => t.id === d));
+        const merged = { ...task, ...clean };
+        if (merged.milestone) merged.endDate = merged.startDate;
+        else if (merged.endDate < merged.startDate) merged.endDate = merged.startDate;
+        const next = cascadeSchedule(project.tasks.map((t) => (t.id === taskId ? merged : t)));
+        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: next, updatedAt: Date.now() } : p)) });
+      },
       // The only path that awards/reverses task XP — mirrors dealsStore's
       // setTaskStatus. Skill is resolved from the task's stage via
       // ENGINEERING_STAGE_SKILL (falling back to the general discipline node
@@ -150,7 +194,11 @@ export const useEngineeringStore = create(
           useSkillStore.getState().removeXP(skillId, TASK_XP, 'task deleted');
         }
         if (task?.googleEventId) deleteCalendarEvent(task.googleEventId);
-        set({ projects: get().projects.map((p) => (p.id === projectId ? { ...p, tasks: p.tasks.filter((t) => t.id !== taskId), updatedAt: Date.now() } : p)) });
+        set({
+          projects: get().projects.map((p) =>
+            p.id === projectId ? { ...p, tasks: pruneDependencies(p.tasks.filter((t) => t.id !== taskId)), updatedAt: Date.now() } : p
+          ),
+        });
       },
 
       // Records the Google Calendar event a task's "Schedule" action created —
@@ -187,6 +235,37 @@ export const useEngineeringStore = create(
 
       resetAll: () => set({ labEntries: [], projects: [], awardedBadges: [] }),
     }),
-    { name: 'audax-engineering', version: 1 }
+    {
+      name: 'audax-engineering',
+      version: 2,
+      // v1 tasks predate the Gantt fields (startDate/endDate/dependencies/
+      // milestone/progress/order) — backfill from each task's existing
+      // `createdAt` so every task lands somewhere sane on the timeline
+      // instead of every pre-existing task colliding on "today".
+      migrate: (persisted, version) => {
+        let state = persisted;
+        if (version < 2) {
+          state = {
+            ...state,
+            projects: (state.projects || []).map((p) => ({
+              ...p,
+              tasks: (p.tasks || []).map((t, i) => {
+                const day = new Date(t.createdAt || Date.now()).toISOString().slice(0, 10);
+                return {
+                  ...t,
+                  startDate: t.startDate || day,
+                  endDate: t.endDate || day,
+                  milestone: t.milestone ?? false,
+                  dependencies: t.dependencies || [],
+                  progress: t.progress ?? (t.status === 'done' ? 100 : 0),
+                  order: t.order ?? i,
+                };
+              }),
+            })),
+          };
+        }
+        return state;
+      },
+    }
   )
 );
