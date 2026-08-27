@@ -3,7 +3,6 @@ import { INITIAL_ACCOUNT_VALUE, GRADE_POINTS } from './constants';
 import { currentAccountValue, habitCompliance, weightedGPA } from './calculations';
 import { calculateCourseProgress } from './course-progress';
 import { esg, budgetVariance, financialAnalysis, netWorthHistory, paceFromEdges, echeanceOccurrences } from './accounting-engine';
-import { DEAL_STAGES } from './constants';
 
 const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -13,7 +12,7 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // implemented here as proper 0-100 weighted averages instead so color thresholds work.
 export function calculateSynergies({
   trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today,
-  healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, deals, businesses, dealsEnabled = true,
+  healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, businesses, businessEnabled = true,
   contacts, applications, posts, personalProjects, networkingEnabled = false, careerEnabled = false, contentEnabled = false, projectsEnabled = false,
   focusSessions, focusEnabled = false,
 }) {
@@ -38,11 +37,11 @@ export function calculateSynergies({
   // other user down toward 0 (an untouched, brand-new domain) the moment
   // this shipped, for a module they never opted into.
   if (engineeringEnabled) scores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
-  // BUGFIX (2026-08-26): Deals/Business Projects had NO synergy domain at all —
-  // unlike every other section, working PE deals or running a business never
-  // moved the composite score. `dealsEnabled` = pe OR business turned on (see
-  // useSynergy.js), same opt-out-aware gating as Trading/Engineering above.
-  if (dealsEnabled) scores.deals = dealsScore(deals || [], businesses || [], monthStart, today);
+  // BUGFIX (2026-08-26): Business Projects had NO synergy domain at all —
+  // unlike every other section, running a business never moved the composite
+  // score. Deals (PE) is deliberately excluded (2026-08-27, user request) —
+  // only Business Projects activity counts toward synergy.
+  if (businessEnabled) scores.business = businessScore(businesses || [], monthStart);
   // Networking/Career/Content/Projects (2026-08-27) — four new domains, same
   // opt-in-aware gating as Engineering (default false: never silently pulls
   // an existing/uninterested user's composite score toward 0).
@@ -223,33 +222,20 @@ function engineeringScore(labEntries, projects, habits, habitLogs, monthStart, t
   return r1(clamp(labComponent * 0.35 + taskComponent * 0.35 + habitComponent * 0.3));
 }
 
-// 0 if truly nothing logged yet (same convention as the other domains). Two
-// independent tracks, averaged when both are actually used, so a user who
-// only does one of the two isn't scored against the other's empty state:
-//   - PE deals: pipeline progress (avg stage reached across deals) + task
-//     execution this month.
-//   - Business projects: this month's logged activity — ideas/facts, KPI
-//     readings, bookkeeping entries. (Gantt tasks aren't timestamped on
-//     completion in businessStore, so they can't feed a "this month" signal
-//     the way lab entries/course checklist ticks do elsewhere.)
-function dealsScore(deals, businesses, monthStart, today) {
-  if (!deals.length && !businesses.length) return 0;
+// 0 if truly nothing logged yet (same convention as the other domains).
+// Deals (PE) is intentionally NOT part of this score (2026-08-27, user
+// request) — only Business Projects' this-month activity — ideas/facts, KPI
+// readings, bookkeeping entries. (Gantt tasks aren't timestamped on
+// completion in businessStore, so they can't feed a "this month" signal the
+// way lab entries/course checklist ticks do elsewhere.)
+function businessScore(businesses, monthStart) {
+  if (!businesses.length) return 0;
   const monthStartMs = monthStart.getTime();
-
-  const monthDealTasksDone = deals.flatMap((d) => d.tasks || []).filter((t) => t.status === 'done' && t.completedAt >= monthStartMs).length;
-  const peTaskComponent = clamp(monthDealTasksDone * 12);
-  const peStageComponent = deals.length
-    ? clamp((deals.reduce((a, d) => a + (d.stageIndex || 0), 0) / deals.length / (DEAL_STAGES.length - 1)) * 100)
-    : 50;
-  const peComponent = r1(clamp(peTaskComponent * 0.6 + peStageComponent * 0.4));
 
   const monthEvents = businesses.flatMap((b) => b.events || []).filter((e) => e.createdAt >= monthStartMs).length;
   const monthKpiLogs = businesses.flatMap((b) => b.kpiLogs || []).filter((l) => l.createdAt >= monthStartMs).length;
   const monthEntries = businesses.flatMap((b) => b.journal || []).filter((e) => e.createdAt >= monthStartMs).length;
-  const bizComponent = r1(clamp(monthEvents * 8 + monthKpiLogs * 8 + monthEntries * 6));
-
-  if (deals.length && businesses.length) return r1((peComponent + bizComponent) / 2);
-  return deals.length ? peComponent : bizComponent;
+  return r1(clamp(monthEvents * 8 + monthKpiLogs * 8 + monthEntries * 6));
 }
 
 // 0 if truly nothing logged yet (same convention as every other domain).

@@ -181,7 +181,7 @@ export const useBusinessStore = create(
         }
       },
       // NOTE: task completion isn't stamped with a `completedAt` (unlike
-      // dealsStore's tasks) — see synergy.js's dealsScore, which relies on
+      // dealsStore's tasks) — see synergy.js's businessScore, which relies on
       // events/kpiLogs/journal timestamps for Business's monthly signal instead.
       deleteTask: (bizId, taskId) =>
         set({

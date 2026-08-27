@@ -5,41 +5,38 @@ import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 import GlobalSearch from './GlobalSearch';
 
-// Direct top-level links. `enabledKey` (checked against
-// user.enabledModules[key]) gates optional domains; items without it are
-// always shown. `defaultEnabled` covers accounts that predate the flag.
+// Only these two stay as direct top-level links — everything else lives
+// under a "Page mère ▾" dropdown group below, no matter how many (or few)
+// of its children are enabled for this account.
 const DIRECT_ITEMS = [
   { to: '/today', label: 'Aujourd’hui', end: true },
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/trading', label: 'Trading', enabledKey: 'trading', defaultEnabled: true },
-  { to: '/engineering', label: 'Engineering', enabledKey: 'engineering', defaultEnabled: false },
-  { to: '/finance', label: 'Finance' },
-  { to: '/leaderboard', label: 'Leaderboard' },
 ];
 
-// Grouped ("Page mère → pages child") links — collapse to a single direct
-// link when only one child is enabled, and disappear entirely when none are,
-// exactly like the flat items above used to. Keeps the desktop nav bar from
-// growing one flat entry per optional module forever.
+// Grouped ("Page mère → pages child") links. `enabledKey` (checked against
+// user.enabledModules[key]) gates optional domains; items without it are
+// always shown. `defaultEnabled` covers accounts that predate the flag. A
+// group disappears entirely when none of its children are enabled, but
+// otherwise ALWAYS renders as a dropdown — even with a single child — per
+// the "everything but Today/Dashboard is a dropdown" rule.
 const NAV_GROUPS = [
   {
     label: 'Deals',
-    items: [
-      { to: '/deals', label: 'Deals (PE)', enabledKey: 'pe', defaultEnabled: true },
-      { to: '/businesses', label: 'Business Projects', enabledKey: 'business', defaultEnabled: true },
-    ],
+    items: [{ to: '/deals', label: 'Deals (PE)', enabledKey: 'pe', defaultEnabled: true }],
   },
   {
     label: 'Growth',
     items: [
       { to: '/learning', label: 'Learning' },
-      { to: '/skills', label: 'Skill Tree' },
       { to: '/focus', label: 'Deep Work', enabledKey: 'focus', defaultEnabled: false },
     ],
   },
   {
     label: 'Career',
     items: [
+      { to: '/trading', label: 'Trading', enabledKey: 'trading', defaultEnabled: true },
+      { to: '/engineering', label: 'Engineering', enabledKey: 'engineering', defaultEnabled: false },
+      { to: '/businesses', label: 'Business Projects', enabledKey: 'business', defaultEnabled: true },
       { to: '/career', label: 'Career', enabledKey: 'career', defaultEnabled: false },
       { to: '/networking', label: 'Networking', enabledKey: 'networking', defaultEnabled: false },
       { to: '/content', label: 'Content', enabledKey: 'content', defaultEnabled: false },
@@ -51,6 +48,14 @@ const NAV_GROUPS = [
     items: [
       { to: '/habits', label: 'Habits' },
       { to: '/health', label: 'Health' },
+      { to: '/finance', label: 'Finance' },
+    ],
+  },
+  {
+    label: 'Others',
+    items: [
+      { to: '/skills', label: 'Skill Tree' },
+      { to: '/leaderboard', label: 'Leaderboard' },
     ],
   },
 ];
@@ -62,23 +67,14 @@ const linkClass = ({ isActive }) =>
     isActive ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'
   }`;
 
-// One "Page mère" — renders nothing (0 enabled children), a plain NavLink (1
-// enabled child, same look as a direct item), or a "Label ▾" dropdown (2+),
-// reusing the open/outside-click-to-close pattern from AccountSwitcher.jsx.
+// One "Page mère" — renders nothing when none of its children are enabled,
+// otherwise always a "Label ▾" dropdown (even for a single child), reusing
+// the open/outside-click-to-close pattern from AccountSwitcher.jsx.
 function NavGroup({ group, enabledChildren }) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
   if (enabledChildren.length === 0) return null;
-
-  if (enabledChildren.length === 1) {
-    const only = enabledChildren[0];
-    return (
-      <NavLink to={only.to} className={linkClass}>
-        {group.label}
-      </NavLink>
-    );
-  }
 
   const isGroupActive = enabledChildren.some((c) => location.pathname.startsWith(c.to));
 

@@ -5,7 +5,6 @@ import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useHealthStore } from '../store/healthStore';
 import { useEngineeringStore } from '../store/engineeringStore';
-import { useDealsStore } from '../store/dealsStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
@@ -49,11 +48,10 @@ export function useSynergy() {
   const tradingEnabled = useAuthStore((s) => s.user?.enabledModules?.trading ?? true);
   const labEntries = useEngineeringStore((s) => s.labEntries);
   const engineeringProjects = useEngineeringStore((s) => s.projects);
-  const deals = useDealsStore((s) => s.deals);
   const businesses = useBusinessStore((s) => s.businesses);
-  const peEnabled = useAuthStore((s) => s.user?.enabledModules?.pe ?? s.user?.enabledModules?.deals ?? true);
+  // Deals (PE) is deliberately excluded from the synergy score (2026-08-27,
+  // user request) — only Business Projects activity feeds it.
   const businessEnabled = useAuthStore((s) => s.user?.enabledModules?.business ?? s.user?.enabledModules?.deals ?? true);
-  const dealsEnabled = peEnabled || businessEnabled;
   const contacts = useNetworkingStore((s) => s.contacts);
   const applications = useCareerStore((s) => s.applications);
   const posts = useContentStore((s) => s.posts);
@@ -113,9 +111,8 @@ export function useSynergy() {
         engineeringProjects,
         engineeringEnabled,
         tradingEnabled,
-        deals,
         businesses,
-        dealsEnabled,
+        businessEnabled,
         contacts,
         applications,
         posts,
@@ -129,7 +126,7 @@ export function useSynergy() {
       }),
     [
       trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
-      labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, deals, businesses, dealsEnabled,
+      labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, businesses, businessEnabled,
       contacts, applications, posts, personalProjects, networkingEnabled, careerEnabled, contentEnabled, projectsEnabled,
       focusSessions, focusEnabled,
     ]

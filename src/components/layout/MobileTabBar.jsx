@@ -19,8 +19,8 @@ const PRIMARY_TABS = [
 const MORE_ITEMS = [
   { to: '/learning', label: 'Learning', icon: BookOpen },
   { to: '/habits', label: 'Habits', icon: Flame },
-  { to: '/deals', label: 'Deals', icon: Handshake },
-  { to: '/businesses', label: 'Business', icon: Rocket },
+  { to: '/deals', label: 'Deals (PE)', icon: Handshake },
+  { to: '/businesses', label: 'Business Projects', icon: Rocket },
   { to: '/engineering', label: 'Engineering', icon: FlaskConical },
   { to: '/networking', label: 'Networking', icon: Users },
   { to: '/career', label: 'Career', icon: Briefcase },

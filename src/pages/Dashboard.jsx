@@ -513,7 +513,7 @@ export default function Dashboard() {
 
 function domainRoute(domain) {
   return {
-    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', deals: '/deals',
+    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', business: '/businesses',
     networking: '/networking', career: '/career', content: '/content', projects: '/projects', focus: '/focus',
   }[domain] || '/';
 }
