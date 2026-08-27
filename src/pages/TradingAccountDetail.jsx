@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Pencil, Wallet, ArrowRight, Clock, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Pencil, Wallet, ArrowRight, Clock, Plus, Trash2, FileDown } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useTradingStore } from '../store/tradingStore';
 import { PROP_FIRM_PHASES } from '../utils/prop-firm-analytics';
@@ -10,6 +10,7 @@ import { Card, Stat, Button, Field, Input, Modal, Badge, EmptyState } from '../c
 import AccountFormModal from '../components/trading/AccountFormModal';
 import RuleGauge from '../components/trading/RuleGauge';
 import PropFirmSimConfig from '../components/trading/PropFirmSimConfig';
+import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
 const STATUS_COLOR = {
@@ -78,6 +79,7 @@ export default function TradingAccountDetail() {
           {account.broker && <p className="text-mute text-sm mt-1">{account.broker}</p>}
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => exportTradingReportPDF(account, getAccountTrades(account.id))}><span className="flex items-center gap-2"><FileDown size={14} /> Export PDF</span></Button>
           <Button variant="secondary" onClick={() => setEditModal(true)}><span className="flex items-center gap-2"><Pencil size={14} /> Edit</span></Button>
           <Button onClick={goTrade}><span className="flex items-center gap-2">Trade this account <ArrowRight size={14} /></span></Button>
         </div>

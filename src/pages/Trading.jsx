@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert, Settings2, FileDown } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
@@ -27,6 +27,7 @@ import PnLCalendar from '../components/trading/PnLCalendar';
 import TradeCsvTools from '../components/trading/TradeCsvTools';
 import { tradeRMultiple } from '../utils/risk-management';
 import { currentLossStreak } from '../utils/trading-psychology';
+import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
 const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
@@ -119,6 +120,11 @@ export default function Trading() {
           <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setCustomizeOpen(true)} title="Customize instruments & strategies">
             <Settings2 size={16} />
           </button>
+          {activeAccount && (
+            <button className="text-mute hover:text-accent cursor-pointer" onClick={() => exportTradingReportPDF(activeAccount, trades)} title="Export account report (PDF)">
+              <FileDown size={16} />
+            </button>
+          )}
           <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleAlerts}>
             <span className="flex items-center gap-2">
               {alerts.enabled ? <Bell size={13} /> : <BellOff size={13} />}
