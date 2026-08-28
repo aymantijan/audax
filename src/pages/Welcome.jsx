@@ -61,8 +61,9 @@ export default function Welcome() {
                   { value: 'learning', label: 'Learning' },
                   { value: 'finance', label: 'Finance' },
                   { value: 'health', label: 'Health' },
-                  { value: 'growth', label: 'Growth' },
-                  { value: 'engineering', label: 'Engineering' },
+                  { value: 'careerNetwork', label: 'Career & Network' },
+                  { value: 'venturesAssets', label: 'Ventures & Assets' },
+                  { value: 'growthCreation', label: 'Growth & Creation' },
                 ]}
               />
             </Field>

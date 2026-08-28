@@ -314,11 +314,19 @@ export default function SettingsPage() {
           <Field label="Email">
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
-          <Field label="Primary domain" hint="75% weight in composite synergy.">
+          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 7 synergy pillars (2026-08-27) — Engineering/Career/Networking/Freelance now live under Career & Network, Business/Fundraising/Real Estate under Ventures & Assets, and skill-XP growth under Growth & Creation.">
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
-              options={['trading', 'learning', 'finance', 'health', 'growth', 'engineering']}
+              options={[
+                { value: 'trading', label: 'Trading' },
+                { value: 'learning', label: 'Learning' },
+                { value: 'finance', label: 'Finance' },
+                { value: 'health', label: 'Health' },
+                { value: 'careerNetwork', label: 'Career & Network' },
+                { value: 'venturesAssets', label: 'Ventures & Assets' },
+                { value: 'growthCreation', label: 'Growth & Creation' },
+              ]}
             />
           </Field>
           <Field label="Career goal" hint="Focuses the skill tree & deals.">

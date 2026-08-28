@@ -7,9 +7,26 @@ import { esg, budgetVariance, financialAnalysis, netWorthHistory, paceFromEdges,
 const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const r1 = (n) => Math.round(n * 10) / 10;
 
-// All five domain scores are 0-100. Weighted composite = primary*0.75 + avg(others)*0.25.
-// Note: the raw spec formulas divided each weighted sum by 3, which caps scores near 33 —
-// implemented here as proper 0-100 weighted averages instead so color thresholds work.
+// The composite/radar score is capped at 7 PILLARS (2026-08-27, user
+// request — the raw per-domain list had grown to 16 and no longer fit a
+// readable radar chart or a "life pillars" mental model). Four stay
+// individually visible (Trading, Learning, Finance, Health — the ones the
+// user explicitly said must never be merged); the rest compact into three
+// composites, each the average of whichever of its members are actually
+// enabled for this account:
+//   - Career & Network: Engineering, Career, Networking, Freelance
+//   - Ventures & Assets: Business Projects, Fundraising, Real Estate
+//   - Growth & Creation: Growth (skill XP), Content, Projects, Creative, Deep Work
+// Every individual sub-score is still computed and returned separately as
+// `subScores` — Dashboard.jsx's granular "Life Balance" tiles read from
+// there unchanged; only the composite `scores` (used for the radar chart,
+// average/weighted math, and "boost your weakest pillar") is capped at 7.
+export const PILLAR_MEMBERS = {
+  careerNetwork: ['engineering', 'career', 'networking', 'freelance'],
+  venturesAssets: ['business', 'fundraising', 'realEstate'],
+  growthCreation: ['growth', 'content', 'projects', 'creative', 'focus'],
+};
+
 export function calculateSynergies({
   trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today,
   healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, businesses, businessEnabled = true,
@@ -20,56 +37,55 @@ export function calculateSynergies({
 }) {
   const monthStart = startOfMonth(new Date());
 
+  // Growth (skill XP) has no enable flag — it's a core, always-on signal,
+  // same as Learning/Finance/Health — so it's always present in subScores
+  // and always pulls Growth & Creation into existence even if none of that
+  // pillar's optional members (Content/Projects/Creative/Focus) are on.
+  const subScores = { growth: growthScore(skills, habits, monthStart) };
+  if (tradingEnabled) subScores.trading = tradingScore(trades, habits, habitLogs, monthStart, today);
+  if (engineeringEnabled) subScores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
+  if (businessEnabled) subScores.business = businessScore(businesses || [], monthStart);
+  if (networkingEnabled) subScores.networking = networkingScore(contacts || [], monthStart);
+  if (careerEnabled) subScores.career = careerScore(applications || [], monthStart);
+  if (contentEnabled) subScores.content = contentScore(posts || [], monthStart);
+  if (projectsEnabled) subScores.projects = projectsScore(personalProjects || [], monthStart);
+  if (focusEnabled) subScores.focus = focusScore(focusSessions || [], monthStart);
+  if (fundraisingEnabled) subScores.fundraising = fundraisingScore(investors || [], monthStart);
+  if (freelanceEnabled) subScores.freelance = freelanceScore(engagements || [], monthStart);
+  if (creativeEnabled) subScores.creative = creativeScore(creativeWorks || [], creativeShowcases || [], monthStart);
+  if (realEstateEnabled) subScores.realEstate = realEstateScore(properties || [], monthStart);
+
   const scores = {
     learning: learningScore(courses),
     finance: financeScore(journal, accountingBudgets, corrections, echeances, monthStart, today),
     health: healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras),
-    growth: growthScore(skills, habits, monthStart),
   };
-  // Same reasoning as the engineering gate below, but inverted: Trading
-  // defaults to ENABLED (it's an original, always-on domain — see
-  // authStore's enabledModules default), so this only ever DROPS the score
-  // for someone who explicitly opted out during onboarding. Without this, a
-  // user who never chose Trading still had a permanent 0-ish "trading"
-  // score (an empty account, no trades) silently dragging their composite
-  // average/weighted score down for a domain they never asked to be judged on.
-  if (tradingEnabled) scores.trading = tradingScore(trades, habits, habitLogs, monthStart, today);
-  // Only scored for accounts that actually turned Engineering on — otherwise
-  // it would silently pull the composite average/weighted score of every
-  // other user down toward 0 (an untouched, brand-new domain) the moment
-  // this shipped, for a module they never opted into.
-  if (engineeringEnabled) scores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
-  // BUGFIX (2026-08-26): Business Projects had NO synergy domain at all —
-  // unlike every other section, running a business never moved the composite
-  // score. Deals (PE) is deliberately excluded (2026-08-27, user request) —
-  // only Business Projects activity counts toward synergy.
-  if (businessEnabled) scores.business = businessScore(businesses || [], monthStart);
-  // Networking/Career/Content/Projects (2026-08-27) — four new domains, same
-  // opt-in-aware gating as Engineering (default false: never silently pulls
-  // an existing/uninterested user's composite score toward 0).
-  if (networkingEnabled) scores.networking = networkingScore(contacts || [], monthStart);
-  if (careerEnabled) scores.career = careerScore(applications || [], monthStart);
-  if (contentEnabled) scores.content = contentScore(posts || [], monthStart);
-  if (projectsEnabled) scores.projects = projectsScore(personalProjects || [], monthStart);
-  if (focusEnabled) scores.focus = focusScore(focusSessions || [], monthStart);
-  // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — four
-  // persona-oriented domains, same opt-in-aware gating as the block above.
-  if (fundraisingEnabled) scores.fundraising = fundraisingScore(investors || [], monthStart);
-  if (freelanceEnabled) scores.freelance = freelanceScore(engagements || [], monthStart);
-  if (creativeEnabled) scores.creative = creativeScore(creativeWorks || [], creativeShowcases || [], monthStart);
-  if (realEstateEnabled) scores.realEstate = realEstateScore(properties || [], monthStart);
+  // Same reasoning as every gate below: Trading defaults to ENABLED (an
+  // original, always-on domain — see authStore's enabledModules default),
+  // so this only ever DROPS the pillar for someone who explicitly opted out.
+  if (tradingEnabled) scores.trading = subScores.trading;
+  // Each composite pillar appears only if ≥1 of its members is actually
+  // enabled — never silently drags the composite average toward 0 for a
+  // module nobody opted into (same convention every individual domain used
+  // before this compaction).
+  for (const [pillar, members] of Object.entries(PILLAR_MEMBERS)) {
+    const active = members.filter((m) => subScores[m] !== undefined);
+    if (active.length) scores[pillar] = r1(active.reduce((a, m) => a + subScores[m], 0) / active.length);
+  }
 
   const values = Object.values(scores);
   const average = r1(values.reduce((a, b) => a + b, 0) / values.length);
 
-  // Fall back to whichever domain is actually scored for this account — never
-  // hardcode 'trading', which may not even be in `scores` if disabled.
+  // Fall back to whichever pillar is actually scored for this account —
+  // never hardcode 'trading', which may not even be in `scores` if
+  // disabled. A legacy primaryDomain value from before this compaction
+  // (e.g. 'engineering', a sub-score, not a pillar) falls back the same way.
   const domain = scores[primaryDomain] !== undefined ? primaryDomain : Object.keys(scores)[0];
   const primary = scores[domain];
   const otherAvg = values.length > 1 ? (values.reduce((a, b) => a + b, 0) - primary) / (values.length - 1) : primary;
   const weighted = r1(primary * 0.75 + otherAvg * 0.25);
 
-  return { scores, average, weighted, primaryDomain: domain };
+  return { scores, subScores, average, weighted, primaryDomain: domain };
 }
 
 function tradingScore(trades, habits, habitLogs, monthStart, today) {

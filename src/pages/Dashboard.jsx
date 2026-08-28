@@ -134,24 +134,24 @@ export default function Dashboard() {
     { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
     ...(peEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
     ...(businessEnabled ? [{ label: 'Business', value: Math.min(100, businesses.reduce((a, b) => a + b.phases.filter((p) => p.status === 'done').length, 0) * 20), sub: businesses.length ? `${businesses.length} suivi${businesses.length > 1 ? 's' : ''}` : 'A-to-Z tracking', color: 'var(--accent-secondary)' }] : []),
-    // Reuses the already-computed synergy.scores.engineering (this month's lab
+    // Reuses the already-computed synergy.subScores.engineering (this month's lab
     // + project-task activity, see synergy.js#engineeringScore) rather than a
     // separate ad-hoc formula — Skills/Courses/Reading/Deals/Business is the
     // only curated "highlights" row on Dashboard that didn't include
     // Engineering despite it having its own gate, badges, and synergy domain.
-    ...(engineeringEnabled ? [{ label: 'Engineering', value: synergy.scores.engineering ?? 0, sub: `${labEntries.length} labo · ${engProjects.length} projet${engProjects.length !== 1 ? 's' : ''}`, color: 'var(--warning)' }] : []),
+    ...(engineeringEnabled ? [{ label: 'Engineering', value: synergy.subScores.engineering ?? 0, sub: `${labEntries.length} labo · ${engProjects.length} projet${engProjects.length !== 1 ? 's' : ''}`, color: 'var(--warning)' }] : []),
     // Networking/Career/Content/Projects (2026-08-27) — same pattern: reuse
     // the already-computed synergy score rather than a separate formula.
-    ...(networkingEnabled && contacts.length ? [{ label: 'Networking', value: synergy.scores.networking ?? 0, sub: `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`, color: '#0a66c2' }] : []),
-    ...(careerEnabled && applications.length ? [{ label: 'Career', value: synergy.scores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
-    ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.scores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
-    ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.scores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
-    ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.scores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h loggées`, color: '#ffa94d' }] : []),
+    ...(networkingEnabled && contacts.length ? [{ label: 'Networking', value: synergy.subScores.networking ?? 0, sub: `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`, color: '#0a66c2' }] : []),
+    ...(careerEnabled && applications.length ? [{ label: 'Career', value: synergy.subScores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
+    ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.subScores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
+    ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.subScores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
+    ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.subScores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h loggées`, color: '#ffa94d' }] : []),
     // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — same pattern.
-    ...(fundraisingEnabled && investors.length ? [{ label: 'Fundraising', value: synergy.scores.fundraising ?? 0, sub: `${investors.length} investisseur${investors.length !== 1 ? 's' : ''}`, color: '#845ef7' }] : []),
-    ...(freelanceEnabled && engagements.length ? [{ label: 'Freelance', value: synergy.scores.freelance ?? 0, sub: `${engagements.length} client${engagements.length !== 1 ? 's' : ''}`, color: '#20c997' }] : []),
-    ...(creativeEnabled && creativeWorks.length ? [{ label: 'Creative', value: synergy.scores.creative ?? 0, sub: `${creativeWorks.length} œuvre${creativeWorks.length !== 1 ? 's' : ''}`, color: '#e05e5e' }] : []),
-    ...(realEstateEnabled && properties.length ? [{ label: 'Real Estate', value: synergy.scores.realEstate ?? 0, sub: `${properties.length} bien${properties.length !== 1 ? 's' : ''}`, color: '#94a3b8' }] : []),
+    ...(fundraisingEnabled && investors.length ? [{ label: 'Fundraising', value: synergy.subScores.fundraising ?? 0, sub: `${investors.length} investisseur${investors.length !== 1 ? 's' : ''}`, color: '#845ef7' }] : []),
+    ...(freelanceEnabled && engagements.length ? [{ label: 'Freelance', value: synergy.subScores.freelance ?? 0, sub: `${engagements.length} client${engagements.length !== 1 ? 's' : ''}`, color: '#20c997' }] : []),
+    ...(creativeEnabled && creativeWorks.length ? [{ label: 'Creative', value: synergy.subScores.creative ?? 0, sub: `${creativeWorks.length} œuvre${creativeWorks.length !== 1 ? 's' : ''}`, color: '#e05e5e' }] : []),
+    ...(realEstateEnabled && properties.length ? [{ label: 'Real Estate', value: synergy.subScores.realEstate ?? 0, sub: `${properties.length} bien${properties.length !== 1 ? 's' : ''}`, color: '#94a3b8' }] : []),
   ];
 
   const activeHabits = habits.filter((h) => !h.archived);
@@ -211,13 +211,13 @@ export default function Dashboard() {
     const unjournaled = monthTrades.filter((t) => !t.journal?.reasoning);
     if (unjournaled.length) items.push({ to: '/trading', text: `Journal ${unjournaled.length} trade(s) missing reasoning` });
     const lowest = Object.entries(synergy.scores).sort((a, b) => a[1] - b[1])[0];
-    if (lowest) items.push({ to: domainRoute(lowest[0]), text: `Boost your weakest domain: ${lowest[0]} (${lowest[1]}/100)` });
+    if (lowest) items.push({ to: domainRoute(lowest[0]), text: `Boost your weakest pillar: ${domainLabel(lowest[0])} (${lowest[1]}/100)` });
     if (!items.length) items.push({ to: '/', text: 'All clear — protect the streak.' });
     return items;
   }, [activeHabits, doneToday, todayEnergy, monthTrades, synergy.scores]);
 
   const radarData = Object.entries(synergy.scores).map(([domain, score]) => ({
-    domain: domain[0].toUpperCase() + domain.slice(1),
+    domain: domainLabel(domain),
     score,
   }));
 
@@ -405,7 +405,7 @@ export default function Dashboard() {
                 {synergy.trend.toFixed(1)} vs yesterday
               </div>
               <div className="text-xs text-mute mt-2">
-                Average: <span className="text-ink">{synergy.average}</span> · Primary: <span className="text-accent capitalize">{synergy.primaryDomain}</span>
+                Average: <span className="text-ink">{synergy.average}</span> · Primary: <span className="text-accent">{domainLabel(synergy.primaryDomain)}</span>
               </div>
             </div>
             <div className="flex-1 h-52">
@@ -424,7 +424,7 @@ export default function Dashboard() {
                 <div className="text-lg font-semibold" style={{ color: synergyColor(score) }}>
                   {Math.round(score)}
                 </div>
-                <div className="text-[10px] text-mute capitalize">{domain}</div>
+                <div className="text-[10px] text-mute">{domainLabel(domain)}</div>
               </div>
             ))}
           </div>
@@ -528,10 +528,20 @@ export default function Dashboard() {
   );
 }
 
+// Pretty labels for the 7-pillar synergy score (2026-08-27 compaction) — the
+// 3 composites are camelCase keys (careerNetwork/venturesAssets/
+// growthCreation) that `capitalize` CSS can't split into words, so they get
+// an explicit label; the 4 individual pillars just get their name capitalized.
+const PILLAR_LABEL = { careerNetwork: 'Career & Network', venturesAssets: 'Ventures & Assets', growthCreation: 'Growth & Creation' };
+function domainLabel(domain) {
+  return PILLAR_LABEL[domain] || (domain ? domain[0].toUpperCase() + domain.slice(1) : domain);
+}
+
+// A composite pillar has no single page — this picks one representative
+// destination (its first/primary member) rather than nothing.
 function domainRoute(domain) {
   return {
-    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits', growth: '/skills', engineering: '/engineering', business: '/businesses',
-    networking: '/networking', career: '/career', content: '/content', projects: '/projects', focus: '/focus',
-    fundraising: '/fundraising', freelance: '/freelance', creative: '/creative', realEstate: '/real-estate',
+    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits',
+    careerNetwork: '/career', venturesAssets: '/businesses', growthCreation: '/skills',
   }[domain] || '/';
 }
