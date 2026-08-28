@@ -56,7 +56,7 @@ function getDiscreteUnit(foodName) {
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
-    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'trading', careerGoal: user?.careerGoal || 'Hybrid',
+    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'metiersVentures', careerGoal: user?.careerGoal || 'Hybrid',
     gender: user?.gender || '', dobYear: user?.dobYear || '', heightCm: user?.heightCm || '',
   });
 
@@ -314,18 +314,17 @@ export default function SettingsPage() {
           <Field label="Email">
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
-          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 7 synergy pillars (2026-08-27) — Engineering/Career/Networking/Freelance now live under Career & Network, Business/Fundraising/Real Estate under Ventures & Assets, and skill-XP growth under Growth & Creation.">
+          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 6 synergy pillars (2026-08-28) — Trading/Engineering/Business/Real Estate/Freelance/Fundraising now live under Métiers & Ventures, Career/Networking under Career Development, and skill-XP growth/Content/Projects/Focus/Creative under Growth & Output.">
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
               options={[
-                { value: 'trading', label: 'Trading' },
                 { value: 'learning', label: 'Learning' },
                 { value: 'finance', label: 'Finance' },
                 { value: 'health', label: 'Health' },
-                { value: 'careerNetwork', label: 'Career & Network' },
-                { value: 'venturesAssets', label: 'Ventures & Assets' },
-                { value: 'growthCreation', label: 'Growth & Creation' },
+                { value: 'metiersVentures', label: 'Métiers & Ventures' },
+                { value: 'careerDevelopment', label: 'Career Development' },
+                { value: 'growthOutput', label: 'Growth & Output' },
               ]}
             />
           </Field>

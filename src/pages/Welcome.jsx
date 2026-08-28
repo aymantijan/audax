@@ -19,7 +19,7 @@ const CAREER_LABELS = {
 // with no Supabase project at all.
 export default function Welcome() {
   const register = useAuthStore((s) => s.register);
-  const [form, setForm] = useState({ name: '', email: '', primaryDomain: 'trading', careerGoal: 'Hybrid', gender: '' });
+  const [form, setForm] = useState({ name: '', email: '', primaryDomain: 'metiersVentures', careerGoal: 'Hybrid', gender: '' });
   const [error, setError] = useState('');
 
   const submit = (e) => {

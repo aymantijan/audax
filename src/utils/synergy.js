@@ -7,24 +7,33 @@ import { esg, budgetVariance, financialAnalysis, netWorthHistory, paceFromEdges,
 const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const r1 = (n) => Math.round(n * 10) / 10;
 
-// The composite/radar score is capped at 7 PILLARS (2026-08-27, user
+// The composite/radar score is capped at 6 PILLARS (2026-08-27/28, user
 // request — the raw per-domain list had grown to 16 and no longer fit a
-// readable radar chart or a "life pillars" mental model). Four stay
-// individually visible (Trading, Learning, Finance, Health — the ones the
-// user explicitly said must never be merged); the rest compact into three
-// composites, each the average of whichever of its members are actually
-// enabled for this account:
-//   - Career & Network: Engineering, Career, Networking, Freelance
-//   - Ventures & Assets: Business Projects, Fundraising, Real Estate
-//   - Growth & Creation: Growth (skill XP), Content, Projects, Creative, Deep Work
+// readable radar chart or a "life pillars" mental model). The key
+// architectural distinction (explicit user correction, 2026-08-28): a
+// MÉTIER/VENTURE is an autonomous activity with its own income/asset —
+// Trading, Engineering, Business, Real Estate, Freelance, Fundraising all
+// qualify equally (Trading is not special-cased just for being the app's
+// original domain). A CROSS-CUTTING LAYER doesn't stand alone as a métier —
+// it supports or tracks whichever métier(s) someone is pursuing: Career
+// (job-seeking) + Networking (relationships) form one such layer; Growth
+// (skill XP) + Content + Projects + Focus form another (personal
+// development/output, not employment). Creative is explicitly NOT a métier
+// per the user — if it earns money it IS Freelance; unmonetized, it's
+// personal practice, so it sits in the growth/output layer alongside
+// Content/Projects/Focus. Finance/Health/Learning stay individually fixed
+// (explicitly protected — never merged).
+//   - Métiers & Ventures: Trading, Engineering, Business, Real Estate, Freelance, Fundraising
+//   - Career Development: Career, Networking
+//   - Growth & Output: Growth (skill XP), Content, Projects, Focus, Creative
 // Every individual sub-score is still computed and returned separately as
 // `subScores` — Dashboard.jsx's granular "Life Balance" tiles read from
 // there unchanged; only the composite `scores` (used for the radar chart,
-// average/weighted math, and "boost your weakest pillar") is capped at 7.
+// average/weighted math, and "boost your weakest pillar") is capped at 6.
 export const PILLAR_MEMBERS = {
-  careerNetwork: ['engineering', 'career', 'networking', 'freelance'],
-  venturesAssets: ['business', 'fundraising', 'realEstate'],
-  growthCreation: ['growth', 'content', 'projects', 'creative', 'focus'],
+  metiersVentures: ['trading', 'engineering', 'business', 'realEstate', 'freelance', 'fundraising'],
+  careerDevelopment: ['career', 'networking'],
+  growthOutput: ['growth', 'content', 'projects', 'focus', 'creative'],
 };
 
 export function calculateSynergies({
@@ -39,8 +48,8 @@ export function calculateSynergies({
 
   // Growth (skill XP) has no enable flag — it's a core, always-on signal,
   // same as Learning/Finance/Health — so it's always present in subScores
-  // and always pulls Growth & Creation into existence even if none of that
-  // pillar's optional members (Content/Projects/Creative/Focus) are on.
+  // and always pulls Growth & Output into existence even if none of that
+  // pillar's optional members (Content/Projects/Focus/Creative) are on.
   const subScores = { growth: growthScore(skills, habits, monthStart) };
   if (tradingEnabled) subScores.trading = tradingScore(trades, habits, habitLogs, monthStart, today);
   if (engineeringEnabled) subScores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
@@ -60,14 +69,11 @@ export function calculateSynergies({
     finance: financeScore(journal, accountingBudgets, corrections, echeances, monthStart, today),
     health: healthScore(energyLogs, habits, habitLogs, monthStart, today, healthExtras),
   };
-  // Same reasoning as every gate below: Trading defaults to ENABLED (an
-  // original, always-on domain — see authStore's enabledModules default),
-  // so this only ever DROPS the pillar for someone who explicitly opted out.
-  if (tradingEnabled) scores.trading = subScores.trading;
-  // Each composite pillar appears only if ≥1 of its members is actually
-  // enabled — never silently drags the composite average toward 0 for a
-  // module nobody opted into (same convention every individual domain used
-  // before this compaction).
+  // Each composite pillar (including Métiers & Ventures, which now holds
+  // Trading alongside every other vertical — see PILLAR_MEMBERS comment)
+  // appears only if ≥1 of its members is actually enabled — never silently
+  // drags the composite average toward 0 for a module nobody opted into
+  // (same convention every individual domain used before this compaction).
   for (const [pillar, members] of Object.entries(PILLAR_MEMBERS)) {
     const active = members.filter((m) => subScores[m] !== undefined);
     if (active.length) scores[pillar] = r1(active.reduce((a, m) => a + subScores[m], 0) / active.length);

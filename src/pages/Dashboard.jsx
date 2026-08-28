@@ -528,11 +528,12 @@ export default function Dashboard() {
   );
 }
 
-// Pretty labels for the 7-pillar synergy score (2026-08-27 compaction) — the
-// 3 composites are camelCase keys (careerNetwork/venturesAssets/
-// growthCreation) that `capitalize` CSS can't split into words, so they get
-// an explicit label; the 4 individual pillars just get their name capitalized.
-const PILLAR_LABEL = { careerNetwork: 'Career & Network', venturesAssets: 'Ventures & Assets', growthCreation: 'Growth & Creation' };
+// Pretty labels for the 6-pillar synergy score (2026-08-28 compaction — see
+// synergy.js#PILLAR_MEMBERS for the métier-vs-cross-cutting-layer
+// architecture). The 3 composites are camelCase keys that `capitalize` CSS
+// can't split into words, so they get an explicit label; Learning/Finance/
+// Health just get their name capitalized.
+const PILLAR_LABEL = { metiersVentures: 'Métiers & Ventures', careerDevelopment: 'Career Development', growthOutput: 'Growth & Output' };
 function domainLabel(domain) {
   return PILLAR_LABEL[domain] || (domain ? domain[0].toUpperCase() + domain.slice(1) : domain);
 }
@@ -541,7 +542,7 @@ function domainLabel(domain) {
 // destination (its first/primary member) rather than nothing.
 function domainRoute(domain) {
   return {
-    trading: '/trading', learning: '/learning', finance: '/finance', health: '/habits',
-    careerNetwork: '/career', venturesAssets: '/businesses', growthCreation: '/skills',
+    learning: '/learning', finance: '/finance', health: '/habits',
+    metiersVentures: '/trading', careerDevelopment: '/career', growthOutput: '/skills',
   }[domain] || '/';
 }

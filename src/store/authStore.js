@@ -74,7 +74,7 @@ export const useAuthStore = create(
           user: {
             name: profile.name,
             email: profile.email || '',
-            primaryDomain: profile.primaryDomain || 'trading',
+            primaryDomain: profile.primaryDomain || 'metiersVentures',
             careerGoal: profile.careerGoal || 'Hybrid',
             // Gender is required at signup going forward (Welcome.jsx/
             // CloudAuthPanel.jsx enforce a choice before submit) — still
