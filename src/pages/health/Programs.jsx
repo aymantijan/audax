@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Pencil, RotateCcw, Save, X, Plus, Trash2, BookOpen, Calendar } from 'lucide-react';
+import { CheckCircle2, Pencil, RotateCcw, Save, X, Plus, Trash2, BookOpen, Calendar, AlertTriangle, Info } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { CURATED_PROGRAMS } from '../../utils/curated-programs';
 import { Card, Button, Badge, Input, EmptyState } from '../../components/common/ui';
@@ -15,7 +15,11 @@ function SectionCard({ title, action, children }) {
 function ExerciseTable({ exercises, editing, onChange }) {
   const update = (i, patch) => onChange(exercises.map((e, idx) => (idx === i ? { ...e, ...patch } : e)));
   const remove = (i) => onChange(exercises.filter((_, idx) => idx !== i));
-  const add = () => onChange([...exercises, { name: '', setsReps: '', rest: '', note: '' }]);
+  const add = () => onChange([...exercises, { name: '', setsReps: '', rest: '', rpe: '', note: '' }]);
+  // RPE is optional per exercise (older/other curated programs may not set
+  // it) — only render the column when at least one row actually has a value,
+  // so a program without RPE data doesn't show an empty column.
+  const hasRpe = exercises.some((e) => e.rpe);
 
   return (
     <div className="overflow-x-auto">
@@ -25,6 +29,7 @@ function ExerciseTable({ exercises, editing, onChange }) {
             <th className="py-1.5 pr-2">Exercice</th>
             <th className="pr-2">Séries × Reps</th>
             <th className="pr-2">Repos</th>
+            {(hasRpe || editing) && <th className="pr-2">RPE</th>}
             <th className="pr-2">Note</th>
             {editing && <th></th>}
           </tr>
@@ -37,6 +42,7 @@ function ExerciseTable({ exercises, editing, onChange }) {
                   <td className="py-1 pr-2"><Input className="!py-1 !text-xs" value={ex.name} onChange={(e) => update(i, { name: e.target.value })} /></td>
                   <td className="py-1 pr-2"><Input className="!py-1 !text-xs w-24" value={ex.setsReps} onChange={(e) => update(i, { setsReps: e.target.value })} /></td>
                   <td className="py-1 pr-2"><Input className="!py-1 !text-xs w-16" value={ex.rest} onChange={(e) => update(i, { rest: e.target.value })} /></td>
+                  <td className="py-1 pr-2"><Input className="!py-1 !text-xs w-12" value={ex.rpe || ''} onChange={(e) => update(i, { rpe: e.target.value })} /></td>
                   <td className="py-1 pr-2"><Input className="!py-1 !text-xs" value={ex.note} onChange={(e) => update(i, { note: e.target.value })} /></td>
                   <td><button onClick={() => remove(i)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button></td>
                 </>
@@ -45,6 +51,7 @@ function ExerciseTable({ exercises, editing, onChange }) {
                   <td className="py-1.5 pr-2">{ex.name}</td>
                   <td className="pr-2">{ex.setsReps}</td>
                   <td className="pr-2 text-mute">{ex.rest}</td>
+                  {hasRpe && <td className="pr-2 text-mute">{ex.rpe || '—'}</td>}
                   <td className="pr-2 text-mute">{ex.note}</td>
                 </>
               )}
@@ -264,6 +271,28 @@ export default function Programs() {
         </SectionCard>
       )}
 
+      {viewing.splitRationale && (
+        <SectionCard title="Pourquoi ce split">
+          <p className="text-xs text-mute mb-3">{viewing.splitRationale.intro}</p>
+          <div className="overflow-x-auto mb-3">
+            <table className="w-full text-xs">
+              <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Split</th><th className="pr-2">Fréquence/muscle</th><th className="pr-2">Meilleur pour</th><th>Compromis</th></tr></thead>
+              <tbody>
+                {viewing.splitRationale.table.map((s, i) => (
+                  <tr key={i} className="border-t border-line">
+                    <td className="py-1.5 pr-2 font-medium">{s.split}</td>
+                    <td className="pr-2 text-mute">{s.frequency}</td>
+                    <td className="pr-2">{s.bestFor}</td>
+                    <td className="text-mute">{s.tradeoff}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {viewing.splitRationale.recommendation && <p className="text-[11px] text-mute italic">{viewing.splitRationale.recommendation}</p>}
+        </SectionCard>
+      )}
+
       <SectionCard title="Macrocycle">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -307,6 +336,41 @@ export default function Programs() {
         </SectionCard>
       ))}
 
+      {viewing.warmupGuide && (
+        <SectionCard title="Échauffement, tempo & RPE">
+          <p className="text-xs text-mute mb-2 italic">S'applique à toutes les séances ci-dessous — décrit une fois ici plutôt que répété exercice par exercice.</p>
+          <div className="mb-3">
+            <div className="text-sm font-medium mb-1">Protocole général (chaque séance)</div>
+            <ul className="text-xs text-mute list-disc list-inside space-y-0.5">
+              {viewing.warmupGuide.generalWarmup.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+          <div className="mb-3">
+            <div className="text-sm font-medium mb-1">Guide de tempo</div>
+            <div className="space-y-1.5">
+              {viewing.warmupGuide.tempoGuide.map((t, i) => (
+                <div key={i} className="text-xs bg-surface border border-line rounded-lg px-3 py-2">
+                  <span className="font-medium">{t.label}</span> — <span className="text-accent">{t.tempo}</span>
+                  <div className="text-mute mt-0.5">{t.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mb-3">
+            <div className="text-sm font-medium mb-1">Échelle RPE</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {viewing.warmupGuide.rpeScale.map((r, i) => (
+                <div key={i} className="text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5">
+                  <span className="font-medium">{r.rpe}</span>
+                  <div className="text-mute">{r.meaning}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {viewing.warmupGuide.restNote && <p className="text-[11px] text-mute font-medium">{viewing.warmupGuide.restNote}</p>}
+        </SectionCard>
+      )}
+
       <SectionCard title="Séances détaillées">
         <div className="space-y-4">
           {Object.keys(viewing.sessions).map((key) => <SessionBlock key={key} programId={viewing.id} sessionKey={key} />)}
@@ -316,19 +380,32 @@ export default function Programs() {
       <SectionCard title="Volume hebdomadaire par groupe musculaire">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Groupe</th><th className="pr-2">Séries/semaine</th><th>Zone optimale</th></tr></thead>
+            <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Groupe</th><th className="pr-2">Séries/semaine</th><th className="pr-2">Zone optimale</th>{viewing.weeklyVolume.some((v) => v.status) && <th>Statut</th>}</tr></thead>
             <tbody>
               {viewing.weeklyVolume.map((v) => (
-                <tr key={v.group} className="border-t border-line">
-                  <td className="py-1.5 pr-2">{v.group}</td>
+                <tr key={v.group} className="border-t border-line align-top">
+                  <td className="py-1.5 pr-2 font-medium">{v.group}</td>
                   <td className="pr-2">{v.sets}</td>
-                  <td className="text-mute">{v.zone}</td>
+                  <td className="pr-2 text-mute">{v.zone}</td>
+                  {v.status && (
+                    <td className="py-1.5">
+                      <div className={`flex items-start gap-1.5 ${v.status === 'attention' ? 'text-warn' : 'text-good'}`}>
+                        {v.status === 'attention' ? <AlertTriangle size={12} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={12} className="shrink-0 mt-0.5" />}
+                        {v.note && <span className="text-mute normal-case">{v.note}</span>}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         {viewing.weeklyVolumeNote && <p className="text-[11px] text-mute mt-3 italic">{viewing.weeklyVolumeNote}</p>}
+        {viewing.weeklyVolumeNotes?.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {viewing.weeklyVolumeNotes.map((n, i) => <p key={i} className="text-[11px] text-mute">{n}</p>)}
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard title="Course & vélo — programmation par bloc">
@@ -409,6 +486,15 @@ export default function Programs() {
           {viewing.limits.map((l, i) => <li key={i}>{l}</li>)}
         </ul>
       </SectionCard>
+
+      {viewing.openItems && (
+        <SectionCard title="Pistes ouvertes — pas encore intégrées">
+          <p className="text-xs text-mute mb-2 flex items-start gap-1.5"><Info size={13} className="shrink-0 mt-0.5" /> {viewing.openItems.intro}</p>
+          <ul className="text-xs text-mute list-disc list-inside space-y-1">
+            {viewing.openItems.items.map((it, i) => <li key={i}>{it}</li>)}
+          </ul>
+        </SectionCard>
+      )}
 
       {viewing.sources?.length > 0 && (
         <p className="text-[11px] text-mute">Sources : {viewing.sources.join(' · ')}</p>
