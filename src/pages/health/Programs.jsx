@@ -2,11 +2,24 @@ import { useState } from 'react';
 import { CheckCircle2, Pencil, RotateCcw, Save, X, Plus, Trash2, BookOpen, Calendar, AlertTriangle, Info } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { CURATED_PROGRAMS } from '../../utils/curated-programs';
-import { Card, Button, Badge, Input, EmptyState } from '../../components/common/ui';
+import { Card, Button, Badge, Input, Select, Textarea, EmptyState } from '../../components/common/ui';
 import ProgramOnboarding from './ProgramOnboarding';
 
 function SectionCard({ title, action, children }) {
   return <Card title={title} action={action}>{children}</Card>;
+}
+
+// Small "modified + revert" affordance, shared by every editable row below —
+// same "original never mutated, revertible" pattern as SessionBlock's
+// exercise variants, generalized to the other program sections
+// (healthStore.js#applyProgramOverrides).
+function RowActions({ overridden, onEdit, onReset }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {overridden && <button onClick={onReset} className="text-mute hover:text-warn cursor-pointer" title="Revenir à l'original"><RotateCcw size={12} /></button>}
+      <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer" title="Modifier"><Pencil size={12} /></button>
+    </span>
+  );
 }
 
 // Inline editable exercise table — used both to display a session's
@@ -116,17 +129,230 @@ function SessionBlock({ programId, sessionKey }) {
   );
 }
 
+// One weekly-schedule day row — lets a user reassign which session (or rest)
+// runs that day, and override the display time. `sessions` is the curated
+// program's session dict, used to populate the picker and render the label.
+function WeeklyDayRow({ programId, phaseKey, day, sessions }) {
+  const { setProgramOverride, resetProgramOverride } = useHealthStore();
+  const overridden = useHealthStore((s) => !!s.programOverrides[programId]?.weeklyStructure?.[phaseKey]?.[day.day]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const sessionOptions = [{ value: '', label: 'Repos (aucune séance)' }, ...Object.keys(sessions).map((k) => ({ value: k, label: sessions[k].label }))];
+
+  const startEdit = () => { setDraft({ session: day.session || '', sessionTime: day.sessionTime || '' }); setEditing(true); };
+  const save = () => {
+    setProgramOverride(programId, 'weeklyStructure', { [phaseKey]: { [day.day]: { session: draft.session || null, sessionTime: draft.sessionTime } } });
+    setEditing(false);
+  };
+
+  return (
+    <tr className="border-t border-line align-top">
+      <td className="py-1.5 pr-2 font-medium">{day.label}</td>
+      <td className="pr-2 text-mute">{day.morning || '—'}</td>
+      <td className="pr-2 text-mute">{day.midday || '—'}</td>
+      {editing ? (
+        <td className="py-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Select className="!py-1 !text-xs w-40" value={draft.session} onChange={(e) => setDraft({ ...draft, session: e.target.value })} options={sessionOptions} />
+            <Input className="!py-1 !text-xs w-28" value={draft.sessionTime} onChange={(e) => setDraft({ ...draft, sessionTime: e.target.value })} placeholder="Horaire" />
+            <button onClick={save} className="text-good cursor-pointer"><Save size={13} /></button>
+            <button onClick={() => setEditing(false)} className="text-mute cursor-pointer"><X size={13} /></button>
+          </div>
+        </td>
+      ) : (
+        <td>
+          <div className="flex items-center gap-2">
+            <span>{day.session ? `${sessions[day.session]?.label} (${day.sessionTime})` : day.sessionTime || '—'}</span>
+            {overridden && <Badge color="var(--warning)">Modifié</Badge>}
+            <RowActions overridden={overridden} onEdit={startEdit} onReset={() => resetProgramOverride(programId, 'weeklyStructure', `${phaseKey}:${day.day}`)} />
+          </div>
+        </td>
+      )}
+    </tr>
+  );
+}
+
+function MacrocycleRow({ programId, index, row }) {
+  const { setProgramOverride, resetProgramOverride } = useHealthStore();
+  const overridden = useHealthStore((s) => !!s.programOverrides[programId]?.macrocycle?.[index]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+
+  const startEdit = () => { setDraft({ dates: row.dates, focus: row.focus, volume: row.volume, intensity: row.intensity }); setEditing(true); };
+  const save = () => { setProgramOverride(programId, 'macrocycle', { [index]: draft }); setEditing(false); };
+  const field = (key, width = 'w-28') => <Input className={`!py-1 !text-xs ${width}`} value={draft[key]} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} />;
+
+  return (
+    <tr className="border-t border-line align-top">
+      <td className="py-1.5 pr-2 font-medium">{row.block}</td>
+      {editing ? (
+        <>
+          <td className="pr-2 py-1">{field('dates')}</td>
+          <td className="pr-2 py-1">{field('focus')}</td>
+          <td className="pr-2 py-1">{field('volume')}</td>
+          <td className="pr-2 py-1">{field('intensity')}</td>
+          <td className="pr-2 text-mute">{row.cardio}</td>
+          <td>{row.agility}</td>
+        </>
+      ) : (
+        <>
+          <td className="pr-2 text-mute">{row.dates}</td>
+          <td className="pr-2">{row.focus}</td>
+          <td className="pr-2">{row.volume}</td>
+          <td className="pr-2">{row.intensity}</td>
+          <td className="pr-2">{row.cardio}</td>
+          <td>{row.agility}</td>
+        </>
+      )}
+      <td className="whitespace-nowrap">
+        {editing ? (
+          <span className="inline-flex items-center gap-1"><button onClick={save} className="text-good cursor-pointer"><Save size={13} /></button><button onClick={() => setEditing(false)} className="text-mute cursor-pointer"><X size={13} /></button></span>
+        ) : (
+          <span className="flex items-center gap-1.5">{overridden && <Badge color="var(--warning)">Modifié</Badge>}<RowActions overridden={overridden} onEdit={startEdit} onReset={() => resetProgramOverride(programId, 'macrocycle', String(index))} /></span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function CardioRow({ programId, index, row }) {
+  const { setProgramOverride, resetProgramOverride } = useHealthStore();
+  const overridden = useHealthStore((s) => !!s.programOverrides[programId]?.cardioProgram?.[index]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+
+  const startEdit = () => { setDraft({ course: row.course, velo: row.velo }); setEditing(true); };
+  const save = () => { setProgramOverride(programId, 'cardioProgram', { [index]: draft }); setEditing(false); };
+
+  return (
+    <tr className="border-t border-line align-top">
+      <td className="py-1.5 pr-2 font-medium">{row.block}</td>
+      {editing ? (
+        <>
+          <td className="pr-2 py-1"><Input className="!py-1 !text-xs" value={draft.course} onChange={(e) => setDraft({ ...draft, course: e.target.value })} /></td>
+          <td className="pr-2 py-1"><Input className="!py-1 !text-xs" value={draft.velo} onChange={(e) => setDraft({ ...draft, velo: e.target.value })} /></td>
+        </>
+      ) : (
+        <>
+          <td className="pr-2">{row.course}</td>
+          <td className="pr-2">{row.velo}</td>
+        </>
+      )}
+      <td className="text-mute">
+        <div className="flex items-center gap-1.5">
+          {row.logique}
+          {editing ? (
+            <span className="inline-flex items-center gap-1 shrink-0"><button onClick={save} className="text-good cursor-pointer"><Save size={13} /></button><button onClick={() => setEditing(false)} className="text-mute cursor-pointer"><X size={13} /></button></span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 shrink-0">{overridden && <Badge color="var(--warning)">Modifié</Badge>}<RowActions overridden={overridden} onEdit={startEdit} onReset={() => resetProgramOverride(programId, 'cardioProgram', String(index))} /></span>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// items is edited as one line-per-drill textarea (split/joined on \n) rather
+// than a per-item table — simpler for a short bullet list like this.
+function AgilityBlock({ programId, index, block }) {
+  const { setProgramOverride, resetProgramOverride } = useHealthStore();
+  const overridden = useHealthStore((s) => !!s.programOverrides[programId]?.agilityMobility?.[index]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const startEdit = () => { setDraft(block.items.join('\n')); setEditing(true); };
+  const save = () => {
+    setProgramOverride(programId, 'agilityMobility', { [index]: { items: draft.split('\n').map((s) => s.trim()).filter(Boolean) } });
+    setEditing(false);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="text-sm font-medium">{block.title}</div>
+        {overridden && <Badge color="var(--warning)">Modifié</Badge>}
+        {!editing && <RowActions overridden={overridden} onEdit={startEdit} onReset={() => resetProgramOverride(programId, 'agilityMobility', String(index))} />}
+      </div>
+      {editing ? (
+        <div className="space-y-1.5">
+          <Textarea className="!text-xs" rows={block.items.length + 1} value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <div className="flex gap-2">
+            <Button className="!py-1 !text-xs" onClick={save}><span className="flex items-center gap-1"><Save size={12} /> Enregistrer</span></Button>
+            <Button variant="ghost" className="!py-1 !text-xs" onClick={() => setEditing(false)}>Annuler</Button>
+          </div>
+        </div>
+      ) : (
+        <ul className="text-xs text-mute list-disc list-inside space-y-0.5">
+          {block.items.map((it, j) => <li key={j}>{it}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Nutrition macros — a single edit toggle for the whole proteinPerKg/
+// carbsPerKg/fatPerKg/calorieRule group (not per-field), since they're
+// always adjusted together in practice.
+function NutritionMacros({ programId, macros }) {
+  const { setProgramOverride, resetProgramOverride } = useHealthStore();
+  const overridden = useHealthStore((s) => !!s.programOverrides[programId]?.nutrition?.macros);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null);
+
+  const startEdit = () => { setDraft({ proteinPerKg: macros.proteinPerKg, carbsPerKg: macros.carbsPerKg, fatPerKg: macros.fatPerKg, calorieRule: macros.calorieRule }); setEditing(true); };
+  const save = () => { setProgramOverride(programId, 'nutrition', { macros: draft }); setEditing(false); };
+
+  if (editing) {
+    return (
+      <div className="space-y-2 mb-3">
+        <div className="grid grid-cols-3 gap-3">
+          <Input className="!text-xs" value={draft.proteinPerKg} onChange={(e) => setDraft({ ...draft, proteinPerKg: e.target.value })} placeholder="Protéines" />
+          <Input className="!text-xs" value={draft.carbsPerKg} onChange={(e) => setDraft({ ...draft, carbsPerKg: e.target.value })} placeholder="Glucides" />
+          <Input className="!text-xs" value={draft.fatPerKg} onChange={(e) => setDraft({ ...draft, fatPerKg: e.target.value })} placeholder="Lipides" />
+        </div>
+        <Textarea className="!text-xs" rows={2} value={draft.calorieRule} onChange={(e) => setDraft({ ...draft, calorieRule: e.target.value })} placeholder="Règle calorique" />
+        <div className="flex gap-2">
+          <Button className="!py-1 !text-xs" onClick={save}><span className="flex items-center gap-1"><Save size={12} /> Enregistrer</span></Button>
+          <Button variant="ghost" className="!py-1 !text-xs" onClick={() => setEditing(false)}>Annuler</Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="flex items-center justify-end gap-1.5 mb-1">
+        {overridden && <Badge color="var(--warning)">Modifié</Badge>}
+        <RowActions overridden={overridden} onEdit={startEdit} onReset={() => resetProgramOverride(programId, 'nutrition')} />
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-center mb-3">
+        <div><div className="text-xs text-mute mb-1">Protéines</div><div className="text-sm font-semibold">{macros.proteinPerKg}</div></div>
+        <div><div className="text-xs text-mute mb-1">Glucides</div><div className="text-sm font-semibold">{macros.carbsPerKg}</div></div>
+        <div><div className="text-xs text-mute mb-1">Lipides</div><div className="text-sm font-semibold">{macros.fatPerKg}</div></div>
+      </div>
+      <p className="text-[11px] text-mute">{macros.calorieRule}</p>
+    </>
+  );
+}
+
 export default function Programs() {
-  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getCuratedProgramAdherence, getProgramProgressionSummary, programSchedule } = useHealthStore();
+  const { activeCuratedProgramId, setActiveCuratedProgram, getActiveCuratedProgram, getEffectiveCuratedProgram, getCuratedProgramAdherence, getProgramProgressionSummary, programSchedule } = useHealthStore();
   const [viewingId, setViewingId] = useState(activeCuratedProgramId);
   const [onboardingFor, setOnboardingFor] = useState(null); // curated program object, or null
   const viewing = viewingId ? CURATED_PROGRAMS.find((p) => p.id === viewingId) : null;
+  // Overrides apply whether or not the program is currently active — a user
+  // can customize a program before ever activating it, and it's still there
+  // when they do. `viewing` stays the true original (names/sessions/etc are
+  // never overridden); `effective` is what actually schedules/logs/exports.
+  const effective = viewing ? getEffectiveCuratedProgram(viewing.id) : null;
   const adherence = getCuratedProgramAdherence();
   const progression = getProgramProgressionSummary();
 
+  // Always starts onboarding from the EFFECTIVE program so calendar-sync
+  // scheduling (generateProgramSchedule) respects any saved overrides.
   const startOnboarding = (program) => {
+    const eff = getEffectiveCuratedProgram(program.id) || program;
     setActiveCuratedProgram(program.id);
-    setOnboardingFor(program);
+    setOnboardingFor(eff);
   };
 
   if (onboardingFor) {
@@ -171,7 +397,7 @@ export default function Programs() {
   }
 
   const isActive = activeCuratedProgramId === viewing.id;
-  const ws = viewing.weeklyStructure;
+  const ws = effective.weeklyStructure;
   // A phase key is an array of day entries (each with a `.day`) — excludes
   // `notes` (also an array, but of plain strings) and `phaseSwitchDate`.
   const phaseKeys = Object.keys(ws).filter((k) => Array.isArray(ws[k]) && ws[k][0]?.day);
@@ -293,22 +519,12 @@ export default function Programs() {
         </SectionCard>
       )}
 
-      <SectionCard title="Macrocycle">
+      <SectionCard title="Macrocycle" action={<span className="text-[11px] text-mute flex items-center gap-1"><Pencil size={11} /> Modifiable par bloc</span>}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Bloc</th><th className="pr-2">Dates</th><th className="pr-2">Focus</th><th className="pr-2">Volume</th><th className="pr-2">Intensité</th><th className="pr-2">Cardio</th><th>Agilité</th></tr></thead>
+            <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Bloc</th><th className="pr-2">Dates</th><th className="pr-2">Focus</th><th className="pr-2">Volume</th><th className="pr-2">Intensité</th><th className="pr-2">Cardio</th><th className="pr-2">Agilité</th><th></th></tr></thead>
             <tbody>
-              {viewing.macrocycle.map((b, i) => (
-                <tr key={i} className="border-t border-line">
-                  <td className="py-1.5 pr-2 font-medium">{b.block}</td>
-                  <td className="pr-2 text-mute">{b.dates}</td>
-                  <td className="pr-2">{b.focus}</td>
-                  <td className="pr-2">{b.volume}</td>
-                  <td className="pr-2">{b.intensity}</td>
-                  <td className="pr-2">{b.cardio}</td>
-                  <td>{b.agility}</td>
-                </tr>
-              ))}
+              {effective.macrocycle.map((b, i) => <MacrocycleRow key={i} programId={viewing.id} index={i} row={b} />)}
             </tbody>
           </table>
         </div>
@@ -316,19 +532,12 @@ export default function Programs() {
       </SectionCard>
 
       {phaseKeys.map((phaseKey) => (
-        <SectionCard key={phaseKey} title={`Structure hebdomadaire — ${phaseKey === 'phaseA' ? 'Phase A' : phaseKey === 'phaseB' ? 'Phase B' : 'Semaine type'}`}>
+        <SectionCard key={phaseKey} title={`Structure hebdomadaire — ${phaseKey === 'phaseA' ? 'Phase A' : phaseKey === 'phaseB' ? 'Phase B' : 'Semaine type'}`} action={<span className="text-[11px] text-mute flex items-center gap-1"><Pencil size={11} /> Modifiable par jour</span>}>
           <div className="overflow-x-auto mb-3">
             <table className="w-full text-xs">
               <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Jour</th><th className="pr-2">Matin</th><th className="pr-2">Journée</th><th>Séance</th></tr></thead>
               <tbody>
-                {ws[phaseKey].map((d) => (
-                  <tr key={d.day} className="border-t border-line">
-                    <td className="py-1.5 pr-2 font-medium">{d.label}</td>
-                    <td className="pr-2 text-mute">{d.morning || '—'}</td>
-                    <td className="pr-2 text-mute">{d.midday || '—'}</td>
-                    <td>{d.session ? `${viewing.sessions[d.session]?.label} (${d.sessionTime})` : d.sessionTime || '—'}</td>
-                  </tr>
-                ))}
+                {ws[phaseKey].map((d) => <WeeklyDayRow key={d.day} programId={viewing.id} phaseKey={phaseKey} day={d} sessions={viewing.sessions} />)}
               </tbody>
             </table>
           </div>
@@ -408,40 +617,26 @@ export default function Programs() {
         )}
       </SectionCard>
 
-      <SectionCard title="Course & vélo — programmation par bloc">
+      <SectionCard title="Course & vélo — programmation par bloc" action={<span className="text-[11px] text-mute flex items-center gap-1"><Pencil size={11} /> Modifiable par bloc</span>}>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="text-mute text-left"><th className="py-1.5 pr-2">Bloc</th><th className="pr-2">Course</th><th className="pr-2">Vélo</th><th>Logique</th></tr></thead>
             <tbody>
-              {viewing.cardioProgram.map((c, i) => (
-                <tr key={i} className="border-t border-line">
-                  <td className="py-1.5 pr-2 font-medium">{c.block}</td>
-                  <td className="pr-2">{c.course}</td>
-                  <td className="pr-2">{c.velo}</td>
-                  <td className="text-mute">{c.logique}</td>
-                </tr>
-              ))}
+              {effective.cardioProgram.map((c, i) => <CardioRow key={i} programId={viewing.id} index={i} row={c} />)}
             </tbody>
           </table>
         </div>
         {viewing.cardioRule && <p className="text-xs mt-3 font-medium">{viewing.cardioRule}</p>}
       </SectionCard>
 
-      <SectionCard title="Agilité & mobilité">
+      <SectionCard title="Agilité & mobilité" action={<span className="text-[11px] text-mute flex items-center gap-1"><Pencil size={11} /> Modifiable par bloc</span>}>
         <div className="space-y-3">
-          {viewing.agilityMobility.map((a, i) => (
-            <div key={i}>
-              <div className="text-sm font-medium mb-1">{a.title}</div>
-              <ul className="text-xs text-mute list-disc list-inside space-y-0.5">
-                {a.items.map((it, j) => <li key={j}>{it}</li>)}
-              </ul>
-            </div>
-          ))}
+          {effective.agilityMobility.map((a, i) => <AgilityBlock key={i} programId={viewing.id} index={i} block={a} />)}
         </div>
       </SectionCard>
 
-      <SectionCard title="Nutrition & composition corporelle">
-        <p className="text-sm font-medium mb-1">{viewing.nutrition.objective}</p>
+      <SectionCard title="Nutrition & composition corporelle" action={<span className="text-[11px] text-mute flex items-center gap-1"><Pencil size={11} /> Macros modifiables</span>}>
+        <p className="text-sm font-medium mb-1">{effective.nutrition.objective}</p>
         <p className="text-xs text-mute mb-3">{viewing.nutrition.intro}</p>
         <div className="space-y-2 mb-4">
           {viewing.nutrition.strategyByBodyfat.map((s, i) => (
@@ -450,12 +645,7 @@ export default function Programs() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-3 text-center mb-3">
-          <div><div className="text-xs text-mute mb-1">Protéines</div><div className="text-sm font-semibold">{viewing.nutrition.macros.proteinPerKg}</div></div>
-          <div><div className="text-xs text-mute mb-1">Glucides</div><div className="text-sm font-semibold">{viewing.nutrition.macros.carbsPerKg}</div></div>
-          <div><div className="text-xs text-mute mb-1">Lipides</div><div className="text-sm font-semibold">{viewing.nutrition.macros.fatPerKg}</div></div>
-        </div>
-        <p className="text-[11px] text-mute">{viewing.nutrition.macros.calorieRule}</p>
+        <NutritionMacros programId={viewing.id} macros={effective.nutrition.macros} />
       </SectionCard>
 
       {viewing.cognitivePerformance && (

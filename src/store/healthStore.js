@@ -60,6 +60,70 @@ function getSessionRotation(program, phaseKey) {
   return rotation;
 }
 
+// ─────────── Curated program overrides (2026-09-01) — full user autonomy ───
+// The exercise-level variant system (programVariants, below) only ever
+// covered ONE session's exercise list. This generalizes the same
+// "original never mutated, overrides layered on top, revertible per row"
+// pattern to the other 4 program sections a user might reasonably want to
+// adapt: weekly schedule (which session runs which day, and when),
+// macrocycle (block dates/volume/intensity), cardio program, agility/
+// mobility, and nutrition macros. Deliberately NOT covering every single
+// field (e.g. a block's display name, or the narrative "logique" column) —
+// this targets what's actually personal/adjustable, not a full CMS.
+//
+// Shape: programOverrides = { [curatedProgramId]: { weeklyStructure?, macrocycle?, cardioProgram?, agilityMobility?, nutrition? } }
+//   weeklyStructure: { [phaseKey]: { [dayKey]: { session, sessionTime } } } — 2 levels deep
+//   macrocycle / cardioProgram / agilityMobility: { [rowIndex]: {...fields} } — 1 level deep
+//   nutrition: { objective?, macros?: {...} } — 1 level deep, macros merged one level further
+function mergeWeeklyStructureOverride(existing, patch) {
+  const result = { ...(existing || {}) };
+  for (const phaseKey of Object.keys(patch)) {
+    result[phaseKey] = { ...(result[phaseKey] || {}), ...patch[phaseKey] };
+  }
+  return result;
+}
+
+// Applies a program's saved overrides on top of its curated original —
+// called by getActiveCuratedProgram so every downstream consumer (schedule
+// rotation, adherence, calendar sync, PDF export) sees the user's real
+// current program transparently, with zero changes needed on their end.
+function applyProgramOverrides(original, overrides) {
+  if (!overrides) return original;
+  const merged = { ...original };
+  if (overrides.weeklyStructure) {
+    const ws = { ...original.weeklyStructure };
+    for (const phaseKey of Object.keys(ws)) {
+      if (!Array.isArray(ws[phaseKey])) continue;
+      const dayOverrides = overrides.weeklyStructure[phaseKey];
+      if (!dayOverrides) continue;
+      ws[phaseKey] = ws[phaseKey].map((d) => {
+        const o = dayOverrides[d.day];
+        if (!o) return d;
+        const session = o.session !== undefined ? o.session : d.session;
+        const sessionTime = o.sessionTime !== undefined ? o.sessionTime : d.sessionTime;
+        const nonTraining = (d.blocks || []).filter((b) => b.type !== 'training');
+        const blocks = session ? [...nonTraining, { type: 'training', sessionKey: session }] : nonTraining;
+        return { ...d, session, sessionTime, blocks };
+      });
+    }
+    merged.weeklyStructure = ws;
+  }
+  for (const section of ['macrocycle', 'cardioProgram', 'agilityMobility']) {
+    const rowOverrides = overrides[section];
+    if (rowOverrides && Array.isArray(original[section])) {
+      merged[section] = original[section].map((row, i) => (rowOverrides[i] ? { ...row, ...rowOverrides[i] } : row));
+    }
+  }
+  if (overrides.nutrition && original.nutrition) {
+    merged.nutrition = {
+      ...original.nutrition,
+      ...(overrides.nutrition.objective !== undefined ? { objective: overrides.nutrition.objective } : {}),
+      macros: { ...original.nutrition.macros, ...(overrides.nutrition.macros || {}) },
+    };
+  }
+  return merged;
+}
+
 // Habit → Health activity link types (see utils/constants.js#HEALTH_LINK_TYPES).
 // Each maps to the skill(s) awarded when the resulting Health entry is logged.
 const HEALTH_LINK_SKILLS = {
@@ -254,7 +318,56 @@ export const useHealthStore = create(
         set({ activeCuratedProgramId: id, trainingPrograms: get().trainingPrograms.map((p) => ({ ...p, active: false })), curatedSessionProgress: {} });
         toast(id ? 'Programme activé' : 'Programme désactivé', 'success');
       },
-      getActiveCuratedProgram: () => (get().activeCuratedProgramId ? getCuratedProgram(get().activeCuratedProgramId) : null),
+      // Returns the EFFECTIVE program (original + saved overrides applied) —
+      // every consumer (schedule rotation, adherence, calendar sync, PDF
+      // export) reads through this, so a saved override takes effect
+      // everywhere automatically. Use getCuratedProgram(id) directly (from
+      // utils/curated-programs) when the true, un-overridden original is
+      // specifically needed (e.g. Programs.jsx's "reset to original" diff).
+      getActiveCuratedProgram: () => (get().activeCuratedProgramId ? get().getEffectiveCuratedProgram(get().activeCuratedProgramId) : null),
+      getEffectiveCuratedProgram: (curatedProgramId) => {
+        const original = getCuratedProgram(curatedProgramId);
+        if (!original) return null;
+        return applyProgramOverrides(original, get().programOverrides[curatedProgramId]);
+      },
+
+      // { [curatedProgramId]: { weeklyStructure?, macrocycle?, cardioProgram?, agilityMobility?, nutrition? } }
+      // See applyProgramOverrides/mergeWeeklyStructureOverride above for the
+      // exact shape per section. Never mutates curated-programs/*.js itself
+      // — same "original always intact, revertible" guarantee as
+      // programVariants, generalized to the rest of the program.
+      programOverrides: {},
+      setProgramOverride: (curatedProgramId, section, patch) => {
+        const programOverride = get().programOverrides[curatedProgramId] || {};
+        const nextSection = section === 'weeklyStructure'
+          ? mergeWeeklyStructureOverride(programOverride.weeklyStructure, patch)
+          : { ...(programOverride[section] || {}), ...patch };
+        set({ programOverrides: { ...get().programOverrides, [curatedProgramId]: { ...programOverride, [section]: nextSection } } });
+        toast('Modification enregistrée', 'success');
+      },
+      // subKey omitted → reset the whole section; otherwise reset just one
+      // row (macrocycle/cardioProgram/agilityMobility: row index as a
+      // string; weeklyStructure: `${phaseKey}:${day}`, e.g. "phaseA:lundi").
+      resetProgramOverride: (curatedProgramId, section, subKey) => {
+        const programOverride = get().programOverrides[curatedProgramId];
+        if (!programOverride?.[section]) return;
+        const next = { ...programOverride };
+        if (subKey === undefined) {
+          delete next[section];
+        } else if (section === 'weeklyStructure') {
+          const [phaseKey, day] = subKey.split(':');
+          const phase = { ...(next.weeklyStructure[phaseKey] || {}) };
+          delete phase[day];
+          next.weeklyStructure = { ...next.weeklyStructure, [phaseKey]: phase };
+        } else {
+          const rows = { ...next[section] };
+          delete rows[subKey];
+          if (Object.keys(rows).length) next[section] = rows;
+          else delete next[section];
+        }
+        set({ programOverrides: { ...get().programOverrides, [curatedProgramId]: next } });
+        toast('Revenu à l\'original', 'info');
+      },
 
       // { [curatedProgramId]: { lastSessionKey, lastCompletedAt } } — tracks
       // rotation position independently of the calendar. A missed day
@@ -1874,7 +1987,7 @@ export const useHealthStore = create(
         lastWaterReminderAt: null, lastMealReminderKey: null, lastBedtimeReminderDate: null,
       },
           trainingPrograms: [], nutritionPlans: [], waterLogs: [], performanceLogs: [],
-          activeCuratedProgramId: null, programVariants: [], programSchedule: null, curatedSessionProgress: {},
+          activeCuratedProgramId: null, programVariants: [], programOverrides: {}, programSchedule: null, curatedSessionProgress: {},
           healthProfile: {
             version: 1,
             experienceLevel: null, trainingGoal: null, daysPerWeek: null, sessionLengthMin: null,
