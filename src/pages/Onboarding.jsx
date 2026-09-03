@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
-  Users, Briefcase, Megaphone, FolderKanban, Timer, Rocket, Palette, Building2,
+  Users, Briefcase, Megaphone, Timer, Rocket, Palette, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
@@ -50,7 +50,6 @@ export default function Onboarding() {
     networking: user?.enabledModules?.networking ?? true,
     career: user?.enabledModules?.career ?? true,
     content: user?.enabledModules?.content ?? true,
-    projects: user?.enabledModules?.projects ?? true,
     focus: user?.enabledModules?.focus ?? true,
     fundraising: user?.enabledModules?.fundraising ?? true,
     freelance: user?.enabledModules?.freelance ?? true,
@@ -118,12 +117,11 @@ export default function Onboarding() {
                 // One combined question toggles BOTH `pe`/`business` at once — the two
                 // pages (Deals split from Business Projects, 2026-08-26) can be turned
                 // on/off independently later in Settings, but onboarding stays one step.
-                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Deals & Business', text: 'PE/GE/VC deal pipeline, plus end-to-end business project tracking (phases, KPIs, accounting).' },
+                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Deals & Business', text: 'PE/GE/VC deal pipeline, plus business tracking from a light side-project (stages + tasks) to a full formal venture (phases, KPIs, accounting).' },
                 { key: 'engineering', icon: FlaskConical, title: 'Engineering', text: 'Lab journal + design-project pipeline — chemical engineering & related.' },
                 { key: 'networking', icon: Users, title: 'Networking', text: 'Contacts, follow-ups, and relationship history — recruiters, mentors, alumni.' },
                 { key: 'career', icon: Briefcase, title: 'Career', text: 'Application pipeline — applied → interview → offer.' },
                 { key: 'content', icon: Megaphone, title: 'Content', text: 'Publications and engagement — LinkedIn, blog, portfolio.' },
-                { key: 'projects', icon: FolderKanban, title: 'Projects', text: 'Personal projects and side-hustles, outside the Deals/Business flow.' },
                 { key: 'focus', icon: Timer, title: 'Deep Work', text: 'A focus timer + session log, feeding XP into whichever domain you were concentrating on.' },
                 { key: 'fundraising', icon: Rocket, title: 'Fundraising', text: 'Investor pipeline for founders raising capital — contacted → term sheet → closed.' },
                 { key: 'freelance', icon: Briefcase, title: 'Freelance', text: 'Clients, hours, invoices — for freelancers and consultants.' },

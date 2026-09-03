@@ -53,7 +53,10 @@ function withDefaults(user) {
       networking: user.enabledModules?.networking ?? false,
       career: user.enabledModules?.career ?? false,
       content: user.enabledModules?.content ?? false,
-      projects: user.enabledModules?.projects ?? false,
+      // `projects` (2026-08-27) retired 2026-09-01 — Projects merged into
+      // Business Projects (businessStore's tier: 'leger') since they used
+      // the same skills and progression concept. No replacement key: the
+      // merged content now lives fully behind `business`.
       focus: user.enabledModules?.focus ?? false,
       fundraising: user.enabledModules?.fundraising ?? false,
       freelance: user.enabledModules?.freelance ?? false,
@@ -85,7 +88,7 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, projects: true, focus: true, fundraising: true, freelance: true, creative: true, realEstate: true }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, focus: true, fundraising: true, freelance: true, creative: true, realEstate: true }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

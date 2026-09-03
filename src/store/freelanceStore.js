@@ -6,10 +6,10 @@ import { toast } from './uiStore';
 import { evaluateBadges } from '../utils/badges';
 
 // Lightweight client/engagement tracker for freelancers and consultants —
-// deliberately simpler than businessStore (no double-entry ledger, no
-// Gantt): a client engagement is hours logged + payments received, not a
-// formally structured venture. Same "lighter than the formal version"
-// reasoning projectsStore already established relative to businessStore.
+// deliberately simpler than businessStore's formal tier (no double-entry
+// ledger, no Gantt): a client engagement is hours logged + payments
+// received, not a formally structured venture. Same "lighter than the
+// formal version" reasoning businessStore's tier: 'leger' side-projects use.
 const ENGAGEMENT_XP = 5; // adding a new client engagement
 const HOURS_XP = 2; // logging a work session — routine effort credit
 const PAYMENT_XP = 6; // an invoice actually getting paid

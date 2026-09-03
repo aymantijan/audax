@@ -17,15 +17,18 @@ const r1 = (n) => Math.round(n * 10) / 10;
 // original domain). A CROSS-CUTTING LAYER doesn't stand alone as a métier —
 // it supports or tracks whichever métier(s) someone is pursuing: Career
 // (job-seeking) + Networking (relationships) form one such layer; Growth
-// (skill XP) + Content + Projects + Focus form another (personal
-// development/output, not employment). Creative is explicitly NOT a métier
-// per the user — if it earns money it IS Freelance; unmonetized, it's
-// personal practice, so it sits in the growth/output layer alongside
-// Content/Projects/Focus. Finance/Health/Learning stay individually fixed
-// (explicitly protected — never merged).
+// (skill XP) + Content + Focus form another (personal development/output,
+// not employment). Creative is explicitly NOT a métier per the user — if it
+// earns money it IS Freelance; unmonetized, it's personal practice, so it
+// sits in the growth/output layer alongside Content/Focus. Finance/Health/
+// Learning stay individually fixed (explicitly protected — never merged).
+// 'Projects' is no longer a pillar member at all (2026-09-01) — it merged
+// into `business` (businessStore's tier: 'leger'), since a side-project and
+// a formal business were the same concept at two formality levels; its
+// activity now feeds businessScore directly instead of its own sub-score.
 //   - Métiers & Ventures: Trading, Engineering, Business, Real Estate, Freelance, Fundraising
 //   - Career Development: Career, Networking
-//   - Growth & Output: Growth (skill XP), Content, Projects, Focus, Creative
+//   - Growth & Output: Growth (skill XP), Content, Focus, Creative
 // Every individual sub-score is still computed and returned separately as
 // `subScores` — Dashboard.jsx's granular "Life Balance" tiles read from
 // there unchanged; only the composite `scores` (used for the radar chart,
@@ -33,13 +36,13 @@ const r1 = (n) => Math.round(n * 10) / 10;
 export const PILLAR_MEMBERS = {
   metiersVentures: ['trading', 'engineering', 'business', 'realEstate', 'freelance', 'fundraising'],
   careerDevelopment: ['career', 'networking'],
-  growthOutput: ['growth', 'content', 'projects', 'focus', 'creative'],
+  growthOutput: ['growth', 'content', 'focus', 'creative'],
 };
 
 export function calculateSynergies({
   trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, today,
   healthExtras, labEntries, engineeringProjects, engineeringEnabled, tradingEnabled = true, businesses, businessEnabled = true,
-  contacts, applications, posts, personalProjects, networkingEnabled = false, careerEnabled = false, contentEnabled = false, projectsEnabled = false,
+  contacts, applications, posts, networkingEnabled = false, careerEnabled = false, contentEnabled = false,
   focusSessions, focusEnabled = false,
   investors, engagements, creativeWorks, creativeShowcases, properties,
   fundraisingEnabled = false, freelanceEnabled = false, creativeEnabled = false, realEstateEnabled = false,
@@ -49,7 +52,7 @@ export function calculateSynergies({
   // Growth (skill XP) has no enable flag — it's a core, always-on signal,
   // same as Learning/Finance/Health — so it's always present in subScores
   // and always pulls Growth & Output into existence even if none of that
-  // pillar's optional members (Content/Projects/Focus/Creative) are on.
+  // pillar's optional members (Content/Focus/Creative) are on.
   const subScores = { growth: growthScore(skills, habits, monthStart) };
   if (tradingEnabled) subScores.trading = tradingScore(trades, habits, habitLogs, monthStart, today);
   if (engineeringEnabled) subScores.engineering = engineeringScore(labEntries || [], engineeringProjects || [], habits, habitLogs, monthStart, today);
@@ -57,7 +60,6 @@ export function calculateSynergies({
   if (networkingEnabled) subScores.networking = networkingScore(contacts || [], monthStart);
   if (careerEnabled) subScores.career = careerScore(applications || [], monthStart);
   if (contentEnabled) subScores.content = contentScore(posts || [], monthStart);
-  if (projectsEnabled) subScores.projects = projectsScore(personalProjects || [], monthStart);
   if (focusEnabled) subScores.focus = focusScore(focusSessions || [], monthStart);
   if (fundraisingEnabled) subScores.fundraising = fundraisingScore(investors || [], monthStart);
   if (freelanceEnabled) subScores.freelance = freelanceScore(engagements || [], monthStart);
@@ -254,18 +256,33 @@ function engineeringScore(labEntries, projects, habits, habitLogs, monthStart, t
 
 // 0 if truly nothing logged yet (same convention as the other domains).
 // Deals (PE) is intentionally NOT part of this score (2026-08-27, user
-// request) — only Business Projects' this-month activity — ideas/facts, KPI
-// readings, bookkeeping entries. (Gantt tasks aren't timestamped on
-// completion in businessStore, so they can't feed a "this month" signal the
-// way lab entries/course checklist ticks do elsewhere.)
+// request). Two tiers of businesses feed this since the 2026-09-01 merge
+// with the old standalone Projects domain:
+//   - Formal (tier !== 'leger'): ideas/facts, KPI readings, bookkeeping
+//     entries this month. (Gantt tasks aren't timestamped on completion in
+//     businessStore, so they can't feed a "this month" signal the way lab
+//     entries/course checklist ticks do elsewhere.)
+//   - Léger (tier === 'leger', ex-Projects): new side-projects started this
+//     month + tasks completed this month — these ARE completedAt-stamped
+//     (addSimpleTask/setSimpleTaskStatus), so they can feed a monthly signal
+//     the formal tier's tasks can't. Same shape as the old projectsScore.
+// A user active in only one tier still scores fully off that tier alone.
 function businessScore(businesses, monthStart) {
   if (!businesses.length) return 0;
   const monthStartMs = monthStart.getTime();
+  const formal = businesses.filter((b) => b.tier !== 'leger');
+  const light = businesses.filter((b) => b.tier === 'leger');
 
-  const monthEvents = businesses.flatMap((b) => b.events || []).filter((e) => e.createdAt >= monthStartMs).length;
-  const monthKpiLogs = businesses.flatMap((b) => b.kpiLogs || []).filter((l) => l.createdAt >= monthStartMs).length;
-  const monthEntries = businesses.flatMap((b) => b.journal || []).filter((e) => e.createdAt >= monthStartMs).length;
-  return r1(clamp(monthEvents * 8 + monthKpiLogs * 8 + monthEntries * 6));
+  const monthEvents = formal.flatMap((b) => b.events || []).filter((e) => e.createdAt >= monthStartMs).length;
+  const monthKpiLogs = formal.flatMap((b) => b.kpiLogs || []).filter((l) => l.createdAt >= monthStartMs).length;
+  const monthEntries = formal.flatMap((b) => b.journal || []).filter((e) => e.createdAt >= monthStartMs).length;
+  const formalComponent = monthEvents * 8 + monthKpiLogs * 8 + monthEntries * 6;
+
+  const monthNewLight = light.filter((b) => b.createdAt >= monthStartMs).length;
+  const monthTasksLight = light.flatMap((b) => b.tasks || []).filter((t) => t.status === 'done' && t.completedAt >= monthStartMs).length;
+  const lightComponent = monthNewLight * 20 + monthTasksLight * 12;
+
+  return r1(clamp(formalComponent + lightComponent));
 }
 
 // 0 if truly nothing logged yet (same convention as every other domain).
@@ -306,18 +323,6 @@ function contentScore(posts, monthStart) {
   return r1(clamp(monthPosts * 20));
 }
 
-// New projects started this month + tasks completed this month across all
-// projects — same shape as engineeringScore's lab/task split.
-function projectsScore(projects, monthStart) {
-  if (!projects.length) return 0;
-  const monthStartMs = monthStart.getTime();
-  const monthNew = projects.filter((p) => p.createdAt >= monthStartMs).length;
-  const monthTasksDone = projects.flatMap((p) => p.tasks || []).filter((t) => t.status === 'done' && t.completedAt >= monthStartMs).length;
-  const newComponent = clamp(monthNew * 20);
-  const taskComponent = clamp(monthTasksDone * 12);
-  return r1(clamp(taskComponent * 0.6 + newComponent * 0.4));
-}
-
 // Minutes of deep work logged this month — ~5 hours (300 min) reaches 100.
 // Unlike the other new domains, focus sessions target a real timestamp
 // (createdAt) rather than a free-text date, so "this month" here means
@@ -342,7 +347,7 @@ function fundraisingScore(investors, monthStart) {
 }
 
 // Hours logged this month + payments received this month — same
-// effort/outcome split as projectsScore's tasks/new-projects shape.
+// effort/outcome split as businessScore's léger-tier tasks/new-business shape.
 function freelanceScore(engagements, monthStart) {
   if (!engagements.length) return 0;
   const monthStartMs = monthStart.getTime();
@@ -352,7 +357,7 @@ function freelanceScore(engagements, monthStart) {
 }
 
 // Works completed this month + showcases this month — mirrors
-// projectsScore/contentScore's "effort + output" shape.
+// businessScore/contentScore's "effort + output" shape.
 function creativeScore(works, showcases, monthStart) {
   if (!works.length && !showcases.length) return 0;
   const monthStartMs = monthStart.getTime();

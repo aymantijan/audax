@@ -44,7 +44,6 @@ const NAV_GROUPS = [
       { to: '/career', label: 'Career', enabledKey: 'career', defaultEnabled: false },
       { to: '/networking', label: 'Networking', enabledKey: 'networking', defaultEnabled: false },
       { to: '/content', label: 'Content', enabledKey: 'content', defaultEnabled: false },
-      { to: '/projects', label: 'Projects', enabledKey: 'projects', defaultEnabled: false },
       { to: '/freelance', label: 'Freelance', enabledKey: 'freelance', defaultEnabled: false },
     ],
   },

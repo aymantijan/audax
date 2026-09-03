@@ -9,7 +9,6 @@ import { useBusinessStore } from '../store/businessStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
-import { useProjectsStore } from '../store/projectsStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFundraisingStore } from '../store/fundraisingStore';
 import { useFreelanceStore } from '../store/freelanceStore';
@@ -59,11 +58,9 @@ export function useSynergy() {
   const contacts = useNetworkingStore((s) => s.contacts);
   const applications = useCareerStore((s) => s.applications);
   const posts = useContentStore((s) => s.posts);
-  const personalProjects = useProjectsStore((s) => s.projects);
   const networkingEnabled = useAuthStore((s) => s.user?.enabledModules?.networking ?? false);
   const careerEnabled = useAuthStore((s) => s.user?.enabledModules?.career ?? false);
   const contentEnabled = useAuthStore((s) => s.user?.enabledModules?.content ?? false);
-  const projectsEnabled = useAuthStore((s) => s.user?.enabledModules?.projects ?? false);
   const focusSessions = useFocusStore((s) => s.sessions);
   const focusEnabled = useAuthStore((s) => s.user?.enabledModules?.focus ?? false);
   const investors = useFundraisingStore((s) => s.investors);
@@ -129,11 +126,9 @@ export function useSynergy() {
         contacts,
         applications,
         posts,
-        personalProjects,
         networkingEnabled,
         careerEnabled,
         contentEnabled,
-        projectsEnabled,
         focusSessions,
         focusEnabled,
         investors,
@@ -149,7 +144,7 @@ export function useSynergy() {
     [
       trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
       labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, businesses, businessEnabled,
-      contacts, applications, posts, personalProjects, networkingEnabled, careerEnabled, contentEnabled, projectsEnabled,
+      contacts, applications, posts, networkingEnabled, careerEnabled, contentEnabled,
       focusSessions, focusEnabled,
       investors, engagements, creativeWorks, creativeShowcases, properties,
       fundraisingEnabled, freelanceEnabled, creativeEnabled, realEstateEnabled,

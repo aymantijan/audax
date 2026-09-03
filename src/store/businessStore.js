@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid } from '../utils/formatters';
+import { PROJECT_STAGES } from '../utils/constants';
 import { validateEntry, accountBalances, balanceSheet, cpc, financialAnalysis, treasuryBalance } from '../utils/accounting-engine';
 import { BUSINESS_ACCOUNT_MAP } from '../utils/business-accounts';
 import { cascadeSchedule, pruneDependencies } from '../utils/gantt';
@@ -24,6 +25,8 @@ const EFFORT_SKILL = 'ge-thesis';
 const MILESTONE_SKILL = 'ge-scaling-strategy';
 
 // Same shape/mechanism as dealsStore's/healthStore's BADGE_DEFS.
+// 'shipped'/'growing'/'task-machine' (2026-09-01) migrated in from the
+// now-merged projectsStore.js — see PROJECT_STAGES/tier note below.
 const BADGE_DEFS = [
   { id: 'first-business', name: 'First Business', tier: 'bronze', check: (s) => s.businesses.length >= 1 },
   { id: 'idea-machine', name: 'Idea Machine', tier: 'bronze', check: (s) => s.businesses.flatMap((b) => b.events).filter((e) => e.type === 'idea').length >= 10 },
@@ -34,6 +37,9 @@ const BADGE_DEFS = [
   { id: 'fully-planned', name: 'Fully Planned', tier: 'silver', check: (s) => s.businesses.some((b) => (b.tasks || []).length >= 8) },
   { id: 'cash-positive', name: 'Cash Positive', tier: 'gold', check: (s) => s.businesses.some((b) => treasuryBalance(b.journal) > 0) },
   { id: 'operator', name: 'Operator', tier: 'gold', check: (s) => s.businesses.some((b) => b.status === 'active' && b.phases.filter((p) => p.status === 'done').length >= 3) },
+  { id: 'shipped', name: 'Shipped', tier: 'silver', check: (s) => s.businesses.some((b) => b.tier === 'leger' && b.stageIndex >= PROJECT_STAGES.indexOf('Lancement')) },
+  { id: 'growing', name: 'Growing', tier: 'gold', check: (s) => s.businesses.some((b) => b.tier === 'leger' && b.stageIndex === PROJECT_STAGES.length - 2) },
+  { id: 'task-machine', name: 'Task Machine', tier: 'silver', check: (s) => s.businesses.reduce((a, b) => a + (b.tasks || []).filter((t) => t.status === 'done').length, 0) >= 25 },
 ];
 
 // Suivi de business "de A à Z" : phases (jalons datés), événements (idées &
@@ -42,10 +48,21 @@ const BADGE_DEFS = [
 // propre journal en partie double, réutilisant le même moteur pur que Finance
 // — accounting-engine.js — avec le plan comptable allégé de business-accounts.js).
 // On peut suivre plusieurs businesses en parallèle, chacun totalement isolé.
+//
+// `tier` (2026-09-01): 'formel' (comptabilité/KPIs/Gantt/phases — le
+// comportement historique de ce store) ou 'leger' (juste nom/description/
+// étapes fixes/tâches simples — l'ancien domaine "Projects", fusionné ici
+// car il utilisait déjà les mêmes compétences EFFORT_SKILL/MILESTONE_SKILL
+// et le même concept de progression par étapes, juste sans le formalisme
+// financier). Un business léger utilise `stageIndex` (index dans
+// PROJECT_STAGES, via setStage) au lieu de `phases[]`, et les tâches
+// simples ci-dessous (addSimpleTask etc.) au lieu du Gantt complet — les
+// deux familles de tâches partagent le même champ `tasks[]`, mais jamais
+// sur le même business (l'UI choisit l'une ou l'autre selon `tier`).
 export const useBusinessStore = create(
   persist(
     (set, get) => ({
-      businesses: [], // [{ id, name, sector, description, status, createdAt, updatedAt, phases:[], tasks:[], events:[], kpis:[], kpiLogs:[], journal:[] }]
+      businesses: [], // [{ id, name, sector, description, status, tier, url, stageIndex, createdAt, updatedAt, phases:[], tasks:[], events:[], kpis:[], kpiLogs:[], journal:[] }]
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
 
       checkBadges: () => {
@@ -57,12 +74,16 @@ export const useBusinessStore = create(
       // ─────────── Businesses ───────────
       addBusiness: (data) => {
         if (!data.name?.trim()) return { ok: false, error: 'Le nom est requis.' };
+        const tier = data.tier === 'leger' ? 'leger' : 'formel';
         const biz = {
           id: uid(),
           name: data.name.trim(),
           sector: data.sector || '',
           description: data.description || '',
-          status: data.status || 'idea', // 'idea' | 'active' | 'paused' | 'closed'
+          url: data.url || '',
+          tier,
+          status: data.status || (tier === 'leger' ? 'active' : 'idea'), // 'idea' | 'active' | 'paused' | 'closed'
+          stageIndex: 0,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           phases: [],
@@ -79,8 +100,66 @@ export const useBusinessStore = create(
         return { ok: true, id: biz.id };
       },
       editBusiness: (id, updates) => set({ businesses: get().businesses.map((b) => (b.id === id ? stamp({ ...b, ...updates }) : b)) }),
-      deleteBusiness: (id) => set({ businesses: get().businesses.filter((b) => b.id !== id) }),
+      deleteBusiness: (id) => {
+        const biz = get().getBusiness(id);
+        set({ businesses: get().businesses.filter((b) => b.id !== id) });
+        if (biz) {
+          const remove = useSkillStore.getState().removeXP;
+          remove(EFFORT_SKILL, 5, 'business deleted');
+          for (const t of biz.tasks || []) if (t.status === 'done') remove(EFFORT_SKILL, 5, 'business deleted');
+        }
+      },
       getBusiness: (id) => get().businesses.find((b) => b.id === id),
+
+      // ─────────── Étapes (tier "léger" — mirrors the old projectsStore.setStage) ───────────
+      setStage: (id, stageIndex) => {
+        const biz = get().getBusiness(id);
+        if (!biz || biz.stageIndex === stageIndex) return;
+        set({ businesses: get().businesses.map((b) => (b.id === id ? stamp({ ...b, stageIndex }) : b)) });
+        useSkillStore.getState().awardXP(MILESTONE_SKILL, 12, `étape franchie : ${PROJECT_STAGES[stageIndex]} (${biz.name})`);
+        toast(`${biz.name} → ${PROJECT_STAGES[stageIndex]} · +12 XP`, 'success');
+        get().checkBadges();
+      },
+
+      // ─────────── Tâches simples (tier "léger" — no phase/Gantt scheduling,
+      // mirrors the old projectsStore's task actions exactly) ───────────
+      addSimpleTask: (bizId, data) => {
+        const task = { id: uid(), title: data.title, status: 'todo', createdAt: Date.now(), completedAt: null };
+        set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: [...(b.tasks || []), task] }) : b)) });
+        return task.id;
+      },
+      editSimpleTask: (bizId, taskId, { title }) =>
+        set({
+          businesses: get().businesses.map((b) =>
+            b.id === bizId ? stamp({ ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, title: title ?? t.title } : t)) }) : b
+          ),
+        }),
+      setSimpleTaskStatus: (bizId, taskId, status) => {
+        const biz = get().getBusiness(bizId);
+        const task = biz?.tasks.find((t) => t.id === taskId);
+        if (!biz || !task || task.status === status) return;
+        const { awardXP, removeXP } = useSkillStore.getState();
+        if (status === 'done') {
+          awardXP(EFFORT_SKILL, 5, `tâche : ${task.title} (${biz.name})`);
+          toast(`Tâche terminée : ${task.title} · +5 XP`, 'success');
+        } else if (task.status === 'done') {
+          removeXP(EFFORT_SKILL, 5, 'task reopened');
+        }
+        set({
+          businesses: get().businesses.map((b) =>
+            b.id === bizId
+              ? stamp({ ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, status, completedAt: status === 'done' ? Date.now() : null } : t)) })
+              : b
+          ),
+        });
+        get().checkBadges();
+      },
+      deleteSimpleTask: (bizId, taskId) => {
+        const biz = get().getBusiness(bizId);
+        const task = biz?.tasks.find((t) => t.id === taskId);
+        if (task?.status === 'done') useSkillStore.getState().removeXP(EFFORT_SKILL, 5, 'task deleted');
+        set({ businesses: get().businesses.map((b) => (b.id === bizId ? stamp({ ...b, tasks: b.tasks.filter((t) => t.id !== taskId) }) : b)) });
+      },
 
       // ─────────── Phases ───────────
       addPhase: (bizId, data) => {
@@ -316,6 +395,59 @@ export const useBusinessStore = create(
 
       resetAll: () => set({ businesses: [], awardedBadges: [] }),
     }),
-    { name: 'audax-business' }
+    {
+      name: 'audax-business',
+      version: 1,
+      // One-time merge (2026-09-01) of the standalone Projects domain into
+      // Business Projects — see the store-level comment on `tier` above for
+      // why they were the same concept at two formality levels. Backfills
+      // tier/url/stageIndex onto every pre-existing (formal) business, then
+      // — if the old audax-projects store exists — imports each project as
+      // a 'leger' business and removes the old key so this never re-imports.
+      // A plain localStorage read/write, not a cross-store call: zustand's
+      // migrate has no access to other stores, and this only ever runs once
+      // per install (zustand only invokes migrate when the persisted
+      // version is older than the store's declared version).
+      migrate: (persisted) => {
+        const existing = (persisted.businesses || []).map((b) => ({ tier: 'formel', url: '', stageIndex: 0, ...b }));
+        let migratedProjects = [];
+        try {
+          const raw = localStorage.getItem('audax-projects');
+          if (raw) {
+            const oldProjects = JSON.parse(raw)?.state?.projects || [];
+            migratedProjects = oldProjects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              sector: p.domain || '',
+              description: p.description || '',
+              url: p.url || '',
+              status: p.status === 'closed' || p.status === 'paused' ? p.status : 'active',
+              tier: 'leger',
+              stageIndex: p.stageIndex ?? 0,
+              createdAt: p.createdAt || Date.now(),
+              updatedAt: p.updatedAt || Date.now(),
+              phases: [], events: [], kpis: [], kpiLogs: [], journal: [],
+              tasks: (p.tasks || []).map((t) => ({ id: t.id, title: t.title, status: t.status, createdAt: t.createdAt, completedAt: t.completedAt || null })),
+            }));
+            localStorage.removeItem('audax-projects');
+            // If Projects was enabled but Business wasn't, force Business on
+            // so the migrated data doesn't silently disappear behind a gate
+            // the user never explicitly turned off for THIS data.
+            try {
+              const authRaw = localStorage.getItem('audax-auth');
+              if (authRaw) {
+                const authParsed = JSON.parse(authRaw);
+                const modules = authParsed?.state?.user?.enabledModules;
+                if (modules?.projects && !modules?.business) {
+                  modules.business = true;
+                  localStorage.setItem('audax-auth', JSON.stringify(authParsed));
+                }
+              }
+            } catch { /* best-effort only */ }
+          }
+        } catch { /* corrupted old projects data — skip import, formal businesses still backfilled above */ }
+        return { ...persisted, businesses: [...existing, ...migratedProjects] };
+      },
+    }
   )
 );

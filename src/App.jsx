@@ -43,8 +43,6 @@ const EngineeringProjectDetail = lazy(lazyWithRetry(() => import('./pages/Engine
 const Networking = lazy(lazyWithRetry(() => import('./pages/Networking'), 'Networking'));
 const Career = lazy(lazyWithRetry(() => import('./pages/Career'), 'Career'));
 const Content = lazy(lazyWithRetry(() => import('./pages/Content'), 'Content'));
-const Projects = lazy(lazyWithRetry(() => import('./pages/Projects'), 'Projects'));
-const ProjectDetail = lazy(lazyWithRetry(() => import('./pages/ProjectDetail'), 'ProjectDetail'));
 const FocusSessions = lazy(lazyWithRetry(() => import('./pages/FocusSessions'), 'FocusSessions'));
 const Fundraising = lazy(lazyWithRetry(() => import('./pages/Fundraising'), 'Fundraising'));
 const Freelance = lazy(lazyWithRetry(() => import('./pages/Freelance'), 'Freelance'));
@@ -182,8 +180,9 @@ export default function App() {
         <Route path="/networking" element={<Networking />} />
         <Route path="/career" element={<Career />} />
         <Route path="/content" element={<Content />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
+        {/* Projects merged into Business Projects (2026-09-01) — same store, tier: 'leger' */}
+        <Route path="/projects" element={<Navigate to="/businesses" replace />} />
+        <Route path="/projects/:id" element={<Navigate to="/businesses" replace />} />
         <Route path="/focus" element={<FocusSessions />} />
         <Route path="/fundraising" element={<Fundraising />} />
         <Route path="/freelance" element={<Freelance />} />

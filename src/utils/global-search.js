@@ -9,7 +9,6 @@ import { useEngineeringStore } from '../store/engineeringStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
-import { useProjectsStore } from '../store/projectsStore';
 import { useFundraisingStore } from '../store/fundraisingStore';
 import { useFreelanceStore } from '../store/freelanceStore';
 import { useCreativeStore } from '../store/creativeStore';
@@ -61,10 +60,12 @@ export function buildSearchIndex() {
   }
 
   // Never indexed before the Deals/Business Projects page split (2026-08-26) —
-  // Business Projects had no global-search presence at all.
+  // Business Projects had no global-search presence at all. Since
+  // 2026-09-01 this also covers tier: 'leger' side-projects (the merged
+  // former Projects domain) — same array, so no separate indexing needed.
   const businesses = useBusinessStore.getState().businesses;
   for (const b of businesses) {
-    items.push({ id: `biz-${b.id}`, domain: 'Business', label: b.name, sub: b.sector || b.status, to: `/businesses/${b.id}` });
+    items.push({ id: `biz-${b.id}`, domain: b.tier === 'leger' ? 'Projects' : 'Business', label: b.name, sub: b.sector || b.status, to: `/businesses/${b.id}` });
   }
 
   const { labEntries, projects: engProjects } = useEngineeringStore.getState();
@@ -88,11 +89,6 @@ export function buildSearchIndex() {
   const posts = useContentStore.getState().posts;
   for (const p of posts) {
     items.push({ id: `post-${p.id}`, domain: 'Content', label: p.title, sub: `${p.platform} · ${p.publishedDate}`, to: '/content' });
-  }
-
-  const personalProjects = useProjectsStore.getState().projects;
-  for (const p of personalProjects) {
-    items.push({ id: `proj-${p.id}`, domain: 'Projects', label: p.name, sub: p.domain, to: `/projects/${p.id}` });
   }
 
   const investors = useFundraisingStore.getState().investors;

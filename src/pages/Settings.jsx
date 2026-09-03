@@ -23,7 +23,6 @@ import { useBusinessStore } from '../store/businessStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
-import { useProjectsStore } from '../store/projectsStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFundraisingStore } from '../store/fundraisingStore';
 import { useFreelanceStore } from '../store/freelanceStore';
@@ -34,7 +33,7 @@ import { markDataSeeded } from '../services/storage';
 import { CAREER_GOALS } from '../utils/constants';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
-const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-projects', 'audax-focus', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
+const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
 
 const FOOD_CATEGORIES = [
   { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
@@ -289,7 +288,6 @@ export default function SettingsPage() {
     useNetworkingStore.getState().resetAll();
     useCareerStore.getState().resetAll();
     useContentStore.getState().resetAll();
-    useProjectsStore.getState().resetAll();
     useFocusStore.getState().resetAll();
     useFundraisingStore.getState().resetAll();
     useFreelanceStore.getState().resetAll();
@@ -314,7 +312,7 @@ export default function SettingsPage() {
           <Field label="Email">
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
-          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 6 synergy pillars (2026-08-28) — Trading/Engineering/Business/Real Estate/Freelance/Fundraising now live under Métiers & Ventures, Career/Networking under Career Development, and skill-XP growth/Content/Projects/Focus/Creative under Growth & Output.">
+          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 6 synergy pillars (2026-08-28) — Trading/Engineering/Business/Real Estate/Freelance/Fundraising now live under Métiers & Ventures, Career/Networking under Career Development, and skill-XP growth/Content/Focus/Creative under Growth & Output.">
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
@@ -371,12 +369,11 @@ export default function SettingsPage() {
           {[
             { key: 'trading', label: 'Trading', default: true },
             { key: 'pe', label: 'Deals (Private Equity)', default: true },
-            { key: 'business', label: 'Business Projects', default: true },
+            { key: 'business', label: 'Business Projects (+ side-projects)', default: true },
             { key: 'engineering', label: 'Ingénierie', default: false },
             { key: 'networking', label: 'Networking', default: false },
             { key: 'career', label: 'Career', default: false },
             { key: 'content', label: 'Content', default: false },
-            { key: 'projects', label: 'Projects', default: false },
             { key: 'focus', label: 'Deep Work', default: false },
             { key: 'fundraising', label: 'Fundraising', default: false },
             { key: 'freelance', label: 'Freelance', default: false },
@@ -387,7 +384,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={user?.enabledModules?.[m.key] ?? m.default}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, projects: false, focus: false, fundraising: false, freelance: false, creative: false, realEstate: false }), [m.key]: e.target.checked } })}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, focus: false, fundraising: false, freelance: false, creative: false, realEstate: false }), [m.key]: e.target.checked } })}
                 className="cursor-pointer"
               />
               {m.label}

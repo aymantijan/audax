@@ -15,7 +15,6 @@ import { useEngineeringStore } from '../store/engineeringStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
 import { useContentStore } from '../store/contentStore';
-import { useProjectsStore } from '../store/projectsStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFundraisingStore } from '../store/fundraisingStore';
 import { useFreelanceStore } from '../store/freelanceStore';
@@ -50,7 +49,6 @@ export default function Dashboard() {
   const networkingEnabled = user?.enabledModules?.networking ?? false;
   const careerEnabled = user?.enabledModules?.career ?? false;
   const contentEnabled = user?.enabledModules?.content ?? false;
-  const projectsEnabled = user?.enabledModules?.projects ?? false;
   const focusEnabled = user?.enabledModules?.focus ?? false;
   const fundraisingEnabled = user?.enabledModules?.fundraising ?? false;
   const freelanceEnabled = user?.enabledModules?.freelance ?? false;
@@ -67,7 +65,6 @@ export default function Dashboard() {
   const contacts = useNetworkingStore((s) => s.contacts);
   const applications = useCareerStore((s) => s.applications);
   const posts = useContentStore((s) => s.posts);
-  const personalProjects = useProjectsStore((s) => s.projects);
   const focusSessions = useFocusStore((s) => s.sessions);
   const investors = useFundraisingStore((s) => s.investors);
   const engagements = useFreelanceStore((s) => s.engagements);
@@ -133,19 +130,21 @@ export default function Dashboard() {
     { label: 'Courses', value: courses.length ? Math.round((courses.filter((c) => c.status === 'completed').length / courses.length) * 100) : 0, sub: `${courses.filter((c) => c.status === 'completed').length}/${courses.length} completed`, color: 'var(--accent-secondary)' },
     { label: 'Reading', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString()} pages · ${readingStreak}d streak`, color: 'var(--warning)' },
     ...(peEnabled ? [{ label: 'Deals', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' total' : 'PE / VC track', color: 'var(--success)' }] : []),
-    ...(businessEnabled ? [{ label: 'Business', value: Math.min(100, businesses.reduce((a, b) => a + b.phases.filter((p) => p.status === 'done').length, 0) * 20), sub: businesses.length ? `${businesses.length} suivi${businesses.length > 1 ? 's' : ''}` : 'A-to-Z tracking', color: 'var(--accent-secondary)' }] : []),
+    // Business Projects (2026-09-01: now includes tier: 'leger' side-projects,
+    // formerly the standalone Projects domain — see businessStore.js) — done
+    // phases (formal tier) + done tasks (either tier) both count as progress.
+    ...(businessEnabled ? [{ label: 'Business', value: Math.min(100, (businesses.reduce((a, b) => a + b.phases.filter((p) => p.status === 'done').length, 0) + businesses.reduce((a, b) => a + (b.tasks || []).filter((t) => t.status === 'done').length, 0)) * 10), sub: businesses.length ? `${businesses.length} suivi${businesses.length > 1 ? 's' : ''}` : 'A-to-Z tracking', color: 'var(--accent-secondary)' }] : []),
     // Reuses the already-computed synergy.subScores.engineering (this month's lab
     // + project-task activity, see synergy.js#engineeringScore) rather than a
     // separate ad-hoc formula — Skills/Courses/Reading/Deals/Business is the
     // only curated "highlights" row on Dashboard that didn't include
     // Engineering despite it having its own gate, badges, and synergy domain.
     ...(engineeringEnabled ? [{ label: 'Engineering', value: synergy.subScores.engineering ?? 0, sub: `${labEntries.length} labo · ${engProjects.length} projet${engProjects.length !== 1 ? 's' : ''}`, color: 'var(--warning)' }] : []),
-    // Networking/Career/Content/Projects (2026-08-27) — same pattern: reuse
+    // Networking/Career/Content (2026-08-27) — same pattern: reuse
     // the already-computed synergy score rather than a separate formula.
     ...(networkingEnabled && contacts.length ? [{ label: 'Networking', value: synergy.subScores.networking ?? 0, sub: `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`, color: '#0a66c2' }] : []),
     ...(careerEnabled && applications.length ? [{ label: 'Career', value: synergy.subScores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
     ...(contentEnabled && posts.length ? [{ label: 'Content', value: synergy.subScores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
-    ...(projectsEnabled && personalProjects.length ? [{ label: 'Projects', value: synergy.subScores.projects ?? 0, sub: `${personalProjects.length} projet${personalProjects.length !== 1 ? 's' : ''}`, color: '#66ccff' }] : []),
     ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.subScores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h loggées`, color: '#ffa94d' }] : []),
     // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — same pattern.
     ...(fundraisingEnabled && investors.length ? [{ label: 'Fundraising', value: synergy.subScores.fundraising ?? 0, sub: `${investors.length} investisseur${investors.length !== 1 ? 's' : ''}`, color: '#845ef7' }] : []),

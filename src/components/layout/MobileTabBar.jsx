@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, FolderKanban, Timer, Palette, Building2 } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, Timer, Palette, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -25,7 +25,6 @@ const MORE_ITEMS = [
   { to: '/networking', label: 'Networking', icon: Users },
   { to: '/career', label: 'Career', icon: Briefcase },
   { to: '/content', label: 'Content', icon: Megaphone },
-  { to: '/projects', label: 'Projects', icon: FolderKanban },
   { to: '/focus', label: 'Deep Work', icon: Timer },
   { to: '/fundraising', label: 'Fundraising', icon: Rocket },
   { to: '/freelance', label: 'Freelance', icon: Briefcase },
@@ -47,7 +46,6 @@ export default function MobileTabBar() {
   const networkingEnabled = user?.enabledModules?.networking ?? false;
   const careerEnabled = user?.enabledModules?.career ?? false;
   const contentEnabled = user?.enabledModules?.content ?? false;
-  const projectsEnabled = user?.enabledModules?.projects ?? false;
   const focusEnabled = user?.enabledModules?.focus ?? false;
   const fundraisingEnabled = user?.enabledModules?.fundraising ?? false;
   const freelanceEnabled = user?.enabledModules?.freelance ?? false;
@@ -63,7 +61,6 @@ export default function MobileTabBar() {
       (t.to !== '/career' || careerEnabled) &&
       (t.to !== '/content' || contentEnabled) &&
       (t.to !== '/focus' || focusEnabled) &&
-      (t.to !== '/projects' || projectsEnabled) &&
       (t.to !== '/fundraising' || fundraisingEnabled) &&
       (t.to !== '/freelance' || freelanceEnabled) &&
       (t.to !== '/creative' || creativeEnabled) &&
