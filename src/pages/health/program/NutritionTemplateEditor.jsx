@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Plus, Trash2, Salad, UtensilsCrossed } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Plus, Trash2, Salad, UtensilsCrossed, Search, ChevronDown } from 'lucide-react';
 import { Card, Button, Field, Input, Select, Badge, EmptyState, Modal } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
-import { estimateMacros } from '../../../utils/nutrition-db';
+import { FOOD_DB, estimateMacros } from '../../../utils/nutrition-db';
 
 const TEMPLATE_TYPES = [
   { value: 'training', label: 'Jour d\'entraînement' },
@@ -13,7 +13,138 @@ const TEMPLATE_TYPES = [
   { value: 'custom', label: 'Personnalisé' },
 ];
 
-const BLANK_ITEM = { food_key: '', food_name: '', grams: 100, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+// ── Food autocomplete component ──
+function FoodSearch({ value, onSelect }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const wrapperRef = useRef(null);
+
+  // Filter FOOD_DB by query
+  const results = useMemo(() => {
+    if (!query || query.length < 1) return FOOD_DB.slice(0, 20);
+    const q = query.toLowerCase();
+    return FOOD_DB.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 15);
+  }, [query]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = (food) => {
+    setQuery(food.name);
+    setOpen(false);
+    onSelect(food);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!open) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIdx((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && results[highlightIdx]) {
+      e.preventDefault();
+      handleSelect(results[highlightIdx]);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div className="relative">
+        <Search size={12} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-mute pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlightIdx(0); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder="Rechercher un aliment…"
+          className="w-full text-xs py-1.5 pl-6 pr-2 bg-surface border border-line rounded-md text-ink placeholder:text-mute focus:outline-none focus:border-accent"
+        />
+      </div>
+      {open && results.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-card border border-line rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {results.map((food, i) => (
+            <button
+              key={food.name}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(food)}
+              onMouseEnter={() => setHighlightIdx(i)}
+              className={`w-full text-left px-2 py-1.5 text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                i === highlightIdx ? 'bg-accent/10 text-accent' : 'text-ink hover:bg-surface'
+              }`}
+            >
+              <span className="font-medium truncate">{food.name}</span>
+              <span className="text-[10px] text-mute whitespace-nowrap flex gap-1.5">
+                <span>{food.kcal} kcal</span>
+                <span className="text-good">{food.protein}P</span>
+                <span className="text-warning">{food.carbs}G</span>
+                <span className="text-bad">{food.fat}L</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Serving selector ──
+function ServingPicker({ food, grams, onChangeGrams }) {
+  const foodEntry = FOOD_DB.find((f) => f.name === food);
+  const servings = foodEntry?.servings || [];
+
+  if (servings.length === 0) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          value={grams}
+          onChange={(e) => onChangeGrams(parseInt(e.target.value) || 0)}
+          className="w-14 text-xs py-1 px-1.5 text-center bg-surface border border-line rounded-md text-ink focus:outline-none focus:border-accent"
+        />
+        <span className="text-[10px] text-mute">g</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        value={grams}
+        onChange={(e) => onChangeGrams(parseInt(e.target.value) || 0)}
+        className="w-14 text-xs py-1 px-1.5 text-center bg-surface border border-line rounded-md text-ink focus:outline-none focus:border-accent"
+      />
+      <select
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === 'g') return;
+          const serving = servings.find((s) => s.label === val);
+          if (serving) onChangeGrams(serving.grams);
+        }}
+        className="text-[10px] py-1 px-0.5 bg-surface border border-line rounded-md text-mute cursor-pointer focus:outline-none"
+        defaultValue="g"
+      >
+        <option value="g">g</option>
+        {servings.map((s) => (
+          <option key={s.label} value={s.label}>{s.label} ({s.grams}g)</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 /**
  * Manage nutrition templates for a specific phase.
@@ -21,7 +152,7 @@ const BLANK_ITEM = { food_key: '', food_name: '', grams: 100, kcal: 0, protein: 
 export default function NutritionTemplateEditor({ phaseId }) {
   const store = useProgramStore();
   const templates = store.getNutritionForPhase(phaseId);
-  const [editing, setEditing] = useState(null); // template object or null
+  const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
 
   return (
@@ -56,7 +187,6 @@ export default function NutritionTemplateEditor({ phaseId }) {
         </div>
       )}
 
-      {/* Create / Edit modal */}
       {(creating || editing) && (
         <TemplateForm
           phaseId={phaseId}
@@ -106,37 +236,58 @@ function TemplateForm({ phaseId, template, onClose }) {
     setMeals(meals.map((m, i) => i === idx ? { ...m, time } : m));
   };
 
-  const addFoodItem = (mealIdx) => {
-    setMeals(meals.map((m, i) => {
-      if (i !== mealIdx) return m;
-      return { ...m, items: [...(m.items || []), { ...BLANK_ITEM }] };
-    }));
-  };
-
-  const updateFoodItem = (mealIdx, itemIdx, field, value) => {
+  const selectFood = (mealIdx, itemIdx, food) => {
     setMeals(meals.map((m, mi) => {
       if (mi !== mealIdx) return m;
       return {
         ...m,
         items: m.items.map((item, ii) => {
           if (ii !== itemIdx) return item;
-          const updated = { ...item, [field]: value };
-          // Auto-recalc macros when food_name or grams change
-          if ((field === 'food_name' || field === 'grams') && updated.food_name) {
-            try {
-              const macros = estimateMacros(updated.food_name, updated.grams || 100);
-              if (macros) {
-                updated.kcal = Math.round(macros.kcal);
-                updated.protein = Math.round(macros.protein * 10) / 10;
-                updated.carbs = Math.round(macros.carbs * 10) / 10;
-                updated.fat = Math.round(macros.fat * 10) / 10;
-                updated.fiber = Math.round((macros.fiber || 0) * 10) / 10;
-              }
-            } catch { /* non-matching food name — keep manual values */ }
+          const grams = item.grams || 100;
+          const macros = estimateMacros(food.name, grams);
+          return {
+            ...item,
+            food_key: food.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            food_name: food.name,
+            grams,
+            kcal: macros ? Math.round(macros.kcal) : 0,
+            protein: macros ? Math.round(macros.protein * 10) / 10 : 0,
+            carbs: macros ? Math.round(macros.carbs * 10) / 10 : 0,
+            fat: macros ? Math.round(macros.fat * 10) / 10 : 0,
+            fiber: 0,
+          };
+        }),
+      };
+    }));
+  };
+
+  const updateGrams = (mealIdx, itemIdx, grams) => {
+    setMeals(meals.map((m, mi) => {
+      if (mi !== mealIdx) return m;
+      return {
+        ...m,
+        items: m.items.map((item, ii) => {
+          if (ii !== itemIdx) return item;
+          const updated = { ...item, grams };
+          if (updated.food_name) {
+            const macros = estimateMacros(updated.food_name, grams);
+            if (macros) {
+              updated.kcal = Math.round(macros.kcal);
+              updated.protein = Math.round(macros.protein * 10) / 10;
+              updated.carbs = Math.round(macros.carbs * 10) / 10;
+              updated.fat = Math.round(macros.fat * 10) / 10;
+            }
           }
           return updated;
         }),
       };
+    }));
+  };
+
+  const addFoodItem = (mealIdx) => {
+    setMeals(meals.map((m, i) => {
+      if (i !== mealIdx) return m;
+      return { ...m, items: [...(m.items || []), { food_key: '', food_name: '', grams: 100, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }] };
     }));
   };
 
@@ -202,14 +353,14 @@ function TemplateForm({ phaseId, template, onClose }) {
         {/* Macro summary (auto-computed) */}
         <div className="grid grid-cols-5 gap-2 text-center">
           {[
-            { label: 'Kcal', value: Math.round(totals.kcal), color: 'text-accent' },
-            { label: 'Protéines', value: `${Math.round(totals.protein)}g`, color: 'text-good' },
-            { label: 'Glucides', value: `${Math.round(totals.carbs)}g`, color: 'text-warning' },
-            { label: 'Lipides', value: `${Math.round(totals.fat)}g`, color: 'text-bad' },
-            { label: 'Fibres', value: `${Math.round(totals.fiber)}g`, color: 'text-mute' },
+            { label: 'Calories', value: Math.round(totals.kcal), unit: 'kcal', color: 'text-accent' },
+            { label: 'Protéines', value: Math.round(totals.protein), unit: 'g', color: 'text-good' },
+            { label: 'Glucides', value: Math.round(totals.carbs), unit: 'g', color: 'text-warning' },
+            { label: 'Lipides', value: Math.round(totals.fat), unit: 'g', color: 'text-bad' },
+            { label: 'Fibres', value: Math.round(totals.fiber), unit: 'g', color: 'text-mute' },
           ].map((m) => (
             <div key={m.label} className="bg-surface border border-line rounded-lg p-2">
-              <div className={`text-lg font-bold ${m.color}`}>{m.value}</div>
+              <div className={`text-lg font-bold ${m.color}`}>{m.value}<span className="text-[10px] font-normal ml-0.5">{m.unit}</span></div>
               <div className="text-[10px] text-mute">{m.label}</div>
             </div>
           ))}
@@ -218,7 +369,7 @@ function TemplateForm({ phaseId, template, onClose }) {
         {/* Meals */}
         {meals.map((meal, mealIdx) => (
           <div key={mealIdx} className="border border-line rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <Input
                 value={meal.meal_label}
                 onChange={(e) => updateMealLabel(mealIdx, e.target.value)}
@@ -236,32 +387,63 @@ function TemplateForm({ phaseId, template, onClose }) {
               </Button>
             </div>
 
+            {/* Column headers */}
+            {(meal.items || []).length > 0 && (
+              <div className="grid grid-cols-[1fr_auto_55px_55px_55px_55px_24px] gap-1 mb-1 px-0.5">
+                <span className="text-[9px] text-mute font-medium uppercase">Aliment</span>
+                <span className="text-[9px] text-mute font-medium uppercase text-center w-[76px]">Quantité</span>
+                <span className="text-[9px] text-mute font-medium uppercase text-center">Kcal</span>
+                <span className="text-[9px] text-good font-medium uppercase text-center">Prot.</span>
+                <span className="text-[9px] text-warning font-medium uppercase text-center">Gluc.</span>
+                <span className="text-[9px] text-bad font-medium uppercase text-center">Lip.</span>
+                <span></span>
+              </div>
+            )}
+
             {/* Food items */}
             {(meal.items || []).map((item, itemIdx) => (
-              <div key={itemIdx} className="grid grid-cols-[1fr_60px_55px_55px_55px_24px] gap-1 mb-1 items-center">
-                <Input
+              <div key={itemIdx} className="grid grid-cols-[1fr_auto_55px_55px_55px_55px_24px] gap-1 mb-1.5 items-center">
+                <FoodSearch
                   value={item.food_name}
-                  onChange={(e) => updateFoodItem(mealIdx, itemIdx, 'food_name', e.target.value)}
-                  placeholder="Aliment"
-                  className="!text-xs !py-1"
+                  onSelect={(food) => selectFood(mealIdx, itemIdx, food)}
                 />
-                <Input
-                  type="number"
-                  value={item.grams}
-                  onChange={(e) => updateFoodItem(mealIdx, itemIdx, 'grams', parseInt(e.target.value) || 0)}
-                  className="!text-xs !py-1 text-center"
-                  placeholder="g"
+                <ServingPicker
+                  food={item.food_name}
+                  grams={item.grams}
+                  onChangeGrams={(g) => updateGrams(mealIdx, itemIdx, g)}
                 />
-                <span className="text-[10px] text-mute text-center">{item.kcal || 0} kcal</span>
-                <span className="text-[10px] text-good text-center">{item.protein || 0}P</span>
-                <span className="text-[10px] text-warning text-center">{item.carbs || 0}G</span>
+                <span className="text-[10px] text-mute text-center font-medium">{item.kcal || 0}</span>
+                <span className="text-[10px] text-good text-center font-medium">{item.protein || 0}g</span>
+                <span className="text-[10px] text-warning text-center font-medium">{item.carbs || 0}g</span>
+                <span className="text-[10px] text-bad text-center font-medium">{item.fat || 0}g</span>
                 <button onClick={() => removeFoodItem(mealIdx, itemIdx)} className="text-mute hover:text-bad cursor-pointer">
                   <Trash2 size={10} />
                 </button>
               </div>
             ))}
 
-            <button onClick={() => addFoodItem(mealIdx)} className="text-[10px] text-accent flex items-center gap-0.5 mt-1 cursor-pointer">
+            {/* Meal subtotal */}
+            {(meal.items || []).length > 0 && (() => {
+              const mealTotals = (meal.items || []).reduce((acc, item) => ({
+                kcal: acc.kcal + (item.kcal || 0),
+                protein: acc.protein + (item.protein || 0),
+                carbs: acc.carbs + (item.carbs || 0),
+                fat: acc.fat + (item.fat || 0),
+              }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+              return (
+                <div className="grid grid-cols-[1fr_auto_55px_55px_55px_55px_24px] gap-1 mt-1 pt-1 border-t border-line/50">
+                  <span className="text-[10px] text-mute font-semibold">Sous-total</span>
+                  <span className="w-[76px]"></span>
+                  <span className="text-[10px] text-mute text-center font-bold">{Math.round(mealTotals.kcal)}</span>
+                  <span className="text-[10px] text-good text-center font-bold">{Math.round(mealTotals.protein)}g</span>
+                  <span className="text-[10px] text-warning text-center font-bold">{Math.round(mealTotals.carbs)}g</span>
+                  <span className="text-[10px] text-bad text-center font-bold">{Math.round(mealTotals.fat)}g</span>
+                  <span></span>
+                </div>
+              );
+            })()}
+
+            <button onClick={() => addFoodItem(mealIdx)} className="text-[10px] text-accent flex items-center gap-0.5 mt-2 cursor-pointer hover:underline">
               <Plus size={10} /> Ajouter un aliment
             </button>
           </div>
