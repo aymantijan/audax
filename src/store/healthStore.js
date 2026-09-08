@@ -1151,7 +1151,7 @@ export const useHealthStore = create(
 
         const weightSeries = bodyComp.filter((b) => b.weightKg).map((b) => ({ date: b.date, value: b.weightKg }));
         const weightPlateau = detectPlateau(weightSeries);
-        const adherence = get().getProgramAdherence();
+        const adherence = null; // Old program system removed — adherence now lives in programStore discipline
         if (weightPlateau.plateaued) {
           alerts.push({
             id: 'weight-plateau', level: 'info',
