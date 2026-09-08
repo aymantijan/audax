@@ -13,14 +13,14 @@ import CycleTracking from './health/CycleTracking';
 import Performance from './health/Performance';
 import Goals from './health/Goals';
 import Analytics from './health/Analytics';
-import Programs from './health/Programs';
+import ProgramTab from './health/program/ProgramTab';
 import CardioLogging from './health/CardioLogging';
 import GymLogging from './health/GymLogging';
 import SportLogging from './health/SportLogging';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, Component: HealthDashboard },
-  { key: 'programs', label: 'Programmes', icon: BookOpen, Component: Programs },
+  { key: 'programs', label: 'Programmes', icon: BookOpen, Component: ProgramTab },
   { key: 'sleep', label: 'Sleep', icon: Moon, Component: SleepTracker },
   { key: 'cardio', label: 'Cardio', icon: HeartPulse, Component: CardioLogging },
   { key: 'gym', label: 'Gym', icon: Dumbbell, Component: GymLogging },

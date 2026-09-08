@@ -6,17 +6,12 @@ import { CARDIO_TYPES, labelFor } from '../../utils/workout-types';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 import CyclePhaseHint from '../../components/health/CyclePhaseHint';
-import { CuratedCardioLogger } from './CuratedSessionLogger';
 
 export default function CardioLogging({ pendingPrompt }) {
-  const { workouts, logWorkout, editWorkout, deleteWorkout, getActiveCuratedProgram, getTodayCuratedSession } = useHealthStore();
-  const curatedProgram = getActiveCuratedProgram();
-  const curatedToday = curatedProgram ? getTodayCuratedSession() : null;
-  const hasCuratedToday = !!(curatedProgram && curatedToday?.dayEntry?.blocks?.some((b) => b.type === 'cardio'));
-  const [freeMode, setFreeMode] = useState(false);
+  const { workouts, logWorkout, editWorkout, deleteWorkout } = useHealthStore();
 
   const [editing, setEditing] = useState(null); // { id } | null
-  const showManualForm = !hasCuratedToday || freeMode || !!editing;
+  const showManualForm = true; // always show — old curated toggle removed
 
   const [cardioSubtype, setCardioSubtype] = useState(CARDIO_TYPES[1].value);
   const [durationMin, setDurationMin] = useState(pendingPrompt?.duration || 30);
@@ -67,14 +62,6 @@ export default function CardioLogging({ pendingPrompt }) {
   return (
     <div className="space-y-6">
       <CyclePhaseHint context="cardio" />
-      {curatedProgram && <CuratedCardioLogger />}
-
-      {hasCuratedToday && !editing && (
-        <button type="button" onClick={() => setFreeMode((v) => !v)} className="text-xs text-mute hover:text-ink underline cursor-pointer">
-          {freeMode ? 'Masquer le formulaire libre' : "Autre chose à logger en plus du programme ? Mode libre"}
-        </button>
-      )}
-
       {showManualForm && (
         <Card
           title={editing ? 'Modifier la séance cardio' : 'Logger du cardio'}

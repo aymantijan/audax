@@ -8,8 +8,8 @@ const MORNING_HOUR = 8;
 const WORKOUT_HOUR = 17;
 const MEAL_WINDOW_MIN = 10; // fire within ±10 min of a scheduled meal time, once
 
-// Tier 1 of the notification scheduler (see program-schedule-generator.js /
-// ProgramOnboarding.jsx for where reminderPrefs gets populated): fires while
+// Tier 1 of the notification scheduler (reminderPrefs is populated during
+// health onboarding): fires while
 // the AUDAX tab is open, checked every minute — no backend involved, so this
 // is the reliable channel regardless of Vercel Cron plan limits. Tier 2
 // (api/reminders-cron.js, best-effort, app-closed) is a separate, coarser

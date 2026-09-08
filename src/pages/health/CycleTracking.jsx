@@ -29,7 +29,7 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 }
 
 export default function CycleTracking() {
-  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, getActiveProgram, getActiveCuratedProgram, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo, getPostpartumInfo } = useHealthStore();
+  const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo, getPostpartumInfo } = useHealthStore();
   const lifeStage = healthProfile.lifeStage || 'none';
   const pregnancyInfo = getPregnancyInfo();
   const postpartumInfo = getPostpartumInfo();
@@ -45,7 +45,7 @@ export default function CycleTracking() {
   const phase = getCyclePhase();
   const coaching = getCyclePhaseCoaching();
   const healthFlag = getCycleHealthFlag();
-  const activeProgram = getActiveProgram() || getActiveCuratedProgram();
+  const activeProgram = null; // old curated program system removed — will be re-linked with Programme v2
   const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
 
   // Symptom "severity" proxied by count of symptoms logged per entry — a

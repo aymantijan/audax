@@ -6,24 +6,17 @@ import { todayKey } from '../../utils/formatters';
 import { kgToLb, lbToKg } from '../../utils/health-science';
 import { GYM_SESSION_TYPES, SMALL_MUSCLE_OPTIONS, labelFor } from '../../utils/workout-types';
 import { searchExercises, suggestExercises } from '../../utils/exercise-library';
-import { INJURY_EXCLUSION_MAP } from '../../utils/training-program-generator';
+import { INJURY_EXCLUSION_MAP } from '../../utils/injury-exclusions';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 import CyclePhaseHint from '../../components/health/CyclePhaseHint';
-import { CuratedGymLogger } from './CuratedSessionLogger';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function GymLogging({ pendingPrompt }) {
-  const { workouts, logGymSession, editGymSession, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, healthProfile, getStrengthPredictions, getActiveCuratedProgram, getNextGymSession } = useHealthStore();
-  const curatedProgram = getActiveCuratedProgram();
-  // Whether the checkbox logger above already covers the next session (the
-  // program's rotation, not a specific calendar day — see getNextGymSession)
-  // — when true, the manual exercise-by-exercise builder is redundant with
-  // what Programme already gave the user, so it's hidden by default behind
-  // "Mode libre" instead of always showing underneath it.
-  const hasCuratedToday = !!(curatedProgram && getNextGymSession()?.session?.exercises?.length);
+  const { workouts, logGymSession, editGymSession, deleteSession, getPRs, getWorkoutVolumeSeries, getEstimated1RMs, getExerciseLibrary, weightUnit, setWeightUnit, healthProfile, getStrengthPredictions } = useHealthStore();
+  // Old curated-program logger removed — Programme v2 (Supabase) handles this.
   const [freeMode, setFreeMode] = useState(false);
 
   const injuredAreas = (healthProfile.injuries || []).map((i) => i.area).filter((a) => INJURY_EXCLUSION_MAP[a]);
@@ -32,8 +25,7 @@ export default function GymLogging({ pendingPrompt }) {
   // null | { sessionId } — every gym entry is always session-based (created
   // via logGymSession), so edit always targets a sessionId.
   const [editing, setEditing] = useState(null);
-  // Editing an existing session always needs the form, regardless of freeMode.
-  const showManualForm = !hasCuratedToday || freeMode || !!editing;
+  const showManualForm = true; // always show — old curated toggle removed
   // The edit button lives on Today/History rows, which can be well below the
   // fold (PRs/1RM/Progression/Library/Volume-chart cards sit in between) —
   // without scrolling, populating the form off-screen looks like nothing
@@ -178,17 +170,6 @@ export default function GymLogging({ pendingPrompt }) {
   return (
     <div className="space-y-6">
       <CyclePhaseHint />
-      {curatedProgram && <CuratedGymLogger />}
-
-      {hasCuratedToday && !editing && (
-        <button
-          type="button"
-          onClick={() => setFreeMode((v) => !v)}
-          className="text-xs text-mute hover:text-ink underline cursor-pointer"
-        >
-          {freeMode ? 'Masquer le formulaire libre' : "Autre chose à logger en plus du programme ? Mode libre"}
-        </button>
-      )}
 
       {showManualForm && (
       <div ref={formCardRef} style={{ scrollMarginTop: '5rem' }}>
