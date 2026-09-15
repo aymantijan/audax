@@ -9,6 +9,7 @@ import RadarOverview from './visualizations/RadarOverview';
 import GanttTimeline from './visualizations/GanttTimeline';
 import HeatmapCalendar from './visualizations/HeatmapCalendar';
 import EvolutionChart from './visualizations/EvolutionChart';
+import CardioTrend from './visualizations/CardioTrend';
 import CorrelationNetwork from './visualizations/CorrelationNetwork';
 import CorrelationScatter from './visualizations/CorrelationScatter';
 import ComparisonChart from './visualizations/ComparisonChart';
@@ -17,7 +18,7 @@ import SpiralTimeline from './visualizations/SpiralTimeline';
 
 const TABS = [
   { key: 'overview', label: 'Vue d\'ensemble', icon: Target, components: ['radar', 'heatmap', 'gantt'] },
-  { key: 'evolution', label: 'Évolution', icon: TrendingUp, components: ['evolution', 'spiral'] },
+  { key: 'evolution', label: 'Évolution', icon: TrendingUp, components: ['evolution', 'cardio', 'spiral'] },
   { key: 'correlations', label: 'Corrélations', icon: Network, components: ['network', 'scatter'] },
   { key: 'analysis', label: 'Analyses', icon: BarChart, components: ['comparison', 'distribution'] },
 ];
@@ -57,6 +58,7 @@ export default function AnalyticsView() {
         {currentTab.components.includes('heatmap') && <HeatmapCalendar />}
         {currentTab.components.includes('gantt') && <GanttTimeline />}
         {currentTab.components.includes('evolution') && <EvolutionChart />}
+        {currentTab.components.includes('cardio') && <CardioTrend />}
         {currentTab.components.includes('spiral') && <SpiralTimeline />}
         {currentTab.components.includes('network') && <CorrelationNetwork />}
         {currentTab.components.includes('scatter') && <CorrelationScatter />}

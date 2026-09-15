@@ -425,6 +425,20 @@ export function searchCardio(query, category) {
   );
 }
 
+// Parse a cardio session's note ("Stairmaster · Zone 2 — free note") back into
+// its modality object, target zone, and free note. Lenient: returns nulls if
+// nothing matches, so a hand-typed note never breaks the logger.
+export function parseCardioNote(notes) {
+  if (!notes) return { modality: null, zone: 2, note: '' };
+  const zoneMatch = notes.match(/Zone\s*(\d)/i);
+  const zone = zoneMatch ? parseInt(zoneMatch[1]) : 2;
+  const modality = CARDIO_LIBRARY.find(
+    (m) => notes.includes(m.name) || (m.aliases || []).some((a) => notes.includes(a))
+  ) || null;
+  const note = notes.includes('—') ? notes.split('—').slice(1).join('—').trim() : '';
+  return { modality, zone, note };
+}
+
 // Human-readable label for a metric key (for logger headers).
 export const CARDIO_METRIC_LABELS = {
   duration: 'Durée (min)', distance: 'Distance', level: 'Niveau', speed: 'Vitesse',

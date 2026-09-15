@@ -3,6 +3,7 @@ import { Play, Save, X, Plus, Minus } from 'lucide-react';
 import { Modal, Button, Field, Input, Select, Badge } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
 import { useHealthStore } from '../../../store/healthStore';
+import { parseCardioNote, HR_ZONES, CARDIO_METRIC_LABELS } from '../../../utils/exercise-library';
 
 /**
  * Log a programme session — exercises come prefilled from the plan,
@@ -16,6 +17,9 @@ export default function SessionLogger({ event, date, onClose }) {
 
   // Build initial exercise rows from plan (or from existing log)
   const initialExercises = useMemo(() => {
+    // Cardio sessions store a cardio entry in exercises_performed, not strength
+    // rows — the cardio block handles those, so keep the exercise list empty.
+    if (session.type === 'cardio') return [];
     if (isEdit && logged.exercises_performed?.length) {
       return logged.exercises_performed.map((ep) => ({
         exercise_name: ep.exercise_name,
@@ -44,6 +48,22 @@ export default function SessionLogger({ event, date, onClose }) {
   }, [exercises, logged]);
 
   const [exerciseRows, setExerciseRows] = useState(initialExercises);
+
+  // ── Cardio logging ──────────────────────────────────────────────
+  const isCardio = session.type === 'cardio';
+  const parsedCardio = useMemo(() => parseCardioNote(session.notes), [session.notes]);
+  const cardioModality = parsedCardio.modality;
+  // Metric keys captured for this modality (duration handled by the top field)
+  const cardioMetricKeys = (cardioModality?.metrics || ['distance', 'avgHr', 'zone']).filter((m) => m !== 'duration');
+  const [cardioMetrics, setCardioMetrics] = useState(() => {
+    const logCardio = isEdit ? logged?.exercises_performed?.find?.((e) => e.is_cardio) : null;
+    if (logCardio?.metrics) return logCardio.metrics;
+    const init = {};
+    for (const k of cardioMetricKeys) init[k] = k === 'zone' ? (parsedCardio.zone || 2) : '';
+    return init;
+  });
+  const setCardioMetric = (key, value) => setCardioMetrics((prev) => ({ ...prev, [key]: value }));
+
   const [sessionRpe, setSessionRpe] = useState(logged?.session_rpe || '');
   const [energyLevel, setEnergyLevel] = useState(logged?.energy_level || 7);
   const [notes, setNotes] = useState(logged?.notes || '');
@@ -106,7 +126,14 @@ export default function SessionLogger({ event, date, onClose }) {
         actual_end: actualEnd,
         duration_min: durationMin ? parseInt(durationMin) : null,
         location_id: event.location_id || null,
-        exercises_performed: exerciseRows,
+        exercises_performed: isCardio
+          ? [{
+              is_cardio: true,
+              modality_id: cardioModality?.id || null,
+              modality_name: cardioModality?.name || session.label,
+              metrics: { ...cardioMetrics, duration: durationMin ? parseInt(durationMin) : null },
+            }]
+          : exerciseRows,
         session_rpe: sessionRpe ? parseFloat(sessionRpe) : null,
         energy_level: energyLevel ? parseInt(energyLevel) : null,
         notes: notes || null,
@@ -149,8 +176,8 @@ export default function SessionLogger({ event, date, onClose }) {
             };
             if (isEdit) health.editGymSession(logId, mirror);
             else health.logGymSession(mirror);
-          } else if (session.type === 'cardio') {
-            // Single cardio entry (proper time-series logger is a later step)
+          } else if (isCardio) {
+            // Cardio entry with full metric set — feeds the cardio trend.
             if (isEdit) health.deleteSession(logId);
             health.logWorkout({
               sessionId: logId,
@@ -158,9 +185,15 @@ export default function SessionLogger({ event, date, onClose }) {
               type: 'cardio',
               category: 'cardio',
               sessionType: session.label,
+              exercise: cardioModality?.name || session.label,
               durationMin: durationMin ? parseInt(durationMin) : 0,
               avgRpe: sessionRpe ? parseFloat(sessionRpe) : null,
               notes: notes || '',
+              cardio: {
+                modalityId: cardioModality?.id || null,
+                modalityName: cardioModality?.name || session.label,
+                ...cardioMetrics,
+              },
             });
           }
         }
@@ -195,6 +228,48 @@ export default function SessionLogger({ event, date, onClose }) {
             </Select>
           </Field>
         </div>
+
+        {/* Cardio metrics — for cardio sessions */}
+        {isCardio && (
+          <div className="border border-line rounded-lg p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold flex items-center gap-1.5">
+                🫀 {cardioModality?.name || session.label}
+              </span>
+              {parsedCardio.zone && (
+                <Badge color="var(--success)">Cible : Zone {parsedCardio.zone}</Badge>
+              )}
+            </div>
+            {cardioModality?.note && (
+              <p className="text-[11px] text-mute">💡 {cardioModality.note}</p>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              {cardioMetricKeys.map((key) => (
+                <Field key={key} label={CARDIO_METRIC_LABELS[key] || key}>
+                  {key === 'zone' ? (
+                    <Select
+                      value={String(cardioMetrics[key] ?? parsedCardio.zone ?? 2)}
+                      onChange={(e) => setCardioMetric(key, parseInt(e.target.value))}
+                    >
+                      {HR_ZONES.map((z) => (
+                        <option key={z.value} value={z.value}>Zone {z.value}</option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      type="number"
+                      min={0}
+                      step={key === 'distance' || key === 'pace' ? 0.01 : 1}
+                      value={cardioMetrics[key] ?? ''}
+                      onChange={(e) => setCardioMetric(key, e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="—"
+                    />
+                  )}
+                </Field>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Exercises */}
         {exerciseRows.map((row, exIdx) => (

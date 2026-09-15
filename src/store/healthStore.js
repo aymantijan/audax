@@ -367,6 +367,9 @@ export const useHealthStore = create(
           sets: data.sets || [],
           avgRpe: data.sets?.length ? Number((data.sets.reduce((a, s) => a + (Number(s.rpe) || 0), 0) / data.sets.length).toFixed(1)) : Number(data.avgRpe) || null,
           quality: Number(data.quality) || null,
+          // Optional cardio metric bag (distance, avgHr, zone, strokeRate…) —
+          // kept alongside the workout so cardio evolution is trackable.
+          cardio: data.cardio || null,
           notes: data.notes || '',
           createdAt: Date.now(),
         };
@@ -477,6 +480,7 @@ export const useHealthStore = create(
               sets,
               avgRpe: sets?.length ? Number((sets.reduce((a, s) => a + (Number(s.rpe) || 0), 0) / sets.length).toFixed(1)) : w.avgRpe,
               quality: data.quality !== undefined ? Number(data.quality) || null : w.quality,
+              cardio: data.cardio !== undefined ? data.cardio : w.cardio,
               notes: data.notes ?? w.notes,
             };
           }),
@@ -1461,6 +1465,25 @@ export const useHealthStore = create(
         }
         return Object.values(byExercise).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
       },
+
+      // Cardio sessions as a flat time-series — each entry carries its captured
+      // metrics (duration, distance, avgHr, zone…) so a trend chart can plot
+      // evolution per modality. Sorted oldest→newest for charting.
+      getCardioSessions: () =>
+        get()
+          .workouts.filter((w) => w.type === 'cardio')
+          .map((w) => ({
+            id: w.id,
+            date: w.date,
+            modality: w.cardio?.modalityName || w.exercise || 'Cardio',
+            modalityId: w.cardio?.modalityId || null,
+            durationMin: Number(w.durationMin) || 0,
+            distance: w.cardio?.distance != null && w.cardio.distance !== '' ? Number(w.cardio.distance) : null,
+            avgHr: w.cardio?.avgHr != null && w.cardio.avgHr !== '' ? Number(w.cardio.avgHr) : null,
+            zone: w.cardio?.zone != null ? Number(w.cardio.zone) : null,
+            cardio: w.cardio || null,
+          }))
+          .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
 
       // Set-level RPE-vs-reps scatter — surfaces whether higher reps correlate
       // with higher perceived exertion for this user specifically.
