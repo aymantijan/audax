@@ -315,12 +315,22 @@ export function exercisesForMuscleGroups(muscleGroups) {
 export function searchExercises(query, muscleGroups) {
   const pool = exercisesForMuscleGroups(muscleGroups);
   if (!query?.trim()) return pool;
-  const q = query.trim().toLowerCase();
-  return pool.filter(
-    (ex) =>
-      ex.name.toLowerCase().includes(q) ||
-      (ex.aliases || []).some((a) => a.toLowerCase().includes(q))
-  );
+  // Token-based (word) matching, order-independent: every typed word must appear
+  // somewhere in the name, an alias, the muscle group, or the equipment. So
+  // "overhead machine press", "press machine overhead" and "machine press" all
+  // find "Machine Overhead Press" — the old whole-string `includes` needed the
+  // exact wording in the exact order and returned nothing for natural queries.
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return pool.filter((ex) => {
+    const haystack = [
+      ex.name,
+      ...(ex.aliases || []),
+      ex.muscleGroup,
+      ex.equipment,
+      ...(ex.secondaryMuscles || []),
+    ].join(' ').toLowerCase();
+    return tokens.every((t) => haystack.includes(t));
+  });
 }
 
 // Round-robin across each requested muscle group (by primary muscleGroup —

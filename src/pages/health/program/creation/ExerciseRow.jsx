@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Trash2, GripVertical, Search, Dumbbell } from 'lucide-react';
+import { Trash2, GripVertical, Search, Dumbbell, Plus } from 'lucide-react';
 import { Input } from '../../../../components/common/ui';
 import { EXERCISE_LIBRARY, MUSCLE_GROUPS, searchExercises } from '../../../../utils/exercise-library';
 
@@ -37,6 +37,18 @@ function ExerciseSearch({ value, exerciseKey, onChange }) {
     setOpen(false);
     onChange(ex.name, ex.id);
   }, [onChange]);
+
+  // Add whatever the user typed as a custom exercise (no library id, but still
+  // named and fully usable) — so they are never blocked by "no match".
+  const pickCustom = useCallback(() => {
+    const name = query.trim();
+    if (!name) return;
+    setOpen(false);
+    onChange(name, null);
+  }, [query, onChange]);
+
+  const trimmed = query.trim();
+  const exactExists = results.some((r) => r.name.toLowerCase() === trimmed.toLowerCase());
 
   const handleKey = (e) => {
     if (!open) { if (e.key === 'ArrowDown' || e.key === 'Enter') { setOpen(true); e.preventDefault(); } return; }
@@ -86,32 +98,44 @@ function ExerciseSearch({ value, exerciseKey, onChange }) {
             ))}
           </div>
 
-          {results.length === 0 ? (
-            <div className="p-3 text-sm text-mute text-center">Aucun exercice trouvé</div>
-          ) : (
-            results.map((ex, i) => (
-              <button
-                key={ex.id}
-                onMouseDown={() => pick(ex)}
-                onMouseEnter={() => setHighlighted(i)}
-                className={`w-full text-left px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors ${
-                  i === highlighted ? 'bg-accent/10' : 'hover:bg-surface-alt'
-                }`}
-              >
-                <Dumbbell size={14} style={{ color: MG_COLORS[ex.muscleGroup] || '#888' }} className="shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{ex.name}</div>
-                  <div className="text-[10px] text-mute flex gap-2">
-                    <span style={{ color: MG_COLORS[ex.muscleGroup] }}>{mgLabel(ex.muscleGroup)}</span>
-                    <span>• {ex.equipment}</span>
-                    <span>• {ex.mechanic}</span>
-                    {ex.secondaryMuscles.length > 0 && (
-                      <span className="opacity-70">+ {ex.secondaryMuscles.map(mgLabel).join(', ')}</span>
-                    )}
-                  </div>
+          {results.length === 0 && !trimmed && (
+            <div className="p-3 text-sm text-mute text-center">Tapez pour chercher un exercice…</div>
+          )}
+          {results.map((ex, i) => (
+            <button
+              key={ex.id}
+              onMouseDown={() => pick(ex)}
+              onMouseEnter={() => setHighlighted(i)}
+              className={`w-full text-left px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors ${
+                i === highlighted ? 'bg-accent/10' : 'hover:bg-surface-alt'
+              }`}
+            >
+              <Dumbbell size={14} style={{ color: MG_COLORS[ex.muscleGroup] || '#888' }} className="shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{ex.name}</div>
+                <div className="text-[10px] text-mute flex gap-2">
+                  <span style={{ color: MG_COLORS[ex.muscleGroup] }}>{mgLabel(ex.muscleGroup)}</span>
+                  <span>• {ex.equipment}</span>
+                  <span>• {ex.mechanic}</span>
+                  {ex.secondaryMuscles.length > 0 && (
+                    <span className="opacity-70">+ {ex.secondaryMuscles.map(mgLabel).join(', ')}</span>
+                  )}
                 </div>
-              </button>
-            ))
+              </div>
+            </button>
+          ))}
+          {/* Always let the user add exactly what they typed */}
+          {trimmed && !exactExists && (
+            <button
+              onMouseDown={pickCustom}
+              className="w-full text-left px-3 py-2 flex items-center gap-2 cursor-pointer border-t border-line hover:bg-surface-alt"
+            >
+              <Plus size={14} className="text-accent shrink-0" />
+              <span className="text-sm">
+                Ajouter <span className="font-semibold">« {trimmed} »</span>
+                <span className="text-[10px] text-mute ml-1">(exercice personnalisé)</span>
+              </span>
+            </button>
           )}
         </div>
       )}
