@@ -1,9 +1,28 @@
 import { useState } from 'react';
-import { Plus, Save, Trash2, Search } from 'lucide-react';
+import { Plus, Save, Trash2, Search, HeartPulse } from 'lucide-react';
 import { Card, Button, Input, Select, Field, EmptyState } from '../../../../components/common/ui';
 import { useProgramStore } from '../../../../store/programStore';
-import { searchExercises } from '../../../../utils/exercise-library';
+import { searchExercises, CARDIO_LIBRARY, CARDIO_CATEGORIES, HR_ZONES } from '../../../../utils/exercise-library';
 import ExerciseRow from './ExerciseRow';
+
+// Cardio selection persists in the session `notes` field (no schema change):
+// "Stairmaster · Zone 2 — free note". Re-parsed leniently on reopen.
+function parseCardio(notes) {
+  if (!notes) return { modalityId: '', zone: 2, freeNote: '' };
+  const zoneMatch = notes.match(/Zone\s*(\d)/i);
+  const zone = zoneMatch ? parseInt(zoneMatch[1]) : 2;
+  const mod = CARDIO_LIBRARY.find(
+    (m) => notes.includes(m.name) || (m.aliases || []).some((a) => notes.includes(a))
+  );
+  const freeNote = notes.includes('—') ? notes.split('—').slice(1).join('—').trim() : '';
+  return { modalityId: mod?.id || '', zone, freeNote };
+}
+function formatCardio(modalityId, zone, freeNote) {
+  const mod = CARDIO_LIBRARY.find((m) => m.id === modalityId);
+  if (!mod) return freeNote || '';
+  const base = `${mod.name} · Zone ${zone}`;
+  return freeNote.trim() ? `${base} — ${freeNote.trim()}` : base;
+}
 
 const SESSION_TYPES = [
   { value: 'strength', label: 'Musculation' },
@@ -21,8 +40,16 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
   const [sessionKey, setSessionKey] = useState(session?.session_key || '');
   const [type, setType] = useState(session?.type || 'strength');
   const [duration, setDuration] = useState(session?.estimated_duration_min || 60);
-  const [notes, setNotes] = useState(session?.notes || '');
   const [saving, setSaving] = useState(false);
+
+  // Cardio config (parsed from notes for cardio sessions; notes stays free for others)
+  const parsedCardio = (session?.type === 'cardio') ? parseCardio(session?.notes) : null;
+  const [cardioModality, setCardioModality] = useState(parsedCardio?.modalityId || '');
+  const [cardioZone, setCardioZone] = useState(parsedCardio?.zone || 2);
+  const [cardioCategory, setCardioCategory] = useState('machine');
+  const [notes, setNotes] = useState(
+    parsedCardio ? parsedCardio.freeNote : (session?.notes || '')
+  );
 
   // Exercises — local state while editing, persisted on save
   const existingExercises = session ? getExercisesForSession(session.id) : [];
@@ -41,7 +68,7 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
   const addFromLibrary = (ex) => {
     setExercises([
       ...exercises,
-      { ...ExerciseRow.blank(exercises.length), exercise_name: ex.name, exercise_key: ex.key },
+      { ...ExerciseRow.blank(exercises.length), exercise_name: ex.name, exercise_key: ex.id },
     ]);
     setSearchTerm('');
   };
@@ -63,10 +90,14 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
     try {
       let sess;
       const key = sessionKey || autoKey;
+      // For cardio sessions, notes encode the chosen modality + zone.
+      const finalNotes = type === 'cardio'
+        ? (formatCardio(cardioModality, cardioZone, notes) || null)
+        : (notes || null);
       if (isNew) {
-        sess = await createSession(phaseId, { session_key: key, label, type, estimated_duration_min: duration || null, notes: notes || null });
+        sess = await createSession(phaseId, { session_key: key, label, type, estimated_duration_min: duration || null, notes: finalNotes });
       } else {
-        sess = await updateSess(session.id, { label, type, estimated_duration_min: duration || null, notes: notes || null });
+        sess = await updateSess(session.id, { label, type, estimated_duration_min: duration || null, notes: finalNotes });
       }
 
       // Save exercises
@@ -158,8 +189,8 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
                           className="w-full text-left px-3 py-2 text-sm hover:bg-surface cursor-pointer border-b border-line last:border-0"
                         >
                           {r.name}
-                          {r.muscles?.length > 0 && (
-                            <span className="text-[10px] text-mute ml-2">{r.muscles.join(', ')}</span>
+                          {r.muscleGroup && (
+                            <span className="text-[10px] text-mute ml-2">{r.muscleGroup}</span>
                           )}
                         </button>
                       ))}
@@ -201,6 +232,52 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
             {!exercises.length && (
               <EmptyState>Aucun exercice. Recherchez ou ajoutez un exercice vide.</EmptyState>
             )}
+          </div>
+        )}
+
+        {/* Cardio modality — only for cardio sessions */}
+        {type === 'cardio' && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-mute uppercase tracking-wide flex items-center gap-1.5">
+              <HeartPulse size={14} /> Modalité cardio
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Catégorie">
+                <Select
+                  options={CARDIO_CATEGORIES}
+                  value={cardioCategory}
+                  onChange={(e) => setCardioCategory(e.target.value)}
+                />
+              </Field>
+              <Field label="Machine / activité">
+                <Select
+                  options={[
+                    { value: '', label: '— Choisir —' },
+                    ...CARDIO_LIBRARY.filter((m) => m.category === cardioCategory).map((m) => ({ value: m.id, label: m.name })),
+                  ]}
+                  value={cardioModality}
+                  onChange={(e) => setCardioModality(e.target.value)}
+                />
+              </Field>
+              <Field label="Zone cible (FC)">
+                <Select
+                  options={HR_ZONES.map((z) => ({ value: String(z.value), label: z.label }))}
+                  value={String(cardioZone)}
+                  onChange={(e) => setCardioZone(parseInt(e.target.value))}
+                />
+              </Field>
+            </div>
+            {cardioModality && (() => {
+              const mod = CARDIO_LIBRARY.find((m) => m.id === cardioModality);
+              return mod?.note ? (
+                <p className="text-[11px] text-mute bg-surface border border-line rounded-lg px-3 py-2">
+                  💡 {mod.note}
+                  {mod.metrics?.length > 0 && (
+                    <span className="block mt-1 opacity-70">Suivi : {mod.metrics.join(' · ')}</span>
+                  )}
+                </p>
+              ) : null;
+            })()}
           </div>
         )}
 

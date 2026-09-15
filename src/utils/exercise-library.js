@@ -37,13 +37,14 @@ export const EQUIPMENT_OPTIONS = [
   { value: 'smith_machine', label: 'Smith Machine' },
 ];
 
-const e = (name, muscleGroup, equipment, mechanic = 'isolation', secondaryMuscles = []) => ({
+const e = (name, muscleGroup, equipment, mechanic = 'isolation', secondaryMuscles = [], aliases = []) => ({
   id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
   name,
   muscleGroup,
   secondaryMuscles,
   equipment,
   mechanic, // 'compound' | 'isolation'
+  aliases,  // alternate names matched in search (keeps the tracking id stable)
 });
 
 export const EXERCISE_LIBRARY = [
@@ -115,7 +116,7 @@ export const EXERCISE_LIBRARY = [
   e('Dumbbell Shoulder Press', 'shoulders', 'dumbbell', 'compound', ['triceps']),
   e('Seated Dumbbell Press', 'shoulders', 'dumbbell', 'compound', ['triceps']),
   e('Arnold Press', 'shoulders', 'dumbbell', 'compound', ['triceps']),
-  e('Machine Shoulder Press', 'shoulders', 'machine', 'compound', ['triceps']),
+  e('Machine Shoulder Press', 'shoulders', 'machine', 'compound', ['triceps'], ['Overhead Press Machine', 'Machine Overhead Press']),
   e('Landmine Shoulder Press', 'shoulders', 'barbell', 'compound', ['triceps', 'core']),
   e('Cuban Press', 'shoulders', 'dumbbell'),
   e('Bradford Press', 'shoulders', 'barbell', 'compound', ['triceps']),
@@ -129,7 +130,7 @@ export const EXERCISE_LIBRARY = [
   e('Rear Delt Fly', 'shoulders', 'dumbbell'),
   e('Bent-Over Rear Delt Raise', 'shoulders', 'dumbbell'),
   e('Cable Y-Raise', 'shoulders', 'cable'),
-  e('Reverse Pec Deck', 'shoulders', 'machine'),
+  e('Reverse Pec Deck', 'shoulders', 'machine', 'isolation', [], ['Reverse Pec-Deck Fly', 'Rear Delt Machine']),
   e('Upright Row', 'shoulders', 'barbell', 'isolation', ['back']),
   e('Cable Upright Row', 'shoulders', 'cable', 'isolation', ['back']),
   e('Barbell Shrug', 'shoulders', 'barbell'),
@@ -165,7 +166,7 @@ export const EXERCISE_LIBRARY = [
   e('Reverse-Grip Pushdown', 'triceps', 'cable'),
   e('Skull Crushers', 'triceps', 'barbell'),
   e('EZ-Bar Skull Crushers', 'triceps', 'barbell'),
-  e('Overhead Tricep Extension', 'triceps', 'dumbbell'),
+  e('Overhead Tricep Extension', 'triceps', 'dumbbell', 'isolation', [], ['Overhead Triceps Extension']),
   e('Cable Overhead Extension', 'triceps', 'cable'),
   e('Dips (Triceps-Focused)', 'triceps', 'bodyweight', 'compound', ['chest']),
   e('Bench Dip', 'triceps', 'bodyweight', 'compound', ['chest']),
@@ -186,7 +187,7 @@ export const EXERCISE_LIBRARY = [
   e('Dead Hang', 'forearms', 'bodyweight'),
 
   // Quads
-  e('Back Squat', 'quads', 'barbell', 'compound', ['glutes', 'hamstrings']),
+  e('Back Squat', 'quads', 'barbell', 'compound', ['glutes', 'hamstrings'], ['Barbell Squat', 'Barbell Back Squat']),
   e('Front Squat', 'quads', 'barbell', 'compound', ['glutes', 'core']),
   e('Box Squat', 'quads', 'barbell', 'compound', ['glutes']),
   e('Zercher Squat', 'quads', 'barbell', 'compound', ['glutes', 'core']),
@@ -260,7 +261,7 @@ export const EXERCISE_LIBRARY = [
   e('Mountain Climbers', 'core', 'bodyweight'),
   e('Pallof Press', 'core', 'cable'),
   e('Landmine Rotation', 'core', 'barbell'),
-  e('Woodchopper', 'core', 'cable'),
+  e('Woodchopper', 'core', 'cable', 'isolation', [], ['Cable Woodchop']),
   e('Dead Bug', 'core', 'bodyweight'),
   e('Stability Ball Crunch', 'core', 'bodyweight'),
   e('Dragon Flag', 'core', 'bodyweight'),
@@ -290,6 +291,16 @@ export const EXERCISE_LIBRARY = [
   e('Rope Climb', 'full_body', 'bodyweight', 'compound', ['back', 'forearms']),
   e('Turkish Get-Up', 'full_body', 'kettlebell', 'compound', ['core', 'shoulders']),
   e('Farmer\'s Walk', 'full_body', 'dumbbell', 'compound', ['forearms', 'core']),
+
+  // ── Additions — Extreme Training Program (Phase A) gaps + common movements ──
+  e('Hip Adduction Machine', 'quads', 'machine', 'isolation', ['glutes'], ['Adductor Machine', 'Inner Thigh Machine']),
+  e('Weighted Dips', 'chest', 'bodyweight', 'compound', ['triceps', 'shoulders'], ['Weighted Dip']),
+  e('Mid Cable Fly', 'chest', 'cable', 'isolation', [], ['Cable Fly', 'Cable Fly (mid height)']),
+  e('Chest Press Machine', 'chest', 'machine', 'compound', ['triceps'], ['Machine Chest Press (plate-loaded)']),
+  e('Dumbbell Overhead Press', 'shoulders', 'dumbbell', 'compound', ['triceps'], ['Seated Dumbbell Overhead Press']),
+  e('Cable Woodchop (Low-to-High)', 'core', 'cable', 'isolation', [], ['Low Cable Woodchop']),
+  e('Standing Calf Raise (Smith)', 'calves', 'smith_machine', 'isolation', [], []),
+  e('Cable Crunch (Kneeling)', 'core', 'cable', 'isolation', [], ['Kneeling Cable Crunch']),
 ];
 
 export const EXERCISE_BY_ID = Object.fromEntries(EXERCISE_LIBRARY.map((ex) => [ex.id, ex]));
@@ -305,7 +316,11 @@ export function searchExercises(query, muscleGroups) {
   const pool = exercisesForMuscleGroups(muscleGroups);
   if (!query?.trim()) return pool;
   const q = query.trim().toLowerCase();
-  return pool.filter((ex) => ex.name.toLowerCase().includes(q));
+  return pool.filter(
+    (ex) =>
+      ex.name.toLowerCase().includes(q) ||
+      (ex.aliases || []).some((a) => a.toLowerCase().includes(q))
+  );
 }
 
 // Round-robin across each requested muscle group (by primary muscleGroup —
@@ -332,3 +347,87 @@ export function suggestExercises(muscleGroups, limit = 24) {
   }
   return out;
 }
+
+// ============================================================================
+// CARDIO LIBRARY
+// ============================================================================
+// Cardio modalities are tracked the same way strength exercises are: a stable
+// `id` keys the progression history (duration, distance, avg HR, zone) over
+// time. Machines from the Extreme Training Program (Stairmaster, Concept2
+// Rower/SkiErg, curved treadmill, elliptical, bike) plus the common modalities.
+//
+// `metrics` declares which fields a session logger should capture for this
+// modality, so the same logger renders the right inputs for a rower (distance,
+// stroke rate) vs. an incline walk (incline, speed). `zoneBased` marks the
+// steady-state Zone-2 machines the program relies on for the interference
+// window (Wilson et al. 2012).
+
+export const HR_ZONES = [
+  { value: 1, label: 'Zone 1 — Récupération', pct: '50-60% FCmax', color: '#94a3b8' },
+  { value: 2, label: 'Zone 2 — Endurance fondamentale', pct: '60-70% FCmax', color: '#22c55e' },
+  { value: 3, label: 'Zone 3 — Tempo / aérobie', pct: '70-80% FCmax', color: '#eab308' },
+  { value: 4, label: 'Zone 4 — Seuil', pct: '80-90% FCmax', color: '#f97316' },
+  { value: 5, label: 'Zone 5 — VO2max / anaérobie', pct: '90-100% FCmax', color: '#ef4444' },
+];
+
+const c = (name, category, metrics, opts = {}) => ({
+  id: 'cardio-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+  name,
+  category,               // 'machine' | 'outdoor' | 'class' | 'sport'
+  metrics,                // fields the logger captures, e.g. ['duration','distance','avgHr','zone']
+  zoneBased: opts.zoneBased ?? true,
+  defaultZone: opts.defaultZone ?? 2,
+  aliases: opts.aliases ?? [],
+  note: opts.note ?? '',
+});
+
+export const CARDIO_LIBRARY = [
+  // Steady-state machines (the program's Zone-2 engine)
+  c('Stairmaster', 'machine', ['duration', 'level', 'avgHr', 'zone'], { note: 'Pied complet sur la marche, ne pas s\'appuyer sur les rails.', aliases: ['StairMaster', 'Escalier', 'Stair Climber'] }),
+  c('Rower (Concept2)', 'machine', ['duration', 'distance', 'strokeRate', 'avgHr', 'zone'], { note: 'Zone 2 : 18-22 coups/min. Jambes → dos → bras.', aliases: ['Rameur', 'Rowing', 'Concept2 Row'] }),
+  c('SkiErg (Concept2)', 'machine', ['duration', 'distance', 'strokeRate', 'avgHr', 'zone'], { note: 'Hanches initient la traction, ~45-60 tractions/min.', aliases: ['Ski Erg', 'Ski'] }),
+  c('Curved Treadmill', 'machine', ['duration', 'distance', 'avgHr', 'zone'], { note: 'Autopropulsé — impossible à « tricher », la FC reflète l\'effort.', aliases: ['Tapis incurvé', 'Manual Treadmill', 'Assault Runner'] }),
+  c('Elliptical', 'machine', ['duration', 'level', 'avgHr', 'zone'], { note: 'Poignées mobiles pour engager le haut du corps.', aliases: ['Elliptique', 'Cross Trainer'] }),
+  c('Treadmill', 'machine', ['duration', 'distance', 'speed', 'incline', 'avgHr', 'zone'], { aliases: ['Tapis de course', 'Running Machine'] }),
+  c('Stationary Bike', 'machine', ['duration', 'distance', 'level', 'avgHr', 'zone'], { note: 'Zone 2 : 80-90 rpm, résistance basse-modérée.', aliases: ['Vélo', 'Bike', 'Spin Bike', 'Cycling'] }),
+  c('Assault Bike', 'machine', ['duration', 'distance', 'calories', 'avgHr', 'zone'], { zoneBased: false, note: 'Air bike — excellent pour intervalles.', aliases: ['Air Bike', 'Echo Bike'] }),
+  c('Incline Walk', 'machine', ['duration', 'distance', 'speed', 'incline', 'avgHr', 'zone'], { note: 'Marche inclinée — faible impact, Zone 2 fiable.', aliases: ['Marche inclinée'] }),
+
+  // Outdoor
+  c('Running (Outdoor)', 'outdoor', ['duration', 'distance', 'pace', 'avgHr', 'zone'], { aliases: ['Course', 'Run', 'Jogging'] }),
+  c('Cycling (Outdoor)', 'outdoor', ['duration', 'distance', 'avgHr', 'zone'], { aliases: ['Vélo route', 'Road Cycling'] }),
+  c('Swimming', 'outdoor', ['duration', 'distance', 'avgHr', 'zone'], { note: 'Introduit dans un cycle ultérieur (Jan/Fév 2027).', aliases: ['Natation', 'Swim'] }),
+  c('Walking', 'outdoor', ['duration', 'distance', 'steps', 'avgHr', 'zone'], { defaultZone: 1, aliases: ['Marche'] }),
+
+  // Interval / class / sport
+  c('HIIT', 'class', ['duration', 'rounds', 'avgHr', 'zone'], { zoneBased: false, defaultZone: 4, aliases: ['Intervalles', 'Interval Training'] }),
+  c('Jump Rope', 'class', ['duration', 'reps', 'avgHr', 'zone'], { zoneBased: false, aliases: ['Corde à sauter', 'Skipping'] }),
+  c('Sled Push/Pull', 'class', ['duration', 'distance', 'load', 'avgHr'], { zoneBased: false, aliases: ['Prowler'] }),
+  c('Boxing', 'sport', ['duration', 'rounds', 'avgHr', 'zone'], { zoneBased: false, aliases: ['Boxe'] }),
+];
+
+export const CARDIO_BY_ID = Object.fromEntries(CARDIO_LIBRARY.map((m) => [m.id, m]));
+
+export const CARDIO_CATEGORIES = [
+  { value: 'machine', label: 'Machine' },
+  { value: 'outdoor', label: 'Extérieur' },
+  { value: 'class', label: 'Intervalle / Cours' },
+  { value: 'sport', label: 'Sport' },
+];
+
+export function searchCardio(query, category) {
+  let pool = CARDIO_LIBRARY;
+  if (category) pool = pool.filter((m) => m.category === category);
+  if (!query?.trim()) return pool;
+  const q = query.trim().toLowerCase();
+  return pool.filter(
+    (m) => m.name.toLowerCase().includes(q) || (m.aliases || []).some((a) => a.toLowerCase().includes(q))
+  );
+}
+
+// Human-readable label for a metric key (for logger headers).
+export const CARDIO_METRIC_LABELS = {
+  duration: 'Durée (min)', distance: 'Distance', level: 'Niveau', speed: 'Vitesse',
+  incline: 'Inclinaison', strokeRate: 'Coups/min', avgHr: 'FC moy (bpm)', zone: 'Zone',
+  calories: 'Calories', pace: 'Allure', steps: 'Pas', rounds: 'Rounds', reps: 'Reps', load: 'Charge (kg)',
+};
