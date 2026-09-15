@@ -8,11 +8,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // 'prompt' (not 'autoUpdate'): a long-lived tab across a deploy must NOT
-      // silently swap its JS mid-session (stores/components could mismatch the
-      // new bundle) — App.jsx listens for the waiting worker and shows a toast
-      // the user acts on, same pattern as lazyRetry's chunk-404 recovery.
-      registerType: 'prompt',
+      // 'autoUpdate': the new service worker skips waiting and takes control so
+      // a fixed build reaches users automatically on their next visit. This was
+      // 'prompt', but a prompt is useless when a bad bundle black-screens before
+      // the toast can render — users then get stuck on the broken cached bundle
+      // with no way to accept the update. Auto-updating (with the supabase.js
+      // guard that stops a bad env from crashing at all) is the safer default.
+      registerType: 'autoUpdate',
       injectRegister: null, // we call registerSW ourselves in main.jsx (needs the update-prompt hook)
       // Without this, `virtual:pwa-register/react` (imported by PwaUpdatePrompt.jsx)
       // doesn't exist under plain `vite dev` and the import 404s into an HTML
@@ -28,6 +30,10 @@ export default defineConfig({
         // for anything already loaded once.
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         navigateFallback: '/index.html',
+        // Take over immediately so a fixed deploy replaces a broken cached
+        // bundle without waiting for every old tab to close.
+        skipWaiting: true,
+        clientsClaim: true,
         // Old chunk hashes from a previous deploy must not linger once a new
         // one is precached — avoids the exact stale-bundle problem lazyRetry
         // works around for lazy routes, but at the service-worker cache layer.
