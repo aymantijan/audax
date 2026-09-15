@@ -9,6 +9,7 @@ import DailyView from './DailyView';
 import NutritionTemplateEditor from './NutritionTemplateEditor';
 import HabitLinker from './HabitLinker';
 import DisciplineCard from './DisciplineCard';
+import ReadinessCard from './ReadinessCard';
 import KPIDashboard from './KPIDashboard';
 import GoalsEditor from './GoalsEditor';
 import TrophyBoard from './TrophyBoard';
@@ -304,7 +305,10 @@ export default function ProgramTab() {
           <h3 className="text-sm font-semibold text-mute uppercase tracking-wide mb-3 flex items-center gap-2">
             <Target size={14} /> Discipline
           </h3>
-          <DisciplineCard />
+          <div className="space-y-3">
+            <ReadinessCard />
+            <DisciplineCard />
+          </div>
         </div>
       )}
 
