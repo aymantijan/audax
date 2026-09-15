@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Play, Save, X, Plus, Minus } from 'lucide-react';
 import { Modal, Button, Field, Input, Select, Badge } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
+import { useHealthStore } from '../../../store/healthStore';
 
 /**
  * Log a programme session — exercises come prefilled from the plan,
@@ -112,11 +113,61 @@ export default function SessionLogger({ event, date, onClose }) {
         status,
       };
 
+      let savedLog;
       if (isEdit) {
-        await store.updateSessionLog(logged.id, date, payload);
+        savedLog = await store.updateSessionLog(logged.id, date, payload);
       } else {
-        await store.logSession(payload);
+        savedLog = await store.logSession(payload);
       }
+
+      // ── Mirror into healthStore — unified tracking (PRs, 1RM, volume,
+      // cardio history) keyed on the program session-log id, so a Programme
+      // session shows up everywhere a manually-logged workout would, and the
+      // exercise_key/name feeds the same evolution curves. Idempotent: a
+      // re-log reconciles the same sessionId instead of duplicating.
+      try {
+        const health = useHealthStore.getState();
+        const logId = savedLog?.id || logged?.id;
+        if (logId && status !== 'skipped') {
+          const hasStrength = exerciseRows.some(
+            (r) => r.exercise_name && (r.actual_sets || []).some((s) => s.reps || s.weight_kg)
+          );
+          if (hasStrength) {
+            const mirror = {
+              sessionId: logId,
+              date,
+              sessionType: session.label,
+              notes: notes || '',
+              exercises: exerciseRows.map((r) => ({
+                exercise: r.exercise_name,
+                sets: (r.actual_sets || []).map((s) => ({
+                  reps: s.reps,
+                  weight: s.weight_kg,
+                  rpe: s.rpe,
+                })),
+              })),
+            };
+            if (isEdit) health.editGymSession(logId, mirror);
+            else health.logGymSession(mirror);
+          } else if (session.type === 'cardio') {
+            // Single cardio entry (proper time-series logger is a later step)
+            if (isEdit) health.deleteSession(logId);
+            health.logWorkout({
+              sessionId: logId,
+              date,
+              type: 'cardio',
+              category: 'cardio',
+              sessionType: session.label,
+              durationMin: durationMin ? parseInt(durationMin) : 0,
+              avgRpe: sessionRpe ? parseFloat(sessionRpe) : null,
+              notes: notes || '',
+            });
+          }
+        }
+      } catch (mirrorErr) {
+        console.error('healthStore mirror failed:', mirrorErr);
+      }
+
       onClose();
     } catch (err) {
       console.error(err);

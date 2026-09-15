@@ -395,7 +395,10 @@ export const useHealthStore = create(
       // XP is awarded ONCE for the whole session, not once per exercise —
       // otherwise a 6-exercise session would be worth 6x a single-exercise log.
       logGymSession: (data, fulfillsPromptId) => {
-        const sessionId = uid();
+        // sessionId can be supplied by the caller (e.g. the Programme logger
+        // passes its own session-log id) so the mirrored entries stay keyed to
+        // a stable id and can be reconciled later via editGymSession.
+        const sessionId = data.sessionId || uid();
         const date = data.date || todayKey();
         const entries = (data.exercises || [])
           .filter((ex) => ex.exercise && (ex.sets || []).some((s) => s.reps || s.weight))
