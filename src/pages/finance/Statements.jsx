@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
-import { CORRECTION_TYPES } from '../../utils/chart-of-accounts';
+import { CORRECTION_TYPES, LIQUIDITY_TIERS, ACCOUNT_MAP, assetClassLabel } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
@@ -35,9 +35,21 @@ function Row({ label, value, bold, indent, color }) {
 
 const blankCorrection = () => ({ type: 'plus-value', label: '', amount: '', account: '', date: new Date().toISOString().slice(0, 10) });
 
+const blankAsset = () => ({
+  accountCode: '', label: '', quantity: '', unit: '', unitCost: '', totalCost: '',
+  acquisitionDate: new Date().toISOString().slice(0, 10), marketIdentifier: '', currentEstimate: '', valuationSource: '',
+});
+
+const VALUATION_HINT = {
+  market_live: 'Valorisé au marché par Wealth OS — renseignez quantité + coût unitaire + identifiant marché (AUDAX ne calcule aucun cours).',
+  audax_manual: 'Réévaluable manuellement — vous pouvez saisir une estimation actuelle (sinon gérez-la via une plus/moins-value ci-dessus).',
+  cost: 'Valeur = coût historique (au journal). Aucune valorisation de marché.',
+};
+
 export default function Statements() {
   const store = useAccountingStore();
   const { corrections, addCorrection, editCorrection, deleteCorrection } = store;
+  const { assets, addAsset, editAsset, deleteAsset } = store;
   const [periodId, setPeriodId] = useState('month');
   const period = periodOf(periodId);
 
@@ -50,6 +62,24 @@ export default function Statements() {
   const [corrModal, setCorrModal] = useState(false);
   const [corrForm, setCorrForm] = useState(blankCorrection());
   const [editingCorr, setEditingCorr] = useState(null);
+
+  const [assetModal, setAssetModal] = useState(false);
+  const [assetForm, setAssetForm] = useState(blankAsset());
+  const [editingAsset, setEditingAsset] = useState(null);
+  // Métadonnées du sous-compte sélectionné : pilotent quels champs de
+  // valorisation afficher (marketIdentifier vs currentEstimate).
+  const assetMeta = ACCOUNT_MAP[assetForm.accountCode] || {};
+  const assetValuation = assetForm.valuationSource || assetMeta.valuationSource || 'cost';
+
+  const submitAsset = (ev) => {
+    ev.preventDefault();
+    if (!assetForm.accountCode || !assetForm.label.trim()) return;
+    const res = editingAsset ? editAsset(editingAsset.id, assetForm) : addAsset(assetForm);
+    if (res && res.ok === false) return;
+    setAssetModal(false);
+    setEditingAsset(null);
+    setAssetForm(blankAsset());
+  };
 
   const submitCorrection = (e2) => {
     e2.preventDefault();
@@ -81,7 +111,15 @@ export default function Statements() {
       <div className="grid lg:grid-cols-3 gap-6">
         <Card title="Bilan — Actif" className="lg:col-span-1">
           <Row label="Actif immobilisé (cl. 2)" value={bs.actif.immobilise} />
-          {bs.actif.detailImmobilise.map((d) => <Row key={d.code} label={d.label} value={d.amount} indent />)}
+          {bs.actif.immobiliseByTier.map((t) => (
+            <div key={t.tier}>
+              <div className="flex justify-between pl-4 pt-1.5 text-[11px] uppercase tracking-wide text-mute">
+                <span>Tier {t.tier} · {LIQUIDITY_TIERS[t.tier]?.label || ''}</span>
+                <span>{fmtMAD(t.total)}</span>
+              </div>
+              {t.accounts.map((d) => <Row key={d.code} label={d.label} value={d.amount} indent />)}
+            </div>
+          ))}
           <Row label="Créances & avances (cl. 3)" value={bs.actif.creances} />
           {bs.actif.detailCreances.map((d) => <Row key={d.code} label={d.label} value={d.amount} indent />)}
           <Row label="Trésorerie (cl. 5)" value={bs.actif.tresorerie} />
@@ -170,6 +208,45 @@ export default function Statements() {
         </div>
       </Card>
 
+      {/* ── Avoirs immobilisés : classification + métadonnées de valorisation (Wealth OS) ── */}
+      <Card
+        title="Avoirs immobilisés (métadonnées Wealth OS)"
+        action={
+          <Button variant="ghost" onClick={() => { setEditingAsset(null); setAssetForm(blankAsset()); setAssetModal(true); }}>
+            <Plus size={15} />
+          </Button>
+        }
+      >
+        <p className="text-[11px] text-mute mb-3">
+          Le journal porte le <strong>coût historique</strong> de chaque bien. Ces définitions ajoutent la catégorie, le palier de liquidité et les métadonnées (quantité, coût unitaire, identifiant marché) que Wealth OS utilise pour valoriser. AUDAX ne calcule aucun cours : pour l'or, les métaux et les actions, il n'expose que quantité + coût unitaire + identifiant.
+        </p>
+        {assets.length ? (
+          <div className="space-y-1.5">
+            {assets.map((as) => (
+              <div key={as.id} className="flex items-center gap-2 text-sm border border-line rounded-lg px-3 py-2">
+                <Badge>{assetClassLabel(as.assetClass)}</Badge>
+                <span className="text-[10px] text-mute">T{as.liquidityTier}</span>
+                <span className="flex-1 truncate">
+                  {as.label}
+                  {as.quantity != null ? <span className="text-mute"> · {as.quantity}{as.unit ? ` ${as.unit}` : ''}</span> : null}
+                  {as.marketIdentifier ? <span className="text-mute"> · {as.marketIdentifier}</span> : null}
+                </span>
+                <span className="text-[10px] text-mute">{as.valuationSource}</span>
+                <span className="font-medium">{fmtMAD(as.totalCost ?? 0)}</span>
+                <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingAsset(as); setAssetForm({ ...blankAsset(), ...as, quantity: as.quantity ?? '', unit: as.unit ?? '', unitCost: as.unitCost ?? '', totalCost: as.totalCost ?? '', marketIdentifier: as.marketIdentifier ?? '', currentEstimate: as.currentEstimate ?? '', acquisitionDate: as.acquisitionDate ?? '', valuationSource: as.valuationSource ?? '' }); setAssetModal(true); }} title="Modifier">
+                  <Pencil size={13} />
+                </button>
+                <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer l'avoir "${as.label}" ?`)) deleteAsset(as.id); }} title="Supprimer">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState>Aucun avoir défini. Ajoutez-en un pour exposer or / actions / immobilier… à Wealth OS avec ses métadonnées.</EmptyState>
+        )}
+      </Card>
+
       {/* ── Période pour CPC & ESG ── */}
       <div className="flex gap-2">
         {PERIODS.map((p) => (
@@ -247,6 +324,58 @@ export default function Statements() {
             <div className="flex gap-3">
               <Button type="button" variant="secondary" onClick={() => { setCorrModal(false); setEditingCorr(null); }}>Annuler</Button>
               <Button type="submit">{editingCorr ? 'Enregistrer' : 'Ajouter'}</Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={assetModal} onClose={() => { setAssetModal(false); setEditingAsset(null); }} title={editingAsset ? "Modifier l'avoir" : 'Ajouter un avoir immobilisé'}>
+        <form onSubmit={submitAsset} className="space-y-3">
+          <Field label="Sous-compte d'immobilisation (classe 2)">
+            <AccountSelect classes={[2]} value={assetForm.accountCode} onChange={(e2) => setAssetForm({ ...assetForm, accountCode: e2.target.value })} />
+          </Field>
+          <p className="text-[11px] text-mute -mt-1">{VALUATION_HINT[assetValuation]}</p>
+          <Field label="Libellé">
+            <Input value={assetForm.label} onChange={(e2) => setAssetForm({ ...assetForm, label: e2.target.value })} placeholder="ex : Lingot or 18K · Actions IAM · Appartement Rabat" autoFocus />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Quantité">
+              <Input type="number" step="any" min="0" value={assetForm.quantity} onChange={(e2) => setAssetForm({ ...assetForm, quantity: e2.target.value })} placeholder="ex : 50" />
+            </Field>
+            <Field label="Unité">
+              <Input value={assetForm.unit} onChange={(e2) => setAssetForm({ ...assetForm, unit: e2.target.value })} placeholder="g · titres · m²" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Coût unitaire (DH)">
+              <Input type="number" step="any" min="0" value={assetForm.unitCost} onChange={(e2) => setAssetForm({ ...assetForm, unitCost: e2.target.value })} />
+            </Field>
+            <Field label="Coût total (DH) — auto si vide">
+              <Input type="number" step="any" min="0" value={assetForm.totalCost} onChange={(e2) => setAssetForm({ ...assetForm, totalCost: e2.target.value })} placeholder="= quantité × coût unitaire" />
+            </Field>
+          </div>
+          <Field label="Date d'acquisition">
+            <Input type="date" value={assetForm.acquisitionDate} onChange={(e2) => setAssetForm({ ...assetForm, acquisitionDate: e2.target.value })} />
+          </Field>
+          {assetValuation === 'market_live' && (
+            <Field label="Identifiant marché (or : karat « 18K » · métaux : « argent_925 » · actions : ticker BVC « IAM »)">
+              <Input value={assetForm.marketIdentifier} onChange={(e2) => setAssetForm({ ...assetForm, marketIdentifier: e2.target.value })} placeholder="18K · argent_925 · IAM" />
+            </Field>
+          )}
+          {assetValuation === 'audax_manual' && (
+            <Field label="Estimation actuelle (DH, optionnel)">
+              <Input type="number" step="any" min="0" value={assetForm.currentEstimate} onChange={(e2) => setAssetForm({ ...assetForm, currentEstimate: e2.target.value })} />
+            </Field>
+          )}
+          <div className="flex justify-between gap-3 pt-2 border-t border-line">
+            {editingAsset ? (
+              <Button type="button" variant="danger" onClick={() => { deleteAsset(editingAsset.id); setAssetModal(false); setEditingAsset(null); }}>
+                <span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span>
+              </Button>
+            ) : <span />}
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" onClick={() => { setAssetModal(false); setEditingAsset(null); }}>Annuler</Button>
+              <Button type="submit">{editingAsset ? 'Enregistrer' : 'Ajouter'}</Button>
             </div>
           </div>
         </form>

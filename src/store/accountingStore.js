@@ -8,7 +8,7 @@ import {
   echeanceOccurrences, treasuryForecastV2, netWorthForecastV2, resolveEcheanceLines,
   DEFAULT_BUDGET_PERIOD, budgetInsights, dailyResults,
 } from '../utils/accounting-engine';
-import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap } from '../utils/chart-of-accounts';
+import { LEGACY_CATEGORY_TO_ACCOUNT, LEGACY_SOURCE_TO_ACCOUNT, classOf, ACCOUNT_MAP, mergedAccountMap, migrateClass2Code } from '../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../utils/label-analysis';
 import { calculateGoalXP, badgeForGoal, budgetSeverity } from '../utils/goals';
 import { useFinanceStore } from './financeStore';
@@ -23,6 +23,9 @@ import { evaluateBadges } from '../utils/badges';
 // et la trésorerie — exactement comme demandé : une saisie, tout se propage.
 
 const stamp = (obj) => ({ ...obj, updatedAt: Date.now() });
+
+// Produit arrondi à 2 décimales (coût total = quantité × coût unitaire).
+const r2mul = (a, b) => Math.round((a * b + Number.EPSILON) * 100) / 100;
 
 // Local Y/M/D date key — NEVER `.toISOString()` for this (round-trips
 // through UTC and can roll a date back a day right at a day/month/week
@@ -130,6 +133,7 @@ export const useAccountingStore = create(
       labelLimits: [], // [{ id, account, label, maxRatioToIncomePct, maxRatioToAccountSpendPct, createdAt }]
       legacyImported: false,
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
+      assets: [], // définitions d'avoirs immobilisés (classe 2), SANS solde — le montant reste au journal (coût historique) ; ici : classification + métadonnées de valorisation pour Wealth OS. Voir addAsset.
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
       echeanceAlerts: { enabled: false, lastShown: {} }, // rappels navigateur pour échéances en retard — même mécanisme que tradingStore.alerts / healthStore.reminders
       budgetAlerts: { enabled: false, lastShown: {} }, // idem pour les dépassements de budget (charges)
@@ -338,6 +342,71 @@ export const useAccountingStore = create(
         toast('Compte auxiliaire supprimé', 'info');
         return { ok: true };
       },
+
+      // ─────────── Avoirs immobilisés (définitions, sans solde) ───────────
+      // Même modèle que treasuryAccounts : une définition structurée par avoir,
+      // rattachée à un sous-compte de classe 2. Le MONTANT reste au journal (coût
+      // historique) ; ici on stocke la classification (assetClass, liquidityTier)
+      // + les métadonnées de valorisation partagées avec Wealth OS. assetClass,
+      // liquidityTier et valuationSource se déduisent du sous-compte choisi
+      // (ACCOUNT_MAP) quand ils ne sont pas fournis, pour rester cohérents avec
+      // le plan comptable. RÈGLE : AUDAX ne calcule aucun cours « live » —
+      // pour un avoir market_live (or, métaux, actions) il n'expose que
+      // quantity + unitCost + marketIdentifier ; Wealth OS applique le cours réel.
+      addAsset: (data) => {
+        if (!data.accountCode || classOf(data.accountCode) !== 2) {
+          return { ok: false, error: 'Un avoir immobilisé doit être rattaché à un sous-compte de classe 2.' };
+        }
+        if (!data.label?.trim()) return { ok: false, error: "Le libellé de l'avoir est requis." };
+        const meta = ACCOUNT_MAP[data.accountCode] || {};
+        const qty = data.quantity != null && data.quantity !== '' ? Number(data.quantity) : null;
+        const unitCost = data.unitCost != null && data.unitCost !== '' ? Number(data.unitCost) : null;
+        const totalCost =
+          data.totalCost != null && data.totalCost !== ''
+            ? Number(data.totalCost)
+            : qty != null && unitCost != null
+              ? r2mul(qty, unitCost)
+              : null;
+        const asset = {
+          id: uid(),
+          accountCode: data.accountCode,
+          assetClass: data.assetClass || meta.assetClass || 'autres',
+          liquidityTier: data.liquidityTier || meta.liquidityTier || 3,
+          label: data.label.trim(),
+          quantity: qty,
+          unit: data.unit?.trim() || null,
+          unitCost,
+          totalCost,
+          acquisitionDate: data.acquisitionDate || null,
+          valuationSource: data.valuationSource || meta.valuationSource || 'cost',
+          marketIdentifier: data.marketIdentifier?.trim() || null,
+          currentEstimate:
+            data.currentEstimate != null && data.currentEstimate !== '' ? Number(data.currentEstimate) : null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set({ assets: [...get().assets, asset] });
+        useSkillStore.getState().awardXP('financial-statements-lv1', 3, `avoir immobilisé défini : ${asset.label}`);
+        toast(`Avoir immobilisé enregistré : ${asset.label}`, 'success');
+        get().checkBadges();
+        return { ok: true, id: asset.id };
+      },
+      editAsset: (id, updates) =>
+        set({
+          assets: get().assets.map((a) => {
+            if (a.id !== id) return a;
+            const next = { ...a, ...updates };
+            // Recalcule totalCost si quantité/coût unitaire changent et qu'aucun
+            // totalCost explicite n'est fourni dans cette mise à jour.
+            if (updates.totalCost == null && (updates.quantity != null || updates.unitCost != null)) {
+              const q = next.quantity != null && next.quantity !== '' ? Number(next.quantity) : null;
+              const u = next.unitCost != null && next.unitCost !== '' ? Number(next.unitCost) : null;
+              next.totalCost = q != null && u != null ? r2mul(q, u) : next.totalCost;
+            }
+            return stamp(next);
+          }),
+        }),
+      deleteAsset: (id) => set({ assets: get().assets.filter((a) => a.id !== id) }),
 
       // ─────────── Journal (mutations) ───────────
       addEntry: (entry) => {
@@ -796,10 +865,44 @@ export const useAccountingStore = create(
 
       resetAll: () =>
         set({
-          journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], echeances: [],
+          journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], assets: [], echeances: [],
           echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} }, awardedBadges: [],
         }),
     }),
-    { name: 'audax-accounting' }
+    {
+      name: 'audax-accounting',
+      // v1 : découpage de la classe 2 (Actif immobilisé) en sous-comptes
+      // catégorisés par liquidité. Remap une seule fois, au chargement, des
+      // anciens codes fourre-tout vers les nouveaux sous-comptes — partout où
+      // un code de classe 2 apparaît (journal, corrections, échéances). Les
+      // budgets (classes 6/7) et limites de libellé (classe 6) ne sont pas
+      // concernés. Passage unique par code (migrateClass2Code) → les échanges
+      // de codes (ancien 231↔nouveau 231) restent corrects.
+      version: 1,
+      migrate: (state, version) => {
+        if (state && version < 1) {
+          if (Array.isArray(state.journal)) {
+            state.journal = state.journal.map((e) => ({
+              ...e,
+              lines: (e.lines || []).map((l) => ({ ...l, account: migrateClass2Code(l.account) })),
+            }));
+          }
+          if (Array.isArray(state.corrections)) {
+            state.corrections = state.corrections.map((c) =>
+              c.account ? { ...c, account: migrateClass2Code(c.account) } : c);
+          }
+          if (Array.isArray(state.echeances)) {
+            state.echeances = state.echeances.map((ec) => ({
+              ...ec,
+              ...(ec.debitAccount ? { debitAccount: migrateClass2Code(ec.debitAccount) } : {}),
+              ...(ec.creditAccount ? { creditAccount: migrateClass2Code(ec.creditAccount) } : {}),
+              ...(ec.natureAccount ? { natureAccount: migrateClass2Code(ec.natureAccount) } : {}),
+            }));
+          }
+          if (!Array.isArray(state.assets)) state.assets = [];
+        }
+        return state;
+      },
+    }
   )
 );

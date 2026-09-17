@@ -117,6 +117,23 @@ const detailClass = (balances, cls, sign = 1, accountMap = ACCOUNT_MAP) =>
     .filter((x) => x.amount !== 0)
     .sort((a, b) => b.amount - a.amount);
 
+// Regroupe les lignes d'actif immobilisé (classe 2) par palier de liquidité
+// (liquidityTier 1 → 3), avec sous-total par palier — pour l'affichage ventilé
+// du Bilan. Un compte sans tier connu (ex. ancien code non migré) retombe en
+// tier 3. Chaque ligne est enrichie de assetClass/valuationSource (métadonnées
+// du plan comptable) pour que le Bilan et l'API puissent les exposer.
+function groupByLiquidityTier(rows, accountMap = ACCOUNT_MAP) {
+  const tiers = {};
+  for (const r of rows) {
+    const meta = accountMap[r.code] || {};
+    const tier = meta.liquidityTier || 3;
+    (tiers[tier] ??= { tier, total: 0, accounts: [] });
+    tiers[tier].accounts.push({ ...r, assetClass: meta.assetClass, valuationSource: meta.valuationSource });
+    tiers[tier].total = r2(tiers[tier].total + r.amount);
+  }
+  return Object.values(tiers).sort((a, b) => a.tier - b.tier);
+}
+
 // BILAN à une date : Actif (2+3+5) = Passif (1+4) + Résultat cumulé (7−6).
 export function balanceSheet(journal, until, accountMap = ACCOUNT_MAP) {
   const balances = accountBalances(journal, until ? { to: until } : undefined);
@@ -131,10 +148,12 @@ export function balanceSheet(journal, until, accountMap = ACCOUNT_MAP) {
 
   const totalActif = r2(immobilise + creances + tresorerie);
   const totalPassif = r2(capitaux + dettesCT + resultat);
+  const detailImmobilise = detailClass(balances, 2, 1, accountMap);
   return {
     actif: {
       immobilise, creances, tresorerie, total: totalActif,
-      detailImmobilise: detailClass(balances, 2, 1, accountMap),
+      detailImmobilise: detailImmobilise,
+      immobiliseByTier: groupByLiquidityTier(detailImmobilise, accountMap),
       detailCreances: detailClass(balances, 3, 1, accountMap),
       detailTresorerie: detailClass(balances, 5, 1, accountMap),
     },

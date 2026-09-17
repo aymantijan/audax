@@ -19,7 +19,7 @@ import { resolveApiKey } from './_lib/api-key-auth.js';
 const STORE_NOTES = {
   auth: 'Local profile: name, career goal, gender, birth year, height, which nav sections are enabled.',
   trading: 'Accounts (demo/broker/prop-firm) and every trade, with derived P&L/pips.',
-  accounting: 'Double-entry journal (source of truth), budgets, treasury accounts, échéances, corrections, goals — see src/utils/accounting-engine.js for how Bilan/CPC/ESG are derived from `journal`.',
+  accounting: 'Double-entry journal (source of truth), budgets, treasury accounts, échéances, corrections, goals, and `assets` — see src/utils/accounting-engine.js for how Bilan/CPC/ESG are derived from `journal`. `assets[]` classifies each class-2 fixed asset (assetClass, liquidityTier, quantity, unitCost, marketIdentifier, valuationSource: market_live | audax_manual | cost) for Wealth OS valuation; the journal keeps amounts at historical cost. Gold has its own account, separate from other precious metals.',
   finance: 'Legacy pre-accounting-engine store — superseded by `accounting`, kept only for backward compatibility.',
   deals: 'PE/GE/VC deal log with per-deal task pipelines.',
   learning: 'Courses, chapters, checklists.',

@@ -23,13 +23,32 @@ export const CHART_OF_ACCOUNTS = [
   { code: '145', label: 'Prêt étudiant', cls: 1 },
   { code: '148', label: 'Autres emprunts long terme', cls: 1 },
 
-  // ── Classe 2 · Actif immobilisé ──
-  { code: '231', label: 'Immobilier', cls: 2 },
-  { code: '234', label: 'Véhicules', cls: 2 },
-  { code: '235', label: 'Matériel & équipement', cls: 2 },
-  { code: '251', label: 'Titres & placements long terme', cls: 2 },
-  { code: '255', label: 'Épargne retraite', cls: 2 },
-  { code: '258', label: 'Objets de valeur (or, art, collections)', cls: 2 },
+  // ── Classe 2 · Actif immobilisé (découpé par CATÉGORIE, classé par LIQUIDITÉ) ──
+  // Chaque sous-compte porte trois métadonnées lues par le Bilan (regroupement)
+  // et par les définitions d'avoirs / l'API (valorisation, partagée avec Wealth OS) :
+  //   liquidityTier  1 → 3 (ordre d'affichage au Bilan)
+  //   assetClass     catégorie normalisée (voir ASSET_CLASSES)
+  //   valuationSource comment la valeur actuelle est obtenue :
+  //     'market_live'  → AUDAX ne fournit que quantité + coût unitaire +
+  //                      marketIdentifier ; Wealth OS applique le cours réel.
+  //     'audax_manual' → AUDAX peut fournir currentEstimate (via corrections).
+  //     'cost'         → valeur = coût historique (éventuellement net d'amort.).
+  // Le code garde toujours « 2 » en tête → classOf() les traite tous en classe 2.
+  //
+  // tier 1 — biens corporels réévaluables (valorisation manuelle AUDAX)
+  { code: '211', label: 'Immobilier', cls: 2, liquidityTier: 1, assetClass: 'immobilier', valuationSource: 'audax_manual' },
+  { code: '241', label: 'Matériel de transport', cls: 2, liquidityTier: 1, assetClass: 'materiel_transport', valuationSource: 'audax_manual' },
+  // tier 2 — valorisés au marché (Wealth OS applique spot / cotation)
+  { code: '231', label: 'Actions & titres cotés', cls: 2, liquidityTier: 2, assetClass: 'actions', valuationSource: 'market_live' },
+  { code: '221', label: 'Or', cls: 2, liquidityTier: 2, assetClass: 'or', valuationSource: 'market_live' }, // COMPTE DÉDIÉ — or seul
+  { code: '222', label: 'Autres métaux précieux', cls: 2, liquidityTier: 2, assetClass: 'autres_metaux_precieux', valuationSource: 'market_live' }, // argent, platine… séparé de l'or
+  // tier 3 — illiquide / amortissable (valeur au coût)
+  { code: '251', label: 'Matériel informatique & équipement', cls: 2, liquidityTier: 3, assetClass: 'materiel_informatique', valuationSource: 'cost' },
+  { code: '255', label: 'Épargne retraite', cls: 2, liquidityTier: 3, assetClass: 'autres', valuationSource: 'cost' },
+  { code: '261', label: 'Mobilier & fournitures', cls: 2, liquidityTier: 3, assetClass: 'fournitures', valuationSource: 'cost' },
+  { code: '271', label: 'Livres & documentation', cls: 2, liquidityTier: 3, assetClass: 'livres', valuationSource: 'cost' },
+  { code: '281', label: 'Vêtements & effets personnels', cls: 2, liquidityTier: 3, assetClass: 'vetements', valuationSource: 'cost' },
+  { code: '291', label: 'Autres actifs', cls: 2, liquidityTier: 3, assetClass: 'autres', valuationSource: 'cost' },
 
   // ── Classe 3 · Créances & avances ──
   { code: '341', label: 'Prêts accordés à des tiers', cls: 3 },
@@ -93,6 +112,42 @@ export const accountsOfClass = (cls) => CHART_OF_ACCOUNTS.filter((a) => a.cls ==
 
 export const classOf = (code) => Number(String(code)[0]);
 
+// ─────────── Actif immobilisé (classe 2) : liquidité & catégories ───────────
+// Paliers de liquidité — ordre d'affichage au Bilan (1 → 3) et libellé du groupe.
+export const LIQUIDITY_TIERS = {
+  1: { label: 'Biens corporels (réévaluables)' },
+  2: { label: 'Valorisé au marché' },
+  3: { label: 'Illiquide / au coût' },
+};
+
+// Catégories normalisées d'un avoir immobilisé — value ⇄ assetClass stocké sur
+// chaque avoir (assets[]) et sur chaque sous-compte de classe 2. `account` est le
+// sous-compte de rattachement par défaut ; `valuationSource` la règle de valo.
+export const ASSET_CLASSES = accountsOfClass(2).map((a) => ({
+  value: a.assetClass,
+  label: a.label,
+  account: a.code,
+  liquidityTier: a.liquidityTier,
+  valuationSource: a.valuationSource,
+}));
+
+export const assetClassLabel = (assetClass) =>
+  ASSET_CLASSES.find((c) => c.value === assetClass)?.label || assetClass;
+
+// Migration des immobilisations déjà saisies vers les nouveaux sous-comptes
+// catégorisés (voir persist.migrate dans accountingStore.js). Remap appliqué
+// EN UN SEUL PASSAGE par code — les échanges de codes (ancien 231↔nouveau 231)
+// sont donc sûrs, chaque ancien code est lu une fois vers sa nouvelle cible.
+export const CLASS2_MIGRATION = {
+  '231': '211', // Immobilier
+  '234': '241', // Véhicules → Matériel de transport
+  '235': '251', // Matériel & équipement → Matériel informatique & équipement
+  '251': '231', // Titres & placements LT → Actions & titres cotés
+  // '255' Épargne retraite : code inchangé
+  '258': '291', // Objets de valeur (or/art/collections) → Autres actifs (à re-ventiler ensuite)
+};
+export const migrateClass2Code = (code) => CLASS2_MIGRATION[String(code)] || code;
+
 // Nature débitrice (actif + charges) ou créditrice (passif + produits)
 export const isDebitNature = (code) => ['2', '3', '5', '6'].includes(String(code)[0]);
 
@@ -144,7 +199,7 @@ export const ENTRY_TEMPLATES = [
     id: 'invest',
     label: "Achat d'immobilisation / placement",
     hint: "L'actif acquis est débité (classe 2), le compte payeur est crédité.",
-    debit: { classes: [2], default: '251', role: 'Actif acquis' },
+    debit: { classes: [2], default: '231', role: 'Actif acquis' },
     credit: { classes: [5], default: '511', role: 'Moyen de paiement' },
   },
   {
@@ -203,7 +258,7 @@ export const LEGACY_CATEGORY_TO_ACCOUNT = {
   'Doctor Visits': '641', 'Prescriptions': '641', 'Gym Membership': '642', 'Personal Care': '641', 'Dental': '641', 'Vision': '641',
   'Clothing': '663', 'Shoes': '663', 'Accessories': '663', 'Furniture': '612', 'Office Supplies': '652', 'Household Goods': '612',
   'Health Insurance': '682', 'Auto Insurance': '682', 'Life Insurance': '682', 'Income Tax': '681', 'Capital Gains Tax': '681',
-  'Brokerage Deposits': '251', 'Crypto Purchases': '516', 'Emergency Fund': '512',
+  'Brokerage Deposits': '231', 'Crypto Purchases': '516', 'Emergency Fund': '512',
   'Gifts': '691', 'Donations': '691', 'Pets': '661', 'Miscellaneous': '698',
 };
 
