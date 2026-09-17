@@ -69,27 +69,29 @@ export const useProgramStore = create((set, get) => ({
       const target = active || draft;
       if (target) {
         await get().loadProgramDetails(target.id);
-        // Wave 2: load overrides, logs, nutrition, habits for active program
-        if (active) {
-          const today = new Date().toISOString().slice(0, 10);
-          const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-          const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-          const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-          await Promise.all([
-            // Wave 2
-            get().loadOverrides(active.id, weekAgo, weekAhead),
-            get().loadSessionLogs(active.id, weekAgo, today),
-            get().loadNutritionTemplates(active.id),
-            get().loadHabitLinks(active.id),
-            // Wave 3
-            get().loadDisciplineScores(active.id, monthAgo, today),
-            get().loadKpis(active.id),
-            get().loadKpiValues(active.id, monthAgo, today),
-            get().loadGoals(active.id),
-            get().loadTrophies(active.id),
-            get().loadAlerts(active.id),
-          ]);
-        }
+        // Load program-scoped data for the target (active OR draft). KPIs,
+        // goals, nutrition templates and habit links are set up while the
+        // program is still a draft, so they MUST load for a draft too —
+        // otherwise a re-init wiped them from cache while the row stayed in the
+        // DB, so they "disappeared" and re-creating hit the unique constraint
+        // ("déjà créé"). The runtime series (logs, discipline, values,
+        // trophies, alerts) simply come back empty for a draft — harmless.
+        const today = new Date().toISOString().slice(0, 10);
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const weekAhead = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+        const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        await Promise.all([
+          get().loadOverrides(target.id, weekAgo, weekAhead),
+          get().loadSessionLogs(target.id, weekAgo, today),
+          get().loadNutritionTemplates(target.id),
+          get().loadHabitLinks(target.id),
+          get().loadDisciplineScores(target.id, monthAgo, today),
+          get().loadKpis(target.id),
+          get().loadKpiValues(target.id, monthAgo, today),
+          get().loadGoals(target.id),
+          get().loadTrophies(target.id),
+          get().loadAlerts(target.id),
+        ]);
       }
     } catch (err) {
       console.error('[programStore] init failed:', err);
@@ -1037,6 +1039,60 @@ export const useProgramStore = create((set, get) => ({
   getLatestKpiValue: (kpiId) => {
     const vals = get().kpiValuesByKpi[kpiId] || [];
     return vals.length ? vals[vals.length - 1] : null;
+  },
+
+  /** Distinct exercises used across the program's sessions (for KPI binding). */
+  getProgramExercises: () => {
+    const s = get();
+    const seen = new Map();
+    for (const list of Object.values(s.exercisesBySession || {})) {
+      for (const ex of (list || [])) {
+        const name = (ex.exercise_name || '').trim();
+        if (name && !seen.has(name.toLowerCase())) {
+          seen.set(name.toLowerCase(), { name, key: ex.exercise_key || null });
+        }
+      }
+    }
+    return [...seen.values()];
+  },
+
+  /**
+   * Live per-session series for an exercise-bound gym KPI, computed from the
+   * logged workouts in healthStore (which Programme sessions mirror into). This
+   * is what makes a "1RM estimé — Bench Press" KPI show a real, per-exercise
+   * number and trend — the generic library KPIs aggregated every exercise
+   * together, which the user (rightly) found pointless.
+   * @param {string} metricKey 'estimated_1rm' | 'max_weight_lifted' | 'total_volume'
+   * @param {string} exerciseName
+   */
+  getExerciseKpiSeries: (metricKey, exerciseName) => {
+    if (!exerciseName) return { series: [], latest: null, previous: null, trend: null };
+    let workouts = [];
+    try { workouts = useHealthStore.getState().workouts || []; } catch { workouts = []; }
+    const target = exerciseName.trim().toLowerCase();
+    const byDate = {};
+    for (const w of workouts) {
+      if (w.type !== 'strength') continue;
+      if ((w.exercise || '').trim().toLowerCase() !== target) continue;
+      const sets = w.sets || [];
+      for (const set of sets) {
+        const weight = Number(set.weight) || 0;
+        const reps = Number(set.reps) || 0;
+        let v = 0;
+        if (metricKey === 'estimated_1rm') v = weight && reps ? weight * (1 + reps / 30) : 0;
+        else if (metricKey === 'max_weight_lifted') v = weight;
+        else if (metricKey === 'total_volume') v = weight * reps;
+        if (metricKey === 'total_volume') byDate[w.date] = (byDate[w.date] || 0) + v;
+        else byDate[w.date] = Math.max(byDate[w.date] || 0, v);
+      }
+    }
+    const series = Object.entries(byDate)
+      .map(([date, value]) => ({ date, value: Math.round(value * 10) / 10 }))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const latest = series.length ? series[series.length - 1] : null;
+    const previous = series.length >= 2 ? series[series.length - 2] : null;
+    const trend = latest && previous ? Math.round((latest.value - previous.value) * 10) / 10 : null;
+    return { series, latest, previous, trend };
   },
 
   // --- Goals ---

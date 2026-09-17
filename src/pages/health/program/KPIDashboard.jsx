@@ -4,6 +4,22 @@ import { Card, Button, Field, Input, Select, Badge, EmptyState, Modal } from '..
 import { useProgramStore } from '../../../store/programStore';
 import { KPI_LIBRARY, KPI_CATEGORIES, getKpiDefinition } from '../../../utils/kpi-library';
 
+// Gym metrics that only make sense per-exercise. Bound to a chosen exercise and
+// stored as CUSTOM KPIs (kpi_key null) so several exercises can each have one
+// without hitting the (program_id, kpi_key) unique constraint.
+const EXERCISE_BINDABLE = new Set(['estimated_1rm', 'max_weight_lifted', 'total_volume']);
+
+// custom_source "metric::Exercise Name" → { metricKey, exerciseName } | null
+function parseExerciseBinding(kpi) {
+  const src = kpi?.custom_source || '';
+  const i = src.indexOf('::');
+  if (i === -1) return null;
+  const metricKey = src.slice(0, i);
+  const exerciseName = src.slice(i + 2);
+  if (!EXERCISE_BINDABLE.has(metricKey) || !exerciseName) return null;
+  return { metricKey, exerciseName };
+}
+
 /**
  * KPI Dashboard — shows tracked KPIs with latest values, trends, and targets.
  */
@@ -83,16 +99,23 @@ export default function KPIDashboard() {
 function KpiTile({ kpi }) {
   const store = useProgramStore();
   const def = kpi.kpi_key ? getKpiDefinition(kpi.kpi_key) : null;
-  const latest = store.getLatestKpiValue(kpi.id);
-  const values = store.getKpiValues(kpi.id);
+  const binding = parseExerciseBinding(kpi);
 
-  // Compute trend (last vs previous)
-  const trend = values.length >= 2
-    ? values[values.length - 1].value - values[values.length - 2].value
-    : null;
-
-  const name = def?.name || kpi.custom_name || kpi.kpi_key;
-  const unit = def?.unit || kpi.custom_unit || '';
+  let latest, trend, name, unit;
+  if (binding) {
+    const s = store.getExerciseKpiSeries(binding.metricKey, binding.exerciseName);
+    latest = s.latest;      // { date, value } | null
+    trend = s.trend;
+    const bdef = getKpiDefinition(binding.metricKey);
+    name = kpi.custom_name || bdef?.name || binding.metricKey;
+    unit = bdef?.unit || kpi.custom_unit || '';
+  } else {
+    latest = store.getLatestKpiValue(kpi.id);
+    const values = store.getKpiValues(kpi.id);
+    trend = values.length >= 2 ? values[values.length - 1].value - values[values.length - 2].value : null;
+    name = def?.name || kpi.custom_name || kpi.kpi_key;
+    unit = def?.unit || kpi.custom_unit || '';
+  }
 
   return (
     <div className="bg-surface border border-line rounded-lg p-3">
@@ -123,9 +146,18 @@ function KpiTile({ kpi }) {
 
 function KpiRow({ kpi, def }) {
   const store = useProgramStore();
-  const latest = store.getLatestKpiValue(kpi.id);
-  const name = def?.name || kpi.custom_name || kpi.kpi_key;
-  const unit = def?.unit || kpi.custom_unit || '';
+  const binding = parseExerciseBinding(kpi);
+  let latest, name, unit;
+  if (binding) {
+    latest = store.getExerciseKpiSeries(binding.metricKey, binding.exerciseName).latest;
+    const bdef = getKpiDefinition(binding.metricKey);
+    name = kpi.custom_name || bdef?.name || binding.metricKey;
+    unit = bdef?.unit || kpi.custom_unit || '';
+  } else {
+    latest = store.getLatestKpiValue(kpi.id);
+    name = def?.name || kpi.custom_name || kpi.kpi_key;
+    unit = def?.unit || kpi.custom_unit || '';
+  }
 
   const handleRemove = async () => {
     const program = store.activeProgram || store.draftProgram;
@@ -165,14 +197,30 @@ function AddKpiModal({ programId, existingKeys, onClose }) {
   const [customUnit, setCustomUnit] = useState('');
   const [targetValue, setTargetValue] = useState('');
   const [targetDirection, setTargetDirection] = useState('higher');
+  const [exerciseName, setExerciseName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const available = KPI_LIBRARY.filter((k) => !existingKeys.includes(k.key));
+  const programExercises = store.getProgramExercises();
+  // Exercise-specific gym metrics can be added once per exercise, so they are
+  // NOT filtered out by existingKeys (they're stored as custom KPIs anyway).
+  const available = KPI_LIBRARY.filter((k) => EXERCISE_BINDABLE.has(k.key) || !existingKeys.includes(k.key));
+  const isBindable = mode === 'library' && EXERCISE_BINDABLE.has(selectedKey);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (mode === 'library' && selectedKey) {
+      if (isBindable && selectedKey && exerciseName.trim()) {
+        // Per-exercise gym KPI → stored as a custom KPI bound via custom_source
+        const def = getKpiDefinition(selectedKey);
+        const exName = exerciseName.trim();
+        await store.addKpi(programId, {
+          custom_name: `${def.name} — ${exName}`,
+          custom_unit: def.unit,
+          custom_source: `${selectedKey}::${exName}`,
+          target_value: targetValue ? parseFloat(targetValue) : null,
+          target_direction: targetDirection,
+        });
+      } else if (mode === 'library' && selectedKey) {
         await store.addKpi(programId, {
           kpi_key: selectedKey,
           target_value: targetValue ? parseFloat(targetValue) : null,
@@ -246,6 +294,25 @@ function AddKpiModal({ programId, existingKeys, onClose }) {
           </div>
         )}
 
+        {isBindable && (
+          <Field label="Sur quel exercice ?" hint="Le KPI suivra cet exercice spécifiquement (1RM, charge max, volume).">
+            {programExercises.length > 0 ? (
+              <Select value={exerciseName} onChange={(e) => setExerciseName(e.target.value)}>
+                <option value="">— Choisir un exercice —</option>
+                {programExercises.map((ex) => (
+                  <option key={ex.name} value={ex.name}>{ex.name}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={exerciseName}
+                onChange={(e) => setExerciseName(e.target.value)}
+                placeholder="ex: Barbell Bench Press"
+              />
+            )}
+          </Field>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Cible (optionnel)">
             <Input type="number" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} placeholder="—" />
@@ -263,7 +330,7 @@ function AddKpiModal({ programId, existingKeys, onClose }) {
 
       <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-line">
         <Button variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button onClick={handleSave} disabled={saving || (mode === 'library' && !selectedKey) || (mode === 'custom' && !customName.trim())}>
+        <Button onClick={handleSave} disabled={saving || (mode === 'library' && !selectedKey) || (isBindable && !exerciseName.trim()) || (mode === 'custom' && !customName.trim())}>
           {saving ? 'Ajout…' : 'Ajouter'}
         </Button>
       </div>
