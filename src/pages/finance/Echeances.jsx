@@ -4,6 +4,7 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { ENTRY_TEMPLATES } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
+import { useFinanceMode, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
 import AccountSelect from '../../components/common/AccountSelect';
 
 // Seuls les modèles pertinents pour un mouvement RÉCURRENT/PROGRAMMÉ (pas les
@@ -39,6 +40,7 @@ const blank = () => {
 };
 
 export default function Echeances() {
+  const simple = useFinanceMode() === 'simple';
   const {
     echeances, addEcheance, editEcheance, deleteEcheance, toggleEcheanceActive, markEcheancePaid,
     getUpcomingEcheances, getOverdueEcheances, echeanceAlerts, setEcheanceAlertsEnabled,
@@ -223,11 +225,11 @@ export default function Echeances() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={`Débit — ${tpl.debit.role}`}>
-              <AccountSelect classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
+            <Field label={simple ? SIMPLE_TEMPLATES[tpl.id]?.debit || tpl.debit.role : `Débit — ${tpl.debit.role}`}>
+              <AccountSelect simple={simple} classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
             </Field>
-            <Field label={`Crédit — ${tpl.credit.role}`}>
-              <AccountSelect classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
+            <Field label={simple ? SIMPLE_TEMPLATES[tpl.id]?.credit || tpl.credit.role : `Crédit — ${tpl.credit.role}`}>
+              <AccountSelect simple={simple} classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
             </Field>
           </div>
           <div className={`grid gap-3 ${form.recurrence === 'weekly' ? 'grid-cols-3' : 'grid-cols-2'}`}>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale } from 'lucide-react';
+import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Circle } from 'lucide-react';
+import { useFinanceMode, describeEntry, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceStore } from '../../store/financeStore';
 import { ENTRY_TEMPLATES, accountLabel, classOf } from '../../utils/chart-of-accounts';
@@ -50,10 +51,31 @@ const blankExpert = () => ({
 });
 
 // Saisie guidée : un modèle → une écriture équilibrée à deux lignes.
-function TemplateForm({ onSubmit, onCancel }) {
-  const [templateId, setTemplateId] = useState('expense');
+const MAIN_SIMPLE = ['expense', 'income', 'transfer'];
+
+// Which template a 2-line entry corresponds to (for editing in guided mode).
+function templateForEntry(entry) {
+  const d = entry.lines.find((l) => Number(l.debit) > 0);
+  const c = entry.lines.find((l) => Number(l.credit) > 0);
+  if (!d || !c || entry.lines.length !== 2) return null;
+  return ENTRY_TEMPLATES.find((t) => t.debit.classes.includes(classOf(d.account)) && t.credit.classes.includes(classOf(c.account))) || null;
+}
+
+function TemplateForm({ onSubmit, onCancel, simple = false, initial = null }) {
+  const initTpl = initial ? templateForEntry(initial) : null;
+  const [templateId, setTemplateId] = useState(initTpl?.id || 'expense');
+  const [showAll, setShowAll] = useState(!!initTpl && !MAIN_SIMPLE.includes(initTpl.id));
   const tpl = ENTRY_TEMPLATES.find((t) => t.id === templateId);
-  const [form, setForm] = useState({ date: today(), label: '', amount: '', debitAccount: tpl.debit.default, creditAccount: tpl.credit.default });
+  const [form, setForm] = useState(() => {
+    if (initial && initTpl) {
+      const d = initial.lines.find((l) => Number(l.debit) > 0);
+      const c = initial.lines.find((l) => Number(l.credit) > 0);
+      return { date: initial.date, label: initial.label, amount: String(d.debit), debitAccount: d.account, creditAccount: c.account };
+    }
+    return { date: today(), label: '', amount: '', debitAccount: tpl.debit.default, creditAccount: tpl.credit.default };
+  });
+  const words = SIMPLE_TEMPLATES[templateId];
+  const visibleTemplates = simple && !showAll ? ENTRY_TEMPLATES.filter((t) => MAIN_SIMPLE.includes(t.id)) : ENTRY_TEMPLATES;
 
   const pickTemplate = (id) => {
     const t = ENTRY_TEMPLATES.find((x) => x.id === id);
@@ -67,7 +89,7 @@ function TemplateForm({ onSubmit, onCancel }) {
     if (!amount || amount <= 0) return toast('Montant invalide', 'error');
     onSubmit({
       date: form.date,
-      label: form.label || tpl.label,
+      label: form.label || (simple ? words.label : tpl.label),
       lines: [
         { account: form.debitAccount, debit: amount, credit: 0 },
         { account: form.creditAccount, debit: 0, credit: amount },
@@ -78,20 +100,23 @@ function TemplateForm({ onSubmit, onCancel }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {ENTRY_TEMPLATES.map((t) => (
+        {visibleTemplates.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => pickTemplate(t.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs border transition-colors cursor-pointer ${
+            className={`${simple && MAIN_SIMPLE.includes(t.id) ? 'px-4 py-2 text-sm font-medium' : 'px-3 py-1.5 text-xs'} rounded-lg border transition-colors cursor-pointer ${
               t.id === templateId ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
             }`}
           >
-            {t.label}
+            {simple ? SIMPLE_TEMPLATES[t.id].label : t.label}
           </button>
         ))}
+        {simple && !showAll && (
+          <button type="button" onClick={() => setShowAll(true)} className="px-3 py-1.5 rounded-lg text-xs text-mute hover:text-ink cursor-pointer">Autres…</button>
+        )}
       </div>
-      <p className="text-xs text-mute">{tpl.hint}</p>
+      {!simple && <p className="text-xs text-mute">{tpl.hint}</p>}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Date">
           <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -99,11 +124,11 @@ function TemplateForm({ onSubmit, onCancel }) {
         <Field label="Montant (DH)">
           <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} autoFocus />
         </Field>
-        <Field label={`Débit — ${tpl.debit.role}`}>
-          <AccountSelect classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
+        <Field label={simple ? words.debit : `Débit — ${tpl.debit.role}`}>
+          <AccountSelect simple={simple} classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
         </Field>
-        <Field label={`Crédit — ${tpl.credit.role}`}>
-          <AccountSelect classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
+        <Field label={simple ? words.credit : `Crédit — ${tpl.credit.role}`}>
+          <AccountSelect simple={simple} classes={tpl.credit.classes} value={form.creditAccount} onChange={(e) => setForm({ ...form, creditAccount: e.target.value })} />
         </Field>
       </div>
       <LabelField
@@ -111,11 +136,11 @@ function TemplateForm({ onSubmit, onCancel }) {
         value={form.label}
         onChange={(v) => setForm({ ...form, label: v })}
         account={classOf(form.debitAccount) === 6 ? form.debitAccount : null}
-        placeholder={tpl.label}
+        placeholder={simple ? (templateId === 'expense' ? 'ex : Café Omar, Marjane…' : words.label) : tpl.label}
       />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={onCancel}>Annuler</Button>
-        <Button type="submit">Enregistrer l'écriture</Button>
+        <Button type="submit">{simple ? 'Enregistrer' : "Enregistrer l'écriture"}</Button>
       </div>
     </form>
   );
@@ -200,6 +225,11 @@ export default function Journal() {
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [monthFilter, setMonthFilter] = useState('');
+  const [deleting, setDeleting] = useState(null);
+  const mode = useFinanceMode();
+  const simple = mode === 'simple';
+  // Simple mode edits 2-line entries in the guided form; anything else opens the expert form.
+  const openEdit = (e) => { setEditing(e); setModal(simple && templateForEntry(e) ? 'template' : 'expert'); };
 
   const sorted = useMemo(
     () =>
@@ -239,15 +269,44 @@ export default function Journal() {
               <span className="flex items-center gap-2"><Import size={15} /> Importer {legacyCount} anciennes transactions</span>
             </Button>
           )}
-          <Button variant="secondary" onClick={() => { setEditing(null); setModal('expert'); }}>Saisie experte</Button>
+          {!simple && <Button variant="secondary" onClick={() => { setEditing(null); setModal('expert'); }}>Saisie experte</Button>}
           <Button onClick={() => { setEditing(null); setModal('template'); }}>
-            <span className="flex items-center gap-2"><Plus size={16} /> Nouvelle écriture</span>
+            <span className="flex items-center gap-2"><Plus size={16} /> {simple ? 'Nouvelle opération' : 'Nouvelle écriture'}</span>
           </Button>
         </div>
       </div>
 
-      <Card title={`Journal général (${sorted.length} écriture${sorted.length > 1 ? 's' : ''})`}>
-        {sorted.length ? (
+      <Card title={simple ? `Opérations (${sorted.length})` : `Journal général (${sorted.length} écriture${sorted.length > 1 ? 's' : ''})`}>
+        {sorted.length && simple ? (
+          <div className="divide-y divide-line/60">
+            {sorted.map((e) => {
+              const d = describeEntry(e, accountMap);
+              const meta = {
+                expense: { Icon: ArrowUpRight, color: 'var(--error)', sign: '−' },
+                income: { Icon: ArrowDownLeft, color: 'var(--success)', sign: '+' },
+                transfer: { Icon: ArrowLeftRight, color: 'var(--accent-primary)', sign: '' },
+                other: { Icon: Circle, color: 'var(--text-secondary)', sign: '' },
+              }[d.kind];
+              return (
+                <div key={e.id} className="flex items-center gap-3 py-2.5 px-1 group">
+                  <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${meta.color} 14%, transparent)` }}>
+                    <meta.Icon size={15} style={{ color: meta.color }} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-ink truncate">{e.label}</div>
+                    <div className="text-[11px] text-mute truncate">
+                      {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}{d.via ? ` · ${d.via}` : ''}
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: d.kind === 'other' ? undefined : meta.color }}>{meta.sign}{fmtMAD(d.amount)}</span>
+                  <button className="p-1 text-mute hover:text-accent cursor-pointer" title="Modifier" onClick={() => openEdit(e)}><Pencil size={13} /></button>
+                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => setDeleting(e)}><Trash2 size={13} /></button>
+                </div>
+              );
+            })}
+          </div>
+        ) : sorted.length ? (
           <div className="space-y-1.5">
             {sorted.map((e) => (
               <div key={e.id} className="border border-line rounded-lg overflow-hidden">
@@ -264,8 +323,7 @@ export default function Journal() {
                     className="text-mute hover:text-accent cursor-pointer"
                     onClick={(ev) => {
                       ev.stopPropagation();
-                      setEditing(e);
-                      setModal('expert');
+                      openEdit(e);
                     }}
                   >
                     <Pencil size={13} />
@@ -274,7 +332,7 @@ export default function Journal() {
                     className="text-mute hover:text-bad cursor-pointer"
                     onClick={(ev) => {
                       ev.stopPropagation();
-                      if (confirm(`Supprimer l'écriture "${e.label}" ?`)) deleteEntry(e.id);
+                      setDeleting(e);
                     }}
                   >
                     <Trash2 size={13} />
@@ -301,13 +359,24 @@ export default function Journal() {
           </div>
         ) : (
           <EmptyState>
-            Aucune écriture. Commencez par « Soldes d'ouverture » pour inventorier vos avoirs, puis saisissez vos opérations.
+            {simple
+              ? <>Aucune opération. Commencez par « Nouvelle opération » → Autres… → « Soldes de départ » pour indiquer ce que vous avez sur chaque compte, puis ajoutez vos dépenses et revenus.</>
+              : <>Aucune écriture. Commencez par « Soldes d'ouverture » pour inventorier vos avoirs, puis saisissez vos opérations.</>}
           </EmptyState>
         )}
       </Card>
 
-      <Modal open={modal === 'template'} onClose={() => setModal(null)} title="Nouvelle écriture (guidée)" wide>
-        <TemplateForm onSubmit={submit} onCancel={() => setModal(null)} />
+      <Modal open={modal === 'template'} onClose={() => { setModal(null); setEditing(null); }} title={editing ? 'Modifier l’opération' : simple ? 'Nouvelle opération' : 'Nouvelle écriture (guidée)'} wide>
+        {modal === 'template' && (
+          <TemplateForm key={editing?.id || 'new'} simple={simple} initial={editing} onSubmit={submit} onCancel={() => { setModal(null); setEditing(null); }} />
+        )}
+      </Modal>
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title={simple ? 'Supprimer cette opération ?' : 'Supprimer cette écriture ?'}>
+        <p className="text-sm text-mute">« {deleting?.label} » sera supprimée, ainsi que son effet sur vos soldes, budgets et états.</p>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
+          <Button variant="danger" onClick={() => { deleteEntry(deleting.id); setDeleting(null); }}>Supprimer</Button>
+        </div>
       </Modal>
       <Modal open={modal === 'expert'} onClose={() => { setModal(null); setEditing(null); }} title={editing ? `Modifier ${editing.ref}` : 'Saisie experte (multi-lignes)'} wide>
         {modal === 'expert' && (

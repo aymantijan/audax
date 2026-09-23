@@ -5,6 +5,7 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { DEFAULT_BUDGET_PERIOD } from '../../utils/accounting-engine';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
+import { useFinanceMode } from '../../components/finance/financeMode';
 import AccountSelect from '../../components/common/AccountSelect';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
@@ -203,6 +204,7 @@ function BudgetInsightsPanel({ v, refDate, natureCharges }) {
 }
 
 export default function Budget() {
+  const simple = useFinanceMode() === 'simple';
   const { budgets, addBudget, editBudget, deleteBudget, getBudgetVariance, getBudgetAlerts, budgetAlerts, setBudgetAlertsEnabled } = useAccountingStore();
   const [refDate, setRefDate] = useState(todayISO());
   const [modal, setModal] = useState(false);
@@ -363,9 +365,9 @@ export default function Budget() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Produits — budget vs réel" value={fmtMAD(totReelProduits)} sub={`Budget : ${fmtMAD(totBudgetProduits)}`} color="var(--success)" />
-        <Stat label="Charges — budget vs réel" value={fmtMAD(totReelCharges)} sub={`Budget : ${fmtMAD(totBudgetCharges)}`} color={totReelCharges > totBudgetCharges ? 'var(--error)' : undefined} />
-        <Stat label="Solde budgété" value={fmtMAD(soldeBudgete)} sub="Σ budgets produits − Σ budgets charges" />
+        <Stat label={simple ? "Revenus — prévu vs réel" : "Produits — budget vs réel"} value={fmtMAD(totReelProduits)} sub={`Budget : ${fmtMAD(totBudgetProduits)}`} color="var(--success)" />
+        <Stat label={simple ? "Dépenses — prévu vs réel" : "Charges — budget vs réel"} value={fmtMAD(totReelCharges)} sub={`Budget : ${fmtMAD(totBudgetCharges)}`} color={totReelCharges > totBudgetCharges ? 'var(--error)' : undefined} />
+        <Stat label="Solde budgété" value={fmtMAD(soldeBudgete)} sub={simple ? "revenus prévus − dépenses prévues" : "Σ budgets produits − Σ budgets charges"} />
         <Stat label="Solde réel" value={fmtMAD(soldeReel)} color={soldeReel >= soldeBudgete ? 'var(--success)' : 'var(--warning)'} sub={`Écart global : ${soldeReel - soldeBudgete >= 0 ? '+' : ''}${fmtMAD(soldeReel - soldeBudgete)}`} />
       </div>
 
@@ -386,14 +388,14 @@ export default function Budget() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-6 items-start">
-        <VarianceTable rows={charges} title="Budgets de charges — contrôle des écarts" natureCharges />
-        <VarianceTable rows={produits} title="Budgets de produits — objectifs de revenus" />
+        <VarianceTable rows={charges} title={simple ? "Budgets de dépenses" : "Budgets de charges — contrôle des écarts"} natureCharges />
+        <VarianceTable rows={produits} title={simple ? "Objectifs de revenus" : "Budgets de produits — objectifs de revenus"} />
       </div>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editingId ? 'Modifier le budget' : 'Définir un budget'}>
         <form onSubmit={submit} className="space-y-3">
-          <Field label="Compte (charge à plafonner ou produit à viser)" hint="Plusieurs budgets peuvent coexister sur le même compte (ex : un plafond hebdo ET un plafond annuel).">
-            <AccountSelect classes={[6, 7]} value={form.account} onChange={(e) => setForm({ ...form, account: e.target.value })} />
+          <Field label={simple ? "Catégorie (dépense à plafonner ou revenu à viser)" : "Compte (charge à plafonner ou produit à viser)"} hint="Plusieurs budgets peuvent coexister sur le même compte (ex : un plafond hebdo ET un plafond annuel).">
+            <AccountSelect simple={simple} classes={[6, 7]} value={form.account} onChange={(e) => setForm({ ...form, account: e.target.value })} />
           </Field>
           <Field label="Montant du plafond/objectif sur la période (DH)">
             <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} autoFocus />

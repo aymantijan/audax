@@ -25,9 +25,9 @@ export const fmtSignedMoney = (n, currency = 'USD') => {
 
 // MAD (personal finance) — dirham shown as a "DH" suffix
 export const fmtMAD = (n, digits = 0) =>
-  (n < 0 ? '-' : '') + Math.abs(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) }) + ' DH';
+  (n < 0 ? '-' : '') + Math.abs(n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) }) + ' DH';
 
-export const fmtSignedMAD = (n) => (n >= 0 ? '+' : '-') + Math.abs(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' DH';
+export const fmtSignedMAD = (n) => (n >= 0 ? '+' : '-') + Math.abs(n ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' DH';
 
 export const fmtPct = (n, digits = 0) => `${(n ?? 0).toFixed(digits)}%`;
 

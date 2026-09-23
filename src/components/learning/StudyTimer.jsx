@@ -5,6 +5,7 @@ import { useFocusStore } from '../../store/focusStore';
 import { useLearningStore } from '../../store/learningStore';
 import { isAcademic } from '../../utils/academic';
 import { todayKey } from '../../utils/formatters';
+import { FOCUS_DOMAINS } from '../../utils/constants';
 import { Button, Field, Input, Modal, Select } from '../common/ui';
 import { tint, useAcademicSettings } from './design';
 import { courseColor } from './TimetableView';
@@ -70,9 +71,18 @@ function useTargetChime(timer, ms) {
   }, [timer, ms]);
 }
 
-export function useCourseLabel(courseId) {
+// French labels for the focus domains (keys stay as stored).
+export const DOMAIN_LABELS = {
+  Trading: 'Trading', PE: 'Private equity', Engineering: 'Ingénierie', Business: 'Business', Learning: 'Apprentissage',
+  Health: 'Santé', Networking: 'Réseau', Career: 'Carrière', Content: 'Contenu', Projects: 'Projets', Creative: 'Création', General: 'Général',
+};
+export const domainLabel = (d) => DOMAIN_LABELS[d] || d;
+
+export function useCourseLabel(courseId, domain = 'Learning') {
   const course = useLearningStore((s) => s.courses.find((c) => c.id === courseId));
-  return course?.name || (courseId ? 'Cours supprimé' : 'Étude libre');
+  if (course) return course.name;
+  if (courseId) return 'Cours supprimé';
+  return domain === 'Learning' ? 'Étude libre' : domainLabel(domain);
 }
 
 function Ring({ pct, color, size = 132, children }) {
@@ -105,14 +115,15 @@ export function CourseOptions({ courses, settings }) {
 }
 
 /** Big timer card for the Aujourd'hui view. */
-export function StudyTimerCard({ preselect }) {
+export function StudyTimerCard({ preselect, allDomains = false }) {
   const courses = useLearningStore((s) => s.courses);
   const settings = useAcademicSettings();
   const { startTimer, pauseTimer, resumeTimer, stopTimer, cancelTimer } = useFocusStore();
   const { timer, ms } = useTimerElapsed();
   const [courseId, setCourseId] = useState('');
   const [mode, setMode] = useState('p50');
-  const label = useCourseLabel(timer?.courseId);
+  const [domain, setDomain] = useState('Learning');
+  const label = useCourseLabel(timer?.courseId, timer?.domain);
   useTargetChime(timer, ms);
   useEffect(() => { if (preselect) setCourseId(preselect); }, [preselect]);
 
@@ -124,18 +135,25 @@ export function StudyTimerCard({ preselect }) {
   if (!timer) {
     return (
       <div className="rounded-2xl border border-line p-5 h-full" style={{ background: `linear-gradient(135deg, ${tint('var(--accent-primary)', 10)}, var(--bg-tertiary) 60%)` }}>
-        <div className="flex items-center gap-2 text-sm font-semibold text-ink"><Timer size={16} className="text-accent" /> Session d'étude</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-ink"><Timer size={16} className="text-accent" /> {allDomains ? 'Session de concentration' : "Session d'étude"}</div>
         <div className="flex flex-col sm:flex-row gap-5 mt-4 items-center">
           <Ring pct={0} color="var(--accent-primary)">
             <div className="text-2xl font-bold tabular-nums text-ink">00:00</div>
             <div className="text-[10px] text-mute">prêt</div>
           </Ring>
           <div className="flex-1 w-full space-y-3">
-            <Field label="Matière / cours">
-              <Select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
-                <CourseOptions courses={courses} settings={settings} />
-              </Select>
-            </Field>
+            {allDomains && (
+              <Field label="Domaine">
+                <Select value={domain} onChange={(e) => setDomain(e.target.value)} options={FOCUS_DOMAINS.map((d) => ({ value: d, label: domainLabel(d) }))} />
+              </Field>
+            )}
+            {(!allDomains || domain === 'Learning') && (
+              <Field label="Matière / cours">
+                <Select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
+                  <CourseOptions courses={courses} settings={settings} />
+                </Select>
+              </Field>
+            )}
             <div className="flex flex-wrap gap-1.5">
               {TIMER_MODES.map((m) => (
                 <button key={m.key} type="button" onClick={() => setMode(m.key)}
@@ -144,7 +162,10 @@ export function StudyTimerCard({ preselect }) {
                 </button>
               ))}
             </div>
-            <Button className="w-full" onClick={() => startTimer({ domain: 'Learning', courseId: courseId || null, targetMin: TIMER_MODES.find((m) => m.key === mode)?.targetMin })}>
+            <Button className="w-full" onClick={() => {
+              const d = allDomains ? domain : 'Learning';
+              startTimer({ domain: d, courseId: d === 'Learning' ? courseId || null : null, targetMin: TIMER_MODES.find((m) => m.key === mode)?.targetMin });
+            }}>
               <span className="flex items-center justify-center gap-2"><Play size={15} /> Démarrer</span>
             </Button>
           </div>
@@ -186,11 +207,12 @@ export function StudyTimerCard({ preselect }) {
 export function StudyTimerDock() {
   const { timer, ms } = useTimerElapsed();
   const { pauseTimer, resumeTimer, stopTimer } = useFocusStore();
-  const label = useCourseLabel(timer?.courseId);
+  const label = useCourseLabel(timer?.courseId, timer?.domain);
   const location = useLocation();
   useTargetChime(timer, ms);
-  if (!timer || timer.domain !== 'Learning') return null;
-  // The Aujourd'hui view already shows the full timer.
+  if (!timer) return null;
+  // The Aujourd'hui view and the Deep Work page already show the full timer.
+  if (location.pathname === '/focus') return null;
   if (location.pathname === '/learning' && !location.search.includes('tab=')) return null;
   const color = timer.courseId ? courseColor(timer.courseId) : 'var(--accent-primary)';
   const reached = timer.targetMin && ms >= timer.targetMin * 60000;
@@ -198,7 +220,7 @@ export function StudyTimerDock() {
     <div className="fixed z-40 bottom-20 md:bottom-6 left-4 md:left-6 flex items-center gap-2 rounded-full border bg-card shadow-xl pl-3 pr-1.5 py-1.5 max-w-[calc(100vw-7rem)]"
       style={{ borderColor: tint(color, 50) }}>
       <span className={`w-2 h-2 rounded-full shrink-0 ${timer.pausedAt ? '' : 'animate-pulse'}`} style={{ background: reached ? 'var(--success)' : color }} />
-      <Link to="/learning" className="min-w-0 flex items-baseline gap-2">
+      <Link to={timer.domain === 'Learning' ? '/learning' : '/focus'} className="min-w-0 flex items-baseline gap-2">
         <span className="font-mono font-semibold tabular-nums text-sm text-ink">{fmtClock(ms)}</span>
         <span className="text-xs text-mute truncate max-w-[9rem]">{label}</span>
       </Link>

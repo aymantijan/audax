@@ -132,6 +132,10 @@ export const useAccountingStore = create(
       goals: [], // [{ id, type:'treasury'|'networth', name, targetAmount, targetDate, achieved, achievedAt, xpAwarded, badge }]
       labelLimits: [], // [{ id, account, label, maxRatioToIncomePct, maxRatioToAccountSpendPct, createdAt }]
       legacyImported: false,
+      // Interface level: 'simple' (dépenses / revenus / catégories) or 'expert'
+      // (partie double, grand livre, états). null = not chosen yet — see useFinanceMode.
+      uiMode: null,
+      setUiMode: (mode) => set({ uiMode: mode }),
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
       assets: [], // définitions d'avoirs immobilisés (classe 2), SANS solde — le montant reste au journal (coût historique) ; ici : classification + métadonnées de valorisation pour Wealth OS. Voir addAsset.
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]

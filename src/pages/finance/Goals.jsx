@@ -1,3 +1,4 @@
+import { useFinanceMode } from '../../components/finance/financeMode';
 import { useEffect, useState } from 'react';
 import { Target, Pencil, Trash2, Trophy, Landmark, TrendingUp } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
@@ -56,6 +57,7 @@ function GoalCard({ g, onEdit, onDelete }) {
 }
 
 export default function Goals() {
+  const simple = useFinanceMode() === 'simple';
   const store = useAccountingStore();
   const { addGoal, editGoal, deleteGoal, checkGoalAchievement } = store;
   const [modal, setModal] = useState(false);
@@ -105,7 +107,7 @@ export default function Goals() {
         }
       >
         <p className="text-xs text-mute mb-4">
-          Basé sur le solde de la classe 5 (comptes de trésorerie) et le rythme mensuel des 6 derniers mois — issu automatiquement du journal.
+          {simple ? 'Basé sur le total de vos comptes et votre rythme d’épargne des 6 derniers mois.' : 'Basé sur le solde de la classe 5 (comptes de trésorerie) et le rythme mensuel des 6 derniers mois — issu automatiquement du journal.'}
         </p>
         {treasuryGoals.length ? (
           <div className="grid md:grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+import { useFinanceMode } from '../../components/finance/financeMode';
 import { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import { Landmark, Plus, Pencil, Archive, ArchiveRestore, Trash2, AlertTriangle } from 'lucide-react';
@@ -20,6 +21,7 @@ const METHOD_OPTIONS = [
 ];
 
 export default function TreasuryPure() {
+  const simple = useFinanceMode() === 'simple';
   const store = useAccountingStore();
   const { treasuryAccounts, addTreasuryAccount, editTreasuryAccount, archiveTreasuryAccount, unarchiveTreasuryAccount, deleteTreasuryAccount } = store;
   const balances = store.getBalances();
@@ -79,7 +81,7 @@ export default function TreasuryPure() {
   if (!store.journal.length && !treasuryAccounts.length) {
     return (
       <Card>
-        <EmptyState>La trésorerie (soldes, flux, prévisions) découle automatiquement des écritures de classe 5 au journal.</EmptyState>
+        <EmptyState>{simple ? 'Vos soldes, entrées/sorties et prévisions apparaîtront dès vos premières opérations.' : 'La trésorerie (soldes, flux, prévisions) découle automatiquement des écritures de classe 5 au journal.'}</EmptyState>
       </Card>
     );
   }
@@ -87,7 +89,7 @@ export default function TreasuryPure() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Trésorerie totale (classe 5)" value={fmtMAD(totalTreso)} color={totalTreso >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
+        <Stat label={simple ? "Total sur vos comptes" : "Trésorerie totale (classe 5)"} value={fmtMAD(totalTreso)} color={totalTreso >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
         <Stat
           label="Autonomie (runway)"
           value={runway === null ? '—' : `${runway.toFixed(1)} mois`}
@@ -145,7 +147,7 @@ export default function TreasuryPure() {
 
       {store.journal.length > 0 && (
         <div className="grid lg:grid-cols-2 gap-6">
-          <Card title="Encaissements vs Décaissements — 6 mois">
+          <Card title={simple ? "Entrées vs sorties d’argent — 6 mois" : "Encaissements vs Décaissements — 6 mois"}>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={series}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -159,7 +161,7 @@ export default function TreasuryPure() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title="Solde de trésorerie — historique et prévision">
+          <Card title={simple ? "Solde de vos comptes — passé et prévision" : "Solde de trésorerie — historique et prévision"}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart
                 data={[

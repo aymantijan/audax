@@ -6,12 +6,14 @@ import { ACCOUNT_MAP } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../../components/common/ui';
 import BadgeList from '../../components/common/BadgeList';
+import { useFinanceMode } from '../../components/finance/financeMode';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const PIE_COLORS = ['#00d9ff', '#b366ff', '#00d97f', '#ffa500', '#ff6b6b', '#7aa2ff', '#f7c948', '#9ae6b4'];
 
 export default function AccountingOverview() {
   const store = useAccountingStore();
+  const simple = useFinanceMode() === 'simple';
   const period = store.currentMonthPeriod();
   const c = store.getCPC(period);
   const e = store.getESG(period);
@@ -31,8 +33,8 @@ export default function AccountingOverview() {
 
   const alerts = useMemo(() => {
     const out = [];
-    if (a.tresorerieNette < 0) out.push({ id: 'tn', level: 'red', cat: 'Trésorerie', msg: `Trésorerie nette négative : ${fmtMAD(a.tresorerieNette)}` });
-    if (a.fondsRoulement < 0) out.push({ id: 'fr', level: 'red', cat: 'Équilibre', msg: 'Fonds de roulement négatif — les emplois durables ne sont pas couverts.' });
+    if (a.tresorerieNette < 0) out.push({ id: 'tn', level: 'red', cat: 'Trésorerie', msg: simple ? `Vos comptes sont dans le rouge : ${fmtMAD(a.tresorerieNette)}` : `Trésorerie nette négative : ${fmtMAD(a.tresorerieNette)}` });
+    if (a.fondsRoulement < 0 && !simple) out.push({ id: 'fr', level: 'red', cat: 'Équilibre', msg: 'Fonds de roulement négatif — les emplois durables ne sont pas couverts.' });
     for (const v of variance.filter((x) => x.cls === 6 && !x.favorable && x.amount > 0)) {
       out.push({ id: `b-${v.id}`, level: v.reel > v.amount * 1.25 ? 'red' : 'orange', cat: 'Budget', msg: `${v.label} : ${fmtMAD(v.reel)} dépensés pour ${fmtMAD(v.amount)} budgétés (${fmtPct(v.realisation ?? 0, 0)})` });
     }
@@ -40,18 +42,28 @@ export default function AccountingOverview() {
     else if (e.tauxEpargne !== null && e.tauxEpargne < 10) out.push({ id: 'ep2', level: 'orange', cat: 'Épargne', msg: `Taux d'épargne faible ce mois : ${fmtPct(e.tauxEpargne, 1)}` });
     const order = { red: 0, orange: 1 };
     return out.sort((x, y) => order[x.level] - order[y.level]);
-  }, [a, variance, e]);
+  }, [a, variance, e, simple]);
 
-  const chargesPie = c.detailCharges.slice(0, 8).map((d) => ({ name: `${d.code} ${ACCOUNT_MAP[d.code]?.label || ''}`, value: d.amount }));
+  const chargesPie = c.detailCharges.slice(0, 8).map((d) => ({ name: simple ? ACCOUNT_MAP[d.code]?.label || d.code : `${d.code} ${ACCOUNT_MAP[d.code]?.label || ''}`, value: d.amount }));
 
   if (!store.journal.length) {
     return (
       <Card>
         <EmptyState>
           <BookOpen className="mx-auto mb-2 text-mute" size={28} />
-          <p className="mb-1 font-medium text-ink">Votre comptabilité personnelle démarre au Journal.</p>
-          Saisissez vos « Soldes d'ouverture » (onglet Journal → Nouvelle écriture), puis chaque opération en partie double.
-          Bilan, CPC, ESG, analyse, budget et trésorerie se rempliront automatiquement.
+          {simple ? (
+            <>
+              <p className="mb-1 font-medium text-ink">Commencez par vos soldes de départ.</p>
+              Dépenses & budget → Opérations → « Nouvelle opération » → Autres… → « Soldes de départ » : indiquez ce que vous avez sur chaque compte.
+              Ajoutez ensuite vos dépenses et revenus : budget, trésorerie et patrimoine se mettent à jour tout seuls.
+            </>
+          ) : (
+            <>
+              <p className="mb-1 font-medium text-ink">Votre comptabilité personnelle démarre au Journal.</p>
+              Saisissez vos « Soldes d'ouverture » (Journal → Nouvelle écriture), puis chaque opération en partie double.
+              Bilan, CPC, ESG, analyse, budget et trésorerie se rempliront automatiquement.
+            </>
+          )}
         </EmptyState>
       </Card>
     );
@@ -74,10 +86,10 @@ export default function AccountingOverview() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Stat label="Trésorerie nette" value={fmtMAD(a.tresorerieNette)} color={a.tresorerieNette >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
-        <Stat label="Actif Net Comptable Corrigé" value={fmtMAD(netWorth.ancc)} sub={`ANC ${fmtMAD(netWorth.anc)}`} />
-        <Stat label="Produits (mois)" value={fmtMAD(c.produitsCourants + c.produitsExcep)} color="var(--success)" />
-        <Stat label="Charges (mois)" value={fmtMAD(c.chargesCourantes + c.chargesExcep)} />
+        <Stat label={simple ? "Disponible sur vos comptes" : "Trésorerie nette"} value={fmtMAD(a.tresorerieNette)} color={a.tresorerieNette >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
+        <Stat label={simple ? 'Patrimoine net' : 'Actif Net Comptable Corrigé'} value={fmtMAD(netWorth.ancc)} sub={simple ? 'ce que vous possédez − vos dettes' : `ANC ${fmtMAD(netWorth.anc)}`} />
+        <Stat label={simple ? "Revenus (mois)" : "Produits (mois)"} value={fmtMAD(c.produitsCourants + c.produitsExcep)} color="var(--success)" />
+        <Stat label={simple ? "Dépenses (mois)" : "Charges (mois)"} value={fmtMAD(c.chargesCourantes + c.chargesExcep)} />
         <Stat
           label="Taux d'épargne (mois)"
           value={e.tauxEpargne !== null ? fmtPct(e.tauxEpargne, 1) : '—'}
@@ -86,7 +98,7 @@ export default function AccountingOverview() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title="Produits vs Charges — 6 mois">
+        <Card title={simple ? "Revenus vs dépenses — 6 mois" : "Produits vs Charges — 6 mois"}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={series}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -95,13 +107,13 @@ export default function AccountingOverview() {
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="var(--border)" />
-              <Bar dataKey="produits" name="Produits (cl. 7)" fill="#00d97f" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="charges" name="Charges (cl. 6)" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="produits" name={simple ? "Revenus" : "Produits (cl. 7)"} fill="#00d97f" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="charges" name={simple ? "Dépenses" : "Charges (cl. 6)"} fill="#ff6b6b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
 
-        <Card title="Répartition des charges du mois (par compte)">
+        <Card title={simple ? "Où va votre argent ce mois-ci" : "Répartition des charges du mois (par compte)"}>
           {chargesPie.length ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
@@ -123,7 +135,7 @@ export default function AccountingOverview() {
               </div>
             </>
           ) : (
-            <EmptyState>Aucune charge ce mois-ci.</EmptyState>
+            <EmptyState>{simple ? "Aucune dépense ce mois-ci." : "Aucune charge ce mois-ci."}</EmptyState>
           )}
         </Card>
       </div>
