@@ -119,7 +119,55 @@ export function isHabitDueOn(habit, dateKey) {
 // Mon/Wed/Fri habit's streak counts consecutive Mon/Wed/Fri completions, not
 // consecutive calendar days. Passing `habit` is optional for backward compat —
 // omitting it (or a daily/weekly habit) behaves exactly as before.
+// Monday (YYYY-MM-DD) of the week containing `dateKey`.
+export function weekStartKey(dateKey) {
+  const d = new Date(dateKey + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return isoDay(d);
+}
+
+// Weekly habits ("X fois par semaine"): completions in the week of `dateKey`.
+export function weeklyProgress(habit, logs, dateKey) {
+  const target = Math.max(1, Number(habit?.timesPerWeek) || 1);
+  const from = weekStartKey(dateKey);
+  const end = new Date(from + 'T12:00:00'); end.setDate(end.getDate() + 6);
+  const to = isoDay(end);
+  const done = logs.filter((l) => l.habitId === habit.id && l.completed && l.date >= from && l.date <= to).length;
+  return { done, target, met: done >= target };
+}
+
+// Should a habit appear on the checklist of `dateKey`? Weekly habits stay
+// listed until their weekly quota is met (and on the days they were done).
+export function isHabitShownOn(habit, logs, dateKey) {
+  if (habit.startDate && habit.startDate > dateKey) return false;
+  if (habit.frequency === 'weekly') {
+    const doneThatDay = logs.some((l) => l.habitId === habit.id && l.date === dateKey && l.completed);
+    return doneThatDay || !weeklyProgress(habit, logs, dateKey).met;
+  }
+  return isHabitDueOn(habit, dateKey);
+}
+
+// Unit of habitStreak(): weeks for weekly habits, days otherwise.
+export const streakUnit = (habit) => (habit?.frequency === 'weekly' ? 'sem.' : 'j');
+
+// Weekly habits: consecutive weeks that met their quota. The running week
+// counts once met; until then the streak is carried by the previous weeks.
+function weeklyStreak(habit, logs, today) {
+  let wk = weekStartKey(today);
+  if (!weeklyProgress(habit, logs, wk).met) {
+    const d = new Date(wk + 'T12:00:00'); d.setDate(d.getDate() - 7); wk = isoDay(d);
+  }
+  let streak = 0;
+  for (let guard = 0; guard < 520; guard++) {
+    if (!weeklyProgress(habit, logs, wk).met) break;
+    streak++;
+    const d = new Date(wk + 'T12:00:00'); d.setDate(d.getDate() - 7); wk = isoDay(d);
+  }
+  return streak;
+}
+
 export function habitStreak(habitId, logs, today, habit) {
+  if (habit?.frequency === 'weekly') return weeklyStreak(habit, logs, today);
   const done = new Set(logs.filter((l) => l.habitId === habitId && l.completed).map((l) => l.date));
   const d = new Date(today + 'T00:00:00');
   if (isHabitDueOn(habit, isoDay(d)) && !done.has(isoDay(d))) d.setDate(d.getDate() - 1); // today not done yet → count from yesterday

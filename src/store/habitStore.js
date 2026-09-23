@@ -12,21 +12,21 @@ import { HABIT_CATEGORIES } from '../utils/constants';
 // `check` receives this store's state, `awardedBadges` persists which ones
 // already fired so re-checking on every toggle never re-toasts one.
 const BADGE_DEFS = [
-  { id: 'first-habit', name: 'First Habit', tier: 'bronze', check: (s) => s.habits.length >= 1 },
-  { id: 'getting-started', name: 'Getting Started', tier: 'bronze', check: (s) => s.logs.filter((l) => l.completed).length >= 10 },
-  { id: 'habit-architect', name: 'Habit Architect', tier: 'silver', check: (s) => s.habits.filter((h) => !h.archived).length >= 5 },
-  { id: 'habit-builder', name: 'Habit Builder', tier: 'silver', check: (s) => s.logs.filter((l) => l.completed).length >= 50 },
-  { id: 'category-explorer', name: 'Category Explorer', tier: 'silver', check: (s) => {
+  { id: 'first-habit', name: 'Première habitude', tier: 'bronze', check: (s) => s.habits.length >= 1 },
+  { id: 'getting-started', name: 'C’est parti', tier: 'bronze', check: (s) => s.logs.filter((l) => l.completed).length >= 10 },
+  { id: 'habit-architect', name: 'Architecte d’habitudes', tier: 'silver', check: (s) => s.habits.filter((h) => !h.archived).length >= 5 },
+  { id: 'habit-builder', name: 'Bâtisseur d’habitudes', tier: 'silver', check: (s) => s.logs.filter((l) => l.completed).length >= 50 },
+  { id: 'category-explorer', name: 'Explorateur', tier: 'silver', check: (s) => {
       const doneIds = new Set(s.logs.filter((l) => l.completed).map((l) => l.habitId));
       return new Set(s.habits.filter((h) => doneIds.has(h.id)).map((h) => h.category)).size >= 4;
     } },
-  { id: 'energy-tracker', name: 'Energy Tracker', tier: 'silver', check: (s) => s.energyLogs.length >= 30 },
-  { id: 'habit-master', name: 'Habit Master', tier: 'gold', check: (s) => s.logs.filter((l) => l.completed).length >= 200 },
-  { id: 'all-rounder', name: 'All-Rounder', tier: 'gold', check: (s) => {
+  { id: 'energy-tracker', name: 'À l’écoute de son énergie', tier: 'silver', check: (s) => s.energyLogs.length >= 30 },
+  { id: 'habit-master', name: 'Maître des habitudes', tier: 'gold', check: (s) => s.logs.filter((l) => l.completed).length >= 200 },
+  { id: 'all-rounder', name: 'Polyvalent', tier: 'gold', check: (s) => {
       const doneIds = new Set(s.logs.filter((l) => l.completed).map((l) => l.habitId));
       return new Set(s.habits.filter((h) => doneIds.has(h.id)).map((h) => h.category)).size >= HABIT_CATEGORIES.length;
     } },
-  { id: 'perfect-day', name: 'Perfect Day', tier: 'gold', check: (s) => {
+  { id: 'perfect-day', name: 'Journée parfaite', tier: 'gold', check: (s) => {
       const activeIds = s.habits.filter((h) => !h.archived).map((h) => h.id);
       if (!activeIds.length) return false;
       const byDate = {};
@@ -54,20 +54,26 @@ export const useHabitStore = create(
           ...data,
           id: uid(),
           xpReward: Number(data.xpReward) || 5,
+          timesPerWeek: data.frequency === 'weekly' ? Math.max(1, Math.min(7, Number(data.timesPerWeek) || 1)) : null,
+          moment: data.moment || 'any',
           archived: false,
           startDate: todayKey(),
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
         set({ habits: [...get().habits, habit] });
-        toast(`Habit added: ${habit.name}`, 'success');
+        toast(`Habitude ajoutée : ${habit.name}`, 'success');
         get().checkBadges();
       },
 
       editHabit: (id, updates) =>
         set({
           habits: get().habits.map((h) =>
-            h.id === id ? { ...h, ...updates, xpReward: Number(updates.xpReward ?? h.xpReward), updatedAt: Date.now() } : h
+            h.id === id ? {
+              ...h, ...updates, xpReward: Number(updates.xpReward ?? h.xpReward),
+              timesPerWeek: (updates.frequency ?? h.frequency) === 'weekly' ? Math.max(1, Math.min(7, Number(updates.timesPerWeek ?? h.timesPerWeek) || 1)) : null,
+              updatedAt: Date.now(),
+            } : h
           ),
         }),
 
@@ -75,7 +81,9 @@ export const useHabitStore = create(
         const habit = get().habits.find((h) => h.id === id);
         set({ habits: get().habits.map((h) => (h.id === id ? { ...h, archived: true, updatedAt: Date.now() } : h)) });
         if (habit?.googleEventId) endRecurringEvent(habit.googleEventId);
+        toast(`« ${habit?.name} » archivée`, 'info');
       },
+      unarchiveHabit: (id) => set({ habits: get().habits.map((h) => (h.id === id ? { ...h, archived: false, updatedAt: Date.now() } : h)) }),
 
       deleteHabit: (id) => {
         const habit = get().habits.find((h) => h.id === id);
@@ -130,10 +138,19 @@ export const useHabitStore = create(
       },
 
       saveEnergyLog: (log) => {
+        // One shared daily check-in: Santé's quick form and the detailed one
+        // here each save a subset — merge instead of replacing, so saving one
+        // never wipes what the other recorded (it used to).
         const others = get().energyLogs.filter((l) => l.date !== log.date);
-        const existing = get().energyLogs.find((l) => l.date === log.date);
-        set({ energyLogs: [...others, { naps: existing?.naps || [], ...log, createdAt: Date.now() }] });
-        toast('Energy check-in saved', 'success');
+        const existing = get().energyLogs.find((l) => l.date === log.date) || {};
+        const merged = {
+          ...existing, ...log,
+          naps: existing.naps || [],
+          sleepData: { ...(existing.sleepData || {}), ...(log.sleepData || {}) },
+          createdAt: existing.createdAt || Date.now(), updatedAt: Date.now(),
+        };
+        set({ energyLogs: [...others, merged] });
+        toast('Check-in enregistré', 'success');
         get().checkBadges();
       },
 

@@ -6,9 +6,9 @@ export function calculateStressLevel(checklist) {
 }
 
 export function stressLabel(level) {
-  if (level <= 3) return 'Relaxed';
-  if (level <= 5) return 'Mild';
-  if (level <= 7) return 'Moderate';
-  if (level <= 8.5) return 'High';
-  return 'Severe';
+  if (level <= 3) return 'Détendu';
+  if (level <= 5) return 'Léger';
+  if (level <= 7) return 'Modéré';
+  if (level <= 8.5) return 'Élevé';
+  return 'Sévère';
 }

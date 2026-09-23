@@ -74,10 +74,10 @@ export const SLEEP_BAND_COLOR = {
 
 export const SLEEP_BAND_LABEL = {
   excellent: 'Excellent',
-  good: 'Good',
-  poor: 'Needs improvement',
-  critical: 'Critical',
-  daySleep: 'Day sleep — invalid',
+  good: 'Bon',
+  poor: 'À améliorer',
+  critical: 'Critique',
+  daySleep: 'Sommeil de jour — non valide',
 };
 
 // Back-compat shim: the old signature returned a number and was called with

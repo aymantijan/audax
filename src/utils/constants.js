@@ -255,45 +255,55 @@ export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 're
 // Labeled explicitly (not plain strings) so the day-picker option is discoverable
 // in the dropdown itself, rather than reading as the bare word "custom".
 export const HABIT_FREQUENCIES = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'custom', label: 'Specific days (e.g. Mon/Wed/Fri)' },
+  { value: 'daily', label: 'Tous les jours' },
+  { value: 'weekly', label: 'X fois par semaine' },
+  { value: 'custom', label: 'Certains jours (ex. lun/mer/ven)' },
 ];
 export const WEEKDAYS = [
-  { value: 'mon', label: 'Mon' },
-  { value: 'tue', label: 'Tue' },
-  { value: 'wed', label: 'Wed' },
-  { value: 'thu', label: 'Thu' },
-  { value: 'fri', label: 'Fri' },
-  { value: 'sat', label: 'Sat' },
-  { value: 'sun', label: 'Sun' },
+  { value: 'mon', label: 'Lun' },
+  { value: 'tue', label: 'Mar' },
+  { value: 'wed', label: 'Mer' },
+  { value: 'thu', label: 'Jeu' },
+  { value: 'fri', label: 'Ven' },
+  { value: 'sat', label: 'Sam' },
+  { value: 'sun', label: 'Dim' },
 ];
 export const MOODS = ['great', 'good', 'okay', 'bad', 'terrible'];
+export const MOOD_LABELS = { great: 'Excellente', good: 'Bonne', okay: 'Correcte', bad: 'Mauvaise', terrible: 'Très mauvaise' };
 export const RECOVERY_ACTIVITIES = ['exercise', 'meditation', 'walk', 'social', 'hobby', 'rest'];
+export const RECOVERY_LABELS = { exercise: 'Sport', meditation: 'Méditation', walk: 'Marche', social: 'Moment social', hobby: 'Loisir', rest: 'Repos' };
+export const HABIT_CATEGORY_LABELS = { trading: 'Trading', learning: 'Apprentissage', finance: 'Finances', health: 'Santé', reflection: 'Réflexion', recovery: 'Récupération', engineering: 'Ingénierie' };
+// When in the day a habit happens — groups the daily checklist.
+export const HABIT_MOMENTS = [
+  { value: 'morning', label: 'Matin' },
+  { value: 'day', label: 'Journée' },
+  { value: 'evening', label: 'Soir' },
+  { value: 'any', label: 'N’importe quand' },
+];
 
 // Optional link from a habit to a Health-page activity type: completing the habit
 // queues a one-tap "log it in Health?" prompt (see healthStore#queueHabitPrompt).
 export const HEALTH_LINK_TYPES = [
-  { value: '', label: 'None' },
-  { value: 'cardio', label: 'Cardio workout' },
-  { value: 'strength', label: 'Strength workout' },
-  { value: 'recovery', label: 'Recovery activity' },
-  { value: 'mindfulness', label: 'Mindfulness / stress' },
-  { value: 'nutrition', label: 'Nutrition / protein' },
-  { value: 'sleep', label: 'Sleep tracking' },
-  { value: 'reflection', label: 'Health reflection' },
+  { value: '', label: 'Aucun' },
+  { value: 'cardio', label: 'Séance de cardio' },
+  { value: 'strength', label: 'Séance de musculation' },
+  { value: 'recovery', label: 'Activité de récupération' },
+  { value: 'mindfulness', label: 'Pleine conscience / stress' },
+  { value: 'nutrition', label: 'Nutrition / protéines' },
+  { value: 'sleep', label: 'Suivi du sommeil' },
+  { value: 'reflection', label: 'Réflexion santé' },
 ];
 
 export const STRESS_ITEMS = [
-  { key: 'heartPalpitations', label: 'Heart palpitations' },
-  { key: 'muscleTension', label: 'Muscle tension' },
-  { key: 'difficultyFocusing', label: 'Difficulty focusing' },
-  { key: 'sleepDisruption', label: 'Sleep disruption' },
-  { key: 'emotionalReactivity', label: 'Emotional reactivity' },
-  { key: 'stomachTension', label: 'Stomach tension' },
-  { key: 'overwhelm', label: 'Feeling overwhelmed' },
-  { key: 'socialWithdrawal', label: 'Social withdrawal' },
-  { key: 'appetiteChange', label: 'Appetite change' },
+  { key: 'heartPalpitations', label: 'Palpitations' },
+  { key: 'muscleTension', label: 'Tensions musculaires' },
+  { key: 'difficultyFocusing', label: 'Difficulté à se concentrer' },
+  { key: 'sleepDisruption', label: 'Sommeil perturbé' },
+  { key: 'emotionalReactivity', label: 'Réactivité émotionnelle' },
+  { key: 'stomachTension', label: 'Ventre noué' },
+  { key: 'overwhelm', label: 'Sentiment d’être débordé' },
+  { key: 'socialWithdrawal', label: 'Repli sur soi' },
+  { key: 'appetiteChange', label: 'Appétit changé' },
   { key: 'procrastination', label: 'Procrastination' },
 ];
 

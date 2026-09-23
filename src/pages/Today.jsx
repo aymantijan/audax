@@ -6,6 +6,7 @@ import {
   Handshake, Rocket, Users, Briefcase, Megaphone, Timer, Palette, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { HABIT_CATEGORY_LABELS } from '../utils/constants';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useAccountingStore } from '../store/accountingStore';
@@ -23,7 +24,7 @@ import { useCreativeStore } from '../store/creativeStore';
 import { useRealEstateStore } from '../store/realEstateStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
-import { isHabitDueOn, habitStreak } from '../utils/calculations';
+import { isHabitDueOn, habitStreak, isHabitShownOn, streakUnit } from '../utils/calculations';
 import { ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
@@ -38,8 +39,8 @@ export default function Today() {
   // store getter that allocates a fresh array/object inline). ----
   const { habits, logs, energyLogs, toggleHabit } = useHabitStore();
   const dueToday = useMemo(
-    () => habits.filter((h) => !h.archived && isHabitDueOn(h, today) && h.startDate <= today),
-    [habits, today]
+    () => habits.filter((h) => !h.archived && isHabitShownOn(h, logs, today)),
+    [habits, logs, today]
   );
   const doneToday = dueToday.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed));
   const todayEnergyLog = energyLogs.find((l) => l.date === today);
@@ -159,9 +160,9 @@ export default function Today() {
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
                     <div className="text-[11px] text-mute">
-                      {h.category}
+                      {HABIT_CATEGORY_LABELS[h.category] || h.category}
                       {h.mandatory ? ' · obligatoire' : ''}
-                      {streak > 0 ? ` · série ${streak}j` : ''}
+                      {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
                     </div>
                   </div>
                   {streak >= 3 && <Flame size={14} className="text-warn shrink-0" />}

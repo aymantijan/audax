@@ -6,7 +6,8 @@ import {
 import { startOfMonth } from 'date-fns';
 import { useTradingStore } from '../store/tradingStore';
 import { useHabitStore } from '../store/habitStore';
-import { tradeStats, equityCurve, currentAccountValue, maxDrawdown } from '../utils/calculations';
+import { tradeStats, equityCurve, currentAccountValue, maxDrawdown, isHabitShownOn } from '../utils/calculations';
+import { Link } from 'react-router-dom';
 import { INSTRUMENTS, STRATEGIES } from '../utils/constants';
 import { fmtMoney, fmtSignedMoney, fmtPct, fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, EmptyState } from '../components/common/ui';
@@ -33,6 +34,25 @@ const tooltipStyle = {
   contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 },
   labelStyle: { color: 'var(--text-secondary)' },
 };
+
+// Habits flagged "obligatoire avant de trader" that are still undone today.
+function MandatoryHabitsAlert() {
+  const habits = useHabitStore((st) => st.habits);
+  const logs = useHabitStore((st) => st.logs);
+  const today = todayKey();
+  const missing = habits.filter((h) => !h.archived && h.mandatory && isHabitShownOn(h, logs, today)
+    && !logs.some((l) => l.habitId === h.id && l.date === today && l.completed));
+  if (!missing.length) return null;
+  return (
+    <div className="rounded-xl border border-warn/50 bg-warn/10 px-4 py-3 text-sm flex items-start gap-2">
+      <ShieldAlert size={16} className="text-warn shrink-0 mt-0.5" />
+      <span className="flex-1">
+        <b>Avant de trader :</b> {missing.map((h) => h.name).join(', ')} {missing.length > 1 ? 'ne sont pas faites' : 'n’est pas faite'}.{' '}
+        <Link to="/habits" className="underline">Ouvrir mes habitudes</Link>
+      </span>
+    </div>
+  );
+}
 
 export default function Trading() {
   // Subscribe to the whole store so any trade change (add/edit/delete) re-renders.
@@ -111,6 +131,7 @@ export default function Trading() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      <MandatoryHabitsAlert />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Trading</h1>

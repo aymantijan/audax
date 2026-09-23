@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
 import { useHabitStore } from '../../store/habitStore';
-import { habitStreak } from '../../utils/calculations';
+import { habitStreak, isHabitShownOn } from '../../utils/calculations';
 import { currentLossStreak } from '../../utils/trading-psychology';
 import { todayKey } from '../../utils/formatters';
 import { Card } from '../common/ui';
@@ -41,7 +41,10 @@ export default function PreTradingChecklist({ onStatus }) {
     const sleepH = recentLog?.sleepData?.sleepHours;
     const energy = recentLog?.energyStartLevel;
 
-    const activeStreak = habits.filter((h) => !h.archived).some((h) => habitStreak(h.id, logs, today) > 0);
+    const activeStreak = habits.filter((h) => !h.archived).some((h) => habitStreak(h.id, logs, today, h) > 0);
+    // Habits flagged 'obligatoire avant de trader' still undone today.
+    const mandatory = habits.filter((h) => !h.archived && h.mandatory && isHabitShownOn(h, logs, today));
+    const mandatoryMissing = mandatory.filter((h) => !logs.some((l) => l.habitId === h.id && l.date === today && l.completed));
 
     // Cross-domain (Phase 9): pulls Phase-4's live loss-streak signal and
     // Phase-1's prop-firm rule breaches into the SAME pre-trade gate that
@@ -84,6 +87,13 @@ export default function PreTradingChecklist({ onStatus }) {
         detail: lossStreak >= 2 ? `${lossStreak}-loss streak` : lossToday ? 'Loss earlier today' : 'Clear',
       },
     ];
+    if (mandatory.length) {
+      list.unshift({
+        label: 'Habitudes obligatoires faites',
+        status: mandatoryMissing.length ? 'red' : 'green',
+        detail: mandatoryMissing.length ? `Manque : ${mandatoryMissing.map((h) => h.name).join(', ')}` : `${mandatory.length}/${mandatory.length}`,
+      });
+    }
     if (propFirmProgress) {
       list.push({
         label: 'Prop-firm rules respected',
