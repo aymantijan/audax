@@ -44,6 +44,10 @@ export const useHabitStore = create(
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
       pauses: [], // vacation / sick periods: [{ id, from, to, reason }] — covered days are jokers for every habit
       habitSettings: { jokersPerMonth: 2 }, // jokers per habit per calendar month (streak protection)
+      // Browser reminders at each habit's reminderTime (local only: the app must be open).
+      habitReminders: { enabled: false, lastShown: {} },
+      setHabitRemindersEnabled: (enabled) => set({ habitReminders: { ...(get().habitReminders || { lastShown: {} }), enabled } }),
+      markHabitReminderShown: (habitId, date) => set({ habitReminders: { ...get().habitReminders, lastShown: { ...(get().habitReminders?.lastShown || {}), [habitId]: date } } }),
 
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'decision-discipline-lv1');
@@ -64,6 +68,8 @@ export const useHabitStore = create(
           direction: data.kind === 'quantity' ? data.direction || 'atLeast' : null, // 'atLeast' | 'atMost'
           source: data.kind === 'quantity' ? data.source || null : null, // auto source (utils/habit-sources.js)
           relapses: [],
+          reminderTime: data.reminderTime || null, // 'HH:MM'
+          after: data.after || null, // habit stacking: do this right after habit `after`
           archived: false,
           startDate: todayKey(),
           createdAt: Date.now(),
@@ -97,7 +103,8 @@ export const useHabitStore = create(
       deleteHabit: (id) => {
         const habit = get().habits.find((h) => h.id === id);
         set({
-          habits: get().habits.filter((h) => h.id !== id),
+          // Habits chained after this one lose their anchor rather than dangling.
+          habits: get().habits.filter((h) => h.id !== id).map((h) => (h.after === id ? { ...h, after: null } : h)),
           logs: get().logs.filter((l) => l.habitId !== id),
         });
         if (habit?.googleEventId) deleteCalendarEvent(habit.googleEventId);
@@ -131,6 +138,16 @@ export const useHabitStore = create(
           if (habit?.healthLink && date === todayKey()) useHealthStore.getState().queueHabitPrompt(habit);
         }
         get().checkBadges();
+        get().suggestNext(habitId, date);
+      },
+
+      // Habit stacking: once an anchor is done, nudge the habits chained after it.
+      suggestNext: (habitId, date = todayKey()) => {
+        if (date !== todayKey()) return;
+        const done = (id) => get().logs.some((l) => l.habitId === id && l.date === date && l.completed);
+        if (!done(habitId)) return;
+        const next = get().habits.filter((h) => !h.archived && h.after === habitId && !done(h.id));
+        if (next.length) toast(`Enchaînez maintenant : ${next.map((h) => h.name).join(', ')}`, 'info');
       },
 
       // The REVERSE of the flow above — called FROM healthStore when a
@@ -163,7 +180,7 @@ export const useHabitStore = create(
           if (completed) useSkillStore.getState().awardXP(habit.linkedSkill, habit.xpReward, `habitude : ${habit.name}`);
           else useSkillStore.getState().removeXP(habit.linkedSkill, habit.xpReward, `habitude annulée : ${habit.name}`);
         }
-        if (completed && !wasDone) get().checkBadges();
+        if (completed && !wasDone) { get().checkBadges(); if (!auto) get().suggestNext(habitId, date); }
       },
 
       // ── Streak protection ──

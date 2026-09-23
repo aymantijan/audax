@@ -1,16 +1,18 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck, Check, Sunrise, Sun, Moon,
   Clock, Archive, ArchiveRestore, ShieldAlert, HeartPulse, Target, ListChecks, ChevronDown, Snowflake, Minus, Ban, Gauge, Zap, Palmtree, Trophy,
+  Bell, BellOff, Link2, CalendarDays, CornerDownRight,
 } from 'lucide-react';
+import { toast } from '../store/uiStore';
 import { HABIT_SOURCES, sourceMeta } from '../utils/habit-sources';
 import { baseCurrencyShort } from '../utils/formatters';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useSkillStore } from '../store/skillStore';
-import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit, quitStreak, quitBest } from '../utils/calculations';
+import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit, quitStreak, quitBest, habitDayStatus, habitBestStreak, habitSuccessRate } from '../utils/calculations';
 import { calculateSleepScore, SLEEP_BAND_COLOR, SLEEP_BAND_LABEL } from '../utils/sleep-quality';
 import { calculateStressLevel, stressLabel } from '../utils/stress-calculator';
 import { checkBurnoutTriggers } from '../utils/burnout';
@@ -130,7 +132,7 @@ function CheckinModal({ open, onClose, date }) {
 }
 
 // ── Add / edit a habit ───────────────────────────────────────────────────
-const blankHabit = () => ({ kind: 'check', name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30, target: 8, unit: '', direction: 'atLeast', source: '' });
+const blankHabit = () => ({ kind: 'check', name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30, target: 8, unit: '', direction: 'atLeast', source: '', reminderTime: '', after: '' });
 const KINDS = [
   { value: 'check', label: 'À cocher', Icon: Check, desc: 'Fait / pas fait' },
   { value: 'quantity', label: 'Mesurable', Icon: Gauge, desc: 'Verres, pages, minutes… (peut être automatique)' },
@@ -139,15 +141,17 @@ const KINDS = [
 const unitOf = (src) => (src?.value === 'spent_amount' ? baseCurrencyShort() : src?.unit || '');
 
 function HabitFormModal({ open, onClose, habit }) {
-  const { addHabit, editHabit } = useHabitStore();
+  const { addHabit, editHabit, habits: allHabits, habitReminders, setHabitRemindersEnabled } = useHabitStore();
   const skills = useSkillStore((s) => s.skills);
+  // Anchor candidates: never itself nor a habit already chained after it (no loops).
+  const anchors = allHabits.filter((h) => !h.archived && h.kind !== 'quit' && h.id !== habit?.id && (!habit || h.after !== habit.id));
   const [f, setF] = useState(blankHabit());
   const [template, setTemplate] = useState('');
   const [error, setError] = useState('');
   useEffect(() => {
     if (!open) return;
     setError(''); setTemplate('');
-    setF(habit ? { ...blankHabit(), ...habit, kind: habit.kind || 'check', linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1, source: habit.source || '', target: habit.target ?? 8, unit: habit.unit || '', direction: habit.direction || 'atLeast' } : blankHabit());
+    setF(habit ? { ...blankHabit(), ...habit, kind: habit.kind || 'check', linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1, source: habit.source || '', target: habit.target ?? 8, unit: habit.unit || '', direction: habit.direction || 'atLeast', reminderTime: habit.reminderTime || '', after: habit.after || '' } : blankHabit());
   }, [open, habit]);
 
   const applyTemplate = (value) => {
@@ -172,7 +176,9 @@ function HabitFormModal({ open, onClose, habit }) {
       timesPerWeek: f.frequency === 'weekly' ? Number(f.timesPerWeek) || 1 : null,
       duration: Number(f.duration) || 15, targetStreak: Number(f.targetStreak) || 30,
       healthLink: f.healthLink || '', linkedSkill: f.linkedSkill || '',
+      reminderTime: f.kind === 'quit' ? null : f.reminderTime || null, after: f.kind === 'quit' ? null : f.after || null,
     };
+    if (data.reminderTime && !habitReminders?.enabled) enableReminders(setHabitRemindersEnabled);
     if (habit) editHabit(habit.id, data); else addHabit(data);
     onClose();
   };
@@ -237,6 +243,23 @@ function HabitFormModal({ open, onClose, habit }) {
             })}
           </div>
         </div>}
+
+        {f.kind !== 'quit' && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Rappel (optionnel)" hint="Notification à cette heure si l’habitude n’est pas encore faite.">
+              <div className="flex gap-2">
+                <Input type="time" value={f.reminderTime} onChange={(e) => setF({ ...f, reminderTime: e.target.value })} />
+                {f.reminderTime && <Button type="button" variant="secondary" onClick={() => setF({ ...f, reminderTime: '' })}>Aucun</Button>}
+              </div>
+            </Field>
+            <Field label="Enchaîner après (optionnel)" hint="« Après mon café, je lis 10 pages » : l’ancrage rend l’habitude automatique.">
+              <Select value={f.after} onChange={(e) => setF({ ...f, after: e.target.value })}>
+                <option value="">— Aucune —</option>
+                {anchors.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+              </Select>
+            </Field>
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="Catégorie"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={HABIT_CATEGORIES.map((c) => ({ value: c, label: catLabel(c) }))} /></Field>
@@ -373,6 +396,155 @@ function PauseModal({ open, onClose }) {
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────
+// ── Per-habit detail: yearly heatmap + records ──
+const DAY_COLOR = {
+  done: 'var(--success)', joker: 'var(--accent-secondary)', missed: 'color-mix(in srgb, var(--error) 45%, transparent)',
+  off: 'color-mix(in srgb, var(--text-secondary) 16%, transparent)', future: 'transparent',
+};
+const DAY_LABEL = { done: 'réussi', joker: 'joker / pause', missed: 'manqué', off: 'non prévu', future: '' };
+const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const WEEKDAY_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+function HabitDetailModal({ habit, onClose, onEdit }) {
+  const allLogs = useHabitStore((s) => s.logs);
+  const habits = useHabitStore((s) => s.habits);
+  const today = todayKey();
+  const scroller = useRef(null);
+  // Most recent weeks first in view when the grid is wider than the modal.
+  useEffect(() => { if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth; }, [habit?.id]);
+  const data = useMemo(() => {
+    if (!habit) return null;
+    const logs = allLogs.filter((l) => l.habitId === habit.id);
+    // 53 full weeks, Monday-first, ending with the current week.
+    const end = new Date(today + 'T12:00:00');
+    const start = new Date(end); start.setDate(start.getDate() - ((end.getDay() + 6) % 7) - 52 * 7);
+    const weeks = []; const perWd = Array.from({ length: 7 }, () => ({ done: 0, due: 0 }));
+    let totalDone = 0; let valueSum = 0; let valueN = 0;
+    for (let w = 0; w < 53; w++) {
+      const col = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start); d.setDate(start.getDate() + w * 7 + i);
+        const key = dateKey(d);
+        const st = habitDayStatus(habit, logs, key, today);
+        const log = logs.find((l) => l.date === key);
+        col.push({ key, st, value: log?.value, month: d.getMonth(), day: d.getDate() });
+        if (st === 'done') { totalDone++; perWd[d.getDay()].done++; perWd[d.getDay()].due++; } else if (st === 'missed') perWd[d.getDay()].due++;
+        if (habit.kind === 'quantity' && log?.value != null && key <= today) { valueSum += Number(log.value) || 0; valueN++; }
+      }
+      weeks.push(col);
+    }
+    // Weekly habits have no "missed" days: best weekday = the day it is done most often.
+    const ranked = perWd.map((x, i) => ({ i, ...x, rate: habit.frequency === 'weekly' ? x.done : x.due >= 4 ? x.done / x.due : -1 }))
+      .filter((x) => x.rate > 0).sort((a, b) => b.rate - a.rate);
+    return {
+      weeks, totalDone,
+      streak: habitStreak(habit.id, allLogs, today, habit),
+      best: habitBestStreak(habit, logs, today),
+      r30: habitSuccessRate(habit, logs, today, 30), r90: habitSuccessRate(habit, logs, today, 90),
+      avg: valueN ? valueSum / valueN : null,
+      bestDay: ranked[0] ? WEEKDAY_FR[ranked[0].i] : null,
+      anchor: habit.after ? habits.find((h) => h.id === habit.after) : null,
+      chained: habits.filter((h) => !h.archived && h.after === habit.id),
+    };
+  }, [habit, allLogs, habits, today]);
+  if (!habit || !data) return null;
+  const unit = habit.kind === 'quit' ? 'j' : streakUnit(habit);
+  const pctTxt = (r) => (r == null ? '—' : `${Math.round(r * 100)} %`);
+  const stats = [
+    { label: 'Série en cours', value: `${data.streak} ${unit}`, color: data.streak ? 'var(--warning)' : undefined },
+    { label: 'Record', value: `${data.best} ${unit}`, color: data.best && data.best === data.streak ? 'var(--success)' : undefined },
+    ...(habit.frequency === 'weekly' ? [] : [{ label: 'Réussite 30 j', value: pctTxt(data.r30) }, { label: 'Réussite 90 j', value: pctTxt(data.r90) }]),
+    { label: habit.kind === 'quit' ? 'Jours sans (1 an)' : 'Fois réussie (1 an)', value: data.totalDone },
+    habit.kind === 'quantity' ? { label: 'Moyenne / jour saisi', value: data.avg == null ? '—' : `${Math.round(data.avg * 10) / 10} ${habit.unit || ''}` }
+      : { label: 'Meilleur jour', value: data.bestDay || '—' },
+  ];
+  const target = Number(habit.targetStreak) || 0;
+  return (
+    <Modal open onClose={onClose} title={habit.name} wide>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-xl border border-line bg-surface px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wide text-mute">{s.label}</div>
+              <div className="text-lg font-bold tabular-nums text-ink" style={s.color ? { color: s.color } : undefined}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+        {target > 0 && habit.kind !== 'quit' && (
+          <div>
+            <div className="flex justify-between text-xs text-mute mb-1"><span>Objectif : série de {target} {unit}</span><span className="tabular-nums">{Math.min(data.streak, target)}/{target}</span></div>
+            <ProgressBar value={Math.min(100, (data.streak / target) * 100)} color={data.streak >= target ? 'var(--success)' : 'var(--warning)'} />
+          </div>
+        )}
+        <div>
+          <div className="text-xs font-semibold text-ink mb-2">Les 12 derniers mois</div>
+          <div ref={scroller} className="overflow-x-auto pb-1">
+            <div className="inline-flex flex-col gap-1 min-w-max">
+              <div className="flex gap-[2px] pl-5 text-[9px] text-mute h-3">
+                {data.weeks.map((col, i) => (
+                  <div key={i} className="w-[10px] overflow-visible whitespace-nowrap">{col[0].day <= 7 ? MONTHS_FR[col[0].month] : ''}</div>
+                ))}
+              </div>
+              <div className="flex gap-[2px]">
+                <div className="flex flex-col gap-[2px] text-[9px] text-mute w-4 pr-1">
+                  {['L', '', 'M', '', 'V', '', 'D'].map((l, i) => <div key={i} className="h-[10px] leading-[10px]">{l}</div>)}
+                </div>
+                {data.weeks.map((col, i) => (
+                  <div key={i} className="flex flex-col gap-[2px]">
+                    {col.map((c) => (
+                      <div key={c.key} title={c.st === 'future' ? '' : `${fmtDate(c.key)} · ${DAY_LABEL[c.st]}${c.value != null && habit.kind === 'quantity' ? ` · ${c.value} ${habit.unit || ''}` : ''}`}
+                        className="w-[10px] h-[10px] rounded-[3px]" style={{ background: DAY_COLOR[c.st], outline: c.key === today ? '1.5px solid var(--accent-primary)' : undefined }} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-mute">
+            {['done', 'missed', 'joker', 'off'].map((k) => <span key={k} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-[3px] inline-block" style={{ background: DAY_COLOR[k] }} /> {DAY_LABEL[k]}</span>)}
+          </div>
+          {habit.frequency === 'weekly' && <p className="text-[11px] text-mute mt-1">Habitude hebdomadaire : les jours sans case verte ne sont pas des échecs, seule la semaine compte.</p>}
+        </div>
+        {(data.anchor || data.chained.length > 0 || habit.reminderTime) && (
+          <div className="text-xs text-mute space-y-1">
+            {habit.reminderTime && <div className="flex items-center gap-1.5"><Bell size={12} /> Rappel à {habit.reminderTime}</div>}
+            {data.anchor && <div className="flex items-center gap-1.5"><Link2 size={12} /> Juste après « {data.anchor.name} »</div>}
+            {data.chained.length > 0 && <div className="flex items-center gap-1.5"><Link2 size={12} /> Suivie de : {data.chained.map((h) => h.name).join(', ')}</div>}
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Fermer</Button>
+          <Button onClick={() => onEdit(habit)}><span className="flex items-center gap-1.5"><Pencil size={14} /> Modifier</span></Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Habit stacking: chained habits come right after their anchor (depth-first).
+function orderChains(items) {
+  const ids = new Set(items.map((h) => h.id));
+  const out = []; const seen = new Set();
+  const visit = (h, depth) => {
+    if (seen.has(h.id)) return;
+    seen.add(h.id); out.push({ h, depth });
+    items.filter((c) => c.after === h.id).forEach((c) => visit(c, Math.min(depth + 1, 2)));
+  };
+  items.filter((h) => !h.after || !ids.has(h.after)).forEach((h) => visit(h, 0));
+  items.forEach((h) => visit(h, 0)); // cycles: never drop a habit
+  return out;
+}
+
+async function enableReminders(setEnabled) {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch { /* ignore */ }
+  }
+  setEnabled(true);
+  toast(typeof Notification !== 'undefined' && Notification.permission === 'granted'
+    ? 'Rappels activés : notification à l’heure choisie (AUDAX ouvert).'
+    : 'Rappels activés dans l’app (notifications du navigateur refusées).', 'success');
+}
+
 export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -387,6 +559,10 @@ export default function Habits() {
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const habitReminders = useHabitStore((s) => s.habitReminders);
+  const setHabitRemindersEnabled = useHabitStore((s) => s.setHabitRemindersEnabled);
+  const nameOf = (id) => habits.find((x) => x.id === id)?.name;
 
   const shift = (days) => {
     const d = new Date(date + 'T12:00:00'); d.setDate(d.getDate() + days);
@@ -439,6 +615,10 @@ export default function Habits() {
           <p className="text-mute text-sm mt-1">Vos routines quotidiennes, vos séries et votre énergie — avec une alerte précoce d’épuisement.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => (habitReminders?.enabled ? setHabitRemindersEnabled(false) : enableReminders(setHabitRemindersEnabled))}
+            title={habitReminders?.enabled ? 'Désactiver les rappels' : 'Activer les rappels (heure choisie par habitude)'}>
+            <span className="flex items-center gap-1.5">{habitReminders?.enabled ? <Bell size={15} className="text-accent" /> : <BellOff size={15} />} Rappels</span>
+          </Button>
           <Button variant="secondary" onClick={() => setPauseOpen(true)}><span className="flex items-center gap-1.5"><Palmtree size={15} /> Pause</span></Button>
           <Button onClick={() => { setEditing(null); setFormOpen(true); }}><span className="flex items-center gap-1.5"><Plus size={16} /> Nouvelle habitude</span></Button>
         </div>
@@ -522,7 +702,7 @@ export default function Habits() {
                 <div key={g.value}>
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2 flex items-center gap-1.5"><Icon size={12} /> {g.label}</div>
                   <div className="space-y-2">
-                    {g.items.map((h) => {
+                    {orderChains(g.items).map(({ h, depth }) => {
                       const done = isDone(h, date);
                       const streak = habitStreak(h.id, logs, today, h);
                       const wk = h.frequency === 'weekly' ? weeklyProgress(h, logs, date) : null;
@@ -531,19 +711,22 @@ export default function Habits() {
                       const isJoker = !!log?.joker && !done;
                       const canJoker = !done && !isJoker && !(h.kind === 'quantity' && h.direction === 'atMost') && jokersLeft(h.id, date) > 0;
                       return (
-                        <div key={h.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${done ? 'border-good/40' : 'border-line bg-surface'}`} style={done ? { background: tint('var(--success)', 8) } : undefined}>
+                        <div key={h.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${done ? 'border-good/40' : 'border-line bg-surface'}`} style={{ ...(done ? { background: tint('var(--success)', 8) } : {}), marginLeft: depth ? depth * 18 : undefined }}>
+                          {depth > 0 && <CornerDownRight size={14} className="text-mute -ml-1 shrink-0" />}
                           <button onClick={() => toggleHabit(h.id, date)} title={h.source ? 'Suivi automatique' : done ? 'Décocher' : 'Fait'}
                             className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${h.source ? 'cursor-default' : 'cursor-pointer'} ${done ? 'bg-good border-good text-black' : isJoker ? 'border-accent2 text-accent2' : 'border-line hover:border-accent'}`}>
                             {done ? <Check size={16} strokeWidth={3} /> : isJoker ? <Snowflake size={14} /> : h.source ? <Zap size={13} className="text-mute" /> : null}
                           </button>
                           <div className="min-w-0 flex-1">
-                            <div className={`text-sm font-medium ${done ? 'text-mute line-through' : 'text-ink'}`}>{h.name}</div>
+                            <button type="button" onClick={() => setDetail(h)} className={`text-left text-sm font-medium cursor-pointer hover:underline ${done ? 'text-mute line-through' : 'text-ink'}`} title="Historique et records">{h.name}</button>
                             <div className="text-[11px] text-mute flex flex-wrap gap-x-2">
                               <span>{catLabel(h.category)}</span>
                               {h.duration ? <span>· {h.duration} min</span> : null}
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
                               <span>· +{h.xpReward} XP{h.linkedSkill && SKILL_MAP[h.linkedSkill] ? ` → ${SKILL_MAP[h.linkedSkill].name}` : ''}</span>
                               {h.mandatory && <span className="text-warning">· obligatoire</span>}
+                              {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}
+                              {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {h.reminderTime}</span>}
                               {h.source && <span className="text-accent">· auto ({sourceMeta(h.source)?.section})</span>}
                               {isJoker && <span style={{ color: 'var(--accent-secondary)' }}>· {log.pause ? 'en pause' : 'joker'} — série protégée</span>}
                             </div>
@@ -594,7 +777,7 @@ export default function Habits() {
               return (
                 <div key={h.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm text-ink truncate">{h.name}</div>
+                    <button type="button" onClick={() => setDetail(h)} className="block max-w-full text-left text-sm text-ink truncate cursor-pointer hover:underline">{h.name}</button>
                     <div className="text-[11px] text-mute">
                       {h.kind === 'quit' ? `À arrêter · ${catLabel(h.category)}`
                         : `${catLabel(h.category)} · ${freqText(h)} · ${HABIT_MOMENTS.find((m) => m.value === (h.moment || 'any'))?.label}`}
@@ -605,6 +788,7 @@ export default function Habits() {
                     <div className="flex items-center justify-end gap-1" style={{ color: streak ? 'var(--warning)' : undefined }}><Flame size={11} /> {streak} {h.kind === 'quit' ? 'j sans' : streakUnit(h)}</div>
                     <div>{h.kind === 'quit' ? `record ${quitBest(h, today)} j` : r == null ? (h.frequency === 'weekly' ? 'suivi par semaine' : '—') : `${r} % sur 30 j`}</div>
                   </div>
+                  <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => setDetail(h)} title="Historique et records"><CalendarDays size={13} /></button>
                   <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
                   <button className="p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => archiveHabit(h.id)} title="Archiver (garde l’historique)"><Archive size={13} /></button>
                 </div>
@@ -665,6 +849,7 @@ export default function Habits() {
 
       <BadgeList badges={getBadges()} />
 
+      {detail && <HabitDetailModal habit={habits.find((x) => x.id === detail.id) || detail} onClose={() => setDetail(null)} onEdit={(h) => { setDetail(null); setEditing(h); setFormOpen(true); }} />}
       <HabitFormModal open={formOpen} onClose={() => { setFormOpen(false); setEditing(null); }} habit={editing} />
       <CheckinModal open={checkinOpen} onClose={() => setCheckinOpen(false)} date={date} />
       <PauseModal open={pauseOpen} onClose={() => setPauseOpen(false)} />

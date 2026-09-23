@@ -212,6 +212,58 @@ export function habitStreak(habitId, logs, today, habit) {
   return streak;
 }
 
+// ── Per-habit history (heatmap, records) ──
+// Status of one day for a habit: 'done' | 'joker' | 'missed' | 'off' (not
+// due / before start / week quota already met) | 'future'.
+export function habitDayStatus(habit, logs, key, today) {
+  if (key > today) return 'future';
+  if (habit.startDate && key < habit.startDate) return 'off';
+  if (habit.kind === 'quit') return (habit.relapses || []).includes(key) ? 'missed' : 'done';
+  const log = logs.find((l) => l.habitId === habit.id && l.date === key);
+  if (log?.completed) return 'done';
+  if (log?.joker) return 'joker';
+  if (habit.frequency === 'weekly') return 'off'; // judged per week, not per day
+  if (!isHabitDueOn(habit, key)) return 'off';
+  return key === today ? 'off' : 'missed';
+}
+
+// Longest run ever: days for daily/custom habits (off & joker days skipped),
+// weeks for weekly habits, clean days for habits to quit.
+export function habitBestStreak(habit, logs, today) {
+  if (habit.kind === 'quit') return quitBest(habit, today);
+  const start = habit.startDate || (logs.filter((l) => l.habitId === habit.id).map((l) => l.date).sort()[0]) || today;
+  let best = 0; let run = 0;
+  if (habit.frequency === 'weekly') {
+    let wk = weekStartKey(start);
+    for (let guard = 0; guard < 600 && wk <= today; guard++) {
+      if (weeklyProgress(habit, logs, wk).met) { run++; best = Math.max(best, run); } else if (wk !== weekStartKey(today)) run = 0;
+      const d = new Date(wk + 'T12:00:00'); d.setDate(d.getDate() + 7); wk = isoDay(d);
+    }
+    return best;
+  }
+  const d = new Date(start + 'T12:00:00');
+  for (let guard = 0; guard < 4000; guard++) {
+    const key = isoDay(d);
+    if (key > today) break;
+    const st = habitDayStatus(habit, logs, key, today);
+    if (st === 'done') { run++; best = Math.max(best, run); } else if (st === 'missed') run = 0;
+    d.setDate(d.getDate() + 1);
+  }
+  return best;
+}
+
+// Success rate over the last `days` days (due days only; jokers excluded).
+export function habitSuccessRate(habit, logs, today, days = 30) {
+  let done = 0; let due = 0;
+  const d = new Date(today + 'T12:00:00');
+  for (let i = 0; i < days; i++) {
+    const st = habitDayStatus(habit, logs, isoDay(d), today);
+    if (st === 'done') { done++; due++; } else if (st === 'missed') due++;
+    d.setDate(d.getDate() - 1);
+  }
+  return due ? done / due : null;
+}
+
 // Compliance rate over the last N days. Weekly habits are excluded — a 1x/week
 // habit would otherwise count as 6 misses per week. Custom (specific-weekday)
 // habits only count on the days they're actually scheduled.

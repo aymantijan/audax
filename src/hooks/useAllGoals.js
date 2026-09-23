@@ -10,12 +10,14 @@ import { calculateCourseProgress } from '../utils/course-progress';
 import { minutesBetween, weekStart, fmtMinutes, studySessions } from '../utils/study';
 import { levelLabel } from '../utils/tracks';
 import { fmtMAD, todayKey } from '../utils/formatters';
+import { habitStreak, habitBestStreak, streakUnit } from '../utils/calculations';
 
 export const GOAL_DOMAINS = {
   health: { label: 'Santé', color: '#ef4444', link: '/health?tab=goals' },
   finance: { label: 'Finances', color: '#10b981', link: '/finance?tab=goals' },
   learning: { label: 'Apprentissage', color: '#6366f1', link: '/learning' },
   content: { label: 'Contenu', color: '#f59e0b', link: '/content' },
+  habits: { label: 'Habitudes', color: '#f97316', link: '/habits' },
 };
 
 const nf = (v) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -33,6 +35,8 @@ export function useAllGoals() {
   const workouts = useHealthStore((s) => s.workouts);
   const bodyComp = useHealthStore((s) => s.bodyComp);
   const energyLogs = useHabitStore((s) => s.energyLogs);
+  const habits = useHabitStore((s) => s.habits);
+  const habitLogs = useHabitStore((s) => s.logs);
   const journal = useAccountingStore((s) => s.journal);
   const financeGoals = useAccountingStore((s) => s.goals);
   const courses = useLearningStore((s) => s.courses);
@@ -124,6 +128,20 @@ export function useAllGoals() {
         targetDate: null, status: p.count >= p.goal ? 'achieved' : 'active', recurring: true, link: GOAL_DOMAINS.content.link,
       });
     }
+    // ── Habitudes (série visée) ──
+    for (const h of habits) {
+      const target = Number(h.targetStreak) || 0;
+      if (h.archived || !target) continue;
+      const streak = habitStreak(h.id, habitLogs, today, h);
+      const best = habitBestStreak(h, habitLogs.filter((l) => l.habitId === h.id), today);
+      const unit = h.kind === 'quit' ? 'j' : streakUnit(h);
+      out.push({
+        key: `hb-${h.id}`, domain: 'habits', title: `${h.name} : série de ${target} ${unit}`,
+        progress: Math.min(100, Math.round((streak / target) * 100)),
+        valueText: `${streak} / ${target} ${unit}`, detail: best > streak ? `record : ${best} ${unit}` : null,
+        targetDate: null, status: streak >= target ? 'achieved' : streak > 0 ? 'ontrack' : 'active', link: GOAL_DOMAINS.habits.link,
+      });
+    }
     return out;
-  }, [healthGoals, workouts, bodyComp, energyLogs, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
 }
