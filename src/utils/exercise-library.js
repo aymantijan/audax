@@ -449,9 +449,124 @@ export function parseCardioNote(notes) {
   return { modality, zone, note };
 }
 
+// Read a session's cardio setup: structured `config.cardio` (migration 004)
+// first, falling back to the legacy notes encoding for older sessions.
+export function getCardioConfig(session) {
+  const c = session?.config?.cardio;
+  if (c?.modality_id && CARDIO_BY_ID[c.modality_id]) {
+    return { modality: CARDIO_BY_ID[c.modality_id], zone: Number(c.zone) || 2, note: session.notes || '' };
+  }
+  return parseCardioNote(session?.notes);
+}
+
 // Human-readable label for a metric key (for logger headers).
 export const CARDIO_METRIC_LABELS = {
   duration: 'Durée (min)', distance: 'Distance', level: 'Niveau', speed: 'Vitesse',
   incline: 'Inclinaison', strokeRate: 'Coups/min', avgHr: 'FC moy (bpm)', zone: 'Zone',
   calories: 'Calories', pace: 'Allure', steps: 'Pas', rounds: 'Rounds', reps: 'Reps', load: 'Charge (kg)',
 };
+
+// ============================================================================
+// AGILITY & MOBILITY LIBRARY
+// ============================================================================
+// Drills for 'agility' and 'mobility' sessions — includes every drill of the
+// Extreme Training Program's Section 10 (morning CARs, Tue/Fri ladder +
+// reactivity, evening static stretching) plus common agility work. Same shape
+// as strength entries (stable `id`, aliases) so drills are tracked the same way.
+// `unit` tells the builder/logger what the "reps" column means for this drill.
+
+export const DRILL_CATEGORIES = [
+  { value: 'ladder', label: 'Échelle' },
+  { value: 'sprint', label: 'Sprints / direction' },
+  { value: 'reactivity', label: 'Réactivité' },
+  { value: 'plyo', label: 'Pliométrie' },
+  { value: 'mobility', label: 'Mobilité' },
+  { value: 'stretch', label: 'Étirements' },
+];
+
+export const DRILL_UNITS = {
+  reps: 'reps', passes: 'passages', sec: 'sec', perSide: 'reps/côté', perJoint: 'reps/articulation',
+};
+
+const drill = (name, category, unit = 'reps', equipment = 'bodyweight', aliases = []) => ({
+  id: 'drill-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+  name,
+  category,
+  muscleGroup: category, // lets the shared picker filter/colour on it
+  secondaryMuscles: [],
+  equipment,
+  mechanic: 'drill',
+  unit,
+  aliases,
+});
+
+export const DRILL_LIBRARY = [
+  // Agility ladder (PDF: Tue & Fri — 4 drills × 3 passes)
+  drill('Icky Shuffle', 'ladder', 'passes', 'agility ladder', ['Ickey Shuffle', 'Échelle icky']),
+  drill('In-In-Out-Out', 'ladder', 'passes', 'agility ladder', ['In in out out', 'Échelle in out']),
+  drill('Lateral Shuffle (Ladder)', 'ladder', 'passes', 'agility ladder', ['Lateral shuffle', 'Pas chassés échelle']),
+  drill('High Knees (Ladder)', 'ladder', 'passes', 'agility ladder', ['Montées de genoux échelle']),
+  drill('Single-Leg Hops (Ladder)', 'ladder', 'passes', 'agility ladder', ['Sauts unipodaux échelle']),
+  drill('Carioca', 'ladder', 'passes', 'bodyweight', ['Grapevine', 'Pas croisés']),
+
+  // Sprints & change of direction (PDF: 5-10 m, 6 reps)
+  drill('Short Sprints with Direction Change (5-10 m)', 'sprint', 'reps', 'cones', ['Sprints changement de direction', 'Change of direction sprint']),
+  drill('5-10-5 Pro Agility Shuttle', 'sprint', 'reps', 'cones', ['Pro agility', 'Shuttle 5-10-5', 'Navette']),
+  drill('T-Drill', 'sprint', 'reps', 'cones', ['T drill', 'Test en T']),
+  drill('Box Drill (Cones)', 'sprint', 'reps', 'cones', ['Carré de plots', 'Square drill']),
+  drill('Cone Weave', 'sprint', 'passes', 'cones', ['Slalom plots']),
+  drill('Acceleration Sprint (10-20 m)', 'sprint', 'reps', 'bodyweight', ['Accélérations']),
+
+  // Reactivity
+  drill('Reaction Ball Drops', 'reactivity', 'reps', 'reaction ball', ['Balle de réaction']),
+  drill('Mirror Drill', 'reactivity', 'sec', 'bodyweight', ['Miroir', 'Shadow drill']),
+  drill('Dot Drill', 'reactivity', 'sec', 'bodyweight', ['Dot drill 5 points']),
+  drill('Partner Tag Reaction Starts', 'reactivity', 'reps', 'bodyweight', ['Départs réactifs']),
+
+  // Light plyometrics
+  drill('Pogo Jumps', 'plyo', 'reps', 'bodyweight', ['Sautillements chevilles']),
+  drill('Skater Hops', 'plyo', 'perSide', 'bodyweight', ['Skater jumps', 'Sauts patineur']),
+  drill('Lateral Bounds', 'plyo', 'perSide', 'bodyweight', ['Bonds latéraux']),
+  drill('A-Skips', 'plyo', 'passes', 'bodyweight', ['A skip']),
+  drill('B-Skips', 'plyo', 'passes', 'bodyweight', ['B skip']),
+
+  // Joint mobility (PDF: morning CARs, 10 min)
+  drill('Controlled Articular Rotations (CARs)', 'mobility', 'perJoint', 'bodyweight', ['CARs', 'Rotations articulaires contrôlées']),
+  drill('Shoulder CARs', 'mobility', 'perSide', 'bodyweight', ['CARs épaules']),
+  drill('Hip CARs', 'mobility', 'perSide', 'bodyweight', ['CARs hanches']),
+  drill('Ankle CARs', 'mobility', 'perSide', 'bodyweight', ['CARs chevilles']),
+  drill('Spine CARs', 'mobility', 'reps', 'bodyweight', ['CARs colonne', 'Cat-Camel']),
+  drill('Leg Swings (Front-to-Back)', 'mobility', 'perSide', 'bodyweight', ['Balancements de jambe avant-arrière', 'Leg swings']),
+  drill('Leg Swings (Lateral)', 'mobility', 'perSide', 'bodyweight', ['Balancements de jambe latéraux']),
+  drill('Lunge with Torso Rotation', 'mobility', 'perSide', 'bodyweight', ['Fente avec rotation du buste', 'Lunge rotation']),
+  drill("World's Greatest Stretch", 'mobility', 'perSide', 'bodyweight', ['WGS']),
+  drill('Hip 90/90 Switches', 'mobility', 'reps', 'bodyweight', ['90/90']),
+  drill('Thoracic Rotations', 'mobility', 'perSide', 'bodyweight', ['Rotations thoraciques', 'Open book']),
+  drill('Ankle Dorsiflexion Rocks', 'mobility', 'perSide', 'bodyweight', ['Mobilité cheville genou au mur']),
+  drill('Band Shoulder Dislocates', 'mobility', 'reps', 'band', ['Pass-through', 'Dislocations élastique']),
+  drill('Deep Squat Hold', 'mobility', 'sec', 'bodyweight', ['Squat profond tenu']),
+
+  // Static stretching (PDF: evening, 3 × 30 s per chain)
+  drill('Posterior Chain Stretch', 'stretch', 'sec', 'bodyweight', ['Étirement chaîne postérieure']),
+  drill('Anterior Chain Stretch', 'stretch', 'sec', 'bodyweight', ['Étirement chaîne antérieure']),
+  drill('Hamstring Stretch', 'stretch', 'sec', 'bodyweight', ['Étirement ischios']),
+  drill('Couch Stretch (Hip Flexors)', 'stretch', 'sec', 'bodyweight', ['Étirement psoas', 'Couch stretch']),
+  drill('Pigeon Stretch', 'stretch', 'sec', 'bodyweight', ['Pigeon']),
+  drill('Calf Stretch', 'stretch', 'sec', 'bodyweight', ['Étirement mollets']),
+  drill('Chest Doorway Stretch', 'stretch', 'sec', 'bodyweight', ['Étirement pectoraux']),
+  drill('Dead Hang (Decompression)', 'stretch', 'sec', 'bodyweight', ['Suspension barre']),
+];
+
+export const DRILL_BY_ID = Object.fromEntries(DRILL_LIBRARY.map((x) => [x.id, x]));
+
+// Same word-based, order-independent matching as searchExercises.
+export function searchDrills(query, categories) {
+  let pool = DRILL_LIBRARY;
+  if (categories?.length) pool = pool.filter((x) => categories.includes(x.category));
+  if (!query?.trim()) return pool;
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return pool.filter((x) => {
+    const hay = [x.name, ...(x.aliases || []), x.category, x.equipment].join(' ').toLowerCase();
+    return tokens.every((t) => hay.includes(t));
+  });
+}

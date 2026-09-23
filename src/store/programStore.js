@@ -142,7 +142,7 @@ export const useProgramStore = create((set, get) => ({
       set({ draftProgram: program, phases: [], sessionsByPhase: {}, weeklyByPhase: {}, exercisesBySession: {}, loading: false });
       return program;
     } catch (err) {
-      set({ error: err.message, loading: false });
+      set({ loading: false }); // error surfaced by the caller, not the page-level screen
       throw err;
     }
   },
@@ -155,8 +155,7 @@ export const useProgramStore = create((set, get) => ({
       else if (s.activeProgram?.id === id) set({ activeProgram: updated });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -188,7 +187,7 @@ export const useProgramStore = create((set, get) => ({
       });
       return program;
     } catch (err) {
-      set({ error: err.message, loading: false });
+      set({ loading: false }); // error surfaced by the caller, not the page-level screen
       throw err;
     }
   },
@@ -209,7 +208,7 @@ export const useProgramStore = create((set, get) => ({
       });
       return program;
     } catch (err) {
-      set({ error: err.message, loading: false });
+      set({ loading: false }); // error surfaced by the caller, not the page-level screen
       throw err;
     }
   },
@@ -227,7 +226,7 @@ export const useProgramStore = create((set, get) => ({
         loading: false,
       });
     } catch (err) {
-      set({ error: err.message, loading: false });
+      set({ loading: false }); // error surfaced by the caller, not the page-level screen
       throw err;
     }
   },
@@ -240,8 +239,7 @@ export const useProgramStore = create((set, get) => ({
       set({ phases: [...get().phases, phase] });
       return phase;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -251,8 +249,7 @@ export const useProgramStore = create((set, get) => ({
       set({ phases: get().phases.map((p) => p.id === phaseId ? updated : p) });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -268,8 +265,7 @@ export const useProgramStore = create((set, get) => ({
       }
       set({ phases });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -283,8 +279,7 @@ export const useProgramStore = create((set, get) => ({
       set({ sessionsByPhase: { ...s.sessionsByPhase, [phaseId]: [...existing, session] } });
       return session;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -303,8 +298,7 @@ export const useProgramStore = create((set, get) => ({
       set({ sessionsByPhase: newMap });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -325,8 +319,7 @@ export const useProgramStore = create((set, get) => ({
       delete newExMap[sessionId];
       set({ sessionsByPhase: newMap, exercisesBySession: newExMap });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -340,8 +333,7 @@ export const useProgramStore = create((set, get) => ({
       set({ exercisesBySession: { ...s.exercisesBySession, [sessionId]: [...existing, exercise] } });
       return exercise;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -353,8 +345,7 @@ export const useProgramStore = create((set, get) => ({
       set({ exercisesBySession: { ...s.exercisesBySession, [sessionId]: list } });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -365,8 +356,7 @@ export const useProgramStore = create((set, get) => ({
       const list = (s.exercisesBySession[sessionId] || []).filter((ex) => ex.id !== exerciseId);
       set({ exercisesBySession: { ...s.exercisesBySession, [sessionId]: list } });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -378,8 +368,7 @@ export const useProgramStore = create((set, get) => ({
       const s = get();
       set({ exercisesBySession: { ...s.exercisesBySession, [sessionId]: exercises } });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -397,8 +386,7 @@ export const useProgramStore = create((set, get) => ({
       set({ weeklyByPhase: { ...s.weeklyByPhase, [phaseId]: updated } });
       return day;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -410,8 +398,7 @@ export const useProgramStore = create((set, get) => ({
       set({ locations: [...get().locations, loc] });
       return loc;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -421,8 +408,7 @@ export const useProgramStore = create((set, get) => ({
       set({ locations: get().locations.map((l) => l.id === id ? updated : l) });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -431,8 +417,7 @@ export const useProgramStore = create((set, get) => ({
       await api.deleteLocation(id);
       set({ locations: get().locations.filter((l) => l.id !== id) });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -510,35 +495,41 @@ export const useProgramStore = create((set, get) => ({
     const logs = (s.sessionLogsByDate[dateStr] || []);
     const sessions = s.sessionsByPhase[phase.id] || [];
 
-    // Build scheduled events from session_ids
+    // Build scheduled events from session_ids. Each session uses its OWN slot
+    // (time / duration / location, migration 004) — cardio at 06:05 and
+    // strength at 17:00 on the same day — falling back to the legacy day-level
+    // values. Events are returned in chronological order.
     return (dayPlan.session_ids || []).map((sessId) => {
       const session = sessions.find((ss) => ss.id === sessId);
       if (!session) return null;
 
+      const own = dayPlan.session_slots?.[sessId] || {};
+      const baseTime = own.time ?? dayPlan.scheduled_time ?? null;
+      const baseLocation = own.location_id ?? dayPlan.location_id ?? null;
+      const duration = own.duration_min ?? session.estimated_duration_min ?? dayPlan.duration_min ?? null;
+
       const override = overrides.find((o) => o.original_session_id === sessId);
       const log = logs.find((l) => l.session_id === sessId);
 
-      // If cancelled, still return with cancelled flag
       if (override?.action === 'cancel') {
-        return { session, planned_time: dayPlan.scheduled_time, location_id: dayPlan.location_id, override, logged: log, cancelled: true, phase };
+        return { session, planned_time: baseTime, duration_min: duration, location_id: baseLocation, override, logged: log, cancelled: true, phase };
       }
-
-      // If rescheduled to another date, mark as moved
       if (override?.action === 'reschedule' && override.new_date && override.new_date !== dateStr) {
-        return { session, planned_time: dayPlan.scheduled_time, location_id: dayPlan.location_id, override, logged: log, moved: true, phase };
+        return { session, planned_time: baseTime, duration_min: duration, location_id: baseLocation, override, logged: log, moved: true, phase };
       }
-
       return {
         session,
-        planned_time: override?.new_time || dayPlan.scheduled_time,
-        location_id: override?.new_location_id || dayPlan.location_id,
+        planned_time: override?.new_time || baseTime,
+        duration_min: duration,
+        location_id: override?.new_location_id || baseLocation,
         override,
         logged: log,
         cancelled: false,
         moved: false,
         phase,
       };
-    }).filter(Boolean);
+    }).filter(Boolean)
+      .sort((a, b) => (a.planned_time || '99:99').localeCompare(b.planned_time || '99:99'));
   },
 
   /**
@@ -559,8 +550,7 @@ export const useProgramStore = create((set, get) => ({
       set({ overridesByDate: { ...get().overridesByDate, ...map } });
       return overrides;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -577,8 +567,7 @@ export const useProgramStore = create((set, get) => ({
       set({ overridesByDate: { ...s.overridesByDate, [key]: updated } });
       return override;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -629,8 +618,7 @@ export const useProgramStore = create((set, get) => ({
         }
       }
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -641,8 +629,7 @@ export const useProgramStore = create((set, get) => ({
       const updated = (s.overridesByDate[dateStr] || []).filter((o) => o.id !== overrideId);
       set({ overridesByDate: { ...s.overridesByDate, [dateStr]: updated } });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -656,8 +643,7 @@ export const useProgramStore = create((set, get) => ({
       set({ sessionLogsByDate: { ...get().sessionLogsByDate, ...map } });
       return logs;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -670,8 +656,7 @@ export const useProgramStore = create((set, get) => ({
       set({ sessionLogsByDate: { ...s.sessionLogsByDate, [key]: [...existing, log] } });
       return log;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -683,8 +668,7 @@ export const useProgramStore = create((set, get) => ({
       set({ sessionLogsByDate: { ...s.sessionLogsByDate, [dateStr]: list } });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -695,8 +679,7 @@ export const useProgramStore = create((set, get) => ({
       const list = (s.sessionLogsByDate[dateStr] || []).filter((l) => l.id !== logId);
       set({ sessionLogsByDate: { ...s.sessionLogsByDate, [dateStr]: list } });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -708,8 +691,7 @@ export const useProgramStore = create((set, get) => ({
       set({ nutritionByPhase: { ...get().nutritionByPhase, ...map } });
       return map;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -721,8 +703,7 @@ export const useProgramStore = create((set, get) => ({
       set({ nutritionByPhase: { ...s.nutritionByPhase, [phaseId]: [...existing, template] } });
       return template;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -734,8 +715,7 @@ export const useProgramStore = create((set, get) => ({
       set({ nutritionByPhase: { ...s.nutritionByPhase, [phaseId]: list } });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -746,8 +726,7 @@ export const useProgramStore = create((set, get) => ({
       const list = (s.nutritionByPhase[phaseId] || []).filter((t) => t.id !== templateId);
       set({ nutritionByPhase: { ...s.nutritionByPhase, [phaseId]: list } });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -761,8 +740,7 @@ export const useProgramStore = create((set, get) => ({
       set({ habitLinks: links });
       return links;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -774,8 +752,7 @@ export const useProgramStore = create((set, get) => ({
       set({ habitLinks: [...existing, link] });
       return link;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -785,8 +762,7 @@ export const useProgramStore = create((set, get) => ({
       set({ habitLinks: get().habitLinks.map((l) => l.id === linkId ? updated : l) });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -795,8 +771,7 @@ export const useProgramStore = create((set, get) => ({
       await api.deleteHabitLink(linkId);
       set({ habitLinks: get().habitLinks.filter((l) => l.id !== linkId) });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -834,8 +809,7 @@ export const useProgramStore = create((set, get) => ({
       set({ disciplineByDate: { ...get().disciplineByDate, ...map } });
       return scores;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -846,8 +820,7 @@ export const useProgramStore = create((set, get) => ({
       set({ disciplineByDate: { ...s.disciplineByDate, [score.score_date]: score } });
       return score;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -964,8 +937,7 @@ export const useProgramStore = create((set, get) => ({
       set({ kpis });
       return kpis;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -975,8 +947,7 @@ export const useProgramStore = create((set, get) => ({
       set({ kpis: [...get().kpis, kpi] });
       return kpi;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -986,8 +957,7 @@ export const useProgramStore = create((set, get) => ({
       set({ kpis: get().kpis.map((k) => k.id === kpiId ? updated : k) });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -999,8 +969,7 @@ export const useProgramStore = create((set, get) => ({
       delete newVals[kpiId];
       set({ kpiValuesByKpi: newVals });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1012,8 +981,7 @@ export const useProgramStore = create((set, get) => ({
       set({ kpiValuesByKpi: { ...get().kpiValuesByKpi, ...map } });
       return map;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1029,8 +997,7 @@ export const useProgramStore = create((set, get) => ({
       set({ kpiValuesByKpi: { ...s.kpiValuesByKpi, [kpiId]: updated } });
       return value;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1103,8 +1070,7 @@ export const useProgramStore = create((set, get) => ({
       set({ goals });
       return goals;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1114,8 +1080,7 @@ export const useProgramStore = create((set, get) => ({
       set({ goals: [...get().goals, goal] });
       return goal;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1125,8 +1090,7 @@ export const useProgramStore = create((set, get) => ({
       set({ goals: get().goals.map((g) => g.id === goalId ? updated : g) });
       return updated;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1135,8 +1099,7 @@ export const useProgramStore = create((set, get) => ({
       await api.deleteGoal(goalId);
       set({ goals: get().goals.filter((g) => g.id !== goalId) });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1194,8 +1157,7 @@ export const useProgramStore = create((set, get) => ({
       });
       return { goal: updatedGoal, trophy };
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1207,8 +1169,7 @@ export const useProgramStore = create((set, get) => ({
       set({ trophies });
       return trophies;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1220,8 +1181,7 @@ export const useProgramStore = create((set, get) => ({
       set({ alerts });
       return alerts;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1231,8 +1191,7 @@ export const useProgramStore = create((set, get) => ({
       set({ alerts: [alert, ...get().alerts] });
       return alert;
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1241,8 +1200,7 @@ export const useProgramStore = create((set, get) => ({
       await api.acknowledgeAlert(alertId);
       set({ alerts: get().alerts.filter((a) => a.id !== alertId) });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 
@@ -1251,8 +1209,7 @@ export const useProgramStore = create((set, get) => ({
       await api.acknowledgeAllAlerts(programId);
       set({ alerts: [] });
     } catch (err) {
-      set({ error: err.message });
-      throw err;
+      throw err; // surfaced by the calling form — not the page-level error screen
     }
   },
 

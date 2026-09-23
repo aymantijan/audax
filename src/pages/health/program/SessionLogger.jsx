@@ -3,7 +3,7 @@ import { Play, Save, X, Plus, Minus } from 'lucide-react';
 import { Modal, Button, Field, Input, Select, Badge } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
 import { useHealthStore } from '../../../store/healthStore';
-import { parseCardioNote, HR_ZONES, CARDIO_METRIC_LABELS } from '../../../utils/exercise-library';
+import { getCardioConfig, HR_ZONES, CARDIO_METRIC_LABELS } from '../../../utils/exercise-library';
 
 /**
  * Log a programme session — exercises come prefilled from the plan,
@@ -51,7 +51,8 @@ export default function SessionLogger({ event, date, onClose }) {
 
   // ── Cardio logging ──────────────────────────────────────────────
   const isCardio = session.type === 'cardio';
-  const parsedCardio = useMemo(() => parseCardioNote(session.notes), [session.notes]);
+  const isDrill = session.type === 'agility' || session.type === 'mobility';
+  const parsedCardio = useMemo(() => getCardioConfig(session), [session]);
   const cardioModality = parsedCardio.modality;
   // Metric keys captured for this modality (duration handled by the top field)
   const cardioMetricKeys = (cardioModality?.metrics || ['distance', 'avgHr', 'zone']).filter((m) => m !== 'duration');
@@ -156,10 +157,26 @@ export default function SessionLogger({ event, date, onClose }) {
         const health = useHealthStore.getState();
         const logId = savedLog?.id || logged?.id;
         if (logId && status !== 'skipped') {
-          const hasStrength = exerciseRows.some(
+          const isDrillSession = session.type === 'agility' || session.type === 'mobility';
+          const hasStrength = session.type === 'strength' && exerciseRows.some(
             (r) => r.exercise_name && (r.actual_sets || []).some((s) => s.reps || s.weight_kg)
           );
-          if (hasStrength) {
+          if (isDrillSession) {
+            // Agility / mobility: one 'sport' entry (duration) — never mixed into
+            // strength PRs / 1RM / volume, which drills would otherwise pollute.
+            if (isEdit) health.deleteSession(logId);
+            health.logWorkout({
+              sessionId: logId,
+              date,
+              type: 'sport',
+              category: session.type,
+              sessionType: session.label,
+              exercise: session.label,
+              durationMin: durationMin ? parseInt(durationMin) : 0,
+              avgRpe: sessionRpe ? parseFloat(sessionRpe) : null,
+              notes: [notes, exerciseRows.filter((r) => r.exercise_name).map((r) => `${r.exercise_name} ${(r.actual_sets || []).length}×${r.actual_sets?.[0]?.reps ?? ''}`).join(' · ')].filter(Boolean).join(' — '),
+            });
+          } else if (hasStrength) {
             const mirror = {
               sessionId: logId,
               date,
@@ -283,11 +300,11 @@ export default function SessionLogger({ event, date, onClose }) {
 
             {/* Sets table */}
             <div className="space-y-1">
-              <div className="grid grid-cols-5 gap-1 text-[10px] text-mute font-semibold uppercase">
-                <span>Set</span><span>Reps</span><span>Poids (kg)</span><span>RPE</span><span>Forme</span>
+              <div className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 text-[10px] text-mute font-semibold uppercase`}>
+                <span>Set</span><span>{isDrill ? 'Qté' : 'Reps'}</span>{!isDrill && <span>Poids (kg)</span>}<span>RPE</span><span>Forme</span>
               </div>
               {row.actual_sets.map((s, setIdx) => (
-                <div key={setIdx} className="grid grid-cols-5 gap-1 items-center">
+                <div key={setIdx} className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 items-center`}>
                   <span className="text-xs text-mute text-center">{setIdx + 1}</span>
                   <input
                     type="number"
@@ -296,14 +313,14 @@ export default function SessionLogger({ event, date, onClose }) {
                     onChange={(e) => updateSet(exIdx, setIdx, 'reps', parseInt(e.target.value) || 0)}
                     className="bg-surface border border-line rounded px-2 py-1 text-xs text-ink text-center w-full"
                   />
-                  <input
+{!isDrill && (<input
                     type="number"
                     min={0}
                     step={0.5}
                     value={s.weight_kg}
                     onChange={(e) => updateSet(exIdx, setIdx, 'weight_kg', parseFloat(e.target.value) || '')}
                     className="bg-surface border border-line rounded px-2 py-1 text-xs text-ink text-center w-full"
-                  />
+                  />)}
                   <input
                     type="number"
                     min={1}

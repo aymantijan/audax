@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react'
 import { Card, Button, Input, Field, Badge, EmptyState } from '../../../../components/common/ui';
 import { useProgramStore } from '../../../../store/programStore';
 import SessionBuilder from './SessionBuilder';
+import { TypeBadge, typeMeta } from '../shared/design';
 import WeeklyStructureEditor from './WeeklyStructureEditor';
 
 export default function PhaseEditor({ programId }) {
@@ -129,22 +130,24 @@ export default function PhaseEditor({ programId }) {
                   </div>
 
                   {sessions.length > 0 ? (
-                    <div className="space-y-1">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {sessions.map((sess) => (
-                        <div
+                        <button
+                          type="button"
                           key={sess.id}
                           onClick={() => { setEditingSessionFor(phase.id); setEditingSession(sess); }}
-                          className="flex items-center justify-between gap-3 border border-line rounded-lg px-3 py-2 hover:border-accent/40 cursor-pointer transition-colors"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/70 px-3 py-2.5 text-left transition-colors hover:border-accent/50 cursor-pointer"
+                          style={{ borderLeft: `3px solid ${typeMeta(sess.type).color}` }}
                         >
-                          <div className="flex items-center gap-2">
-                            <Badge color={sess.type === 'strength' ? 'var(--accent-primary)' : sess.type === 'cardio' ? 'var(--success)' : 'var(--warning)'}>
-                              {sess.type}
-                            </Badge>
-                            <span className="text-sm font-medium">{sess.label}</span>
-                            <span className="text-xs text-mute">({sess.session_key})</span>
-                          </div>
-                          {sess.estimated_duration_min && <span className="text-xs text-mute">{sess.estimated_duration_min} min</span>}
-                        </div>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-ink">{sess.label}</span>
+                            <span className="mt-1 flex items-center gap-2 text-xs text-mute">
+                              <TypeBadge type={sess.type} />
+                              {sess.estimated_duration_min ? `${sess.estimated_duration_min} min` : ''}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs text-mute">Modifier</span>
+                        </button>
                       ))}
                     </div>
                   ) : (

@@ -43,6 +43,25 @@
   --color-warn: var(--warning);
   --color-bad: var(--error);
   --color-line: var(--border);
+  /* Aliases used across Programme & other pages that previously resolved to
+     NOTHING (invisible borders, transparent dropdowns, missing warning colors). */
+  --color-warning: var(--warning);
+  --color-danger: var(--error);
+  --color-heading: var(--text-primary);
+  --color-surface-alt: var(--bg-tertiary);
+}
+
+/* CSS-variable aliases for inline styles / charts (same story as above). */
+:root,
+[data-theme="dark"],
+[data-theme="light"] {
+  --accent: var(--accent-primary);
+  --danger: var(--error);
+  --text-mute: var(--text-secondary);
+  --bg-card: var(--bg-tertiary);
+  --bg-surface: var(--bg-secondary);
+  --surface-alt: var(--bg-tertiary);
+  --border-line: var(--border);
 }
 
 html,

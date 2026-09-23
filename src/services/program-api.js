@@ -38,6 +38,25 @@ function unwrap({ data, error }) {
   return data;
 }
 
+// True when Supabase rejected a write because a column from a newer migration
+// (e.g. 004's session_slots / config) doesn't exist yet. Lets callers retry
+// without the new field so the app keeps working until the migration is run.
+function isMissingColumn(error, column) {
+  if (!error) return false;
+  const msg = `${error.message || ''} ${error.details || ''}`;
+  return (error.code === 'PGRST204' || error.code === '42703') && (!column || msg.includes(column));
+}
+
+// Clear message for the 'agility' session type before migration 004.
+function explainConstraint(error) {
+  if (error?.code === '23514' && String(error.message || '').includes('type_check')) {
+    const e = new Error("Le type « Agilité » nécessite la migration 004 (supabase/migrations/004_program_session_slots_agility.sql).");
+    e.code = error.code;
+    return e;
+  }
+  return error;
+}
+
 // ---------------------------------------------------------------------------
 // Programs
 // ---------------------------------------------------------------------------
@@ -194,34 +213,38 @@ export async function fetchSessions(phaseId) {
 
 export async function createSession(phaseId, data) {
   const uid = await getUserId();
-  const rows = unwrap(
-    await supabase
-      .from('program_sessions')
-      .insert({
-        phase_id: phaseId,
-        user_id: uid,
-        session_key: data.session_key,
-        label: data.label,
-        type: data.type,
-        estimated_duration_min: data.estimated_duration_min || null,
-        notes: data.notes || null,
-      })
-      .select()
-  );
-  return rows[0];
+  const row = {
+    phase_id: phaseId,
+    user_id: uid,
+    session_key: data.session_key,
+    label: data.label,
+    type: data.type,
+    estimated_duration_min: data.estimated_duration_min || null,
+    notes: data.notes || null,
+    config: data.config || {},
+  };
+  let res = await supabase.from('program_sessions').insert(row).select();
+  if (isMissingColumn(res.error, 'config')) {
+    // Pre-migration fallback: no config column → keep the legacy notes encoding.
+    const { config, ...legacy } = row;
+    res = await supabase.from('program_sessions').insert({ ...legacy, notes: data.notesFallback ?? legacy.notes }).select();
+  }
+  if (res.error) throw explainConstraint(res.error);
+  return res.data[0];
 }
 
 export async function updateSession(id, updates) {
   const uid = await getUserId();
-  const rows = unwrap(
-    await supabase
-      .from('program_sessions')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', uid)
-      .select()
-  );
-  return rows[0];
+  const { notesFallback, ...clean } = updates;
+  let res = await supabase.from('program_sessions').update(clean).eq('id', id).eq('user_id', uid).select();
+  if (isMissingColumn(res.error, 'config')) {
+    const { config, ...legacy } = clean;
+    res = await supabase.from('program_sessions')
+      .update({ ...legacy, ...(notesFallback !== undefined ? { notes: notesFallback } : {}) })
+      .eq('id', id).eq('user_id', uid).select();
+  }
+  if (res.error) throw explainConstraint(res.error);
+  return res.data[0];
 }
 
 export async function deleteSession(id) {
@@ -362,14 +385,28 @@ export async function upsertDayPlan(phaseId, dayOfWeek, data) {
     duration_min: data.duration_min || null,
     location_id: data.location_id || null,
     notes: data.notes || null,
+    // Per-session time/duration/location: { [sessionId]: { time, duration_min, location_id } }
+    session_slots: data.session_slots || {},
   };
-  const rows = unwrap(
-    await supabase
+  let res = await supabase
+    .from('program_weekly_structure')
+    .upsert(row, { onConflict: 'phase_id,day_of_week' })
+    .select();
+  if (isMissingColumn(res.error, 'session_slots')) {
+    // Pre-migration fallback: save everything except per-session slots.
+    const { session_slots, ...legacy } = row;
+    res = await supabase
       .from('program_weekly_structure')
-      .upsert(row, { onConflict: 'phase_id,day_of_week' })
-      .select()
-  );
-  return rows[0];
+      .upsert(legacy, { onConflict: 'phase_id,day_of_week' })
+      .select();
+    if (!res.error) {
+      // Keep the slots in the returned row so the UI reflects them this session,
+      // and flag that they weren't persisted (editor shows a migration notice).
+      return { ...res.data[0], session_slots, _slotsNotPersisted: true };
+    }
+  }
+  if (res.error) throw res.error;
+  return res.data[0];
 }
 
 // ---------------------------------------------------------------------------
