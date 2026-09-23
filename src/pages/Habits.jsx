@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import {
   Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck, Check, Sunrise, Sun, Moon,
   Clock, Archive, ArchiveRestore, ShieldAlert, HeartPulse, Target, ListChecks, ChevronDown, Snowflake, Minus, Ban, Gauge, Zap, Palmtree, Trophy,
-  Bell, BellOff, Link2, CalendarDays, CornerDownRight,
+  Bell, BellOff, Link2, CalendarDays, CornerDownRight, Sparkles, TrendingDown, TrendingUp,
 } from 'lucide-react';
+import { coachAdvice, habitCorrelations } from '../utils/habit-coach';
 import { toast } from '../store/uiStore';
 import { HABIT_SOURCES, sourceMeta } from '../utils/habit-sources';
 import { baseCurrencyShort } from '../utils/formatters';
@@ -545,6 +546,90 @@ async function enableReminders(setEnabled) {
     : 'Rappels activés dans l’app (notifications du navigateur refusées).', 'success');
 }
 
+// ── Coach: slipping habits, mini versions, habit ↔ check-in links ──
+const pctOf = (r) => `${Math.round((r || 0) * 100)} %`;
+const nf1 = (v) => (Math.round(v * 10) / 10).toLocaleString('fr-FR');
+const METRIC_GENDER_F = { energy: true, sleep: true, stress: false }; // « votre énergie est plus élevée »
+
+function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
+  const { applyMini, restoreFull, snoozeCoach, editHabit } = useHabitStore();
+  const coachSnooze = useHabitStore((s) => s.coachSnooze);
+  const advice = useMemo(() => coachAdvice(habits, logs, today, coachSnooze || {}), [habits, logs, today, coachSnooze]);
+  const links = useMemo(() => habitCorrelations(habits, logs, energyLogs, today), [habits, logs, energyLogs, today]);
+  return (
+    <Card>
+      <div className="text-sm font-semibold text-ink flex items-center gap-2 mb-3"><Sparkles size={15} className="text-accent" /> Coach</div>
+      {advice.length === 0 && links.length === 0 && (
+        <p className="text-sm text-mute">Rien à signaler : vos habitudes tiennent.{energyLogs.length < 14 ? ' Les liens avec votre énergie, votre sommeil et votre stress apparaîtront après environ deux semaines de check-ins.' : ''}</p>
+      )}
+      {advice.length > 0 && (
+        <div className="space-y-2">
+          {advice.map((a) => {
+            const h = a.habit;
+            const slipping = a.type === 'slipping';
+            const color = slipping ? 'var(--warning)' : 'var(--success)';
+            const Icon = slipping ? TrendingDown : TrendingUp;
+            return (
+              <div key={h.id} className="rounded-xl border px-3 py-2.5 flex items-start gap-2" style={{ borderColor: tint(color, 40), background: tint(color, 6) }}>
+                <Icon size={16} className="shrink-0 mt-0.5" style={{ color }} />
+                <div className="min-w-0 flex-1 text-sm">
+                  {slipping ? (
+                    <>
+                      <div className="text-ink">« {h.name} » décroche</div>
+                      <div className="text-[12px] text-mute">
+                        {a.weeks ? (Math.round(a.recent * 3) ? `Quota atteint 1 semaine sur les 3 dernières.` : `Quota non atteint ces 3 dernières semaines.`)
+                          : `${a.done}/${a.due} jours réussis ces 14 derniers jours${a.prior != null ? ` (contre ${pctOf(a.prior)} avant)` : ''}.`}
+                        {a.mini ? ` Réduisez l’effort plutôt que d’abandonner : ${a.mini.text}.`
+                          : a.fallback?.kind === 'reminder' ? ' Un rappel à heure fixe aide souvent à reprendre.'
+                            : a.fallback?.kind === 'anchor' ? ` Accrochez-la à « ${a.fallback.anchor.name} », qui tient bien.`
+                              : ' Un joker ou une pause protège la série si la période est chargée.'}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-ink">« {h.name} » tient bon en version mini</div>
+                      <div className="text-[12px] text-mute">{a.done != null ? `${a.done}/${a.due} jours réussis ces 14 derniers jours (${pctOf(a.recent)}).` : 'Quota atteint 3 semaines sur 3.'} Prêt à revenir à la version normale ?</div>
+                    </>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {slipping && a.mini && <Button className="!py-1 !px-2.5 text-xs" onClick={() => applyMini(h.id, a.mini.changes)}>Passer en version mini</Button>}
+                    {slipping && !a.mini && a.fallback?.kind === 'reminder' && <Button className="!py-1 !px-2.5 text-xs" onClick={() => onEdit(h)}>Ajouter un rappel</Button>}
+                    {slipping && !a.mini && a.fallback?.kind === 'anchor' && <Button className="!py-1 !px-2.5 text-xs" onClick={() => { editHabit(h.id, { after: a.fallback.anchor.id }); toast(`« ${h.name} » s’enchaîne désormais après « ${a.fallback.anchor.name} »`, 'success'); }}>L’enchaîner</Button>}
+                    {!slipping && <Button className="!py-1 !px-2.5 text-xs" onClick={() => restoreFull(h.id)}>Revenir à la normale</Button>}
+                    <Button variant="secondary" className="!py-1 !px-2.5 text-xs" onClick={() => snoozeCoach(h.id, slipping ? 7 : 14)}>{slipping ? 'Plus tard' : 'Rester en mini'}</Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {links.length > 0 && (
+        <div className={advice.length ? 'mt-4 pt-3 border-t border-line' : ''}>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2">Ce que disent vos check-ins</div>
+          <div className="space-y-1.5">
+            {links.map((l) => {
+              const fem = METRIC_GENDER_F[l.metric.key];
+              const word = l.diff > 0 ? (fem ? 'plus élevée' : 'plus élevé') : (fem ? 'plus basse' : 'plus bas');
+              const c = l.good ? 'var(--success)' : 'var(--error)';
+              return (
+                <div key={`${l.habit.id}-${l.metric.key}`} className="flex items-start gap-2 text-sm">
+                  <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ background: c }} />
+                  <span className="text-mute">
+                    Le lendemain de « <span className="text-ink">{l.habit.name}</span> », votre {l.metric.label} est <b style={{ color: c }}>{word} de {nf1(Math.abs(l.diff))} pt</b>
+                    <span className="text-[11px]"> ({nf1(l.withMean)} contre {nf1(l.withoutMean)} sur 10 · {l.nWith} j avec, {l.nWithout} j sans)</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-mute mt-2">Sur 120 jours. Ce sont des corrélations, pas une preuve de cause à effet.</p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -725,6 +810,7 @@ export default function Habits() {
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
                               <span>· +{h.xpReward} XP{h.linkedSkill && SKILL_MAP[h.linkedSkill] ? ` → ${SKILL_MAP[h.linkedSkill].name}` : ''}</span>
                               {h.mandatory && <span className="text-warning">· obligatoire</span>}
+                              {h.mini && <span className="text-accent">· version mini</span>}
                               {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}
                               {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {h.reminderTime}</span>}
                               {h.source && <span className="text-accent">· auto ({sourceMeta(h.source)?.section})</span>}
@@ -756,6 +842,8 @@ export default function Habits() {
           <EmptyState>{isPast ? 'Aucune habitude prévue ce jour-là.' : active.length ? 'Rien de prévu aujourd’hui.' : 'Aucune habitude. Commencez par une seule habitude clé, puis ajoutez-en progressivement.'}</EmptyState>
         )}
       </Card>
+
+      {active.length > 0 && !isPast && <CoachCard habits={habits} logs={logs} energyLogs={energyLogs} today={today} onEdit={(h) => { setEditing(h); setFormOpen(true); }} />}
 
       {quitHabits.length > 0 && (
         <div>

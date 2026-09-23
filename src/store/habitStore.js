@@ -47,6 +47,26 @@ export const useHabitStore = create(
       // Browser reminders at each habit's reminderTime (local only: the app must be open).
       habitReminders: { enabled: false, lastShown: {} },
       setHabitRemindersEnabled: (enabled) => set({ habitReminders: { ...(get().habitReminders || { lastShown: {} }), enabled } }),
+      // Coach: advice hidden until a date ({ habitId: 'YYYY-MM-DD' }).
+      coachSnooze: {},
+      snoozeCoach: (habitId, days = 7) => {
+        const d = new Date(todayKey() + 'T12:00:00'); d.setDate(d.getDate() + days);
+        set({ coachSnooze: { ...(get().coachSnooze || {}), [habitId]: todayKey(d) } });
+      },
+      // Mini version: shrink the habit, keep the original values to restore later.
+      applyMini: (id, changes) => {
+        const h = get().habits.find((x) => x.id === id);
+        if (!h || h.mini) return;
+        const original = Object.fromEntries(Object.keys(changes).map((k) => [k, h[k]]));
+        get().editHabit(id, { ...changes, mini: { original, since: todayKey() } });
+        toast(`« ${h.name} » passe en version mini : l’essentiel est de garder la chaîne`, 'success');
+      },
+      restoreFull: (id) => {
+        const h = get().habits.find((x) => x.id === id);
+        if (!h?.mini) return;
+        get().editHabit(id, { ...h.mini.original, mini: null });
+        toast(`« ${h.name} » revient à la version normale 💪`, 'success');
+      },
       markHabitReminderShown: (habitId, date) => set({ habitReminders: { ...get().habitReminders, lastShown: { ...(get().habitReminders?.lastShown || {}), [habitId]: date } } }),
 
       checkBadges: () => {
@@ -294,7 +314,7 @@ export const useHabitStore = create(
         toast('Sieste enregistrée', 'success');
       },
 
-      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 } }),
+      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 }, coachSnooze: {} }),
     }),
     { name: 'audax-habits' }
   )
