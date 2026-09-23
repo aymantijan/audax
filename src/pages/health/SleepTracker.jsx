@@ -84,14 +84,14 @@ export default function SleepTracker() {
       </Card>
 
       {window_ && (
-        <Card title="Your Optimal Sleep Window">
+        <Card title="Ta fenêtre de sommeil optimale">
           <div className="flex items-center gap-6">
             <div>
               <div className="text-xs text-mute mb-1">Bedtime</div>
               <div className="text-xl font-bold">{window_.bedtime}</div>
             </div>
             <div>
-              <div className="text-xs text-mute mb-1">Wake time</div>
+              <div className="text-xs text-mute mb-1">Heure de réveil</div>
               <div className="text-xl font-bold">{window_.wakeTime}</div>
             </div>
             <div className="text-xs text-mute">Based on {window_.sampleSize} of your best nights (avg {window_.avgQuality}/10)</div>
@@ -99,10 +99,10 @@ export default function SleepTracker() {
         </Card>
       )}
 
-      <Card title="7-Day Sleep Quality" action={<Button variant="secondary" onClick={() => navigate('/habits')}>Log tonight's sleep</Button>}>
+      <Card title="Qualité du sommeil sur 7 jours" action={<Button variant="secondary" onClick={() => navigate('/habits')}>Enregistrer ma nuit</Button>}>
         {history.length ? (
           <>
-            <div className="text-sm text-mute mb-3">7-day average: <span className="text-ink font-semibold">{avg}/10</span></div>
+            <div className="text-sm text-mute mb-3">Moyenne 7 jours : <span className="text-ink font-semibold">{avg}/10</span></div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={history}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -118,7 +118,7 @@ export default function SleepTracker() {
             </ResponsiveContainer>
           </>
         ) : (
-          <EmptyState>No sleep data yet — log your bedtime and wake time on the Habits page.</EmptyState>
+          <EmptyState>Pas encore de données — renseigne ton heure de coucher et de réveil dans le check-in du jour (Aujourd’hui).</EmptyState>
         )}
       </Card>
     </div>

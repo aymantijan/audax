@@ -68,7 +68,7 @@ export default function Dashboard({ goTo }) {
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleReminders}>
           <span className="flex items-center gap-2">
             {reminders.enabled ? <Bell size={13} /> : <BellOff size={13} />}
-            {reminders.enabled ? 'Reminders on' : 'Enable reminders'}
+            {reminders.enabled ? 'Rappels activés' : 'Activer les rappels'}
           </span>
         </Button>
       </div>
@@ -100,7 +100,7 @@ export default function Dashboard({ goTo }) {
           <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-5 gap-3">
             {Object.entries(readiness.breakdown).map(([k, v]) => (
               <div key={k} className="text-center">
-                <div className="text-xs text-mute capitalize mb-1">{k}</div>
+                <div className="text-xs text-mute mb-1">{({ sleep: 'Sommeil', energy: 'Énergie', stress: 'Stress', recovery: 'Récupération', consistency: 'Régularité' })[k] || k}</div>
                 <div className="text-sm font-semibold">{v}</div>
               </div>
             ))}
@@ -121,16 +121,16 @@ export default function Dashboard({ goTo }) {
         </div>
       </div>
 
-      <Card title="Ask the Health AI">
+      <Card title="Demander au coach santé IA">
         <form onSubmit={submitQuestion} className="flex gap-2 mb-3">
-          <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="e.g. Why is my energy low this week?" className="flex-1" />
+          <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ex. Pourquoi mon énergie est-elle basse cette semaine ?" className="flex-1" />
           <Button type="submit" disabled={asking}>
-            <span className="flex items-center gap-2">{asking ? 'Thinking…' : <><Send size={13} /> Ask</>}</span>
+            <span className="flex items-center gap-2">{asking ? 'Réflexion…' : <><Send size={13} /> Demander</>}</span>
           </Button>
         </form>
         {answer && <div className="text-sm bg-surface border border-line rounded-lg p-3">{answer}</div>}
         {askError && <div className="text-sm text-bad">{askError}</div>}
-        {!answer && !askError && !asking && <div className="text-xs text-mute">Ask anything about your own logged health data — requires the AI coach to be configured on this deployment.</div>}
+        {!answer && !askError && !asking && <div className="text-xs text-mute">Pose une question sur tes propres données santé — nécessite que le coach IA soit configuré.</div>}
       </Card>
 
       {alerts.length > 0 && (
@@ -157,42 +157,42 @@ export default function Dashboard({ goTo }) {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Sleep" value={todayLog?.sleepData ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
-        <Stat label="Energy" value={todayLog ? `${todayLog.energyStartLevel}/10` : '—'} />
+        <Stat label="Sommeil" value={todayLog?.sleepData ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
+        <Stat label="Énergie" value={todayLog ? `${todayLog.energyStartLevel}/10` : '—'} />
         <Stat label="Stress" value={todayLog ? `${todayLog.stressLevel}/10` : '—'} />
-        <Stat label="Nutrition quality" value={nutrition.quality != null ? `${nutrition.quality}%` : '—'} sub={`${Math.round(nutrition.totals.protein)}g protein today`} />
+        <Stat label="Qualité nutritionnelle" value={nutrition.quality != null ? `${nutrition.quality}%` : '—'} sub={`${Math.round(nutrition.totals.protein)} g de protéines aujourd’hui`} />
       </div>
 
-      <Card title="Workout of the Day" action={<Badge>{todayWorkouts.length ? 'Logged' : 'Not logged'}</Badge>}>
+      <Card title="Séance du jour" action={<Badge>{todayWorkouts.length ? 'Faite' : 'Pas encore'}</Badge>}>
         {todayWorkouts.length ? (
           <ul className="space-y-1.5">
             {todayWorkouts.map((w) => (
               <li key={w.id} className="text-sm flex items-center gap-2">
-                <Dumbbell size={13} className="text-mute" /> {w.exercise || w.type} {w.durationMin ? `· ${w.durationMin}m` : ''} {w.quality ? `· quality ${w.quality}/10` : ''}
+                <Dumbbell size={13} className="text-mute" /> {w.exercise || w.type} {w.durationMin ? `· ${w.durationMin}m` : ''} {w.quality ? `· qualité ${w.quality}/10` : ''}
               </li>
             ))}
           </ul>
         ) : (
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => goTo?.('workout')}>Start a workout</Button>
-            <Button variant="secondary" onClick={() => logWorkout({ type: 'cardio', exercise: 'Rest day', durationMin: 0, quality: null, notes: 'Skipped' })}>Skip today</Button>
+            <Button onClick={() => goTo?.('workout')}>Commencer une séance</Button>
+            <Button variant="secondary" onClick={() => logWorkout({ type: 'cardio', exercise: 'Rest day', durationMin: 0, quality: null, notes: 'Skipped' })}>Pas de séance aujourd’hui</Button>
           </div>
         )}
       </Card>
 
-      <Card title="This Week" action={<Badge>Last 7 days</Badge>}>
+      <Card title="Cette semaine" action={<Badge>7 derniers jours</Badge>}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-          <div><div className="text-xs text-mute mb-1">Days logged</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
+          <div><div className="text-xs text-mute mb-1">Jours renseignés</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
           <div>
-            <div className="text-xs text-mute mb-1">Workouts</div>
+            <div className="text-xs text-mute mb-1">Séances</div>
             <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
           </div>
           <div>
-            <div className="text-xs text-mute mb-1">Avg sleep</div>
+            <div className="text-xs text-mute mb-1">Sommeil moy.</div>
             <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
           </div>
           <div>
-            <div className="text-xs text-mute mb-1">Avg energy</div>
+            <div className="text-xs text-mute mb-1">Énergie moy.</div>
             <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
           </div>
         </div>
@@ -236,7 +236,7 @@ function ActivityHeatmap({ data }) {
       {weeks.map((week, wi) => (
         <div key={wi} className="flex flex-col gap-1">
           {week.map((d) => (
-            <div key={d.date} title={`${d.date}: ${d.count} log${d.count !== 1 ? 's' : ''}`} className="w-2.5 h-2.5 rounded-sm" style={{ background: colorFor(d.count) }} />
+            <div key={d.date} title={`${d.date} : ${d.count} saisie${d.count !== 1 ? 's' : ''}`} className="w-2.5 h-2.5 rounded-sm" style={{ background: colorFor(d.count) }} />
           ))}
         </div>
       ))}

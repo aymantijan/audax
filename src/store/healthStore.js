@@ -54,23 +54,23 @@ const HEALTH_LINK_SKILLS = {
 };
 
 const BADGE_DEFS = [
-  { id: 'first-session', name: 'First Session', tier: 'bronze', check: (s) => s.workouts.length >= 1 },
-  { id: 'body-comp-tracker', name: 'Body Comp Tracker', tier: 'bronze', check: (s) => s.bodyComp.length >= 10 },
-  { id: 'cardio-king', name: 'Cardio King', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'cardio').length >= 20 },
-  { id: 'iron', name: 'Iron', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'strength').length >= 20 },
-  { id: 'deadlift-king', name: 'Deadlift King', tier: 'gold', check: (s) => s.workouts.some((w) => w.exercise && /deadlift/i.test(w.exercise) && Number(w.weight) >= 140) },
-  { id: 'sleep-champion', name: 'Sleep Champion', tier: 'silver', check: (s) => {
+  { id: 'first-session', name: 'Première séance', tier: 'bronze', check: (s) => s.workouts.length >= 1 },
+  { id: 'body-comp-tracker', name: 'Suivi corporel', tier: 'bronze', check: (s) => s.bodyComp.length >= 10 },
+  { id: 'cardio-king', name: 'Roi du cardio', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'cardio').length >= 20 },
+  { id: 'iron', name: 'Fonte', tier: 'silver', check: (s) => s.workouts.filter((w) => w.type === 'strength').length >= 20 },
+  { id: 'deadlift-king', name: 'Roi du soulevé de terre', tier: 'gold', check: (s) => s.workouts.some((w) => w.exercise && /deadlift/i.test(w.exercise) && Number(w.weight) >= 140) },
+  { id: 'sleep-champion', name: 'Champion du sommeil', tier: 'silver', check: (s) => {
       const logs = useHabitStore.getState().energyLogs;
       return logs.filter((l) => (l.sleepData?.sleepQualityScore ?? 0) >= 8).length >= 14;
     } },
-  { id: 'protein-perfect', name: 'Protein Perfect', tier: 'silver', check: (s) => s.nutritionLogs.filter((n) => n.proteinTargetMet).length >= 14 },
-  { id: 'nutrition-consistent', name: 'Nutrition Consistent', tier: 'silver', check: (s) => new Set(s.nutritionLogs.map((n) => n.date)).size >= 30 },
-  { id: 'recovery-master', name: 'Recovery Master', tier: 'silver', check: (s) => s.recoveryLogs.length >= 20 },
-  { id: 'hydration-hero', name: 'Hydration Hero', tier: 'silver', check: (s) => s.waterLogs.length >= 50 },
-  { id: 'pr-hunter', name: 'PR Hunter', tier: 'silver', check: (s) => s.getPRs().length >= 15 },
-  { id: 'goal-crusher', name: 'Goal Crusher', tier: 'silver', check: (s) => s.goals.some((g) => g.achieved) },
-  { id: 'dedicated-30', name: 'Dedicated ×30', tier: 'silver', check: (s) => s.workouts.length >= 30 },
-  { id: 'century-club', name: 'Century Club', tier: 'gold', check: (s) => s.workouts.length >= 100 },
+  { id: 'protein-perfect', name: 'Protéines parfaites', tier: 'silver', check: (s) => s.nutritionLogs.filter((n) => n.proteinTargetMet).length >= 14 },
+  { id: 'nutrition-consistent', name: 'Nutrition régulière', tier: 'silver', check: (s) => new Set(s.nutritionLogs.map((n) => n.date)).size >= 30 },
+  { id: 'recovery-master', name: 'Maître de la récup', tier: 'silver', check: (s) => s.recoveryLogs.length >= 20 },
+  { id: 'hydration-hero', name: 'Héros de l’hydratation', tier: 'silver', check: (s) => s.waterLogs.length >= 50 },
+  { id: 'pr-hunter', name: 'Chasseur de records', tier: 'silver', check: (s) => s.getPRs().length >= 15 },
+  { id: 'goal-crusher', name: 'Briseur d’objectifs', tier: 'silver', check: (s) => s.goals.some((g) => g.achieved) },
+  { id: 'dedicated-30', name: 'Assidu ×30', tier: 'silver', check: (s) => s.workouts.length >= 30 },
+  { id: 'century-club', name: 'Club des 100', tier: 'gold', check: (s) => s.workouts.length >= 100 },
 ];
 
 export const useHealthStore = create(
@@ -980,7 +980,7 @@ export const useHealthStore = create(
       // reachable; if it isn't, this local recommendation is what stays shown.
       getCoachRecommendation: () => {
         const today = todayKey();
-        if (get().coachCache?.date === today) return get().coachCache;
+        if (get().coachCache?.date === today && get().coachCache?.lang === 'fr') return get().coachCache;
         const energyLogs = useHabitStore.getState().energyLogs;
         const todayLog = energyLogs.find((l) => l.date === today);
         const readiness = get().getReadiness();
@@ -995,7 +995,7 @@ export const useHealthStore = create(
           overtrainingAlerts: alerts,
           workoutsThisWeek,
         });
-        const cached = { date: today, source: 'local', ...rec };
+        const cached = { date: today, source: 'local', lang: 'fr', ...rec };
         set({ coachCache: cached });
         return cached;
       },
@@ -1055,7 +1055,7 @@ export const useHealthStore = create(
         try {
           const { getAIDailyRecommendation } = await import('../services/health-coach-ai');
           const text = await getAIDailyRecommendation(get().buildCoachContext());
-          set({ coachCache: { date: today, text, tone: 'info', source: 'ai' } });
+          set({ coachCache: { date: today, text, tone: 'info', source: 'ai', lang: 'fr' } });
         } catch {
           // AI unavailable — local heuristic (already cached) remains shown.
         }
@@ -1521,10 +1521,10 @@ export const useHealthStore = create(
       // of each so either alone is enough to raise the target.
       getSleepTarget: () => {
         const window_ = get().getSleepWindow();
-        const activeCurated = get().getActiveCuratedProgram();
+        // (The old curated-program sleepFloor source was removed with that
+        // system — calling it crashed the whole Sleep page.)
         const cycleCoaching = get().getCyclePhaseCoaching();
         const floorParts = [];
-        if (activeCurated?.sleepFloor) floorParts.push({ ...activeCurated.sleepFloor, reason: activeCurated.name });
         // Luteal-phase floor assumes a real progesterone rise, which hormonal
         // contraception generally suppresses — the bleed-window (menstrual)
         // floor stays regardless, since that discomfort is independent of

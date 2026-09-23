@@ -47,7 +47,7 @@ export default function EnergyStress() {
     <div className="space-y-6">
       <Card title="Check-in">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
-          <Field label="Time of day">
+          <Field label="Moment de la journée">
             <Select value={slot} onChange={(e) => setSlot(e.target.value)} options={SLOTS} />
           </Field>
           <Field label={`Energy: ${energy}/10`}>
@@ -63,11 +63,11 @@ export default function EnergyStress() {
             <Input type="date" value={checkinDate} max={todayKey()} onChange={(e) => e.target.value && setCheckinDate(e.target.value)} />
           </Field>
         </div>
-        <Button className="mt-3" onClick={save}>{checkinDate === todayKey() ? 'Save check-in' : `Save check-in for ${checkinDate}`}</Button>
+        <Button className="mt-3" onClick={save}>{checkinDate === todayKey() ? 'Enregistrer le check-in' : `Enregistrer le check-in du ${checkinDate}`}</Button>
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title="7-Day Energy Trend — by time of day">
+        <Card title="Énergie sur 7 jours — par moment de la journée">
           {trend.length > 1 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={trend}>
@@ -82,11 +82,11 @@ export default function EnergyStress() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-mute text-sm py-6">Log a few check-ins across the day to see trends.</div>
+            <div className="text-center text-mute text-sm py-6">Fais quelques check-ins dans la journée pour voir les tendances.</div>
           )}
         </Card>
 
-        <Card title="7-Day Stress Trend — by time of day">
+        <Card title="Stress sur 7 jours — par moment de la journée">
           {trend.length > 1 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={trend}>
@@ -101,7 +101,7 @@ export default function EnergyStress() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-mute text-sm py-6">Log a few check-ins across the day to see trends.</div>
+            <div className="text-center text-mute text-sm py-6">Fais quelques check-ins dans la journée pour voir les tendances.</div>
           )}
         </Card>
       </div>

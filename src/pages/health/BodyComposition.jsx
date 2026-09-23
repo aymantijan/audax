@@ -43,23 +43,23 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
   y += 8;
   doc.setFontSize(10);
   doc.setTextColor(120);
-  doc.text(`Generated ${new Date().toLocaleDateString()} · ${monthEntries.length} entries in the last 30 days`, 14, y);
+  doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} · ${monthEntries.length} mesure(s) sur les 30 derniers jours`, 14, y);
   y += 12;
 
   doc.setTextColor(0);
   doc.setFontSize(13);
-  doc.text('Summary', 14, y);
+  doc.text('Résumé', 14, y);
   y += 7;
   doc.setFontSize(10);
   const lines = [
-    `Current weight: ${latest?.weightKg ?? '—'} kg`,
-    `Weight change this month: ${first && latest && first.weightKg && latest.weightKg ? (latest.weightKg - first.weightKg).toFixed(1) : '—'} kg`,
-    `Current body fat: ${latest?.bodyFatPct ?? '—'}% (${latest?.bodyFatMethod ?? 'n/a'})`,
-    `Current waist: ${latest?.waistCm ?? '—'} cm`,
+    `Poids actuel : ${latest?.weightKg ?? '—'} kg`,
+    `Évolution du poids ce mois-ci : ${first && latest && first.weightKg && latest.weightKg ? (latest.weightKg - first.weightKg).toFixed(1) : '—'} kg`,
+    `Masse grasse actuelle : ${latest?.bodyFatPct ?? '—'}% (${latest?.bodyFatMethod ?? 'n/a'})`,
+    `Tour de taille actuel : ${latest?.waistCm ?? '—'} cm`,
     '',
-    `Predicted weekly rate (realistic): ${prediction.weeklyRateKg.realistic} kg/wk`,
-    `Predicted 12-week change: conservative ${prediction.projectedChangeKg.conservative['12w']}kg · realistic ${prediction.projectedChangeKg.realistic['12w']}kg · optimistic ${prediction.projectedChangeKg.optimistic['12w']}kg`,
-    `Prediction confidence: ${prediction.confidence}%`,
+    `Rythme prévu (réaliste) : ${prediction.weeklyRateKg.realistic} kg/sem.`,
+    `Évolution prévue sur 12 semaines : prudente ${prediction.projectedChangeKg.conservative['12w']} kg · réaliste ${prediction.projectedChangeKg.realistic['12w']} kg · optimiste ${prediction.projectedChangeKg.optimistic['12w']} kg`,
+    `Confiance de la prévision : ${prediction.confidence} %`,
   ];
   for (const line of lines) {
     doc.text(line, 14, y);
@@ -69,29 +69,29 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
   if (extra.program || extra.plan) {
     y += 6;
     doc.setFontSize(13);
-    doc.text('Training & Nutrition Plan', 14, y);
+    doc.text('Plan entraînement & nutrition', 14, y);
     y += 7;
     doc.setFontSize(10);
     const planLines = [];
     if (extra.program) {
-      planLines.push(`Program: ${extra.program.splitType.replace('_', ' ')}, ${extra.program.daysPerWeek}x/week`);
-      if (extra.adherence?.percent != null) planLines.push(`Adherence: ${extra.adherence.percent}% of planned exercises logged (week ${extra.adherence.weeksElapsed}/${extra.adherence.totalWeeks})`);
+      planLines.push(`Programme : ${extra.program.splitType.replace('_', ' ')}, ${extra.program.daysPerWeek}x/semaine`);
+      if (extra.adherence?.percent != null) planLines.push(`Assiduité : ${extra.adherence.percent} % des exercices prévus enregistrés (semaine ${extra.adherence.weeksElapsed}/${extra.adherence.totalWeeks})`);
     }
     if (extra.plan) {
-      planLines.push(`Nutrition target: ${extra.plan.targetKcal} kcal/day (${extra.plan.targetMacros.proteinG}P / ${extra.plan.targetMacros.carbsG}C / ${extra.plan.targetMacros.fatG}F)`);
+      planLines.push(`Objectif nutrition : ${extra.plan.targetKcal} kcal/jour (${extra.plan.targetMacros.proteinG}P / ${extra.plan.targetMacros.carbsG}C / ${extra.plan.targetMacros.fatG}F)`);
     }
     for (const line of planLines) { doc.text(line, 14, y); y += 6; }
   }
 
   y += 6;
   doc.setFontSize(13);
-  doc.text('Entries (last 30 days)', 14, y);
+  doc.text('Mesures (30 derniers jours)', 14, y);
   y += 7;
   doc.setFontSize(9);
   doc.text('Date', 14, y);
-  doc.text('Weight (kg)', 60, y);
-  doc.text('Waist (cm)', 110, y);
-  doc.text('Body Fat %', 160, y);
+  doc.text('Poids (kg)', 60, y);
+  doc.text('Taille (cm)', 110, y);
+  doc.text('Masse grasse %', 160, y);
   y += 5;
   doc.setDrawColor(200);
   doc.line(14, y, 196, y);
@@ -223,21 +223,21 @@ export default function BodyComposition() {
         </div>
       )}
 
-      <Card title="Log Body Composition">
+      <Card title="Nouvelle mesure">
         <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Field label="Weight (kg)">
+          <Field label="Poids (kg)">
             <Input type="number" step="0.1" value={form.weightKg} onChange={(e) => setForm({ ...form, weightKg: e.target.value })} />
           </Field>
-          <Field label="Date" hint="Backdate a missed entry">
+          <Field label="Date" hint="Antidater une saisie oubliée">
             <Input type="date" value={form.date} max={todayKey()} onChange={(e) => e.target.value && setForm({ ...form, date: e.target.value })} />
           </Field>
-          <Field label="Sex (for Navy formula)">
+          <Field label="Sexe (pour la formule Navy)">
             <Select value={form.sex} onChange={(e) => setForm({ ...form, sex: e.target.value })} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />
           </Field>
           <Field label="Height (cm)">
             <Input type="number" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
-          <Field label="Age (years)" hint="For the BMR/TDEE estimate below">
+          <Field label="Age (years)" hint="Pour l’estimation BMR/TDEE ci-dessous">
             <Input type="number" min="10" max="100" value={form.ageYears} onChange={(e) => setForm({ ...form, ageYears: e.target.value })} />
           </Field>
           <Field label="Waist (cm)">
@@ -266,10 +266,10 @@ export default function BodyComposition() {
           <Field label={`Visual abs rating: ${form.absRating}/10`}>
             <input type="range" min="1" max="10" value={form.absRating} onChange={(e) => setForm({ ...form, absRating: Number(e.target.value) })} className="w-full mt-2" />
           </Field>
-          <Field label="Visual body-fat estimate % (optional fallback)">
+          <Field label="Estimation visuelle de masse grasse % (facultatif)">
             <Input type="number" step="0.1" value={form.visualBodyFatPct} onChange={(e) => setForm({ ...form, visualBodyFatPct: e.target.value })} placeholder="Used only if Navy formula inputs are incomplete" />
           </Field>
-          <Field label="Progress photo (optional)" hint="Stored locally, max 1.5MB">
+          <Field label="Photo de progression (facultatif)" hint="Stored locally, max 1.5MB">
             <label className="flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-xs text-mute cursor-pointer hover:text-ink">
               <Camera size={14} />
               {form.photo ? 'Photo attached ✓' : 'Choose photo…'}
@@ -278,20 +278,20 @@ export default function BodyComposition() {
             {photoError && <p className="text-bad text-[11px] mt-1">{photoError}</p>}
           </Field>
           <div className="col-span-2 md:col-span-4">
-            <Button type="submit" className="w-full">{form.date === todayKey() ? 'Log today' : `Log for ${form.date}`}</Button>
+            <Button type="submit" className="w-full">{form.date === todayKey() ? 'Enregistrer aujourd’hui' : `Enregistrer pour le ${form.date}`}</Button>
           </div>
         </form>
       </Card>
 
       {latest && (
-        <Card title="Current Estimate">
+        <Card title="Estimation actuelle">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-xs text-mute mb-1">Weight</div>
+              <div className="text-xs text-mute mb-1">Poids</div>
               <div className="text-xl font-bold">{latest.weightKg ?? '—'} kg</div>
             </div>
             <div>
-              <div className="text-xs text-mute mb-1">Body Fat %</div>
+              <div className="text-xs text-mute mb-1">Masse grasse %</div>
               <div className="text-xl font-bold">{latest.bodyFatPct ?? '—'}%</div>
               <div className="text-[11px] text-mute">{latest.bodyFatMethod === 'navy' ? 'Navy method' : latest.bodyFatMethod === 'visual' ? 'Visual estimate' : ''}</div>
             </div>
@@ -330,14 +330,14 @@ export default function BodyComposition() {
       )}
 
       {latest && (
-        <Card title="Energy Needs (BMR / TDEE)">
+        <Card title="Besoins énergétiques (BMR / TDEE)">
           {bmr ? (
             <>
               <div className="grid grid-cols-2 gap-4 text-center mb-4">
                 <div>
                   <div className="text-xs text-mute mb-1">BMR</div>
                   <div className="text-xl font-bold">{bmr} kcal/day</div>
-                  <div className="text-[11px] text-mute">Mifflin-St Jeor, at rest</div>
+                  <div className="text-[11px] text-mute">Mifflin-St Jeor, au repos</div>
                 </div>
                 <div>
                   <div className="text-xs text-mute mb-1">TDEE</div>
@@ -362,11 +362,11 @@ export default function BodyComposition() {
                 ))}
               </div>
               <p className="text-[11px] text-mute mt-3">
-                An estimate, not a prescription — actual maintenance varies by individual. Track weight trend over 2-3 weeks at a target and adjust from there.
+                Une estimation, pas une prescription — la maintenance réelle varie selon chacun. Suis la tendance du poids 2-3 semaines à une cible donnée, puis ajuste.
               </p>
             </>
           ) : (
-            <EmptyState>Log weight, height, age, and sex above to estimate your energy needs.</EmptyState>
+            <EmptyState>Renseigne poids, taille, âge et sexe ci-dessus pour estimer tes besoins énergétiques.</EmptyState>
           )}
         </Card>
       )}
@@ -399,7 +399,7 @@ export default function BodyComposition() {
         </form>
       </Card>
 
-      <Card title="Weight Prediction" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: null, plan: getActiveNutritionPlan(), adherence: null })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
+      <Card title="Prévision de poids" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: null, plan: getActiveNutritionPlan(), adherence: null })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
         <div className="text-xs text-mute mb-3">Confidence: {prediction.confidence}% (based on days logged) · Efficiency multiplier: {prediction.efficiency}%</div>
         <div className="grid grid-cols-3 gap-3 text-center mb-3">
           {['conservative', 'realistic', 'optimistic'].map((k) => (
@@ -450,7 +450,7 @@ export default function BodyComposition() {
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState>Log a few entries to see trends.</EmptyState>
+          <EmptyState>Ajoute quelques mesures pour voir les tendances.</EmptyState>
         )}
       </Card>
 
@@ -468,7 +468,7 @@ export default function BodyComposition() {
       )}
 
       {bodyComp.length > 0 && (
-        <Card title="History">
+        <Card title="Historique">
           <ul className="space-y-1.5">
             {[...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1)).map((b) => (
               <li key={b.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">

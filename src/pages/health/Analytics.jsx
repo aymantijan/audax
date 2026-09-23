@@ -7,12 +7,12 @@ import { Card, Badge, EmptyState, Field, Select } from '../../components/common/
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const CORRELATIONS = [
-  { key: 'sleepVsStrength', label: 'Sleep Quality ↔ Strength Volume', desc: 'Does better sleep track with heavier training sessions?' },
-  { key: 'sleepVsTradingAccuracy', label: 'Sleep Quality ↔ Trading Win Rate', desc: 'Cross-domain: does better sleep track with a higher win rate? (Trading)' },
-  { key: 'stressVsSpending', label: 'Stress ↔ Spending', desc: 'Cross-domain: does stress correlate with discretionary spending? (Finance)' },
-  { key: 'energyVsTradingAccuracy', label: 'Energy ↔ Trading Win Rate', desc: 'Cross-domain: does energy level track with trading win rate? (Trading)' },
-  { key: 'sleepVsTiltRisk', label: 'Sleep Quality ↔ Tilt/Revenge Days', desc: 'Cross-domain: does poor sleep track with days a tilt or revenge pattern got flagged? (Trading)' },
-  { key: 'energyVsTiltRisk', label: 'Energy ↔ Tilt/Revenge Days', desc: 'Cross-domain: does low energy track with days a tilt or revenge pattern got flagged? (Trading)' },
+  { key: 'sleepVsStrength', label: 'Qualité du sommeil ↔ volume de force', desc: 'Un meilleur sommeil va-t-il de pair avec des séances plus lourdes ?' },
+  { key: 'sleepVsTradingAccuracy', label: 'Qualité du sommeil ↔ taux de réussite trading', desc: 'Transversal : un meilleur sommeil va-t-il avec un meilleur taux de réussite ? (Trading)' },
+  { key: 'stressVsSpending', label: 'Stress ↔ dépenses', desc: 'Transversal : le stress est-il lié aux dépenses discrétionnaires ? (Finance)' },
+  { key: 'energyVsTradingAccuracy', label: 'Énergie ↔ taux de réussite trading', desc: 'Transversal : ton niveau d’énergie suit-il ton taux de réussite ? (Trading)' },
+  { key: 'sleepVsTiltRisk', label: 'Qualité du sommeil ↔ jours de tilt / revenge', desc: 'Transversal : un mauvais sommeil coïncide-t-il avec les jours de tilt ou de revenge trading ? (Trading)' },
+  { key: 'energyVsTiltRisk', label: 'Énergie ↔ jours de tilt / revenge', desc: 'Transversal : une énergie basse coïncide-t-elle avec les jours de tilt ou de revenge trading ? (Trading)' },
 ];
 
 export default function Analytics() {
@@ -62,7 +62,7 @@ export default function Analytics() {
             </ResponsiveContainer>
           </>
         ) : (
-          <EmptyState>Not enough overlapping days logged for both metrics yet — need at least 3.</EmptyState>
+          <EmptyState>Pas encore assez de jours communs aux deux mesures — il en faut au moins 3.</EmptyState>
         )}
       </Card>
 
@@ -84,7 +84,7 @@ export default function Analytics() {
         </div>
       </Card>
 
-      <Card title="Stress ↔ Spending Dashboard">
+      <Card title="Stress ↔ dépenses">
         {stressSpending.some((d) => d.spend > 0 || d.stress != null) ? (
           <ResponsiveContainer width="100%" height={240}>
             <ComposedChart data={stressSpending}>
@@ -99,11 +99,11 @@ export default function Analytics() {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState>Log stress check-ins and journal entries to see this dashboard.</EmptyState>
+          <EmptyState>Enregistre ton stress et des entrées de journal pour voir ce tableau.</EmptyState>
         )}
       </Card>
 
-      <Card title="Habit ↔ Energy Correlations">
+      <Card title="Corrélations habitudes ↔ énergie">
         {habitEnergy.length ? (
           <ul className="space-y-1.5">
             {habitEnergy.map((h) => (
@@ -116,11 +116,11 @@ export default function Analytics() {
             ))}
           </ul>
         ) : (
-          <EmptyState>Complete habits and log energy check-ins for a few weeks to see correlations.</EmptyState>
+          <EmptyState>Complète tes habitudes et note ton énergie pendant quelques semaines pour voir les corrélations.</EmptyState>
         )}
       </Card>
 
-      <Card title="RPE vs. Reps (Strength Sets)">
+      <Card title="RPE vs reps (séries de force)">
         {rpeReps.length > 2 ? (
           <ResponsiveContainer width="100%" height={220}>
             <ScatterChart>
@@ -132,11 +132,11 @@ export default function Analytics() {
             </ScatterChart>
           </ResponsiveContainer>
         ) : (
-          <EmptyState>Log a few strength sets with reps + RPE to see this.</EmptyState>
+          <EmptyState>Enregistre quelques séries de force avec reps + RPE pour voir ce graphique.</EmptyState>
         )}
       </Card>
 
-      <Card title="Weight Prediction Summary">
+      <Card title="Prévision de poids">
         <div className="grid grid-cols-3 gap-3 text-center">
           {['conservative', 'realistic', 'optimistic'].map((k) => (
             <div key={k} className="bg-surface border border-line rounded-lg p-3">
@@ -150,13 +150,13 @@ export default function Analytics() {
 
       <Card title="Annual Health Report" action={<Badge>Auto-generated</Badge>}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-          <div><div className="text-xs text-mute mb-1">Days logged</div><div className="text-lg font-semibold">{annual.daysLogged}</div></div>
-          <div><div className="text-xs text-mute mb-1">Total workouts</div><div className="text-lg font-semibold">{annual.totalWorkouts}</div></div>
+          <div><div className="text-xs text-mute mb-1">Jours renseignés</div><div className="text-lg font-semibold">{annual.daysLogged}</div></div>
+          <div><div className="text-xs text-mute mb-1">Séances au total</div><div className="text-lg font-semibold">{annual.totalWorkouts}</div></div>
           <div><div className="text-xs text-mute mb-1">Cardio / Strength</div><div className="text-lg font-semibold">{annual.cardioSessions} / {annual.strengthSessions}</div></div>
-          <div><div className="text-xs text-mute mb-1">Avg sleep quality</div><div className="text-lg font-semibold">{annual.avgSleepQuality ?? '—'}/10</div></div>
-          <div><div className="text-xs text-mute mb-1">Avg energy</div><div className="text-lg font-semibold">{annual.avgEnergy ?? '—'}/10</div></div>
-          <div><div className="text-xs text-mute mb-1">Avg stress</div><div className="text-lg font-semibold">{annual.avgStress ?? '—'}/10</div></div>
-          <div><div className="text-xs text-mute mb-1">Weight change</div><div className="text-lg font-semibold">{annual.weightChangeKg != null ? `${annual.weightChangeKg > 0 ? '+' : ''}${annual.weightChangeKg}kg` : '—'}</div></div>
+          <div><div className="text-xs text-mute mb-1">Qualité de sommeil moy.</div><div className="text-lg font-semibold">{annual.avgSleepQuality ?? '—'}/10</div></div>
+          <div><div className="text-xs text-mute mb-1">Énergie moy.</div><div className="text-lg font-semibold">{annual.avgEnergy ?? '—'}/10</div></div>
+          <div><div className="text-xs text-mute mb-1">Stress moy.</div><div className="text-lg font-semibold">{annual.avgStress ?? '—'}/10</div></div>
+          <div><div className="text-xs text-mute mb-1">Évolution du poids</div><div className="text-lg font-semibold">{annual.weightChangeKg != null ? `${annual.weightChangeKg > 0 ? '+' : ''}${annual.weightChangeKg}kg` : '—'}</div></div>
           <div><div className="text-xs text-mute mb-1">Badges earned</div><div className="text-lg font-semibold">{annual.badgesEarned}</div></div>
         </div>
       </Card>
@@ -169,7 +169,7 @@ export default function Analytics() {
             ))}
           </div>
         ) : (
-          <EmptyState>No badges earned yet — keep logging.</EmptyState>
+          <EmptyState>Aucun badge pour l’instant — continue d’enregistrer.</EmptyState>
         )}
       </Card>
     </div>

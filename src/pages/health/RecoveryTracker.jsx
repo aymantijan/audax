@@ -6,7 +6,7 @@ import { todayKey, fmtDate } from '../../utils/formatters';
 import { Card, Button, Badge, Field, Input, ProgressBar } from '../../components/common/ui';
 
 const ACTIVITIES = [
-  { key: 'sleep8', label: 'Sleep 8h+' },
+  { key: 'sleep8', label: 'Sommeil 8 h+' },
   { key: 'meditation', label: 'Meditation' },
   { key: 'stretching', label: 'Stretching' },
   { key: 'cold', label: 'Cold exposure' },
@@ -87,7 +87,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
         </div>
       )}
 
-      <Card title="Water Intake" action={<Droplet size={16} className="text-mute" />}>
+      <Card title="Hydratation" action={<Droplet size={16} className="text-mute" />}>
         <div className="mb-3">
           <div className="flex justify-between text-xs mb-1">
             <span>{isPastDate ? fmtDate(logDate) : 'Today'}</span>
@@ -101,7 +101,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
           ))}
           <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(-dateWater, logDate)}>Reset</Button>
         </div>
-        <Field label="Daily target (ml)">
+        <Field label="Objectif quotidien (ml)">
           <Input type="number" min="0" step="250" value={waterTargetMl} onChange={(e) => setWaterTarget(e.target.value)} className="w-32" />
         </Field>
       </Card>
@@ -143,13 +143,13 @@ export default function RecoveryTracker({ pendingPrompt }) {
           ))}
         </div>
         <form onSubmit={submitActivity} className="flex gap-2 mb-4">
-          <Input value={newActivity} onChange={(e) => setNewActivity(e.target.value)} placeholder="Add a custom activity (e.g. Sauna, Yoga)…" className="flex-1 !py-1.5 text-xs" />
+          <Input value={newActivity} onChange={(e) => setNewActivity(e.target.value)} placeholder="Ajouter une activité (ex. sauna, yoga)…" className="flex-1 !py-1.5 text-xs" />
           <Button type="submit" variant="ghost" className="!px-2 !py-1"><Plus size={13} /></Button>
         </form>
-        <Button onClick={save}>{dateLog ? 'Update' : 'Save'} recovery log</Button>
+        <Button onClick={save}>{dateLog ? 'Update' : 'Enregistrer'} recovery log</Button>
       </Card>
 
-      <Card title="Last 14 Days">
+      <Card title="14 derniers jours">
         {history.length ? (
           <ul className="space-y-1.5">
             {history.map((r) => (
@@ -163,7 +163,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
             ))}
           </ul>
         ) : (
-          <div className="text-center text-mute text-sm py-6">No recovery activities logged yet.</div>
+          <div className="text-center text-mute text-sm py-6">Aucune activité de récupération enregistrée.</div>
         )}
       </Card>
     </div>

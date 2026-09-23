@@ -190,7 +190,7 @@ export default function NutritionTracker({ pendingPrompt }) {
         </div>
       ) : null}
 
-      <Card title="Quick Log" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setScanOpen(true)}><span className="flex items-center gap-1.5"><ScanBarcode size={13} /> Scanner un code-barres</span></Button>}>
+      <Card title="Saisie rapide" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setScanOpen(true)}><span className="flex items-center gap-1.5"><ScanBarcode size={13} /> Scanner un code-barres</span></Button>}>
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end">
           <Field label="Food">
             <Input list="food-db" value={name} onChange={(e) => changeName(e.target.value)} placeholder="e.g. Chicken breast, egg, banana…" />
@@ -204,10 +204,10 @@ export default function NutritionTracker({ pendingPrompt }) {
           <Field label="Unit">
             <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={servingOptions.map((o) => ({ value: o.label, label: o.label }))} className="w-32" />
           </Field>
-          <Field label="Date" hint="Backdate a missed meal">
+          <Field label="Date" hint="Antidater un repas oublié">
             <Input type="date" value={logDate} max={todayKey()} onChange={(e) => e.target.value && setLogDate(e.target.value)} />
           </Field>
-          <Button type="submit">Log meal</Button>
+          <Button type="submit">Ajouter le repas</Button>
         </form>
       </Card>
 
@@ -381,7 +381,7 @@ export default function NutritionTracker({ pendingPrompt }) {
         </Card>
       )}
 
-      <Card title="Today's Macros" action={quality != null && <Badge color={quality >= 70 ? 'var(--success)' : quality >= 40 ? 'var(--warning)' : 'var(--error)'}>{quality}% whole foods</Badge>}>
+      <Card title="Macros du jour" action={quality != null && <Badge color={quality >= 70 ? 'var(--success)' : quality >= 40 ? 'var(--warning)' : 'var(--error)'}>{quality}% whole foods</Badge>}>
         <div className="space-y-3">
           {[
             { key: 'protein', label: 'Protein', unit: 'g' },
@@ -399,13 +399,13 @@ export default function NutritionTracker({ pendingPrompt }) {
           ))}
         </div>
         <div className="mt-4">
-          <Field label="Protein target (g/day)">
+          <Field label="Objectif protéines (g/jour)">
             <Input type="number" min="0" value={proteinTargetG} onChange={(e) => setProteinTarget(e.target.value)} className="w-32" />
           </Field>
         </div>
       </Card>
 
-      <Card title="Logged Today">
+      <Card title="Enregistré aujourd’hui">
         {entries.length ? (
           <ul className="space-y-1.5">
             {entries.map((en) => (
@@ -419,24 +419,24 @@ export default function NutritionTracker({ pendingPrompt }) {
             ))}
           </ul>
         ) : (
-          <EmptyState>No meals logged today.</EmptyState>
+          <EmptyState>Aucun repas enregistré aujourd’hui.</EmptyState>
         )}
         {entries.length > 0 && (
           <div className="flex gap-2 mt-3">
             <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Template name (e.g. Breakfast Standard)" />
-            <Button variant="secondary" onClick={saveTemplate}><span className="flex items-center gap-2"><Plus size={14} /> Save as template</span></Button>
+            <Button variant="secondary" onClick={saveTemplate}><span className="flex items-center gap-2"><Plus size={14} /> Enregistrer comme modèle</span></Button>
           </div>
         )}
       </Card>
 
       {mealTemplates.length > 0 && (
-        <Card title="Meal Templates">
+        <Card title="Modèles de repas">
           <ul className="space-y-1.5">
             {mealTemplates.map((t) => (
               <li key={t.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{t.name} <span className="text-mute text-xs">({t.items.length} items)</span></span>
                 <span className="flex items-center gap-3">
-                  <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id, logDate)}>Log</Button>
+                  <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id, logDate)}>Ajouter</Button>
                   <button onClick={() => deleteMealTemplate(t.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>

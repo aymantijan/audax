@@ -378,7 +378,7 @@ export default function GymLogging({ pendingPrompt }) {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-mute text-sm py-6">{progressExercise ? 'Log a few more sessions to see a trend.' : 'Choisis un exercice pour voir sa progression.'}</div>
+            <div className="text-center text-mute text-sm py-6">{progressExercise ? 'Encore quelques séances pour voir une tendance.' : 'Choisis un exercice pour voir sa progression.'}</div>
           )}
         </Card>
       )}

@@ -5,11 +5,11 @@ import { fmtDateShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, ProgressBar, Badge, EmptyState } from '../../components/common/ui';
 
 const GOAL_TYPES = [
-  { value: 'weight', label: 'Target weight' },
-  { value: 'strength', label: 'Strength PR' },
-  { value: 'sleep', label: 'Average sleep quality' },
-  { value: 'bodyfat', label: 'Target body fat %' },
-  { value: 'workoutFrequency', label: 'Workout frequency (per week)' },
+  { value: 'weight', label: 'Poids cible' },
+  { value: 'strength', label: 'Record de force' },
+  { value: 'sleep', label: 'Qualité moyenne du sommeil' },
+  { value: 'bodyfat', label: 'Masse grasse visée %' },
+  { value: 'workoutFrequency', label: 'Fréquence d’entraînement (par semaine)' },
 ];
 
 const blankGoal = { type: 'weight', targetKg: '', exercise: '', targetScore: '', targetBodyFatPct: '', targetPerWeek: '', targetDate: '' };
@@ -20,36 +20,36 @@ function TargetFields({ form, setForm }) {
   return (
     <>
       {form.type === 'weight' && (
-        <Field label="Target weight (kg)">
+        <Field label="Poids cible (kg)">
           <Input type="number" step="0.1" value={form.targetKg} onChange={(e) => setForm({ ...form, targetKg: e.target.value })} required />
         </Field>
       )}
       {form.type === 'strength' && (
         <>
-          <Field label="Exercise">
+          <Field label="Exercice">
             <Input value={form.exercise} onChange={(e) => setForm({ ...form, exercise: e.target.value })} placeholder="e.g. Deadlift" required />
           </Field>
-          <Field label="Target weight (kg)">
+          <Field label="Poids cible (kg)">
             <Input type="number" step="0.5" value={form.targetKg} onChange={(e) => setForm({ ...form, targetKg: e.target.value })} required />
           </Field>
         </>
       )}
       {form.type === 'sleep' && (
-        <Field label="Target avg quality (/10)">
+        <Field label="Qualité moyenne visée (/10)">
           <Input type="number" min="1" max="10" step="0.5" value={form.targetScore} onChange={(e) => setForm({ ...form, targetScore: e.target.value })} required />
         </Field>
       )}
       {form.type === 'bodyfat' && (
-        <Field label="Target body fat (%)">
+        <Field label="Masse grasse visée (%)">
           <Input type="number" min="1" max="60" step="0.5" value={form.targetBodyFatPct} onChange={(e) => setForm({ ...form, targetBodyFatPct: e.target.value })} required />
         </Field>
       )}
       {form.type === 'workoutFrequency' && (
-        <Field label="Workouts / week">
+        <Field label="Séances / semaine">
           <Input type="number" min="1" max="14" value={form.targetPerWeek} onChange={(e) => setForm({ ...form, targetPerWeek: e.target.value })} required />
         </Field>
       )}
-      <Field label="Target date (optional)">
+      <Field label="Date cible (facultatif)">
         <Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
       </Field>
     </>
@@ -103,7 +103,7 @@ export default function Goals() {
 
   return (
     <div className="space-y-6">
-      <Card title="New Goal">
+      <Card title="Nouvel objectif">
         <div className="flex flex-wrap gap-1.5 mb-4">
           {GOAL_TEMPLATES.map((t) => (
             <button
@@ -121,11 +121,11 @@ export default function Goals() {
             <Select value={form.type} onChange={(e) => setForm({ ...blankGoal, type: e.target.value })} options={GOAL_TYPES} />
           </Field>
           <TargetFields form={form} setForm={setForm} />
-          <Button type="submit">Add goal</Button>
+          <Button type="submit">Ajouter l’objectif</Button>
         </form>
       </Card>
 
-      <Card title="Your Goals">
+      <Card title="Tes objectifs">
         {goals.length ? (
           <ul className="space-y-4">
             {goals.map((g) => (
@@ -134,8 +134,8 @@ export default function Goals() {
                   <form onSubmit={saveEdit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
                     <TargetFields form={editForm} setForm={setEditForm} />
                     <div className="flex gap-2">
-                      <Button type="submit" className="!px-3 !py-1.5 text-xs">Save</Button>
-                      <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setEditingId(null)}>Cancel</Button>
+                      <Button type="submit" className="!px-3 !py-1.5 text-xs">Enregistrer</Button>
+                      <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setEditingId(null)}>Annuler</Button>
                     </div>
                   </form>
                 ) : (
@@ -152,10 +152,10 @@ export default function Goals() {
                     </div>
                     <ProgressBar value={g.percent} color={g.percent >= 100 ? 'var(--success)' : 'var(--accent-primary)'} />
                     <div className="flex justify-between text-xs text-mute mt-1.5">
-                      <span>{g.current != null ? `Current: ${g.current}` : 'No data yet'} · {g.percent}%</span>
+                      <span>{g.current != null ? `Actuel : ${g.current}` : 'Pas encore de données'} · {g.percent}%</span>
                       <span>
-                        {g.etaWeeks != null && `~${g.etaWeeks} week${g.etaWeeks !== 1 ? 's' : ''} to go at current rate`}
-                        {g.targetDate && `${g.etaWeeks != null ? ' · ' : ''}target ${fmtDateShort(g.targetDate)}`}
+                        {g.etaWeeks != null && `~${g.etaWeeks} semaine${g.etaWeeks !== 1 ? 's' : ''} restante${g.etaWeeks !== 1 ? 's' : ''} au rythme actuel`}
+                        {g.targetDate && `${g.etaWeeks != null ? ' · ' : ''}cible ${fmtDateShort(g.targetDate)}`}
                       </span>
                     </div>
                   </>
@@ -164,7 +164,7 @@ export default function Goals() {
             ))}
           </ul>
         ) : (
-          <EmptyState>No goals yet — set a target weight, a strength PR, a sleep quality target, a body-fat %, or a weekly workout frequency above.</EmptyState>
+          <EmptyState>Aucun objectif — fixe un poids cible, un record de force, une qualité de sommeil, un % de masse grasse ou une fréquence d’entraînement ci-dessus.</EmptyState>
         )}
       </Card>
     </div>

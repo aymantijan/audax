@@ -44,10 +44,10 @@ export function computeReadiness({ sleepQuality = 0, energy = 0, stress = 0, rec
 }
 
 export function readinessBand(score) {
-  if (score >= 80) return { label: 'Primed', color: 'var(--success)' };
-  if (score >= 60) return { label: 'Ready', color: 'var(--accent-primary)' };
-  if (score >= 40) return { label: 'Moderate', color: 'var(--warning)' };
-  return { label: 'Compromised', color: 'var(--error)' };
+  if (score >= 80) return { label: 'Au top', color: 'var(--success)' };
+  if (score >= 60) return { label: 'Prêt', color: 'var(--accent-primary)' };
+  if (score >= 40) return { label: 'Moyen', color: 'var(--warning)' };
+  return { label: 'Fatigué', color: 'var(--error)' };
 }
 
 // ---- Body fat % — Navy circumference method (US Navy, Hodgdon & Beckett 1984) ----
@@ -79,11 +79,11 @@ export function bodyFatNavyFemale({ waistCm, hipCm, neckCm, heightCm }) {
 // ---- BMR / TDEE (Mifflin-St Jeor — the modern standard, more accurate than
 // Harris-Benedict for most adults) ----
 export const ACTIVITY_MULTIPLIERS = {
-  sedentary: { label: 'Sedentary (little/no exercise)', mult: 1.2 },
-  light: { label: 'Light (exercise 1-3x/week)', mult: 1.375 },
-  moderate: { label: 'Moderate (exercise 3-5x/week)', mult: 1.55 },
-  active: { label: 'Active (exercise 6-7x/week)', mult: 1.725 },
-  veryActive: { label: 'Very active (hard exercise + physical job)', mult: 1.9 },
+  sedentary: { label: 'Sédentaire (peu ou pas de sport)', mult: 1.2 },
+  light: { label: 'Léger (sport 1-3x/semaine)', mult: 1.375 },
+  moderate: { label: 'Modéré (sport 3-5x/semaine)', mult: 1.55 },
+  active: { label: 'Actif (sport 6-7x/semaine)', mult: 1.725 },
+  veryActive: { label: 'Très actif (sport intense + travail physique)', mult: 1.9 },
 };
 
 export function computeBMR({ weightKg, heightCm, age, sex }) {
@@ -158,19 +158,19 @@ export function checkOvertrainingTriggers({ energyLogs = [], workouts = [] }) {
   const last5 = recent.slice(0, 5);
 
   if (last3.length >= 3 && last3.every((l) => l.energyStartLevel < 5)) {
-    alerts.push({ id: 'energy-low-3d', level: 'danger', message: 'Energy below 5/10 for 3+ consecutive days — consider a deload.' });
+    alerts.push({ id: 'energy-low-3d', level: 'danger', message: 'Énergie sous 5/10 depuis 3 jours ou plus — envisage une semaine de décharge.' });
   }
   if (last5.filter((l) => l.stressLevel > 7).length >= 5) {
-    alerts.push({ id: 'stress-high-5d', level: 'danger', message: 'Stress above 7/10 for 5 of the last 5 logged days.' });
+    alerts.push({ id: 'stress-high-5d', level: 'danger', message: 'Stress au-dessus de 7/10 sur les 5 derniers jours enregistrés.' });
   }
   if (last5.filter((l) => (l.sleepData?.sleepQualityScore ?? 10) < 5).length >= 5) {
-    alerts.push({ id: 'sleep-low-5d', level: 'danger', message: 'Sleep quality below 5/10 for 5 of the last 5 logged days.' });
+    alerts.push({ id: 'sleep-low-5d', level: 'danger', message: 'Qualité du sommeil sous 5/10 sur les 5 derniers jours enregistrés.' });
   }
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const weekWorkouts = workouts.filter((w) => w.date && new Date(w.date).getTime() >= weekAgo);
   const highRpeCount = weekWorkouts.filter((w) => Number(w.avgRpe) >= 8.5).length;
   if (highRpeCount >= 4) {
-    alerts.push({ id: 'high-rpe-week', level: 'warning', message: `${highRpeCount} sessions at RPE 8.5+ this week — recovery may be lagging behind training load.` });
+    alerts.push({ id: 'high-rpe-week', level: 'warning', message: `${highRpeCount} séances à RPE 8,5+ cette semaine — la récupération ne suit peut-être pas la charge.` });
   }
   return alerts;
 }
@@ -182,24 +182,24 @@ export function checkOvertrainingTriggers({ energyLogs = [], workouts = [] }) {
 // returns the single highest-priority, ready-to-read recommendation.
 export function generateCoachRecommendation({ sleepQuality = null, energy = null, stress = null, readiness = null, overtrainingAlerts = [], workoutsThisWeek = 0 }) {
   if (overtrainingAlerts.some((a) => a.level === 'danger')) {
-    return { text: overtrainingAlerts.find((a) => a.level === 'danger').message + ' Prioritize rest today.', tone: 'danger' };
+    return { text: overtrainingAlerts.find((a) => a.level === 'danger').message + ' Priorité au repos aujourd’hui.', tone: 'danger' };
   }
   if (sleepQuality !== null && sleepQuality < 5) {
-    return { text: 'Sleep quality has been poor — protect your wind-down tonight (screens off 30 min before bed) before pushing training intensity.', tone: 'warning' };
+    return { text: 'Ton sommeil est mauvais ces derniers temps — protège ta routine du soir (écrans coupés 30 min avant) avant de pousser l’intensité.', tone: 'warning' };
   }
   if (stress !== null && stress >= 7) {
-    return { text: 'Stress is elevated. A short walk or 10 minutes of breathing work will likely do more for you today than another hard session.', tone: 'warning' };
+    return { text: 'Ton stress est élevé. Une courte marche ou 10 minutes de respiration t’apporteront sans doute plus qu’une séance dure de plus.', tone: 'warning' };
   }
   if (energy !== null && energy < 5) {
-    return { text: 'Energy is low today — an easy Zone-2 session or full rest beats forcing high intensity.', tone: 'warning' };
+    return { text: 'Énergie basse aujourd’hui — une séance facile en Zone 2 ou un repos complet valent mieux que forcer l’intensité.', tone: 'warning' };
   }
   if (readiness !== null && readiness >= 80) {
-    return { text: `Readiness is strong (${readiness}/100) — a good day to push intensity or attempt a strength PR.`, tone: 'success' };
+    return { text: `Readiness élevée (${readiness}/100) — bon jour pour pousser l’intensité ou tenter un record.`, tone: 'success' };
   }
   if (workoutsThisWeek === 0) {
-    return { text: "No training logged yet this week — even a short session keeps momentum and today's recovery systems primed.", tone: 'info' };
+    return { text: 'Aucun entraînement cette semaine — même une séance courte entretient l’élan.', tone: 'info' };
   }
-  return { text: 'Signals look balanced today — stick to the plan and log honestly, consistency compounds more than any single session.', tone: 'info' };
+  return { text: 'Signaux équilibrés aujourd’hui — suis le plan et enregistre honnêtement : la régularité paie plus qu’une séance isolée.', tone: 'info' };
 }
 
 // ---- Pearson correlation coefficient (−1..1) over paired series ----
@@ -561,6 +561,6 @@ export function correlationStrength(r) {
   if (r === null) return { label: 'Not enough data', color: 'var(--text-secondary)' };
   const abs = Math.abs(r);
   if (abs >= 0.6) return { label: 'Strong', color: r > 0 ? 'var(--success)' : 'var(--error)' };
-  if (abs >= 0.3) return { label: 'Moderate', color: 'var(--warning)' };
+  if (abs >= 0.3) return { label: 'Moyen', color: 'var(--warning)' };
   return { label: 'Weak', color: 'var(--text-secondary)' };
 }

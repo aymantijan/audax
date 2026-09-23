@@ -225,7 +225,7 @@ export default function CycleTracking() {
       ) : (
         <>
       {phase && (
-        <Card title="Current Phase">
+        <Card title="Phase actuelle">
           <div className="flex items-center gap-4 flex-wrap">
             <Badge color={CYCLE_PHASE_COLOR[phase.phase]}>{CYCLE_PHASE_LABEL[phase.phase]}</Badge>
             {phase.dayOfCycle && <span className="text-sm text-mute">Day {phase.dayOfCycle} of ~{phase.cycleLength}</span>}
@@ -299,15 +299,15 @@ export default function CycleTracking() {
         </Card>
       )}
 
-      <Card title="Log Period Start">
+      <Card title="Début des règles">
         <div className="grid grid-cols-3 gap-3 mb-3">
-          <Field label="Flow">
+          <Field label="Flux">
             <Select value={flow} onChange={(e) => setFlow(e.target.value)} options={[{ value: 'light', label: 'Light' }, { value: 'medium', label: 'Medium' }, { value: 'heavy', label: 'Heavy' }]} />
           </Field>
-          <Field label="Start date" hint="Backdate a missed entry">
+          <Field label="Date de début" hint="Antidater une saisie oubliée">
             <Input type="date" value={startDate} max={todayKey()} onChange={(e) => e.target.value && setStartDate(e.target.value)} />
           </Field>
-          <Field label="Notes (optional)">
+          <Field label="Notes (facultatif)">
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
         </div>
@@ -336,14 +336,14 @@ export default function CycleTracking() {
           ))}
         </div>
         <form onSubmit={submitCustomSymptom} className="flex gap-2 mb-3">
-          <Input value={newSymptom} onChange={(e) => setNewSymptom(e.target.value)} placeholder="Add a custom symptom…" className="flex-1 !py-1.5 text-xs" />
+          <Input value={newSymptom} onChange={(e) => setNewSymptom(e.target.value)} placeholder="Ajouter un symptôme…" className="flex-1 !py-1.5 text-xs" />
           <Button type="submit" variant="ghost" className="!px-2 !py-1"><Plus size={13} /></Button>
         </form>
-        <Button onClick={save}>{startDate === todayKey() ? 'Log today as period start' : `Log ${startDate} as period start`}</Button>
+        <Button onClick={save}>{startDate === todayKey() ? 'Début des règles aujourd’hui' : `Début des règles le ${startDate}`}</Button>
       </Card>
 
       {energyByPhase && (
-        <Card title="Energy by Phase" action={cycleLen && <span className="text-xs text-mute">est. cycle length: {cycleLen}d</span>}>
+        <Card title="Énergie par phase" action={cycleLen && <span className="text-xs text-mute">est. cycle length: {cycleLen}d</span>}>
           <div className="grid grid-cols-4 gap-3 text-center">
             {Object.entries(energyByPhase).map(([phaseKey, val]) => (
               <div key={phaseKey}>
@@ -386,7 +386,7 @@ export default function CycleTracking() {
       )}
 
       {symptomTrend.length > 1 && (
-        <Card title="Symptom Trend">
+        <Card title="Évolution des symptômes">
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={symptomTrend}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -400,7 +400,7 @@ export default function CycleTracking() {
         </Card>
       )}
 
-      <Card title="History">
+      <Card title="Historique">
         {cycleLogs.length ? (
           <ul className="space-y-1.5">
             {[...cycleLogs].reverse().map((c) => (
@@ -413,7 +413,7 @@ export default function CycleTracking() {
             ))}
           </ul>
         ) : (
-          <EmptyState>No cycle entries yet.</EmptyState>
+          <EmptyState>Aucun cycle enregistré pour l’instant.</EmptyState>
         )}
       </Card>
         </>
