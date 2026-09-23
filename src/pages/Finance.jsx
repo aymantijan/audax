@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Library, FileSpreadsheet, LineChart, PiggyBank, Landmark, Target, HeartCrack, Tag, CalendarClock,
-  CalendarDays, Crown, Wallet, ArrowLeftRight, Gem, Calculator, Sparkles, GraduationCap,
+  CalendarDays, Crown, Wallet, ArrowLeftRight, Gem, Calculator, Sparkles, GraduationCap, Sun,
 } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { todayKey } from '../utils/formatters';
 import { useFinanceMode } from '../components/finance/financeMode';
 import AccountingOverview from './finance/AccountingOverview';
+import FinanceToday from './finance/FinanceToday';
 import Journal from './finance/Journal';
 import Ledger from './finance/Ledger';
 import Statements from './finance/Statements';
@@ -28,8 +29,11 @@ import WealthRank from './finance/WealthRank';
 // Les clés de page ne changent pas : les liens ?tab= existants restent valides.
 const SPACES = [
   {
-    key: 'home', label: 'Vue d’ensemble', desc: 'Le mois en un coup d’œil', icon: LayoutDashboard,
-    pages: [{ key: 'overview', label: 'Vue d’ensemble', icon: LayoutDashboard, Component: AccountingOverview }],
+    key: 'home', label: 'Aujourd’hui', desc: 'Reste à dépenser, échéances', icon: Sun,
+    pages: [
+      { key: 'today', label: 'Aujourd’hui', icon: Sun, Component: FinanceToday },
+      { key: 'overview', label: 'Vue du mois', icon: LayoutDashboard, Component: AccountingOverview },
+    ],
   },
   {
     key: 'spend', label: 'Dépenses & budget', desc: 'Opérations, budget, catégories', icon: Wallet,
@@ -95,7 +99,7 @@ export default function Finance() {
 
   // QuickAdd deep-links as /finance?quickadd=journal (Journal opens its form);
   // GlobalSearch as /finance?tab=<key>.
-  const [page, setPage] = useState(() => (searchParams.get('quickadd') === 'journal' ? 'journal' : searchParams.get('tab') || 'overview'));
+  const [page, setPage] = useState(() => (searchParams.get('quickadd') === 'journal' ? 'journal' : searchParams.get('tab') || 'today'));
   const current = allPages.find((p) => p.key === page) || allPages[0];
   const currentSpace = spaces.find((sp) => sp.key === current.space);
   const [lastInSpace, setLastInSpace] = useState({});
