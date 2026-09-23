@@ -181,7 +181,7 @@ export function Badge({ children, color = 'var(--accent-primary)' }) {
 export function Modal({ open, onClose, title, children, wide }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-10 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/60 backdrop-blur-sm overflow-y-auto py-10 px-4" onClick={onClose}>
       <div
         className={`bg-card border border-line rounded-xl p-6 w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} shadow-2xl`}
         onClick={(e) => e.stopPropagation()}

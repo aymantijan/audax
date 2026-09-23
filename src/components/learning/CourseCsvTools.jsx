@@ -90,10 +90,10 @@ export default function CourseCsvTools({ courses }) {
   const [result, setResult] = useState(null); // { imported, errors: [{course, message}] }
 
   const exportCsv = () => {
-    if (!courses.length) return toast('No courses to export.', 'info');
+    if (!courses.length) return toast('Aucun cours à exporter.', 'info');
     const csv = toCSV(courses.flatMap(courseRows), COLUMNS);
     downloadCSV(`audax-courses-${new Date().toISOString().slice(0, 10)}.csv`, csv);
-    toast(`Exported ${courses.length} course${courses.length > 1 ? 's' : ''}`, 'success');
+    toast(`${courses.length} cours exporté(s)`, 'success');
   };
 
   const importCsv = (e) => {
@@ -112,14 +112,14 @@ export default function CourseCsvTools({ courses }) {
       parsed.forEach(({ chapters, ...data }) => {
         const res = validate(courseSchema, data);
         if (!res.ok) {
-          errors.push({ course: data.name || '(unnamed)', message: res.error });
+          errors.push({ course: data.name || '(sans nom)', message: res.error });
           return;
         }
         addCourse({ ...res.data, chapters });
         imported++;
       });
       setResult({ imported, errors });
-      toast(`Imported ${imported} course${imported === 1 ? '' : 's'}${errors.length ? `, ${errors.length} skipped` : ''}`, errors.length ? 'warning' : 'success');
+      toast(`${imported} cours importé(s)${errors.length ? `, ${errors.length} ignoré(s)` : ''}`, errors.length ? 'warning' : 'success');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -129,10 +129,10 @@ export default function CourseCsvTools({ courses }) {
     <div className="space-y-2">
       <div className="flex gap-2">
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={exportCsv}>
-          <span className="flex items-center gap-2"><Download size={13} /> Export CSV</span>
+          <span className="flex items-center gap-2"><Download size={13} /> Exporter (CSV)</span>
         </Button>
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => fileRef.current?.click()}>
-          <span className="flex items-center gap-2"><Upload size={13} /> Import CSV</span>
+          <span className="flex items-center gap-2"><Upload size={13} /> Importer (CSV)</span>
         </Button>
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
       </div>
@@ -141,7 +141,7 @@ export default function CourseCsvTools({ courses }) {
           {result.errors.slice(0, 20).map((e, i) => (
             <div key={i} className="text-bad">{e.course}: {e.message}</div>
           ))}
-          {result.errors.length > 20 && <div>…and {result.errors.length - 20} more.</div>}
+          {result.errors.length > 20 && <div>… et {result.errors.length - 20} autre(s).</div>}
         </div>
       )}
     </div>
