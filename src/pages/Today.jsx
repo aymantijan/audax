@@ -134,7 +134,7 @@ export default function Today() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Bonjour, {user?.name}</h1>
-          <p className="text-mute text-sm mt-1">{fmtDate(today)} — ce qu'il te reste à faire aujourd'hui.</p>
+          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — ce qu'il te reste à faire aujourd'hui.</p>
         </div>
         <Link to="/dashboard" className="text-sm text-accent hover:underline flex items-center gap-1 shrink-0">
           Tableau de bord complet <ArrowRight size={14} />
@@ -199,7 +199,7 @@ export default function Today() {
         ) : (
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm text-mute">
-              <Sunrise size={16} /> Pas encore loggé aujourd'hui.
+              <Sunrise size={16} /> Pas encore fait aujourd'hui.
             </div>
             <Link to="/habits">
               <Button className="!px-3 !py-1.5 text-xs">Faire le check-in</Button>
@@ -279,21 +279,21 @@ export default function Today() {
         <div className="flex items-center gap-6 text-sm flex-wrap">
           <div className="flex items-center gap-1.5">
             <HeartPulse size={15} className={workedOutToday ? 'text-good' : 'text-mute'} />
-            <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? 'Séance loggée' : 'Pas de séance'}</span>
+            <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? 'Séance enregistrée' : 'Pas de séance'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Receipt size={15} className={loggedMealToday ? 'text-good' : 'text-mute'} />
-            <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? 'Repas loggé' : 'Aucun repas loggé'}</span>
+            <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? 'Repas enregistré' : 'Aucun repas enregistré'}</span>
           </div>
         </div>
         {pendingPrompts.length > 0 && (
           <ul className="mt-3 space-y-2">
             {pendingPrompts.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
-                <span>Logger « {p.habitName} » comme activité santé ?</span>
+                <span>Enregistrer « {p.habitName} » comme activité santé ?</span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Link to="/health">
-                    <Button className="!px-2.5 !py-1 text-xs">Logger</Button>
+                    <Button className="!px-2.5 !py-1 text-xs">Enregistrer</Button>
                   </Link>
                   <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
                     Ignorer
@@ -318,7 +318,7 @@ export default function Today() {
           <div className="flex items-center gap-6 text-sm flex-wrap">
             <div className="flex items-center gap-1.5">
               <FlaskConical size={15} className={loggedLabToday ? 'text-good' : 'text-mute'} />
-              <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience loggée' : 'Aucune expérience loggée'}</span>
+              <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience enregistrée' : 'Aucune expérience enregistrée'}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-mute">{activeEngProjects.length} projet{activeEngProjects.length !== 1 ? 's' : ''} en cours</span>
@@ -350,7 +350,7 @@ export default function Today() {
 
       {/* ---- Deals & Business ---- */}
       {((user?.enabledModules?.pe ?? true) || (user?.enabledModules?.business ?? true)) && (ongoingDeals.length > 0 || businesses.length > 0) && (
-        <Card title="Deals & Business">
+        <Card title="Private equity & business">
           <div className="flex items-center gap-6 text-sm flex-wrap">
             {(user?.enabledModules?.pe ?? true) && (
               <Link to="/deals" className="flex items-center gap-1.5 hover:text-accent">
@@ -378,7 +378,7 @@ export default function Today() {
         const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || focusStore.sessions.length > 0;
         if (!anyOn || !anyData) return null;
         return (
-          <Card title="Networking, Career, Content & Focus">
+          <Card title="Réseau, carrière, contenu & concentration">
             <div className="flex items-center gap-6 text-sm flex-wrap">
               {netOn && contacts.length > 0 && (
                 <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
@@ -430,7 +430,7 @@ export default function Today() {
         const anyData = investors.length > 0 || engagements.length > 0 || creativeWorks.length > 0 || properties.length > 0;
         if (!anyOn || !anyData) return null;
         return (
-          <Card title="Fundraising, Freelance, Creative & Real Estate">
+          <Card title="Levée de fonds, freelance, création & immobilier">
             <div className="flex items-center gap-6 text-sm flex-wrap">
               {fundraisingOn && investors.length > 0 && (
                 <Link to="/fundraising" className="flex items-center gap-1.5 hover:text-accent">

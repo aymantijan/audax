@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { CURRENCY_SYMBOL } from './constants';
 import { currencyMeta, formatMoney, toBase } from './currency';
 
@@ -38,9 +39,12 @@ export const fmtSignedMAD = (n) => (n >= 0 ? '+' : '') + formatMoney(n, FX.base,
 
 export const fmtPct = (n, digits = 0) => `${(n ?? 0).toFixed(digits)}%`;
 
-export const fmtDate = (d) => (d ? format(new Date(d), 'MMM d, yyyy') : '—');
+// French dates ("23 sept. 2026" / "23 sept."). A bare 'YYYY-MM-DD' is read at
+// local noon so it never slips to the previous day west of UTC.
+const asDate = (d) => new Date(typeof d === 'string' && d.length === 10 ? `${d}T12:00:00` : d);
+export const fmtDate = (d) => (d ? format(asDate(d), 'd MMM yyyy', { locale: fr }) : '—');
 
-export const fmtDateShort = (d) => (d ? format(new Date(d), 'MMM d') : '—');
+export const fmtDateShort = (d) => (d ? format(asDate(d), 'd MMM', { locale: fr }) : '—');
 
 // Optional `d` lets callers format an arbitrary date the same way (e.g. a
 // streak loop walking backwards day-by-day) — omitted, it's today's date.
