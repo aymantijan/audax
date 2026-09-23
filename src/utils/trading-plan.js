@@ -2,9 +2,10 @@
 // A trade is tagged when logged (trade.followedPlan true/false); legacy
 // trades without the tag are left out of the comparison.
 import { tradeRMultiple } from './risk-management';
+import { MISTAKES, mistakesOf } from './trading-journal';
 
 // Rule breaks proposed in the trade form, on top of the checklist's red items.
-export const PLAN_BREAKS = ['Not my setup', 'Oversized position', 'Moved my stop', 'Revenge trade', 'FOMO entry', 'Traded the news', 'Over my max trades'];
+export const PLAN_BREAKS = MISTAKES;
 
 function groupStats(trades) {
   const count = trades.length;
@@ -29,7 +30,7 @@ export function planSplit(trades) {
   const tagged = on.length + off.length;
   const breaks = {};
   for (const t of off) {
-    for (const b of t.planBreaks?.length ? t.planBreaks : ['Unspecified']) {
+    for (const b of mistakesOf(t).length ? mistakesOf(t) : ['Unspecified']) {
       breaks[b] = breaks[b] || { label: b, count: 0, pnl: 0 };
       breaks[b].count++; breaks[b].pnl += Number(t.pnl) || 0;
     }

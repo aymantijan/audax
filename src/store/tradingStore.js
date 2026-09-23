@@ -70,7 +70,7 @@ export const useTradingStore = create(
       // or strategy isn't account-specific). `kind: 'pip'` computes PnL the
       // forex way (price move / pipSize * pipValuePerLot * lots); `'direct'`
       // computes it the crypto/stock way (price move * size), same as BTC.
-      customInstruments: [], // [{ id, code, kind:'pip'|'direct', pipSize?, pipValuePerLot?, createdAt }]
+      customInstruments: [], // [{ id, code, kind:'pip'|'direct', assetClass?, pipSize?, pipValuePerLot?, createdAt }]
       customStrategies: [], // [{ id, name, createdAt }]
 
       getInstrumentList: () => [...INSTRUMENTS, ...get().customInstruments.map((c) => c.code)],
@@ -80,7 +80,7 @@ export const useTradingStore = create(
       getInstrumentSpecs: () =>
         Object.fromEntries(get().customInstruments.map((c) => [c.code, { pipSize: c.pipSize, pipValuePerLot: c.pipValuePerLot, kind: c.kind }])),
 
-      addCustomInstrument: ({ code, kind, pipSize, pipValuePerLot }) => {
+      addCustomInstrument: ({ code, kind, pipSize, pipValuePerLot, assetClass }) => {
         const clean = (code || '').trim().toUpperCase();
         if (!clean) return { ok: false, error: 'Symbol is required.' };
         const taken = INSTRUMENTS.includes(clean) || get().customInstruments.some((c) => c.code === clean);
@@ -89,7 +89,7 @@ export const useTradingStore = create(
           return { ok: false, error: 'Pip size and pip value per lot are required for a pip-based instrument.' };
         }
         const instrument = {
-          id: uid(), code: clean, kind,
+          id: uid(), code: clean, kind, assetClass: assetClass || null,
           pipSize: kind === 'pip' ? Number(pipSize) : undefined,
           pipValuePerLot: kind === 'pip' ? Number(pipValuePerLot) : undefined,
           createdAt: Date.now(),
@@ -138,9 +138,56 @@ export const useTradingStore = create(
         if (get().trades.some((t) => t.strategy === strat.name)) {
           return { ok: false, error: 'This strategy has logged trades — it cannot be deleted.' };
         }
-        set({ customStrategies: get().customStrategies.filter((c) => c.id !== id) });
+        const { [strat.name]: _drop, ...playbook } = get().playbook || {};
+        set({ customStrategies: get().customStrategies.filter((c) => c.id !== id), playbook });
         toast('Strategy removed', 'info');
         return { ok: true };
+      },
+
+      // ─────────── Playbook (Trading n°2) ───────────
+      // Per strategy/setup name (built-in or custom): what it is and the
+      // criteria a trade must meet to count as an A+ setup.
+      playbook: {}, // { [strategyName]: { description, timeframe, criteria: [string] } }
+      setPlaybook: (name, data) => {
+        const criteria = (data.criteria || []).map((c) => String(c).trim()).filter(Boolean);
+        set({ playbook: { ...(get().playbook || {}), [name]: { description: (data.description || '').trim(), timeframe: data.timeframe || '', criteria } } });
+        toast(`Playbook updated: ${name}`, 'success');
+      },
+      customMistakes: [], // user-added mistake tags (strings), on top of MISTAKES
+      addCustomMistake: (label) => {
+        const clean = (label || '').trim();
+        if (!clean || (get().customMistakes || []).some((m) => m.toLowerCase() === clean.toLowerCase())) return;
+        set({ customMistakes: [...(get().customMistakes || []), clean] });
+      },
+
+      // ─────────── Open positions (Trading n°2) ───────────
+      // Kept apart from trades[] so stats/equity/prop-firm rules only ever see
+      // closed trades. Partial closes are stored on the position and summed
+      // into the final trade's P&L when it is closed.
+      openPositions: [], // [{ id, accountId, ...trade fields w/o exit, partials: [{ id, date, exitPrice, size, pnl }] }]
+      openPosition: (data) => {
+        const pos = { ...data, id: uid(), accountId: data.accountId || get().activeAccountId, partials: [], createdAt: Date.now() };
+        set({ openPositions: [...(get().openPositions || []), pos] });
+        toast(`Position opened: ${pos.instrument} ${pos.direction}`, 'success');
+        return pos.id;
+      },
+      editPosition: (id, updates) => set({ openPositions: (get().openPositions || []).map((p) => (p.id === id ? { ...p, ...updates } : p)) }),
+      addPartial: (id, { date, exitPrice, size, pnl }) => {
+        set({
+          openPositions: (get().openPositions || []).map((p) => (p.id === id ? {
+            ...p, partials: [...(p.partials || []), { id: uid(), date: date || todayKey(), exitPrice: Number(exitPrice), size: Number(size), pnl: round2(Number(pnl) || 0) }],
+          } : p)),
+        });
+        toast(`Partial close recorded (${Number(pnl) >= 0 ? '+' : ''}${round2(Number(pnl) || 0)})`, 'success');
+      },
+      removePartial: (id, partialId) => set({ openPositions: (get().openPositions || []).map((p) => (p.id === id ? { ...p, partials: (p.partials || []).filter((x) => x.id !== partialId) } : p)) }),
+      discardPosition: (id) => { set({ openPositions: (get().openPositions || []).filter((p) => p.id !== id) }); toast('Position removed', 'info'); },
+      // tradeData = the full closed trade (P&L already includes partials).
+      closePosition: (id, tradeData) => {
+        const pos = (get().openPositions || []).find((p) => p.id === id);
+        const tradeId = get().addTrade({ ...tradeData, accountId: pos?.accountId || tradeData.accountId, partials: pos?.partials || [] });
+        set({ openPositions: (get().openPositions || []).filter((p) => p.id !== id) });
+        return tradeId;
       },
 
       // Phase 6: local-only browser-notification alerts (rule breaches/warnings,
@@ -716,7 +763,7 @@ export const useTradingStore = create(
           trades: [], accounts: [], activeAccountId: null, awardedBadges: [],
           alerts: { enabled: false, lastShown: {} }, coachCache: {},
           scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
-          customInstruments: [], customStrategies: [],
+          customInstruments: [], customStrategies: [], playbook: {}, customMistakes: [], openPositions: [],
         }),
     }),
     { name: 'audax-trading' }

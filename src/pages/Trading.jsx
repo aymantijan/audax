@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert, Settings2, FileDown, Sun, BookOpen, BarChart3, Briefcase, Scale,
+  Plus, Pencil, Trash2, Wallet, BatteryLow, Bell, BellOff, Flame, ShieldAlert, Settings2, FileDown, Sun, BookOpen, BarChart3, Briefcase, Scale, ExternalLink,
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid, Cell,
 } from 'recharts';
 import { useTradingStore } from '../store/tradingStore';
 import { useHabitStore } from '../store/habitStore';
-import { isHabitShownOn } from '../utils/calculations';
+import { isHabitShownOn, computeTradeDerived } from '../utils/calculations';
 import { INSTRUMENTS, STRATEGIES } from '../utils/constants';
 import { fmtMoney, fmtSignedMoney, fmtPct, fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, EmptyState } from '../components/common/ui';
@@ -31,6 +31,9 @@ import TradingAccounts from './TradingAccounts';
 import { tradeRMultiple, rMultipleStats } from '../utils/risk-management';
 import { currentLossStreak } from '../utils/trading-psychology';
 import { planSplit } from '../utils/trading-plan';
+import { mistakeStats, mistakesOf } from '../utils/trading-journal';
+import PlaybookCard from '../components/trading/PlaybookCard';
+import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
 const tooltipStyle = {
@@ -75,6 +78,7 @@ function PlanBadge({ t }) {
 // On-plan vs off-plan: what trading against your own rules really costs.
 function PlanDisciplineCard({ trades, currency }) {
   const s = useMemo(() => planSplit(trades), [trades]);
+  const m = useMemo(() => mistakeStats(trades), [trades]);
   const Col = ({ label, g, color }) => (
     <div className="rounded-xl border p-3" style={{ borderColor: tint(color, 35), background: tint(color, 5) }}>
       <div className="text-xs font-semibold mb-2" style={{ color }}>{label} · {g.count} trade{g.count === 1 ? '' : 's'}</div>
@@ -88,8 +92,8 @@ function PlanDisciplineCard({ trades, currency }) {
     </div>
   );
   return (
-    <Card title="Plan discipline" action={s.onPlanPct != null ? <span className="text-xs text-mute">{Math.round(s.onPlanPct)}% of tagged trades on plan</span> : null}>
-      {s.tagged === 0 ? (
+    <Card title="Plan discipline & mistakes" action={s.onPlanPct != null ? <span className="text-xs text-mute">{Math.round(s.onPlanPct)}% of tagged trades on plan</span> : null}>
+      {s.tagged === 0 && m.tags.length === 0 ? (
         <EmptyState>Every new trade is tagged <b>on plan</b> or <b>off plan</b>. Once you have a few of each, this compares what following your rules earns you against breaking them.</EmptyState>
       ) : (
         <div className="space-y-3">
@@ -100,11 +104,14 @@ function PlanDisciplineCard({ trades, currency }) {
           {s.off.count > 0 && s.off.pnl < 0 && (
             <p className="text-sm"><Scale size={14} className="inline -mt-0.5 mr-1 text-bad" />Off-plan trades cost you <b className="text-bad">{fmtMoney(Math.abs(s.off.pnl), 0, currency)}</b> on this account.</p>
           )}
-          {s.breaks.length > 0 && (
+          {m.tags.length > 0 && (
             <div>
-              <div className="text-[11px] uppercase tracking-wide text-mute mb-1.5">Most expensive rule breaks</div>
+              <div className="text-[11px] uppercase tracking-wide text-mute mb-1.5">What your mistakes cost (all trades)</div>
+              {m.clean.count > 0 && (
+                <p className="text-xs text-mute mb-1.5">Clean trades: <b className="text-ink">{m.clean.count}</b> · {m.clean.expR != null ? fmtR(m.clean.expR) : fmtSignedMoney(m.clean.avgPnl, currency)} per trade — with a mistake: <b className="text-ink">{m.withMistakes.count}</b> · {m.withMistakes.expR != null ? fmtR(m.withMistakes.expR) : fmtSignedMoney(m.withMistakes.avgPnl, currency)} per trade.</p>
+              )}
               <div className="flex flex-wrap gap-1.5">
-                {s.breaks.slice(0, 6).map((b) => (
+                {m.tags.slice(0, 8).map((b) => (
                   <span key={b.label} className="text-xs px-2 py-0.5 rounded-full border border-line">
                     {b.label} · {b.count}× · <span style={{ color: b.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(b.pnl, currency)}</span>
                   </span>
@@ -115,6 +122,77 @@ function PlanDisciplineCard({ trades, currency }) {
           {s.untagged > 0 && <p className="text-[11px] text-mute">{s.untagged} older trade{s.untagged > 1 ? 's are' : ' is'} not tagged — edit {s.untagged > 1 ? 'them' : 'it'} in the Journal to include {s.untagged > 1 ? 'them' : 'it'}.</p>}
         </div>
       )}
+    </Card>
+  );
+}
+
+// Open positions: not in any stat until closed; partials bank P&L along the way.
+function OpenPositionsCard({ positions, currency, onClosePos, onEditPos }) {
+  const { addPartial, removePartial, discardPosition, getInstrumentSpecs } = useTradingStore();
+  const [partialFor, setPartialFor] = useState(null);
+  const [pf, setPf] = useState({ exitPrice: '', size: '', pnl: '' });
+  const [pnlTouched, setPnlTouched] = useState(false);
+  const autoPnl = partialFor ? computeTradeDerived({ ...partialFor, exitPrice: pf.exitPrice, positionSize: pf.size }, getInstrumentSpecs()).pnl : 0;
+  const pnlValue = pnlTouched ? pf.pnl : (autoPnl || '');
+  const remaining = (p) => Math.max(0, Number(p.positionSize) - (p.partials || []).reduce((a, x) => a + Number(x.size || 0), 0));
+  if (!positions.length) return null;
+  return (
+    <Card title={`Open positions (${positions.length})`}>
+      <ul className="divide-y divide-line/60">
+        {positions.map((p) => {
+          const banked = (p.partials || []).reduce((a, x) => a + Number(x.pnl || 0), 0);
+          return (
+            <li key={p.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse shrink-0" />
+              <span className="font-medium">{p.instrument}</span>
+              <span className="capitalize text-mute">{p.direction}</span>
+              <span className="text-mute tabular-nums">{remaining(p)}{(p.partials || []).length ? `/${p.positionSize}` : ''} @ {p.entryPrice}</span>
+              {Number(p.stopLoss) > 0 && <span className="text-xs text-mute">SL {p.stopLoss}</span>}
+              {Number(p.riskAmount) > 0 && <span className="text-xs text-mute">risk {fmtMoney(p.riskAmount, 0, currency)}</span>}
+              <span className="text-xs text-mute">{p.strategy}{p.session ? ` · ${p.session}` : ''}{p.timeframe ? ` · ${p.timeframe}` : ''}</span>
+              {(p.partials || []).length > 0 && <span className="text-xs" style={{ color: banked >= 0 ? 'var(--success)' : 'var(--error)' }}>banked {fmtSignedMoney(banked, currency)}</span>}
+              <span className="ml-auto flex items-center gap-1.5">
+                <Button variant="secondary" className="!py-1 !px-2 text-xs" onClick={() => { setPartialFor(p); setPf({ exitPrice: '', size: '', pnl: '' }); setPnlTouched(false); }}>Partial</Button>
+                <Button className="!py-1 !px-2 text-xs" onClick={() => onClosePos(p)}>Close</Button>
+                <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => onEditPos(p)} title="Edit (move stop, notes…)"><Pencil size={13} /></button>
+                <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Remove this open position without logging a trade?')) discardPosition(p.id); }} title="Remove"><Trash2 size={13} /></button>
+              </span>
+              {(p.partials || []).length > 0 && (
+                <div className="w-full pl-5 flex flex-wrap gap-1.5">
+                  {p.partials.map((x) => (
+                    <span key={x.id} className="text-[11px] px-2 py-0.5 rounded-full border border-line text-mute">
+                      {x.size} @ {x.exitPrice} · <span style={{ color: x.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>{fmtSignedMoney(x.pnl, currency)}</span>
+                      <button className="ml-1 hover:text-bad cursor-pointer" onClick={() => removePartial(p.id, x.id)} title="Undo partial">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <Modal open={!!partialFor} onClose={() => setPartialFor(null)} title={`Partial close · ${partialFor?.instrument || ''}`}>
+        {partialFor && (
+          <form className="space-y-3" onSubmit={(e) => {
+            e.preventDefault();
+            const size = Number(pf.size);
+            if (!(size > 0) || size >= remaining(partialFor)) return toast(`Size must be between 0 and ${remaining(partialFor)} (use Close for the rest)`, 'error');
+            if (!(Number(pf.exitPrice) > 0)) return toast('Exit price is required', 'error');
+            addPartial(partialFor.id, { exitPrice: pf.exitPrice, size, pnl: Number(pnlValue) || 0 });
+            setPartialFor(null);
+          }}>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Exit price"><Input type="number" step="any" value={pf.exitPrice} onChange={(e) => setPf({ ...pf, exitPrice: e.target.value })} autoFocus /></Field>
+              <Field label={`Size closed (of ${remaining(partialFor)})`}><Input type="number" step="any" value={pf.size} onChange={(e) => setPf({ ...pf, size: e.target.value })} /></Field>
+              <Field label={`P&L (${currency})`} hint={autoPnl ? `Auto: ${autoPnl}` : ''}><Input type="number" step="any" value={pnlValue} onChange={(e) => { setPnlTouched(true); setPf({ ...pf, pnl: e.target.value }); }} /></Field>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setPartialFor(null)}>Cancel</Button>
+              <Button type="submit">Record partial</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </Card>
   );
 }
@@ -150,6 +228,7 @@ export default function Trading() {
   const [formOpen, setFormOpen] = useState(() => searchParams.get('quickadd') === 'trade');
   const [space, setSpace] = useState(() => (SPACES.some((s) => s.key === searchParams.get('tab')) ? searchParams.get('tab') : 'today'));
   const [editing, setEditing] = useState(null);
+  const [posForm, setPosForm] = useState(null); // { position, mode: 'close' | 'edit' }
   const [filterInstrument, setFilterInstrument] = useState('all');
   const [filterStrategy, setFilterStrategy] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
@@ -203,6 +282,9 @@ export default function Trading() {
 
   // Today on this account + room left before the daily loss limit.
   const todayTrades = trades.filter((t) => t.date === today);
+  const positions = (tradingStore.openPositions || []).filter((p) => p.accountId === activeAccountId);
+  const playbook = tradingStore.playbook || {};
+  const isAplus = (t) => { const c = playbook[t.strategy]?.criteria || []; return c.length > 0 && Array.isArray(t.criteriaMet) && c.every((x) => t.criteriaMet.includes(x)); };
   const todayPnl = todayTrades.reduce((a, t) => a + t.pnl, 0);
   const dailyLimitPct = activeAccount?.type === 'propfirm' ? activeAccount?.propFirmRules?.maxDailyLossPct : activeAccount?.riskLimits?.maxDailyLossPct;
   const dailyRoom = dailyLimitPct != null && initialBalance > 0 ? (initialBalance * dailyLimitPct) / 100 - Math.max(0, -todayPnl) : null;
@@ -312,6 +394,7 @@ export default function Trading() {
             <Stat label="On plan (month)" value={monthPlan.onPlanPct != null ? `${Math.round(monthPlan.onPlanPct)}%` : '—'} sub={monthPlan.tagged ? `${monthPlan.on.count}/${monthPlan.tagged} tagged trades` : 'tag trades when you log them'}
               color={monthPlan.onPlanPct == null ? undefined : monthPlan.onPlanPct >= 80 ? 'var(--success)' : monthPlan.onPlanPct >= 60 ? 'var(--warning)' : 'var(--error)'} />
           </div>
+          <OpenPositionsCard positions={positions} currency={currency} onClosePos={(p) => setPosForm({ position: p, mode: 'close' })} onEditPos={(p) => setPosForm({ position: p, mode: 'edit' })} />
           <div className="grid lg:grid-cols-3 gap-5">
             <PreTradingChecklist />
             <Card title={`Today's trades (${todayTrades.length})`} action={<button className="text-xs text-accent hover:underline cursor-pointer" onClick={openNew}>+ Log trade</button>}>
@@ -337,6 +420,7 @@ export default function Trading() {
 
       {space === 'journal' && (
         <div className="space-y-5">
+          <PlaybookCard trades={trades} currency={currency} />
           <Card
             title={`Trade Log (${filtered.length})`}
             action={
@@ -356,8 +440,9 @@ export default function Trading() {
                       <th className="py-2 pr-4">Date</th>
                       <th className="py-2 pr-4">Plan</th>
                       <th className="py-2 pr-4">Instrument</th>
-                      <th className="py-2 pr-4">Strategy</th>
+                      <th className="py-2 pr-4">Setup</th>
                       <th className="py-2 pr-4">Dir</th>
+                      <th className="py-2 pr-4">Session · TF</th>
                       <th className="py-2 pr-4 text-right">R</th>
                       <th className="py-2 pr-4 text-right">P&L</th>
                       <th className="py-2 pr-4">Emotion</th>
@@ -371,8 +456,9 @@ export default function Trading() {
                         <td className="py-2.5 pr-4 whitespace-nowrap">{fmtDateShort(t.date)}</td>
                         <td className="py-2.5 pr-4"><PlanBadge t={t} /></td>
                         <td className="py-2.5 pr-4">{t.instrument}</td>
-                        <td className="py-2.5 pr-4">{t.strategy}</td>
+                        <td className="py-2.5 pr-4 whitespace-nowrap">{t.strategy}{isAplus(t) && <span className="ml-1 text-[10px] font-bold text-good">A+</span>}{mistakesOf(t).length > 0 && <span className="ml-1 text-[10px] text-bad" title={mistakesOf(t).join(', ')}>⚠{mistakesOf(t).length}</span>}</td>
                         <td className="py-2.5 pr-4 capitalize">{t.direction}</td>
+                        <td className="py-2.5 pr-4 text-xs text-mute whitespace-nowrap">{t.session || '—'}{t.timeframe ? ` · ${t.timeframe}` : ''}</td>
                         <td className="py-2.5 pr-4 text-right text-mute tabular-nums">{fmtR(tradeRMultiple(t))}</td>
                         <td className="py-2.5 pr-4 text-right font-medium tabular-nums" style={{ color: t.pnl >= 0 ? 'var(--success)' : 'var(--error)' }}>
                           {fmtSignedMoney(t.pnl, currency)}
@@ -381,6 +467,7 @@ export default function Trading() {
                         <td className="py-2.5 pr-4 capitalize text-mute">{t.journal?.emotion}</td>
                         <td className="py-2.5 pr-4">{t.journal?.reasoning ? '✓' : <span className="text-warn">—</span>}</td>
                         <td className="py-2.5 text-right whitespace-nowrap">
+                          {t.chartUrl && <a href={t.chartUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-mute hover:text-accent mr-3" title="Open chart"><ExternalLink size={14} /></a>}
                           <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => openEdit(t)}><Pencil size={14} /></button>
                           <button className="text-mute hover:text-bad cursor-pointer" onClick={() => remove(t)}><Trash2 size={14} /></button>
                         </td>
@@ -440,6 +527,7 @@ export default function Trading() {
       )}
 
       <TradeForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
+      <TradeForm open={!!posForm} onClose={() => setPosForm(null)} editing={null} position={posForm?.position || null} positionMode={posForm?.mode || null} />
       <CustomizeTradingModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
 
       <Modal open={balModal} onClose={() => setBalModal(false)} title={`Edit ${activeAccount?.name || 'account'} balance`}>

@@ -4,8 +4,11 @@ import { useTradingStore } from '../../store/tradingStore';
 import { INSTRUMENTS, STRATEGIES } from '../../utils/constants';
 import { Modal, Card, Field, Input, Select, Button, Badge } from '../common/ui';
 import { toast } from '../../store/uiStore';
+import { ASSET_CLASSES, BUILTIN_ASSET_CLASS, INSTRUMENT_PRESETS } from '../../utils/trading-journal';
 
-const blankInstrumentForm = () => ({ code: '', kind: 'pip', pipSize: '', pipValuePerLot: '' });
+const classLabel = (v) => ASSET_CLASSES.find((c) => c.value === v)?.label || '';
+
+const blankInstrumentForm = () => ({ code: '', kind: 'pip', pipSize: '', pipValuePerLot: '', assetClass: 'index' });
 
 function InstrumentsSection() {
   const { customInstruments, addCustomInstrument, deleteCustomInstrument } = useTradingStore();
@@ -24,26 +27,47 @@ function InstrumentsSection() {
     if (!res.ok) toast(res.error, 'error');
   };
 
+  const taken = new Set([...INSTRUMENTS, ...customInstruments.map((c) => c.code)]);
+  const presets = INSTRUMENT_PRESETS.filter((p) => !taken.has(p.code));
+
   return (
     <Card title="Instruments">
       <div className="flex flex-wrap gap-1.5 mb-4">
         {INSTRUMENTS.map((code) => (
           <span key={code} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs border border-line text-mute">
-            <Lock size={10} /> {code}
+            <Lock size={10} /> {code} <span className="opacity-70">· {classLabel(BUILTIN_ASSET_CLASS[code])}</span>
           </span>
         ))}
         {customInstruments.map((c) => (
           <span key={c.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border border-accent/40 text-accent bg-accent/10">
             {c.code}
-            <span className="text-mute">· {c.kind === 'direct' ? 'direct' : `${c.pipSize} / ${c.pipValuePerLot}`}</span>
+            <span className="text-mute">· {c.assetClass ? `${classLabel(c.assetClass)} · ` : ''}{c.kind === 'direct' ? 'direct' : `${c.pipSize} / ${c.pipValuePerLot}`}</span>
             <button type="button" onClick={() => remove(c)} className="hover:text-bad cursor-pointer"><Trash2 size={11} /></button>
           </span>
         ))}
       </div>
 
-      <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+      {presets.length > 0 && (
+        <div className="mb-4">
+          <div className="text-xs text-mute mb-1.5">Quick add — indices, metals, crypto, stocks and futures (contract values vary by broker: check yours, you can re-add with your own values)</div>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.map((p) => (
+              <button key={p.code} type="button" onClick={() => { const res = addCustomInstrument(p); if (!res.ok) toast(res.error, 'error'); }}
+                className="px-2.5 py-1 rounded-lg text-xs border border-dashed border-line text-mute hover:text-accent hover:border-accent cursor-pointer"
+                title={p.kind === 'direct' ? 'P&L = price move × units' : `1 point/pip = ${p.pipSize} · value per lot/contract = ${p.pipValuePerLot}`}>
+                + {p.code} <span className="opacity-70">· {classLabel(p.assetClass)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
         <Field label="Symbol">
           <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. US30, ETH, NAS100" />
+        </Field>
+        <Field label="Asset class">
+          <Select value={form.assetClass} onChange={(e) => setForm({ ...form, assetClass: e.target.value })} options={ASSET_CLASSES} />
         </Field>
         <Field label="PnL calculation">
           <Select
@@ -62,7 +86,7 @@ function InstrumentsSection() {
             </Field>
           </>
         )}
-        <Button type="submit" className={form.kind === 'pip' ? '' : 'md:col-start-4'}>
+        <Button type="submit" className={form.kind === 'pip' ? '' : 'md:col-start-5'}>
           <span className="flex items-center gap-2"><Plus size={14} /> Add</span>
         </Button>
       </form>
