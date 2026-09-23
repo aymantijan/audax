@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BarChart3, Plus, Trash2, Pin, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, Button, Field, Input, Select, Badge, EmptyState, Modal } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
+import { toast } from '../../../store/uiStore';
 import { KPI_LIBRARY, KPI_CATEGORIES, getKpiDefinition } from '../../../utils/kpi-library';
 
 // Gym metrics that only make sense per-exercise. Bound to a chosen exercise and
@@ -34,7 +35,8 @@ export default function KPIDashboard() {
   // Group KPIs by category
   const grouped = {};
   for (const kpi of kpis) {
-    const def = kpi.kpi_key ? getKpiDefinition(kpi.kpi_key) : null;
+    const binding = parseExerciseBinding(kpi);
+    const def = binding ? getKpiDefinition(binding.metricKey) : (kpi.kpi_key ? getKpiDefinition(kpi.kpi_key) : null);
     const cat = def?.category || 'custom';
     (grouped[cat] ||= []).push({ kpi, def });
   }
@@ -76,7 +78,7 @@ export default function KPIDashboard() {
                 </div>
                 <div className="space-y-1">
                   {items.map(({ kpi, def }) => (
-                    <KpiRow key={kpi.id} kpi={kpi} def={def} />
+                    <KpiRow key={kpi.id} kpi={kpi} />
                   ))}
                 </div>
               </div>
@@ -96,94 +98,115 @@ export default function KPIDashboard() {
   );
 }
 
+// Name + unit of a KPI whatever its kind (library, exercise-bound, custom).
+function kpiLabel(kpi) {
+  const binding = parseExerciseBinding(kpi);
+  const def = binding ? getKpiDefinition(binding.metricKey) : (kpi.kpi_key ? getKpiDefinition(kpi.kpi_key) : null);
+  return {
+    name: kpi.custom_name || def?.name || kpi.kpi_key,
+    unit: def?.unit || kpi.custom_unit || '',
+    manual: !binding && !kpi.kpi_key, // custom KPI → values entered by hand
+  };
+}
+
+function Sparkline({ series, color = 'var(--accent-primary)' }) {
+  const pts = series.slice(-14);
+  if (pts.length < 2) return null;
+  const vals = pts.map((p) => p.value);
+  const min = Math.min(...vals); const max = Math.max(...vals);
+  const span = max - min || 1;
+  const d = pts.map((p, i) => `${(i / (pts.length - 1)) * 100},${28 - ((p.value - min) / span) * 24 - 2}`).join(' ');
+  return (
+    <svg viewBox="0 0 100 28" preserveAspectRatio="none" className="mt-2 h-7 w-full">
+      <polyline points={d} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function KpiTile({ kpi }) {
   const store = useProgramStore();
-  const def = kpi.kpi_key ? getKpiDefinition(kpi.kpi_key) : null;
-  const binding = parseExerciseBinding(kpi);
-
-  let latest, trend, name, unit;
-  if (binding) {
-    const s = store.getExerciseKpiSeries(binding.metricKey, binding.exerciseName);
-    latest = s.latest;      // { date, value } | null
-    trend = s.trend;
-    const bdef = getKpiDefinition(binding.metricKey);
-    name = kpi.custom_name || bdef?.name || binding.metricKey;
-    unit = bdef?.unit || kpi.custom_unit || '';
-  } else {
-    latest = store.getLatestKpiValue(kpi.id);
-    const values = store.getKpiValues(kpi.id);
-    trend = values.length >= 2 ? values[values.length - 1].value - values[values.length - 2].value : null;
-    name = def?.name || kpi.custom_name || kpi.kpi_key;
-    unit = def?.unit || kpi.custom_unit || '';
-  }
+  const { series, latest, trend } = store.getKpiSeries(kpi);
+  const { name, unit } = kpiLabel(kpi);
+  const good = trend == null ? null : (kpi.target_direction === 'lower' ? trend <= 0 : trend >= 0);
 
   return (
-    <div className="bg-surface border border-line rounded-lg p-3">
-      <div className="text-[10px] text-mute mb-1 truncate">{name}</div>
+    <div className="rounded-xl border border-line bg-surface/70 p-3">
+      <div className="mb-1 truncate text-[11px] text-mute">{name}</div>
       <div className="flex items-end gap-1">
-        <span className="text-xl font-bold text-ink">
-          {latest ? formatValue(latest.value) : '—'}
-        </span>
-        <span className="text-xs text-mute mb-0.5">{unit}</span>
+        <span className="text-xl font-bold text-ink">{latest ? formatValue(latest.value) : '—'}</span>
+        <span className="mb-0.5 text-xs text-mute">{unit}</span>
       </div>
-      {trend != null && (
-        <div className={`text-[10px] flex items-center gap-0.5 mt-1 ${trend >= 0 ? 'text-good' : 'text-bad'}`}>
-          {trend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-          {trend >= 0 ? '+' : ''}{formatValue(trend)} {unit}
+      {trend != null && trend !== 0 && (
+        <div className={`mt-0.5 flex items-center gap-0.5 text-[11px] ${good ? 'text-good' : 'text-bad'}`}>
+          {trend > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+          {trend > 0 ? '+' : ''}{formatValue(trend)} {unit}
         </div>
       )}
+      <Sparkline series={series} />
       {kpi.target_value != null && latest && (
-        <div className="mt-1.5 h-1.5 bg-card rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent"
-            style={{ width: `${Math.min(100, (latest.value / kpi.target_value) * 100)}%` }}
-          />
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-card">
+          <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, (latest.value / kpi.target_value) * 100))}%` }} />
         </div>
       )}
     </div>
   );
 }
 
-function KpiRow({ kpi, def }) {
+function KpiRow({ kpi }) {
   const store = useProgramStore();
-  const binding = parseExerciseBinding(kpi);
-  let latest, name, unit;
-  if (binding) {
-    latest = store.getExerciseKpiSeries(binding.metricKey, binding.exerciseName).latest;
-    const bdef = getKpiDefinition(binding.metricKey);
-    name = kpi.custom_name || bdef?.name || binding.metricKey;
-    unit = bdef?.unit || kpi.custom_unit || '';
-  } else {
-    latest = store.getLatestKpiValue(kpi.id);
-    name = def?.name || kpi.custom_name || kpi.kpi_key;
-    unit = def?.unit || kpi.custom_unit || '';
-  }
+  const { series, latest, trend } = store.getKpiSeries(kpi);
+  const { name, unit, manual } = kpiLabel(kpi);
+  const [entering, setEntering] = useState(false);
+  const [val, setVal] = useState('');
 
-  const handleRemove = async () => {
-    const program = store.activeProgram || store.draftProgram;
-    if (program) await store.removeKpi(kpi.id);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const saveValue = async () => {
+    if (val === '' || !Number.isFinite(Number(val))) return;
+    try {
+      await store.saveKpiValue(kpi.id, { value_date: todayStr, value: Number(val), source: 'manual' });
+      setVal(''); setEntering(false);
+      store.syncGoals();
+    } catch (err) { toast(err?.message || 'Enregistrement impossible', 'error'); }
   };
 
-  const handleTogglePin = async () => {
-    await store.updateKpi(kpi.id, { is_pinned: !kpi.is_pinned });
-  };
+  const reached = kpi.target_value != null && latest
+    && (kpi.target_direction === 'lower' ? latest.value <= kpi.target_value : latest.value >= kpi.target_value);
 
   return (
-    <div className="flex items-center gap-3 border border-line rounded-lg px-3 py-2 group">
-      <button onClick={handleTogglePin} className="text-mute hover:text-accent cursor-pointer">
-        <Pin size={12} className={kpi.is_pinned ? 'text-accent fill-accent' : ''} />
+    <div className="group flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface/50 px-3 py-2.5">
+      <button onClick={() => store.updateKpi(kpi.id, { is_pinned: !kpi.is_pinned })} className="text-mute hover:text-accent cursor-pointer" title="Épingler">
+        <Pin size={13} className={kpi.is_pinned ? 'fill-accent text-accent' : ''} />
       </button>
-      <span className="text-sm flex-1">{name}</span>
-      <span className="text-sm font-medium">
-        {latest ? `${formatValue(latest.value)} ${unit}` : '—'}
-      </span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm text-ink">{name}</div>
+        <div className="text-[11px] text-mute">
+          {series.length ? `${series.length} mesure(s)` : manual ? 'Saisie manuelle' : 'En attente de données'}
+          {trend != null && trend !== 0 && ` · ${trend > 0 ? '+' : ''}${formatValue(trend)} ${unit}`}
+        </div>
+      </div>
+      <span className="text-sm font-semibold text-ink">{latest ? `${formatValue(latest.value)} ${unit}` : '—'}</span>
       {kpi.target_value != null && (
-        <Badge color={latest && latest.value >= kpi.target_value ? 'var(--success)' : 'var(--text-mute)'}>
-          Cible: {formatValue(kpi.target_value)} {unit}
-        </Badge>
+        <Badge color={reached ? 'var(--success)' : 'var(--text-secondary)'}>Cible : {formatValue(kpi.target_value)} {unit}</Badge>
       )}
-      <button onClick={handleRemove} className="text-mute hover:text-bad opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-        <Trash2 size={12} />
+      {manual && (entering ? (
+        <span className="flex items-center gap-1">
+          <input
+            autoFocus type="number" value={val} onChange={(e) => setVal(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveValue(); if (e.key === 'Escape') setEntering(false); }}
+            placeholder={unit || 'valeur'}
+            className="w-20 rounded-md border border-line bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+          />
+          <Button onClick={saveValue} className="!px-2 !py-1 text-xs">OK</Button>
+        </span>
+      ) : (
+        <Button variant="secondary" onClick={() => setEntering(true)} className="!px-2 !py-1 text-xs">
+          <span className="flex items-center gap-1"><Plus size={12} /> Valeur du jour</span>
+        </Button>
+      ))}
+      <button onClick={() => store.removeKpi(kpi.id)} className="text-mute opacity-0 transition-opacity hover:text-bad group-hover:opacity-100 cursor-pointer" title="Supprimer">
+        <Trash2 size={13} />
       </button>
     </div>
   );

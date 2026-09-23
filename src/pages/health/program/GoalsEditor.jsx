@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Target, Plus, Trash2, Trophy, CheckCircle, Circle } from 'lucide-react';
 import { Card, Button, Field, Input, Select, Badge, EmptyState, Modal } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
+import { useHealthStore } from '../../../store/healthStore';
 import { getKpiDefinition } from '../../../utils/kpi-library';
 
 const PRIORITY_COLORS = {
@@ -26,6 +27,11 @@ export default function GoalsEditor() {
   const program = store.activeProgram || store.draftProgram;
   const { goals, kpis, phases } = store;
   const [creating, setCreating] = useState(false);
+  const workouts = useHealthStore((st) => st.workouts);
+
+  // Goals follow their linked KPI automatically; a reached target is validated
+  // and awarded its trophy without a manual click.
+  useEffect(() => { store.syncGoals(); }, [goals.length, kpis.length, workouts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!program) return null;
 
@@ -117,7 +123,9 @@ function GoalCard({ goal, kpis, phases, onAchieve, onDelete }) {
   const kpiName = def?.name || kpi?.custom_name || null;
   const phase = phases.find((p) => p.id === goal.phase_id);
 
-  const progress = goal.progress_pct ?? 0;
+  const live = useProgramStore.getState().getGoalProgress(goal);
+  const progress = goal.kpi_id ? live.pct : (goal.progress_pct ?? 0);
+  const current = goal.kpi_id ? live.current : goal.current_value;
   const isNearTarget = progress >= 90;
 
   return (
@@ -144,8 +152,8 @@ function GoalCard({ goal, kpis, phases, onAchieve, onDelete }) {
           {goal.target_value != null && (
             <div className="mt-2">
               <div className="flex items-center justify-between text-[10px] text-mute mb-1">
-                <span>{kpiName || 'Progression'}: {goal.current_value ?? 0}</span>
-                <span>Cible: {goal.target_value}</span>
+                <span>{kpiName || 'Progression'} : {current ?? '—'}</span>
+                <span>Cible : {goal.target_value}</span>
               </div>
               <div className="h-2 bg-surface rounded-full overflow-hidden">
                 <div

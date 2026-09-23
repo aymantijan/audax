@@ -352,10 +352,10 @@ export const KPI_LIBRARY = [
     unit: 'L',
     category: 'nutrition',
     direction: 'higher',
+    // Water lives in healthStore.waterLogs (ml events), aggregated per day by the source adapter.
     compute: (store, date) => {
-      const logs = getNutritionForDate(store, date);
-      if (!logs.length) return null;
-      return logs.reduce((sum, n) => sum + (n.waterL || 0), 0);
+      const ml = store.waterByDate?.[dayKey(date)];
+      return ml ? Math.round((ml / 1000) * 100) / 100 : null;
     },
   },
 

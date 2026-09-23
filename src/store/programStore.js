@@ -15,6 +15,95 @@ import {
   computeTimingScore, computeCompletionScore, computeNutritionScore,
   computeSleepScore, computeRecoveryScore, computeHabitsScore, computeDailyDiscipline,
 } from '../utils/discipline-engine';
+import { getKpiDefinition, computeKpiValue } from '../utils/kpi-library';
+
+// --- KPI data adapter ------------------------------------------------------
+// The compute() functions in kpi-library expect a specific shape (gymSessions,
+// cardioSessions, sleepLogs, bodyCompositionLogs, habitCompletions...) that no
+// store actually exposed, so every library KPI silently read nothing. This
+// builds that shape from the REAL stores (healthStore + habitStore).
+function buildKpiSource() {
+  let h = {}; let hb = {};
+  try { h = useHealthStore.getState(); } catch { /* noop */ }
+  try { hb = useHabitStore.getState(); } catch { /* noop */ }
+  const workouts = h.workouts || [];
+
+  // Strength: one "session" per sessionId (a gym session = N exercise entries)
+  const gymMap = {};
+  for (const w of workouts) {
+    if (w.type !== 'strength') continue;
+    const k = w.sessionId || w.id;
+    const g = (gymMap[k] ||= { date: w.date, sets: [], duration_min: 0 });
+    for (const st of (w.sets || [])) g.sets.push({ reps: Number(st.reps) || 0, weight: Number(st.weight) || 0, rpe: Number(st.rpe) || null });
+    g.duration_min += Number(w.durationMin) || 0;
+  }
+  const num = (v) => (v != null && v !== '' ? Number(v) : null);
+  const cardioSessions = workouts.filter((w) => w.type === 'cardio').map((w) => ({
+    date: w.date,
+    duration_min: Number(w.durationMin) || 0,
+    distance_km: num(w.cardio?.distance) || 0,
+    calories: num(w.cardio?.calories) || 0,
+    avg_heart_rate: num(w.cardio?.avgHr),
+  }));
+
+  const waterByDate = {};
+  for (const wl of (h.waterLogs || [])) waterByDate[wl.date] = (waterByDate[wl.date] || 0) + (Number(wl.amountMl) || 0);
+
+  const heightFallback = Number(h.healthProfile?.heightCm) || null;
+  const bodyCompositionLogs = (h.bodyComp || []).map((b) => ({
+    date: b.date,
+    weight: Number(b.weightKg) || null,
+    bodyFatPct: num(b.bodyFatPct),
+    waistCm: num(b.waistCm),
+    heightCm: Number(b.heightCm) || heightFallback,
+  }));
+
+  const energyLogs = hb.energyLogs || [];
+  const sleepLogs = energyLogs.filter((l) => l.sleepData).map((l) => ({
+    date: l.date,
+    hoursSlept: l.sleepData.sleepHours ?? l.sleepData.hoursSlept ?? null,
+    sleepQualityScore: l.sleepData.sleepQualityScore ?? null,
+    latencyMin: l.sleepData.latencyMin ?? null,
+  }));
+
+  const recMap = {};
+  for (const r of (h.recoveryLogs || [])) {
+    recMap[r.date] = { ...(recMap[r.date] || {}), date: r.date, score: Math.min(100, Math.round(((r.activities?.length || 0) / 5) * 100)) };
+  }
+  for (const l of energyLogs) {
+    recMap[l.date] = { ...(recMap[l.date] || { date: l.date }), energyLevel: l.energyStartLevel ?? null, stressLevel: l.stressLevel ?? null };
+  }
+
+  const activeHabitIds = (hb.habits || []).filter((x) => !x.archived).map((x) => x.id);
+  const habitCompletions = {};
+  for (const lg of (hb.logs || [])) {
+    if (!activeHabitIds.includes(lg.habitId)) continue;
+    const day = (habitCompletions[lg.date] ||= Object.fromEntries(activeHabitIds.map((id) => [id, false])));
+    if (lg.completed) day[lg.habitId] = true;
+  }
+
+  return {
+    gymSessions: Object.values(gymMap),
+    cardioSessions,
+    nutritionLogs: h.nutritionLogs || [],
+    waterByDate,
+    bodyCompositionLogs,
+    sleepLogs,
+    recoveryLogs: Object.values(recMap),
+    habitCompletions,
+  };
+}
+
+const isoDay = (offset) => {
+  const d = new Date(Date.now() - offset * 86400000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const summarize = (series) => {
+  const latest = series.length ? series[series.length - 1] : null;
+  const previous = series.length >= 2 ? series[series.length - 2] : null;
+  const trend = latest && previous ? Math.round((latest.value - previous.value) * 100) / 100 : null;
+  return { series, latest, previous, trend };
+};
 
 export const useProgramStore = create((set, get) => ({
 
@@ -871,7 +960,8 @@ export const useProgramStore = create((set, get) => ({
       const log = energyLogs.find((l) => l.date === dateStr);
       const sleepData = log?.sleepData
         ? {
-            hoursSlept: log.sleepData.hoursSlept ?? log.sleepData.durationHours ?? null,
+            // QuickCheckin stores hours as sleepData.sleepHours
+            hoursSlept: log.sleepData.sleepHours ?? log.sleepData.hoursSlept ?? null,
             sleepQualityScore: log.sleepData.sleepQualityScore ?? null,
           }
         : null;
@@ -1006,6 +1096,83 @@ export const useProgramStore = create((set, get) => ({
   getLatestKpiValue: (kpiId) => {
     const vals = get().kpiValuesByKpi[kpiId] || [];
     return vals.length ? vals[vals.length - 1] : null;
+  },
+
+  /**
+   * One time-series for ANY KPI, from the right source:
+   *  - exercise-bound gym KPI (custom_source "metric::Exercise") -> logged workouts
+   *  - discipline_* library KPIs -> live discipline engine
+   *  - other library KPIs -> kpi-library compute() over real store data
+   *  - manual/custom KPIs -> values saved by the user
+   * A stored value for a date always wins (manual correction).
+   */
+  getKpiSeries: (kpi, days = 90) => {
+    if (!kpi) return summarize([]);
+    const s = get();
+    const src = kpi.custom_source || '';
+    const sep = src.indexOf('::');
+    if (sep !== -1) return s.getExerciseKpiSeries(src.slice(0, sep), src.slice(sep + 2));
+
+    const byDate = {};
+    if (kpi.kpi_key && getKpiDefinition(kpi.kpi_key)) {
+      const disc = { discipline_overall: 'overall_score', discipline_timing: 'timing_score', discipline_completion: 'completion_score' }[kpi.kpi_key];
+      const source = disc ? null : buildKpiSource();
+      for (let i = days - 1; i >= 0; i--) {
+        const date = isoDay(i);
+        let v = null;
+        if (disc) v = s.getDisciplineForDate(date)?.[disc] ?? null;
+        else { try { v = computeKpiValue(kpi.kpi_key, source, date); } catch { v = null; } }
+        if (v != null && Number.isFinite(Number(v))) byDate[date] = Math.round(Number(v) * 100) / 100;
+      }
+    }
+    for (const v of (s.kpiValuesByKpi[kpi.id] || [])) byDate[v.value_date] = Number(v.value);
+    const series = Object.entries(byDate).map(([date, value]) => ({ date, value })).sort((a, b) => (a.date < b.date ? -1 : 1));
+    return summarize(series);
+  },
+
+  /** Live progress of a goal from its linked KPI (baseline = first value in the series). */
+  getGoalProgress: (goal) => {
+    const s = get();
+    const kpi = s.kpis.find((k) => k.id === goal.kpi_id);
+    if (!kpi || goal.target_value == null) return { current: goal.current_value ?? null, pct: goal.progress_pct ?? 0, reached: false };
+    const { series, latest } = s.getKpiSeries(kpi);
+    if (!latest) return { current: null, pct: 0, reached: false };
+    const target = Number(goal.target_value);
+    const current = latest.value;
+    const dir = goal.target_direction || kpi.target_direction || 'higher';
+    const base = series[0].value;
+    let pct;
+    if (dir === 'lower') pct = base === target ? (current <= target ? 100 : 0) : ((base - current) / (base - target)) * 100;
+    else if (dir === 'exact' || dir === 'range') pct = target ? 100 - (Math.abs(current - target) / Math.abs(target)) * 100 : 0;
+    else pct = target ? (current / target) * 100 : 0;
+    pct = Math.max(0, Math.min(100, Math.round(pct * 10) / 10));
+    const reached = dir === 'lower' ? current <= target : dir === 'higher' ? current >= target : pct >= 99;
+    return { current, pct, reached };
+  },
+
+  /**
+   * Push live goal progress to the DB and auto-achieve goals whose KPI reached
+   * the target (which awards the trophy). Guarded against concurrent runs.
+   */
+  syncGoals: async () => {
+    if (get()._syncingGoals) return;
+    set({ _syncingGoals: true });
+    try {
+      for (const goal of get().goals.filter((g) => !g.achieved && g.kpi_id)) {
+        const { current, pct, reached } = get().getGoalProgress(goal);
+        if (current == null) continue;
+        if (reached) {
+          await get().updateGoal(goal.id, { current_value: current, progress_pct: 100 });
+          await get().achieveGoal(goal.id);
+        } else if (Math.abs((goal.progress_pct ?? 0) - pct) >= 1 || Number(goal.current_value) !== current) {
+          await get().updateGoal(goal.id, { current_value: current, progress_pct: pct });
+        }
+      }
+    } catch (err) {
+      console.error('[programStore] syncGoals failed:', err);
+    } finally {
+      set({ _syncingGoals: false });
+    }
   },
 
   /** Distinct exercises used across the program's sessions (for KPI binding). */
