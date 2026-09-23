@@ -33,6 +33,7 @@ const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
 const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
 const Health = lazy(lazyWithRetry(() => import('./pages/Health'), 'Health'));
 const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
+const GoalsHub = lazy(lazyWithRetry(() => import('./pages/GoalsHub'), 'GoalsHub'));
 const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
 const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
 const DealDetail = lazy(lazyWithRetry(() => import('./pages/DealDetail'), 'DealDetail'));
@@ -189,6 +190,7 @@ export default function App() {
         <Route path="/creative" element={<Creative />} />
         <Route path="/real-estate" element={<RealEstate />} />
         <Route path="/skills" element={<Skills />} />
+        <Route path="/goals" element={<GoalsHub />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, Timer, Palette, Building2 } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, Target, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, Timer, Palette, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -17,6 +17,7 @@ const PRIMARY_TABS = [
 ];
 
 const MORE_ITEMS = [
+  { to: '/goals', label: 'Objectifs', icon: Target },
   { to: '/learning', label: 'Learning', icon: BookOpen },
   { to: '/habits', label: 'Habits', icon: Flame },
   { to: '/deals', label: 'Deals (PE)', icon: Handshake },

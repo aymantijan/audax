@@ -6,6 +6,7 @@ import { gradeFor } from '../utils/grades';
 import { useAuthStore } from '../store/authStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
+import { useAllGoals } from '../hooks/useAllGoals';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
@@ -113,6 +114,7 @@ export default function Dashboard() {
   // Not gated on hasJournal: a goal can be created before any journal entry exists
   // (getGoalRows() handles an empty journal fine, just with current=0/no pace yet).
   const goals = accountingStore.getGoalRows();
+  const allGoals = useAllGoals();
   const todayEnergy = energyLogs.find((l) => l.date === today);
 
   // Grade (game rank) from raw lifetime XP (not the domain-balanced figure —
@@ -249,9 +251,10 @@ export default function Dashboard() {
     [activeHabits, logs, today]
   );
 
+  // Nearest deadlines across Santé / Finances / Apprentissage (see hooks/useAllGoals).
   const upcomingGoals = useMemo(
-    () => goals.filter((g) => g.targetDate).sort((a, b) => (a.targetDate < b.targetDate ? -1 : 1)).slice(0, 3),
-    [goals]
+    () => allGoals.filter((g) => g.targetDate && g.status !== 'achieved' && !g.recurring).sort((a, b) => (a.targetDate < b.targetDate ? -1 : 1)).slice(0, 4),
+    [allGoals]
   );
 
   const TrendIcon = synergy.trend > 0.5 ? TrendingUp : synergy.trend < -0.5 ? TrendingDown : Minus;
@@ -511,9 +514,9 @@ export default function Dashboard() {
                 </li>
               ))}
               {upcomingGoals.map((g) => (
-                <li key={g.id} className="flex items-center gap-2 text-sm">
+                <li key={g.key} className="flex items-center gap-2 text-sm">
                   <ArrowRight size={14} className="text-mute shrink-0" />
-                  <span className="flex-1 truncate">{g.name}</span>
+                  <Link to={g.link} className="flex-1 truncate hover:text-accent">{g.title}</Link>
                   <span className="text-[11px] text-mute">{fmtDate(g.targetDate)}</span>
                 </li>
               ))}

@@ -755,54 +755,136 @@ export const useAccountingStore = create(
         set({ corrections: get().corrections.map((c) => (c.id === id ? stamp({ ...c, ...updates, amount: Number(updates.amount ?? c.amount) }) : c)) }),
       deleteCorrection: (id) => set({ corrections: get().corrections.filter((c) => c.id !== id) }),
 
-      // ─────────── Objectifs (trésorerie & patrimoine) ───────────
+      // ─────────── Objectifs financiers (v2, 2026-09-23) ───────────
+      // Chaque objectif d'épargne a SON argent — plus de mesure partagée :
+      //  • 'envelope' : argent mis de côté sur vos comptes (contributions
+      //    affectées, sans mouvement bancaire) — la somme des enveloppes ne
+      //    peut pas dépasser la trésorerie disponible ;
+      //  • 'account'  : un compte de trésorerie dédié (livret, sous-compte) —
+      //    progression = son solde, point de départ figé à la création ;
+      //  • 'networth' : jalon de patrimoine net, point de départ figé.
+      // L'ancien type 'treasury' (tous les objectifs mesuraient le MÊME solde
+      // total → double comptage, objectif "atteint" dès sa création) est lu
+      // comme une enveloppe vide à alimenter.
       addGoal: (data) => {
+        const kind = data.kind || (data.type === 'networth' ? 'networth' : 'envelope');
+        const targetAmount = Number(data.targetAmount);
+        if (!data.name?.trim() || !(targetAmount > 0)) return { ok: false, error: 'Nom et montant cible requis.' };
+        let startAmount = null;
+        let contributions = [];
+        if (kind === 'account') {
+          if (!data.account) return { ok: false, error: 'Choisissez le compte dédié.' };
+          startAmount = accountBalances(get().journal)[data.account]?.balance || 0;
+          if (startAmount >= targetAmount) return { ok: false, error: `Ce compte contient déjà ${Math.round(startAmount)} DH : fixez une cible plus haute.` };
+        } else if (kind === 'networth') {
+          startAmount = get().getNetWorth().ancc;
+          if (startAmount >= targetAmount) return { ok: false, error: `Votre patrimoine net est déjà de ${Math.round(startAmount)} DH : fixez une cible plus haute.` };
+        } else {
+          const initial = Number(data.initialAmount) || 0;
+          if (initial > 0) {
+            const { unallocated } = get().getGoalAllocation();
+            if (initial > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur vos comptes.` };
+            if (initial >= targetAmount) return { ok: false, error: 'Le montant de départ atteint déjà la cible.' };
+            contributions = [{ id: uid(), date: localDateKey(new Date()), amount: initial, note: 'Épargne déjà constituée' }];
+          }
+        }
         const goal = {
-          ...data, id: uid(), targetAmount: Number(data.targetAmount),
+          id: uid(), kind, name: data.name.trim(), targetAmount, targetDate: data.targetDate || '',
+          account: kind === 'account' ? data.account : null, startAmount, contributions,
           achieved: false, achievedAt: null, createdAt: Date.now(), updatedAt: Date.now(),
         };
         set({ goals: [...get().goals, goal] });
         toast(`Objectif créé : ${goal.name}`, 'success');
+        return { ok: true, id: goal.id };
       },
       editGoal: (id, updates) =>
-        set({ goals: get().goals.map((g) => (g.id === id ? stamp({ ...g, ...updates, targetAmount: Number(updates.targetAmount ?? g.targetAmount) }) : g)) }),
+        set({ goals: get().goals.map((g) => (g.id === id ? stamp({ ...g, name: updates.name ?? g.name, targetDate: updates.targetDate ?? g.targetDate, targetAmount: Number(updates.targetAmount ?? g.targetAmount) }) : g)) }),
       deleteGoal: (id) => set({ goals: get().goals.filter((g) => g.id !== id) }),
 
-      // Lignes enrichies pour l'UI : valeur actuelle, rythme, progression, projection.
+      // Put money aside for an envelope goal (negative = take it back).
+      contributeGoal: (id, amount, note = '') => {
+        const g = get().goals.find((x) => x.id === id);
+        const amt = Math.round(Number(amount) * 100) / 100;
+        if (!g || !amt) return { ok: false, error: 'Montant invalide.' };
+        const kind = g.kind || (g.type === 'networth' ? 'networth' : 'envelope');
+        if (kind !== 'envelope') return { ok: false, error: 'Cet objectif suit un compte : faites un virement vers ce compte.' };
+        const current = (g.contributions || []).reduce((s, c) => s + Number(c.amount), 0);
+        if (amt > 0) {
+          const { unallocated } = get().getGoalAllocation();
+          if (amt > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur vos comptes.` };
+        } else if (-amt > current + 0.005) return { ok: false, error: `L'enveloppe ne contient que ${Math.round(current)} DH.` };
+        set({ goals: get().goals.map((x) => (x.id === id ? stamp({ ...x, kind, contributions: [...(x.contributions || []), { id: uid(), date: localDateKey(new Date()), amount: amt, note }] }) : x)) });
+        return { ok: true };
+      },
+
+      // Money on your accounts vs money already earmarked by envelope goals.
+      getGoalAllocation: () => {
+        const treasury = treasuryBalance(get().journal);
+        const balances = accountBalances(get().journal);
+        let allocated = 0;
+        let dedicated = 0;
+        for (const g of get().goals) {
+          if (g.achieved) continue;
+          const kind = g.kind || (g.type === 'networth' ? 'networth' : 'envelope');
+          if (kind === 'envelope') allocated += (g.contributions || []).reduce((s, c) => s + Number(c.amount), 0);
+          if (kind === 'account' && g.account) dedicated += balances[g.account]?.balance || 0;
+        }
+        const r = (v) => Math.round(v * 100) / 100;
+        return { treasury: r(treasury), allocated: r(allocated), dedicated: r(dedicated), unallocated: r(treasury - allocated - dedicated) };
+      },
+
+      // Lignes enrichies pour l'UI : valeur actuelle, rythme, effort mensuel, projection.
       getGoalRows: () => {
         const journal = get().journal;
         const corrections = get().corrections;
+        const balances = accountBalances(journal);
         const nwHist = netWorthHistory(journal, corrections, 6);
         const nwPace = paceFromEdges(nwHist, 'ancc');
         const nwCurrent = get().getNetWorth().ancc;
+        const now = Date.now();
+        const todayK = localDateKey(new Date());
+        const monthsUntil = (date) => Math.max(0, (new Date(`${date}T12:00:00`).getTime() - now) / (30.44 * 86400000));
 
-        const treasurySeries = get().getMonthlySeries(6);
-        const treasuryPace = paceFromEdges(treasurySeries, 'solde');
-        const treasuryCurrent = treasurySeries.length ? treasurySeries[treasurySeries.length - 1].solde : treasuryBalance(journal);
-
-        return get().goals.map((g) => {
-          // Once achieved, the goal is CLOSED: frozen at the amount actually
-          // reached when it was hit (achievedAmount), never recomputed
-          // against today's live balance. Without this, a goal marked
-          // "atteint" kept showing a progress bar racing the current
-          // treasury/net-worth figure — which naturally drifts BELOW the
-          // target again the moment money gets spent, making an achieved
-          // goal look unachieved days later. Pre-existing achieved goals
-          // that predate this fix (no achievedAmount on file) fall back to
-          // the target itself — the best available "closed at 100%" value,
-          // since the actual historical figure was never stored.
+        return get().goals.map((raw) => {
+          const kind = raw.kind || (raw.type === 'networth' ? 'networth' : 'envelope');
+          const g = { ...raw, kind, type: kind === 'networth' ? 'networth' : 'treasury', contributions: raw.contributions || [] };
+          // Achieved goals are closed: frozen at the amount actually reached.
           if (g.achieved) {
             const amount = g.achievedAmount ?? g.targetAmount;
             const progress = g.targetAmount > 0 ? Math.max(0, Math.min(100, (amount / g.targetAmount) * 100)) : null;
-            return { ...g, current: amount, pace: null, progress, projected: null, onTrack: null };
+            return { ...g, current: amount, pace: null, progress, projected: null, onTrack: null, neededPerMonth: null };
           }
-          const isTreasury = g.type === 'treasury';
-          const current = isTreasury ? treasuryCurrent : nwCurrent;
-          const pace = isTreasury ? treasuryPace : nwPace;
-          const progress = g.targetAmount > 0 ? Math.max(0, Math.min(100, (current / g.targetAmount) * 100)) : null;
-          const projected = g.targetDate ? projectValue(current, pace, g.targetDate) : null;
-          const onTrack = projected !== null ? projected >= g.targetAmount : null;
-          return { ...g, current, pace, progress, projected, onTrack };
+          const ageMonths = (now - (g.createdAt || now)) / (30.44 * 86400000);
+          let current; let pace = null;
+          let judgeAge = ageMonths;
+          if (kind === 'envelope') {
+            current = g.contributions.reduce((s, c) => s + Number(c.amount), 0);
+            // Rhythm is judged from the first real contribution, not creation
+            // (a migrated or brand-new envelope isn't "late" before its first euro).
+            const firstReal = g.contributions.filter((c) => c.note !== 'Épargne déjà constituée').map((c) => c.date).sort()[0];
+            judgeAge = firstReal ? (now - new Date(`${firstReal}T12:00:00`).getTime()) / (30.44 * 86400000) : 0;
+            const since = localDateKey(new Date(now - 90 * 86400000));
+            const recent = g.contributions.filter((c) => c.date >= since && c.note !== 'Épargne déjà constituée').reduce((s, c) => s + Number(c.amount), 0);
+            pace = recent / Math.min(3, Math.max(1, ageMonths));
+          } else if (kind === 'account') {
+            current = balances[g.account]?.balance || 0;
+            pace = g.startAmount != null ? (current - g.startAmount) / Math.max(1, ageMonths) : null;
+          } else {
+            current = nwCurrent;
+            pace = nwPace;
+          }
+          current = Math.round(current * 100) / 100;
+          // Progress from the starting point for account / net-worth goals
+          // (legacy goals without a start fall back to current/target).
+          const base = kind !== 'envelope' && g.startAmount != null && g.startAmount < g.targetAmount ? g.startAmount : 0;
+          const progress = g.targetAmount > base ? Math.max(0, Math.min(100, ((current - base) / (g.targetAmount - base)) * 100)) : null;
+          const left = g.targetDate && g.targetDate > todayK ? monthsUntil(g.targetDate) : null;
+          const remaining = Math.max(0, g.targetAmount - current);
+          const neededPerMonth = left != null ? Math.round(remaining / Math.max(0.5, left)) : null;
+          const projected = left != null && pace != null ? Math.round(current + pace * left) : null;
+          // Too young to judge a rhythm → no verdict rather than a false alarm.
+          const onTrack = projected != null && judgeAge >= 1 ? projected >= g.targetAmount : null;
+          return { ...g, current, pace, progress, projected, onTrack, neededPerMonth, monthsLeft: left };
         });
       },
 
@@ -815,7 +897,7 @@ export const useAccountingStore = create(
         const xp = calculateGoalXP(goal.targetAmount);
         const badge = badgeForGoal(goal.targetAmount);
         set({ goals: get().goals.map((g) => (g.id === goalId ? stamp({ ...g, achieved: true, achievedAt: Date.now(), achievedAmount: current, xpAwarded: xp, badge }) : g)) });
-        const skillId = goal.type === 'treasury' ? 'treasury-planning-lv1' : 'ratio-analysis-lv1';
+        const skillId = (goal.kind || goal.type) === 'networth' ? 'ratio-analysis-lv1' : 'treasury-planning-lv1';
         useSkillStore.getState().awardXP(skillId, xp, `objectif atteint : ${goal.name}`);
         toast(`🎉 Objectif atteint : ${goal.name} · +${xp} XP · Badge : ${badge}`, 'success');
         get().checkBadges();

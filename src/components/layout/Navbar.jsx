@@ -11,6 +11,7 @@ import GlobalSearch from './GlobalSearch';
 const DIRECT_ITEMS = [
   { to: '/today', label: 'Aujourd’hui', end: true },
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/goals', label: 'Objectifs' },
 ];
 
 // Grouped ("Page mère → pages child") links. `enabledKey` (checked against
