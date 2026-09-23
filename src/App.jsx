@@ -27,7 +27,6 @@ const Onboarding = lazy(lazyWithRetry(() => import('./pages/Onboarding'), 'Onboa
 const Today = lazy(lazyWithRetry(() => import('./pages/Today'), 'Today'));
 const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
 const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
-const TradingAccounts = lazy(lazyWithRetry(() => import('./pages/TradingAccounts'), 'TradingAccounts'));
 const TradingAccountDetail = lazy(lazyWithRetry(() => import('./pages/TradingAccountDetail'), 'TradingAccountDetail'));
 const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
 const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
@@ -165,7 +164,7 @@ export default function App() {
         <Route path="/today" element={<Today />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trading" element={<Trading />} />
-        <Route path="/trading/accounts" element={<TradingAccounts />} />
+        <Route path="/trading/accounts" element={<Navigate to="/trading?tab=accounts" replace />} />
         <Route path="/trading/account/:id" element={<TradingAccountDetail />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/course/:courseId" element={<CoursePage />} />

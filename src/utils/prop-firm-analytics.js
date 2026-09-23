@@ -1,3 +1,4 @@
+import { todayKey, dateKey } from './formatters';
 // Pure functions tracking a prop-firm RULE SET (the user's own firm's actual
 // terms, or a self-imposed simulation on a Demo account — see below) against
 // the trades logged since a given phase-start timestamp. Nothing here is
@@ -37,7 +38,7 @@ function dailyPnL(trades) {
 // `rules.maxDailyProfitAmount`: optional absolute $ cap on a single day's
 // profit (some firms flag/disqualify unusually large single-day gains as
 // a sign of over-leveraging or exploiting a pricing glitch).
-export function computeRulesProgress(rules, phaseStart, initialBalance, trades, today = new Date().toISOString().slice(0, 10)) {
+export function computeRulesProgress(rules, phaseStart, initialBalance, trades, today = todayKey()) {
   rules = rules || {};
   // Compare at CALENDAR-DAY granularity, not raw milliseconds: `t.date` is a
   // day-only string ('YYYY-MM-DD', midnight), while `phaseStart` is a precise
@@ -45,7 +46,7 @@ export function computeRulesProgress(rules, phaseStart, initialBalance, trades, 
   // phase that starts mid-day would otherwise wrongly exclude every trade
   // logged that SAME day (midnight-of-today < phase-start-later-today) —
   // trades are only ever dated by day, so the phase boundary should be too.
-  const phaseStartDay = new Date(phaseStart).toISOString().slice(0, 10);
+  const phaseStartDay = dateKey(phaseStart);
   const phaseTrades = trades.filter((t) => String(t.date).slice(0, 10) >= phaseStartDay);
   const sorted = [...phaseTrades].sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -114,7 +115,7 @@ export function computeRulesProgress(rules, phaseStart, initialBalance, trades, 
 // `account.currentPhaseStartAt` scopes every metric to the CURRENT phase only —
 // advancing a phase resets these numbers without touching trade history.
 // Thin wrapper over computeRulesProgress for a real Prop Firm account.
-export function computePropFirmProgress(account, trades, today = new Date().toISOString().slice(0, 10)) {
+export function computePropFirmProgress(account, trades, today = todayKey()) {
   const phaseStart = account.currentPhaseStartAt || account.createdAt;
   return computeRulesProgress(account.propFirmRules, phaseStart, account.initialBalance || 0, trades, today);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
 import { useHabitStore } from '../../store/habitStore';
@@ -9,8 +9,9 @@ import { Card } from '../common/ui';
 
 const DOT = { green: 'var(--success)', yellow: 'var(--warning)', red: 'var(--error)' };
 
-// Returns { clear, overridden } via onStatus so the page can gate the Log Trade button.
-export default function PreTradingChecklist({ onStatus }) {
+// The checklist items, shared by the card below and the trade form (which
+// tags a trade logged while something is red as off-plan by default).
+export function usePreTradeChecklist() {
   // Whole-store subscription (not a selector) — getAccountTrades/getPropFirmProgress
   // return a freshly-allocated array/object on every call, so selecting them via
   // useTradingStore(s => s.getX(...)) makes useSyncExternalStore see a "changed"
@@ -22,7 +23,6 @@ export default function PreTradingChecklist({ onStatus }) {
   const accountTrades = tradingStore.getAccountTrades(activeAccountId);
   const propFirmProgress = activeAccount?.type === 'propfirm' ? tradingStore.getPropFirmProgress(activeAccountId) : null;
   const { habits, logs, energyLogs } = useHabitStore();
-  const [override, setOverride] = useState(false);
 
   const today = todayKey();
   const items = useMemo(() => {
@@ -105,11 +105,13 @@ export default function PreTradingChecklist({ onStatus }) {
   }, [trades, accountTrades, propFirmProgress, habits, logs, energyLogs, today]);
 
   const allGreen = items.every((i) => i.status === 'green');
-  const clear = allGreen || override;
-  useEffect(() => {
-    onStatus?.(clear);
-  }, [clear, onStatus]);
+  return { items, allGreen, reds: items.filter((i) => i.status === 'red') };
+}
 
+// Informative only: logging a trade is never blocked (you often journal a
+// trade already taken) — it is tagged off-plan instead, see TradeForm.
+export default function PreTradingChecklist() {
+  const { items, allGreen, reds } = usePreTradeChecklist();
   return (
     <Card title="Pre-Trading Checklist">
       <ul className="space-y-2.5">
@@ -127,14 +129,11 @@ export default function PreTradingChecklist({ onStatus }) {
             <ShieldCheck size={17} /> Clear to trade
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center gap-2 text-warn text-sm font-medium">
-              <ShieldAlert size={17} /> Warnings detected. Proceed at own risk?
+              <ShieldAlert size={17} /> {reds.length ? `${reds.length} red flag${reds.length > 1 ? 's' : ''} — not your best day to trade` : 'Some checks are incomplete'}
             </div>
-            <label className="flex items-center gap-2 text-xs text-mute cursor-pointer">
-              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-              I understand and choose to proceed
-            </label>
+            <p className="text-xs text-mute">{reds.length ? 'A trade logged now is tagged off-plan by default, so you can see later what trading against your rules really costs.' : 'Do your check-in in Health to complete it.'}</p>
           </div>
         )}
       </div>

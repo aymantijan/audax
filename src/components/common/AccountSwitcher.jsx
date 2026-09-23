@@ -82,7 +82,7 @@ export default function AccountSwitcher({ compact = false }) {
                   <Plus size={13} /> New account
                 </button>
                 <Link
-                  to="/trading/accounts"
+                  to="/trading?tab=accounts"
                   onClick={() => setOpen(false)}
                   className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-mute hover:text-accent hover:bg-surface cursor-pointer"
                 >

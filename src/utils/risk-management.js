@@ -1,3 +1,4 @@
+import { todayKey } from './formatters';
 // Risk management (Phase 3): position sizing, R-multiple tracking, and
 // same-day correlated-exposure warnings. All functions are pure and work off
 // the trade journal the app already has — no "live open position" concept
@@ -18,7 +19,7 @@ const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 // and a total-drawdown cap, both scored over the account's ENTIRE trade
 // history (there's no phase boundary to scope them to). `account.riskLimits`
 // is optional — accounts without it are simply never checked.
-export function computeRiskLimitBreaches(account, trades, today = new Date().toISOString().slice(0, 10)) {
+export function computeRiskLimitBreaches(account, trades, today = todayKey()) {
   const rules = account?.riskLimits;
   if (!rules || (rules.maxDailyLossPct == null && rules.maxTotalDrawdownPct == null)) return [];
 

@@ -5,7 +5,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import { useTradingStore } from '../store/tradingStore';
 import { PROP_FIRM_PHASES } from '../utils/prop-firm-analytics';
 import { computeDemoReadiness, computeBrokerHealth, computePropFirmTimeline } from '../utils/account-type-analytics';
-import { fmtMoney, fmtSignedMoney, fmtPct } from '../utils/formatters';
+import { fmtMoney, fmtSignedMoney, fmtPct, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Modal, Badge, EmptyState } from '../components/common/ui';
 import AccountFormModal from '../components/trading/AccountFormModal';
 import RuleGauge from '../components/trading/RuleGauge';
@@ -25,13 +25,13 @@ export default function TradingAccountDetail() {
   const [editModal, setEditModal] = useState(false);
   const [balModal, setBalModal] = useState(false);
   const [balForm, setBalForm] = useState({ newBalance: '', reason: '' });
-  const [payoutForm, setPayoutForm] = useState({ amount: '', date: new Date().toISOString().slice(0, 10), notes: '' });
+  const [payoutForm, setPayoutForm] = useState({ amount: '', date: todayKey(), notes: '' });
 
   const account = accounts.find((a) => a.id === id);
   if (!account) {
     return (
       <div className="max-w-4xl mx-auto">
-        <EmptyState>Account not found. <Link to="/trading/accounts" className="text-accent">Back to accounts</Link></EmptyState>
+        <EmptyState>Account not found. <Link to="/trading?tab=accounts" className="text-accent">Back to accounts</Link></EmptyState>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export default function TradingAccountDetail() {
     e.preventDefault();
     if (!Number(payoutForm.amount)) return;
     addPayout(account.id, payoutForm);
-    setPayoutForm({ amount: '', date: new Date().toISOString().slice(0, 10), notes: '' });
+    setPayoutForm({ amount: '', date: todayKey(), notes: '' });
   };
   // Breach can hit at any stage (funded or still in evaluation) — a hard
   // rule violation, not a missed target, so it's a separate confirm from

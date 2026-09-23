@@ -5,9 +5,12 @@ import { tradeSchema, validate } from '../../utils/validators';
 import { INSTRUMENTS, STRATEGIES, EMOTIONS, MACRO_FIELDS, TRADE_XP } from '../../utils/constants';
 import { Button, Field, Input, Select, Textarea, Modal } from '../common/ui';
 import SkillPicker from '../common/SkillPicker';
+import { usePreTradeChecklist } from './PreTradingChecklist';
+import { PLAN_BREAKS } from '../../utils/trading-plan';
+import { todayKey } from '../../utils/formatters';
 
 const blank = () => ({
-  date: new Date().toISOString().slice(0, 10),
+  date: todayKey(),
   instrument: 'EURUSD',
   strategy: 'Trend',
   direction: 'long',
@@ -24,6 +27,8 @@ const blank = () => ({
   lesson: '',
   linkedSkills: [],
   macro: {},
+  followedPlan: true,
+  planBreaks: [],
 });
 
 export default function TradeForm({ open, onClose, editing }) {
@@ -49,14 +54,21 @@ export default function TradeForm({ open, onClose, editing }) {
   const [form, setForm] = useState(blank());
   const [pnlTouched, setPnlTouched] = useState(false);
   const [error, setError] = useState('');
+  const { reds } = usePreTradeChecklist();
+  const [redsAtOpen, setRedsAtOpen] = useState([]);
 
   useEffect(() => {
     if (open) {
-      setForm(editing ? { ...blank(), ...editing, journal: { ...blank().journal, ...editing.journal } } : blank());
+      // New trade while the checklist is red → off-plan by default, with the red items as the reasons.
+      const redLabels = editing ? [] : reds.map((r) => r.label);
+      setRedsAtOpen(redLabels);
+      setForm(editing
+        ? { ...blank(), ...editing, journal: { ...blank().journal, ...editing.journal }, followedPlan: editing.followedPlan ?? null, planBreaks: editing.planBreaks || [] }
+        : { ...blank(), followedPlan: redLabels.length === 0, planBreaks: redLabels });
       setPnlTouched(!!editing);
       setError('');
     }
-  }, [open, editing]);
+  }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const derived = useMemo(
     () => computeTradeDerived(form, instrumentSpecs),
@@ -76,7 +88,7 @@ export default function TradeForm({ open, onClose, editing }) {
     e.preventDefault();
     const res = validate(tradeSchema, form);
     if (!res.ok) return setError(res.error);
-    const data = { ...res.data, macro: form.macro };
+    const data = { ...res.data, macro: form.macro, followedPlan: form.followedPlan ?? null, planBreaks: form.followedPlan === false ? form.planBreaks : [] };
     if (editing) editTrade(editing.id, data);
     else addTrade(data);
     onClose();
@@ -85,6 +97,34 @@ export default function TradeForm({ open, onClose, editing }) {
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Trade' : 'Log Trade'} wide>
       <form onSubmit={submit} className="space-y-4">
+        <div className="rounded-lg border p-3" style={{ borderColor: form.followedPlan === false ? 'color-mix(in srgb, var(--error) 45%, transparent)' : 'var(--border)' }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium flex-1 min-w-[10rem]">Was this trade within your plan & rules?</span>
+            {[{ v: true, label: 'On plan', c: 'var(--success)' }, { v: false, label: 'Off plan', c: 'var(--error)' }].map((o) => (
+              <button key={o.label} type="button" onClick={() => upd('followedPlan', o.v)}
+                className="px-3 py-1 rounded-lg border text-xs font-semibold cursor-pointer"
+                style={form.followedPlan === o.v ? { borderColor: o.c, color: o.c, background: `color-mix(in srgb, ${o.c} 12%, transparent)` } : { borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {redsAtOpen.length > 0 && <p className="text-[11px] text-warn mt-2">Your pre-trading checklist is red ({redsAtOpen.join(', ')}). If you took this trade earlier under your plan, switch to On plan.</p>}
+          {form.followedPlan === false && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {[...new Set([...redsAtOpen, ...PLAN_BREAKS, ...form.planBreaks])].map((b) => {
+                const on = form.planBreaks.includes(b);
+                return (
+                  <button key={b} type="button" onClick={() => upd('planBreaks', on ? form.planBreaks.filter((x) => x !== b) : [...form.planBreaks, b])}
+                    className={`px-2 py-0.5 rounded-full border text-[11px] cursor-pointer ${on ? 'border-bad text-bad bg-bad/10' : 'border-line text-mute hover:text-ink'}`}>
+                    {b}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {form.followedPlan == null && editing && <p className="text-[11px] text-mute mt-2">Not tagged yet — tag it to include it in the on-plan / off-plan comparison.</p>}
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Field label="Date">
             <Input type="date" value={form.date} onChange={(e) => upd('date', e.target.value)} />

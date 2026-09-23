@@ -447,7 +447,7 @@ export const useTradingStore = create(
       // accountingStore fire exactly once per payout, never re-matching an
       // already-linked one.
       addPayout: (id, { amount, date, notes }) => {
-        const payout = { id: uid(), amount: Number(amount) || 0, date: date || new Date().toISOString().slice(0, 10), notes: notes || '', bookkept: false, createdAt: Date.now() };
+        const payout = { id: uid(), amount: Number(amount) || 0, date: date || todayKey(), notes: notes || '', bookkept: false, createdAt: Date.now() };
         set({ accounts: get().accounts.map((a) => (a.id === id ? stamp({ ...a, payouts: [...(a.payouts || []), payout] }) : a)) });
         const sym = CURRENCY_SYMBOL[get().getAccount(id)?.currency] || '$';
         toast(`Payout logged: ${sym}${payout.amount}`, 'success');

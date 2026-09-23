@@ -13,7 +13,7 @@ const STATUS_COLOR = {
   failed: 'var(--error)', breached: 'var(--error)', archived: 'var(--text-secondary)',
 };
 
-export default function TradingAccounts() {
+export default function TradingAccounts({ embedded = false }) {
   const { accounts, activeAccountId, setActiveAccount, archiveAccount, deleteAccount, accountValue, getStats, getTypeScore, getAccountScore } = useTradingStore();
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -65,10 +65,10 @@ export default function TradingAccounts() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className={embedded ? 'space-y-6' : 'space-y-6 max-w-4xl mx-auto'}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Trading Accounts</h1>
+          {embedded ? <h2 className="text-lg font-semibold">Your accounts</h2> : <h1 className="text-2xl font-bold">Trading Accounts</h1>}
           <p className="text-mute text-sm mt-1">Manage your demo, broker, and prop firm accounts.</p>
         </div>
         <Button onClick={() => { setEditing(null); setModal(true); }}>
