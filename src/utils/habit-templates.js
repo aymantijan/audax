@@ -120,6 +120,8 @@ export const HABIT_TEMPLATES = [
       h('Dormir 7 h', 'recovery', 5, '', { kind: 'quantity', target: 7, unit: 'h', direction: 'atLeast', source: 'sleep_hours', moment: 'morning', duration: 1 }),
       h('Une séance de sport', 'health', 8, '', { kind: 'quantity', target: 1, unit: 'séance', direction: 'atLeast', source: 'workouts', moment: 'day', duration: 60 }),
       h('Journaliser ses trades', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'trade', direction: 'atLeast', source: 'trades_journaled', moment: 'evening', duration: 10 }),
+      h('Écrire son plan de séance (trading)', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'plan', direction: 'atLeast', source: 'trading_plan', moment: 'morning', duration: 5 }),
+      h('Revue de fin de journée (trading)', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'revue', direction: 'atLeast', source: 'trading_review', moment: 'evening', duration: 10 }),
       h('Noter ses dépenses', 'finance', 3, '', { kind: 'quantity', target: 1, unit: 'opération', direction: 'atLeast', source: 'expenses_logged', moment: 'evening', duration: 2 }),
       h('10 000 pas', 'health', 5, '', { kind: 'quantity', target: 10000, unit: 'pas', direction: 'atLeast', moment: 'day', duration: 1 }),
       h('Maximum 2 cafés', 'health', 3, '', { kind: 'quantity', target: 2, unit: 'cafés', direction: 'atMost', moment: 'day', duration: 1 }),

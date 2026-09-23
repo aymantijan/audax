@@ -5,6 +5,7 @@ import { useHabitStore } from '../../store/habitStore';
 import { habitStreak, isHabitShownOn } from '../../utils/calculations';
 import { currentLossStreak } from '../../utils/trading-psychology';
 import { todayKey } from '../../utils/formatters';
+import { planStatus, routineKey } from '../../utils/trading-routine';
 import { Card } from '../common/ui';
 
 const DOT = { green: 'var(--success)', yellow: 'var(--warning)', red: 'var(--error)' };
@@ -94,6 +95,20 @@ export function usePreTradeChecklist() {
         detail: mandatoryMissing.length ? `Manque : ${mandatoryMissing.map((h) => h.name).join(', ')}` : `${mandatory.length}/${mandatory.length}`,
       });
     }
+    const plan = (tradingStore.dailyPlans || {})[routineKey(activeAccountId, today)];
+    const ps = planStatus(plan, accountTrades.filter((t) => t.date === today));
+    list.push({
+      label: 'Session plan written',
+      status: plan ? 'green' : 'yellow',
+      detail: plan ? `${plan.maxTrades ? `max ${plan.maxTrades} trades` : 'plan saved'}` : 'Plan your session in Today',
+    });
+    if (plan) {
+      list.push({
+        label: 'Within today’s plan limits',
+        status: ps.stop ? 'red' : 'green',
+        detail: ps.stop ? ps.reasons.join(', ') : `${ps.tradesUsed}${ps.maxTrades ? `/${ps.maxTrades}` : ''} trades`,
+      });
+    }
     if (propFirmProgress) {
       list.push({
         label: 'Prop-firm rules respected',
@@ -102,7 +117,7 @@ export function usePreTradeChecklist() {
       });
     }
     return list;
-  }, [trades, accountTrades, propFirmProgress, habits, logs, energyLogs, today]);
+  }, [trades, accountTrades, propFirmProgress, habits, logs, energyLogs, today, tradingStore.dailyPlans, activeAccountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allGreen = items.every((i) => i.status === 'green');
   return { items, allGreen, reds: items.filter((i) => i.status === 'red') };

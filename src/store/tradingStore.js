@@ -160,6 +160,24 @@ export const useTradingStore = create(
         set({ customMistakes: [...(get().customMistakes || []), clean] });
       },
 
+      // ─────────── Routine (Trading n°3) ───────────
+      // Keyed `${accountId}|YYYY-MM-DD` (weekReviews: the week's Monday).
+      dailyPlans: {}, // { bias, instruments[], setups[], maxTrades, maxLoss, levels, news, notes, savedAt }
+      dayReviews: {}, // { grade, followedPlan, wentWell, improve, lesson, savedAt }
+      weekReviews: {}, // { grade, worked, fix, focusNext, savedAt }
+      savePlan: (accountId, day, data) => {
+        set({ dailyPlans: { ...(get().dailyPlans || {}), [`${accountId}|${day}`]: { ...data, savedAt: Date.now() } } });
+        toast('Session plan saved — trade your plan', 'success');
+      },
+      saveDayReview: (accountId, day, data) => {
+        set({ dayReviews: { ...(get().dayReviews || {}), [`${accountId}|${day}`]: { ...data, savedAt: Date.now() } } });
+        toast(`Day reviewed — grade ${data.grade}`, 'success');
+      },
+      saveWeekReview: (accountId, weekStart, data) => {
+        set({ weekReviews: { ...(get().weekReviews || {}), [`${accountId}|${weekStart}`]: { ...data, savedAt: Date.now() } } });
+        toast(`Week reviewed — grade ${data.grade}`, 'success');
+      },
+
       // ─────────── Open positions (Trading n°2) ───────────
       // Kept apart from trades[] so stats/equity/prop-firm rules only ever see
       // closed trades. Partial closes are stored on the position and summed
@@ -764,6 +782,7 @@ export const useTradingStore = create(
           alerts: { enabled: false, lastShown: {} }, coachCache: {},
           scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
           customInstruments: [], customStrategies: [], playbook: {}, customMistakes: [], openPositions: [],
+          dailyPlans: {}, dayReviews: {}, weekReviews: {},
         }),
     }),
     { name: 'audax-trading' }

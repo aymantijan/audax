@@ -188,7 +188,7 @@ function HabitFormModal({ open, onClose, habit }) {
     <Modal open={open} onClose={onClose} title={habit ? 'Modifier l’habitude' : 'Nouvelle habitude'} wide>
       <form onSubmit={submit} className="space-y-4">
         {!habit && (
-          <Field label="Partir d’un modèle (optionnel)" hint="89 modèles : à cocher, mesurables (souvent automatiques) et à arrêter">
+          <Field label="Partir d’un modèle (optionnel)" hint="91 modèles : à cocher, mesurables (souvent automatiques) et à arrêter">
             <Select value={template} onChange={(e) => applyTemplate(e.target.value)}>
               <option value="">— Partir de zéro —</option>
               {HABIT_TEMPLATES.map((g) => (

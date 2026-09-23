@@ -26,6 +26,8 @@ export const HABIT_SOURCES = [
   { value: 'focus_minutes', label: 'Minutes de concentration (Deep Work)', unit: 'min', section: 'Deep Work', get: (d) => Math.round(sum(useFocusStore.getState().sessions.filter((s) => s.date === d), (s) => s.durationMinutes)) },
   { value: 'flashcards', label: 'Fiches révisées (Révisions)', unit: 'fiches', section: 'Révisions', get: (d) => (useFlashcardStore.getState().reviewLog || []).filter((e) => e.d === d).length },
   { value: 'trades_journaled', label: 'Trades journalisés (Trading)', unit: 'trade(s)', section: 'Trading', get: (d) => (useTradingStore.getState().trades || []).filter((t) => t.date === d && t.journal?.reasoning?.trim()).length },
+  { value: 'trading_plan', label: 'Plan de séance écrit (Trading)', unit: 'plan(s)', section: 'Trading', get: (d) => Object.keys(useTradingStore.getState().dailyPlans || {}).filter((k) => k.endsWith(`|${d}`)).length },
+  { value: 'trading_review', label: 'Revue de fin de journée (Trading)', unit: 'revue(s)', section: 'Trading', get: (d) => Object.keys(useTradingStore.getState().dayReviews || {}).filter((k) => k.endsWith(`|${d}`)).length },
   { value: 'expenses_logged', label: 'Opérations saisies (Finances)', unit: 'opération(s)', section: 'Finances', get: (d) => (useAccountingStore.getState().journal || []).filter((e) => e.date === d).length },
   { value: 'spent_amount', label: 'Montant dépensé (Finances)', unit: 'DH', section: 'Finances', get: (d) => Math.round(sum((useAccountingStore.getState().journal || []).filter((e) => e.date === d), (e) => sum(e.lines.filter((l) => classOf(l.account) === 6), (l) => (Number(l.debit) || 0) - (Number(l.credit) || 0)))) },
 ];

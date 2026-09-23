@@ -33,6 +33,7 @@ import { currentLossStreak } from '../utils/trading-psychology';
 import { planSplit } from '../utils/trading-plan';
 import { mistakeStats, mistakesOf } from '../utils/trading-journal';
 import PlaybookCard from '../components/trading/PlaybookCard';
+import { SessionPlanCard, DayReviewCard, WeeklyReviewCard } from '../components/trading/RoutineCards';
 import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
@@ -385,6 +386,8 @@ export default function Trading() {
 
       {space === 'today' && (
         <div className="space-y-5">
+          <SessionPlanCard accountId={activeAccountId} todayTrades={todayTrades} currency={currency} instruments={instrumentList} strategies={strategyList}
+            suggestedMaxLoss={dailyLimitPct != null && initialBalance > 0 ? (initialBalance * dailyLimitPct) / 100 : null} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {accountValueCard}
             <Stat label="Today" value={fmtSignedMoney(todayPnl, currency)} color={todayPnl > 0 ? 'var(--success)' : todayPnl < 0 ? 'var(--error)' : undefined} sub={`${todayTrades.length} trade${todayTrades.length === 1 ? '' : 's'}`} />
@@ -414,12 +417,14 @@ export default function Trading() {
             </Card>
             <BurnRateTracker trades={trades} accountValue={account} currency={currency} />
           </div>
+          <DayReviewCard accountId={activeAccountId} todayTrades={todayTrades} currency={currency} />
           <TradingCoach accountId={activeAccountId} currency={currency} />
         </div>
       )}
 
       {space === 'journal' && (
         <div className="space-y-5">
+          <WeeklyReviewCard accountId={activeAccountId} trades={trades} currency={currency} />
           <PlaybookCard trades={trades} currency={currency} />
           <Card
             title={`Trade Log (${filtered.length})`}
