@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CalendarClock, Plus, Pencil, Trash2, CheckCircle2, PauseCircle, PlayCircle, AlertTriangle, Bell, BellOff } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { ENTRY_TEMPLATES } from '../../utils/chart-of-accounts';
-import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
+import { fmtMAD, fmtDate, todayKey, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import { useFinanceMode, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
 import { toast } from '../../store/uiStore';
@@ -219,7 +219,7 @@ export default function Echeances() {
             <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={tpl.label} autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Montant (DH)">
+            <Field label={`Montant (${baseCurrencyShort()})`}>
               <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </Field>
             <Field label="Date (1ère échéance)">

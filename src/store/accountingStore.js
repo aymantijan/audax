@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { uid, usdToMad } from '../utils/formatters';
+import { uid, setFxContext } from '../utils/formatters';
+import { defaultRates, fetchRates, toBase, currencyMeta } from '../utils/currency';
 import {
   validateEntry, accountBalances, ledgerFor, trialBalance,
   balanceSheet, cpc, esg, financialAnalysis, correctedNetWorth, monthlySeries,
@@ -136,6 +137,38 @@ export const useAccountingStore = create(
       // (partie double, grand livre, états). null = not chosen yet — see useFinanceMode.
       uiMode: null,
       setUiMode: (mode) => set({ uiMode: mode }),
+
+      // ── Devises (Finances n°4) ── see utils/currency.js for the model.
+      baseCurrency: 'MAD',
+      fxRates: defaultRates('MAD'), // base units per 1 unit of each currency
+      fxUpdatedAt: null,
+      // The base can only change while the journal is empty: every amount in
+      // the journal is expressed in it, so switching later would silently
+      // relabel all existing figures.
+      setBaseCurrency: (code) => {
+        if (code === get().baseCurrency) return { ok: true };
+        if (get().journal.length) return { ok: false, error: 'La devise principale ne peut changer que tant qu’aucune opération n’est saisie.' };
+        set({ baseCurrency: code, fxRates: defaultRates(code), fxUpdatedAt: null });
+        toast(`Devise principale : ${currencyMeta(code).label}`, 'success');
+        return { ok: true };
+      },
+      setFxRate: (code, rate) => {
+        const r = Number(String(rate).replace(',', '.'));
+        if (!(r > 0)) return;
+        set({ fxRates: { ...get().fxRates, [code]: r }, fxUpdatedAt: Date.now() });
+      },
+      refreshFxRates: async () => {
+        try {
+          const rates = await fetchRates(get().baseCurrency);
+          set({ fxRates: { ...get().fxRates, ...rates }, fxUpdatedAt: Date.now() });
+          toast('Taux de change mis à jour', 'success');
+          return { ok: true };
+        } catch (e) {
+          toast(`Taux non mis à jour : ${e.message}`, 'error');
+          return { ok: false };
+        }
+      },
+      toBase: (amount, code) => toBase(amount, code, get().baseCurrency, get().fxRates),
       treasuryAccounts: [], // comptes auxiliaires de trésorerie : [{ id, code, parentCode, name, bank, archived, createdAt, updatedAt }]
       assets: [], // définitions d'avoirs immobilisés (classe 2), SANS solde — le montant reste au journal (coût historique) ; ici : classification + métadonnées de valorisation pour Wealth OS. Voir addAsset.
       echeances: [], // [{ id, label, type:'produit'|'charge', natureAccount, treasuryAccount, amount, dueDate, recurrence, endDate, active, paidDates, createdAt, updatedAt }]
@@ -307,11 +340,12 @@ export const useAccountingStore = create(
       // getAccountMap() (voir mergedAccountMap dans chart-of-accounts.js).
       getAccountMap: () => mergedAccountMap(get().treasuryAccounts),
 
-      addTreasuryAccount: ({ parentCode, name, bank }) => {
+      addTreasuryAccount: ({ parentCode, name, bank, currency }) => {
         if (classOf(parentCode) !== 5) return { ok: false, error: 'Le compte auxiliaire doit être rattaché à un compte de trésorerie (classe 5).' };
         if (!name?.trim()) return { ok: false, error: 'Le nom du compte est requis.' };
         const account = {
           id: uid(), code: `${parentCode}-${uid()}`, parentCode, name: name.trim(), bank: bank?.trim() || '',
+          currency: currency && currency !== get().baseCurrency ? currency : null,
           archived: false, createdAt: Date.now(), updatedAt: Date.now(),
         };
         set({ treasuryAccounts: [...get().treasuryAccounts, account] });
@@ -424,6 +458,7 @@ export const useAccountingStore = create(
           ref: entry.ref || `E${get().journal.length + 1}`,
           label: entry.label.trim(),
           lines: res.lines.map((l) => ({ account: l.account, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })),
+          ...(entry.fx && entry.fx.currency && entry.fx.currency !== get().baseCurrency ? { fx: { currency: entry.fx.currency, amount: Number(entry.fx.amount), rate: Number(entry.fx.rate) } } : {}),
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -714,11 +749,11 @@ export const useAccountingStore = create(
         let pnlMad = 0;
         for (const acct of accounts.filter((a) => a.type === 'broker' || a.type === 'propfirm')) {
           const currency = acct.currency || 'USD';
-          if (currency !== 'USD' && currency !== 'MAD') continue;
           const pnl = getAccountTrades(acct.id)
             .filter((t) => new Date(t.date).getTime() >= cutoff)
             .reduce((a, t) => a + (Number(t.pnl) || 0), 0);
-          pnlMad += currency === 'USD' ? usdToMad(pnl) : pnl;
+          // Converted to the user's base currency at their own rate table.
+          pnlMad += get().toBase(pnl, currency);
         }
         return Math.round(Math.max(0, pnlMad) * payoutPct);
       },
@@ -1017,3 +1052,16 @@ export const useAccountingStore = create(
     }
   )
 );
+
+// Keep the synchronous money formatters (utils/formatters.js) in sync with the
+// user's base currency and rate table — initial hydration and every change
+// (including a cloud-sync setState from another device).
+{
+  const push = (st) => setFxContext(st.baseCurrency, st.fxRates);
+  push(useAccountingStore.getState());
+  let last = null;
+  useAccountingStore.subscribe((st) => {
+    const key = `${st.baseCurrency}|${st.fxUpdatedAt}`;
+    if (key !== last) { last = key; push(st); }
+  });
+}

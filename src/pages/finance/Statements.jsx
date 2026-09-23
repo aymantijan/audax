@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
 import { CORRECTION_TYPES, LIQUIDITY_TIERS, ACCOUNT_MAP, assetClassLabel } from '../../utils/chart-of-accounts';
-import { fmtMAD, fmtPct } from '../../utils/formatters';
+import { fmtMAD, fmtPct, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
 
@@ -305,7 +305,7 @@ export default function Statements() {
             <Input value={corrForm.label} onChange={(e2) => setCorrForm({ ...corrForm, label: e2.target.value })} placeholder="ex : Réévaluation appartement" autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Montant (DH)">
+            <Field label={`Montant (${baseCurrencyShort()})`}>
               <Input type="number" step="any" min="0" value={corrForm.amount} onChange={(e2) => setCorrForm({ ...corrForm, amount: e2.target.value })} />
             </Field>
             <Field label="Date">
@@ -347,10 +347,10 @@ export default function Statements() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Coût unitaire (DH)">
+            <Field label={`Coût unitaire (${baseCurrencyShort()})`}>
               <Input type="number" step="any" min="0" value={assetForm.unitCost} onChange={(e2) => setAssetForm({ ...assetForm, unitCost: e2.target.value })} />
             </Field>
-            <Field label="Coût total (DH) — auto si vide">
+            <Field label={`Coût total (${baseCurrencyShort()}) — auto si vide`}>
               <Input type="number" step="any" min="0" value={assetForm.totalCost} onChange={(e2) => setAssetForm({ ...assetForm, totalCost: e2.target.value })} placeholder="= quantité × coût unitaire" />
             </Field>
           </div>

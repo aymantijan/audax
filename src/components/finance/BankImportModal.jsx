@@ -5,11 +5,13 @@ import {
   parseDelimited, detectColumns, extractTransactions, guessCategory, isDuplicate, entryFor,
 } from '../../utils/bank-import';
 import { toast } from '../../store/uiStore';
+import { fmtMAD } from '../../utils/formatters';
 import { Button, Field, Modal, Select } from '../common/ui';
 import AccountSelect from '../common/AccountSelect';
 import { useFinanceMode } from './financeMode';
+import { CURRENCIES, rateFor, formatMoney } from '../../utils/currency';
 
-const fmt = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
+const fmt = (n) => `${n < 0 ? '−' : '+'}${fmtMAD(Math.abs(n), 2)}`;
 
 /**
  * Import a bank statement (CSV exported from the bank's website/app).
@@ -17,7 +19,8 @@ const fmt = (n) => `${n < 0 ? '−' : '+'}${Math.abs(n).toLocaleString('fr-FR', 
  * category guessed from its label, likely duplicates are unticked.
  */
 export default function BankImportModal({ open, onClose }) {
-  const { journal, addEntry } = useAccountingStore();
+  const { journal, addEntry, baseCurrency, fxRates, treasuryAccounts } = useAccountingStore();
+  const [stmtCur, setStmtCur] = useState(null); // null = follow the account's currency
   const simple = useFinanceMode() === 'simple';
   const fileRef = useRef(null);
   const [text, setText] = useState('');
@@ -32,11 +35,16 @@ export default function BankImportModal({ open, onClose }) {
   const parsed = useMemo(() => (text ? parseDelimited(text) : null), [text]);
   useEffect(() => { if (parsed?.rows?.length) setMap(detectColumns(parsed.rows)); }, [parsed]);
   const txs = useMemo(() => (parsed && map ? extractTransactions(parsed.rows, map) : []), [parsed, map]);
-  const lines = useMemo(() => txs.map((t) => {
+  const accountCur = treasuryAccounts.find((a) => a.code === bank)?.currency || baseCurrency;
+  const cur = stmtCur || accountCur;
+  const rate = rateFor(cur, baseCurrency, fxRates);
+  const lines = useMemo(() => txs.map((t0) => {
+    // Amounts converted to the base currency; the original stays in `fx`.
+    const t = cur === baseCurrency ? t0 : { ...t0, amount: Math.round(t0.amount * rate * 100) / 100, fx: { currency: cur, amount: Math.abs(t0.amount), rate } };
     const kind = t.amount < 0 ? 'expense' : 'income';
     const g = guessCategory(journal, t.label, kind);
     return { ...t, kind, guess: g, dup: isDuplicate(journal, bank, t) };
-  }), [txs, journal, bank]);
+  }), [txs, journal, bank, cur, rate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stateOf = (i) => ({ include: !lines[i].dup, category: lines[i].guess.account, ...(rowsState[i] || {}) });
   const setRow = (i, patch) => setRowsState((s) => ({ ...s, [i]: { ...stateOf(i), ...patch } }));
@@ -60,7 +68,7 @@ export default function BankImportModal({ open, onClose }) {
   const doImport = () => {
     let ok = 0; let failed = 0;
     for (const { l, st } of selected) {
-      const res = addEntry(entryFor(l, bank, st.category));
+      const res = addEntry({ ...entryFor(l, bank, st.category), ...(l.fx ? { fx: l.fx } : {}) });
       if (res.ok) ok += 1; else failed += 1;
     }
     toast(`${ok} opération(s) importée(s)${failed ? ` · ${failed} refusée(s)` : ''}`, failed ? 'warning' : 'success');
@@ -95,9 +103,14 @@ export default function BankImportModal({ open, onClose }) {
               <button className="ml-auto underline hover:text-ink cursor-pointer" onClick={() => { setText(''); setDraft(''); setFileName(''); setMap(null); setRowsState({}); }}>Changer de fichier</button>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Compte concerné par ce relevé">
-                <AccountSelect simple={simple} classes={[5]} value={bank} onChange={(e) => setBank(e.target.value)} />
-              </Field>
+              <div className="space-y-2">
+                <Field label="Compte concerné par ce relevé">
+                  <AccountSelect simple={simple} classes={[5]} value={bank} onChange={(e) => { setBank(e.target.value); setStmtCur(null); }} />
+                </Field>
+                <Field label="Devise du relevé" hint={cur !== baseCurrency ? `Converti à 1 ${cur} = ${rate} ${baseCurrency} (modifiable dans Devises)` : undefined}>
+                  <Select value={cur} onChange={(e) => setStmtCur(e.target.value)} options={CURRENCIES.map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` }))} />
+                </Field>
+              </div>
               {map && (
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Date"><Select value={map.date} onChange={(e) => setMap({ ...map, date: Number(e.target.value) })} options={colOptions} /></Field>
@@ -138,7 +151,9 @@ export default function BankImportModal({ open, onClose }) {
                         <div className="col-span-4 sm:col-span-1 order-last sm:order-none">
                           <AccountSelect simple={simple} classes={l.kind === 'expense' ? [6, 5] : [7, 5]} value={st.category} onChange={(e) => setRow(i, { category: e.target.value })} />
                         </div>
-                        <span className="text-right tabular-nums font-semibold whitespace-nowrap" style={{ color: l.amount < 0 ? 'var(--error)' : 'var(--success)' }}>{fmt(l.amount)}</span>
+                        <span className="text-right tabular-nums font-semibold whitespace-nowrap" style={{ color: l.amount < 0 ? 'var(--error)' : 'var(--success)' }}>
+                          {fmt(l.amount)}{l.fx && <span className="block text-[10px] font-normal text-mute">{formatMoney(l.fx.amount, l.fx.currency)}</span>}
+                        </span>
                       </div>
                     );
                   })}

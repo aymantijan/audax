@@ -1,4 +1,5 @@
 import { useFinanceMode } from '../../components/finance/financeMode';
+import { CURRENCIES, formatMoney, fromBase } from '../../utils/currency';
 import { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import { Landmark, Plus, Pencil, Archive, ArchiveRestore, Trash2, AlertTriangle } from 'lucide-react';
@@ -10,7 +11,7 @@ import { toast } from '../../store/uiStore';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
-const blankSubForm = (parentCode) => ({ parentCode, name: '', bank: '' });
+const blankSubForm = (parentCode) => ({ parentCode, name: '', bank: '', currency: '' });
 
 // Trois méthodes pour la base mensuelle des comptes non couverts par une
 // échéance — voir accounting-engine.js (smaByAccount/emaByAccount/budgetByAccount).
@@ -54,14 +55,14 @@ export default function TreasuryPure() {
   const runway = avgDecaissements > 0 ? totalTreso / avgDecaissements : null;
 
   const openNewSub = (parentCode) => { setEditingSub(null); setSubForm(blankSubForm(parentCode)); setSubModal(true); };
-  const openEditSub = (a) => { setEditingSub(a); setSubForm({ parentCode: a.parentCode, name: a.name, bank: a.bank || '' }); setSubModal(true); };
+  const openEditSub = (a) => { setEditingSub(a); setSubForm({ parentCode: a.parentCode, name: a.name, bank: a.bank || '', currency: a.currency || '' }); setSubModal(true); };
   const closeSubModal = () => { setSubModal(false); setEditingSub(null); };
 
   const submitSub = (e) => {
     e.preventDefault();
     if (!subForm.name.trim()) return toast('Le nom du compte est requis.', 'error');
     if (editingSub) {
-      editTreasuryAccount(editingSub.id, { name: subForm.name, bank: subForm.bank });
+      editTreasuryAccount(editingSub.id, { name: subForm.name, bank: subForm.bank, currency: subForm.currency || null });
       toast(`Compte auxiliaire modifié : ${subForm.name}`, 'success');
     } else {
       const res = addTreasuryAccount(subForm);
@@ -126,6 +127,9 @@ export default function TreasuryPure() {
                       {a.archived && <Badge color="var(--text-secondary)">Archivé</Badge>}
                       <span className="font-medium whitespace-nowrap" style={{ color: (balances[a.code]?.balance || 0) >= 0 ? undefined : 'var(--error)' }}>
                         {fmtMAD(balances[a.code]?.balance || 0)}
+                        {a.currency && a.currency !== store.baseCurrency && (
+                          <span className="block text-[10px] text-mute text-right">≈ {formatMoney(fromBase(balances[a.code]?.balance || 0, a.currency, store.baseCurrency, store.fxRates), a.currency)}</span>
+                        )}
                       </span>
                       <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEditSub(a)} title="Modifier"><Pencil size={13} /></button>
                       {a.archived ? (
@@ -235,6 +239,10 @@ export default function TreasuryPure() {
           </Field>
           <Field label="Banque / plateforme (optionnel)">
             <Input value={subForm.bank} onChange={(e) => setSubForm({ ...subForm, bank: e.target.value })} placeholder="ex : CIH Bank" />
+          </Field>
+          <Field label="Devise du compte" hint="Pour un compte en devise (broker en USD, compte en euros…) : le solde reste tenu dans votre devise principale, avec l'équivalent affiché.">
+            <Select value={subForm.currency || ''} onChange={(e) => setSubForm({ ...subForm, currency: e.target.value })}
+              options={[{ value: '', label: `Devise principale (${store.baseCurrency})` }, ...CURRENCIES.filter((c) => c.code !== store.baseCurrency).map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` }))]} />
           </Field>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={closeSubModal}>Annuler</Button>

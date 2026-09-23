@@ -8,6 +8,8 @@ import { todayKey } from '../../utils/formatters';
 import { toast } from '../../store/uiStore';
 import { Button, Modal } from '../common/ui';
 import AccountSelect from '../common/AccountSelect';
+import { MoneyInput, moneyToEntry } from './CurrencyUI';
+import { formatMoney } from '../../utils/currency';
 
 const KINDS = {
   expense: { label: 'Dépense', Icon: ArrowUpRight, color: 'var(--error)' },
@@ -20,10 +22,11 @@ const KINDS = {
  * your last operation; both stay one tap away to change.
  */
 export default function QuickEntryModal({ open, onClose }) {
-  const { journal, addEntry, getAccountMap } = useAccountingStore();
+  const { journal, addEntry, getAccountMap, baseCurrency, fxRates } = useAccountingStore();
   const accountMap = getAccountMap();
   const [kind, setKind] = useState('expense');
-  const [amount, setAmount] = useState('');
+  const [money, setMoney] = useState({ amount: '', currency: null, rate: null });
+  const amount = money.amount;
   const [label, setLabel] = useState('');
   const [category, setCategory] = useState(null); // null = follow the guess
   const [cash, setCash] = useState(null);
@@ -33,7 +36,7 @@ export default function QuickEntryModal({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
-    setKind('expense'); setAmount(''); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0);
+    setKind('expense'); setMoney({ amount: '', currency: null, rate: null }); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0);
     setTimeout(() => amountRef.current?.focus(), 50);
   }, [open]);
 
@@ -60,17 +63,17 @@ export default function QuickEntryModal({ open, onClose }) {
 
   const name = (code) => accountMap[code]?.label || code;
   const save = (again) => {
-    const amt = Number(String(amount).replace(',', '.'));
+    const { base: amt, fx } = moneyToEntry(money, baseCurrency, fxRates);
     if (!amt || amt <= 0) { toast('Indiquez un montant', 'error'); amountRef.current?.focus(); return; }
     const lbl = label.trim() || name(chosenCategory);
     const lines = kind === 'expense'
       ? [{ account: chosenCategory, debit: amt, credit: 0 }, { account: chosenCash, debit: 0, credit: amt }]
       : [{ account: chosenCash, debit: amt, credit: 0 }, { account: chosenCategory, debit: 0, credit: amt }];
-    const res = addEntry({ date, label: lbl, lines });
+    const res = addEntry({ date, label: lbl, lines, fx });
     if (!res.ok) { toast(res.error, 'error'); return; }
-    toast(`${KINDS[kind].label} enregistrée : ${lbl} · ${amt.toLocaleString('fr-FR')} DH`, 'success');
+    toast(`${KINDS[kind].label} enregistrée : ${lbl} · ${fx ? `${formatMoney(fx.amount, fx.currency)} → ` : ''}${formatMoney(amt, baseCurrency)}`, 'success');
     if (again) {
-      setCount((c) => c + 1); setAmount(''); setLabel(''); setCategory(null);
+      setCount((c) => c + 1); setMoney((m) => ({ ...m, amount: '' })); setLabel(''); setCategory(null);
       setTimeout(() => amountRef.current?.focus(), 30);
     } else onClose();
   };
@@ -89,10 +92,8 @@ export default function QuickEntryModal({ open, onClose }) {
           ))}
         </div>
 
-        <div className="flex items-baseline justify-center gap-2 py-2">
-          <input ref={amountRef} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="0"
-            className="w-44 bg-transparent text-center text-4xl font-bold tabular-nums text-ink placeholder:text-mute focus:outline-none" style={{ color: amount ? K.color : undefined }} />
-          <span className="text-lg text-mute">DH</span>
+        <div className="py-2" style={{ color: amount ? K.color : undefined }}>
+          <MoneyInput big value={money} onChange={setMoney} inputRef={amountRef} />
         </div>
 
         <div>

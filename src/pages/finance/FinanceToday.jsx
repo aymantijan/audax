@@ -7,6 +7,7 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceMode, describeEntry } from '../../components/finance/financeMode';
 import { computeToday } from '../../components/finance/todayMoney';
 import QuickEntryModal from '../../components/finance/QuickEntryModal';
+import { fxNote } from '../../components/finance/CurrencyUI';
 import BankImportModal from '../../components/finance/BankImportModal';
 import { fmtMAD } from '../../utils/formatters';
 import { toast } from '../../store/uiStore';
@@ -205,7 +206,7 @@ export default function FinanceToday() {
                 return (
                   <div key={e.id} className="flex items-center gap-3 py-2 text-sm">
                     <Icon size={14} style={{ color: m[1] }} className="shrink-0" />
-                    <span className="flex-1 min-w-0 truncate text-ink">{e.label}<span className="text-[11px] text-mute">{d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}</span></span>
+                    <span className="flex-1 min-w-0 truncate text-ink">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}{d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}</span></span>
                     <span className="tabular-nums font-medium" style={{ color: d.kind === 'other' ? undefined : m[1] }}>{m[2]}{fmtMAD(d.amount)}</span>
                   </div>
                 );

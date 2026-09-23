@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { baseCurrencyShort } from '../../utils/formatters';
 import { ResponsiveContainer, ComposedChart, Bar, Line, ScatterChart, Scatter, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { correlationStrength } from '../../utils/health-science';
@@ -94,7 +95,7 @@ export default function Analytics() {
               <YAxis yAxisId="spend" orientation="right" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar yAxisId="spend" dataKey="spend" name="Spending (DH)" fill="#ff6b6b" radius={[3, 3, 0, 0]} />
+              <Bar yAxisId="spend" dataKey="spend" name={`Spending (${baseCurrencyShort()})`} fill="#ff6b6b" radius={[3, 3, 0, 0]} />
               <Line yAxisId="stress" type="monotone" dataKey="stress" name="Stress /10" stroke="#00d9ff" strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>

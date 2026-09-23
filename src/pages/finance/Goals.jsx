@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Target, Pencil, Trash2, Trophy, Landmark, TrendingUp, PiggyBank, Plus, Minus, AlertTriangle, Wallet } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceMode } from '../../components/finance/financeMode';
-import { fmtMAD } from '../../utils/formatters';
+import { fmtMAD, baseCurrencyShort } from '../../utils/formatters';
 
 import { Card, Button, Field, Input, Modal, ProgressBar, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
@@ -180,7 +180,7 @@ export default function Goals() {
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.kind === 'networth' ? 'ex : Patrimoine 100 000 DH' : "ex : Fonds d'urgence 6 mois"} autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Montant cible (DH)"><Input type="number" step="any" min="0" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} /></Field>
+            <Field label={`Montant cible (${baseCurrencyShort()})`}><Input type="number" step="any" min="0" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} /></Field>
             <Field label="Date cible (optionnel)"><Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} /></Field>
           </div>
           {!editing && form.kind === 'account' && (
@@ -203,7 +203,7 @@ export default function Goals() {
 
       <Modal open={!!contrib} onClose={() => setContrib(null)} title={contrib?.sign > 0 ? `Mettre de côté · ${contrib?.goal.name}` : `Reprendre de l'argent · ${contrib?.goal.name}`}>
         <form onSubmit={submitContrib} className="space-y-3">
-          <Field label="Montant (DH)" hint={contrib?.sign > 0 ? `Libre sur vos comptes : ${fmtMAD(alloc.unallocated)}${contrib?.goal.neededPerMonth ? ` · effort conseillé : ${fmtMAD(contrib.goal.neededPerMonth)}/mois` : ''}` : `Dans l'enveloppe : ${fmtMAD(contrib?.goal.current || 0)}`}>
+          <Field label={`Montant (${baseCurrencyShort()})`} hint={contrib?.sign > 0 ? `Libre sur vos comptes : ${fmtMAD(alloc.unallocated)}${contrib?.goal.neededPerMonth ? ` · effort conseillé : ${fmtMAD(contrib.goal.neededPerMonth)}/mois` : ''}` : `Dans l'enveloppe : ${fmtMAD(contrib?.goal.current || 0)}`}>
             <Input type="number" step="any" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
           </Field>
           <p className="text-[11px] text-mute">L'argent reste sur vos comptes : il est simplement réservé à cet objectif et n'est plus compté comme libre.</p>

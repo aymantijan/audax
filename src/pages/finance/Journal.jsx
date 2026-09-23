@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Circle } from 'lucide-react';
 import { useFinanceMode, describeEntry, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
 import QuickEntryModal from '../../components/finance/QuickEntryModal';
+import { MoneyInput, moneyToEntry, fxNote } from '../../components/finance/CurrencyUI';
 import BankImportModal from '../../components/finance/BankImportModal';
 import { Zap, FileUp } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
@@ -73,7 +74,7 @@ function TemplateForm({ onSubmit, onCancel, simple = false, initial = null }) {
     if (initial && initTpl) {
       const d = initial.lines.find((l) => Number(l.debit) > 0);
       const c = initial.lines.find((l) => Number(l.credit) > 0);
-      return { date: initial.date, label: initial.label, amount: String(d.debit), debitAccount: d.account, creditAccount: c.account };
+      return { date: initial.date, label: initial.label, amount: String(initial.fx ? initial.fx.amount : d.debit), currency: initial.fx?.currency || null, rate: initial.fx?.rate ?? null, debitAccount: d.account, creditAccount: c.account };
     }
     return { date: today(), label: '', amount: '', debitAccount: tpl.debit.default, creditAccount: tpl.credit.default };
   });
@@ -88,9 +89,11 @@ function TemplateForm({ onSubmit, onCancel, simple = false, initial = null }) {
 
   const submit = (e) => {
     e.preventDefault();
-    const amount = Number(form.amount);
+    const { baseCurrency, fxRates } = useAccountingStore.getState();
+    const { base: amount, fx } = moneyToEntry({ amount: form.amount, currency: form.currency, rate: form.rate }, baseCurrency, fxRates);
     if (!amount || amount <= 0) return toast('Montant invalide', 'error');
     onSubmit({
+      fx,
       date: form.date,
       label: form.label || (simple ? words.label : tpl.label),
       lines: [
@@ -124,8 +127,8 @@ function TemplateForm({ onSubmit, onCancel, simple = false, initial = null }) {
         <Field label="Date">
           <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
         </Field>
-        <Field label="Montant (DH)">
-          <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} autoFocus />
+        <Field label="Montant">
+          <MoneyInput autoFocus value={{ amount: form.amount, currency: form.currency, rate: form.rate }} onChange={(m) => setForm({ ...form, amount: m.amount, currency: m.currency, rate: m.rate })} />
         </Field>
         <Field label={simple ? words.debit : `Débit — ${tpl.debit.role}`}>
           <AccountSelect simple={simple} classes={tpl.debit.classes} value={form.debitAccount} onChange={(e) => setForm({ ...form, debitAccount: e.target.value })} />
@@ -300,7 +303,7 @@ export default function Journal() {
                     <meta.Icon size={15} style={{ color: meta.color }} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm text-ink truncate">{e.label}</div>
+                    <div className="text-sm text-ink truncate">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}</span></div>
                     <div className="text-[11px] text-mute truncate">
                       {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       {d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}{d.via ? ` · ${d.via}` : ''}
@@ -324,7 +327,7 @@ export default function Journal() {
                   {expanded[e.id] ? <ChevronDown size={14} className="text-mute shrink-0" /> : <ChevronRight size={14} className="text-mute shrink-0" />}
                   <span className="text-mute text-xs whitespace-nowrap">{e.date}</span>
                   <Badge color="var(--accent-secondary)">{e.ref}</Badge>
-                  <span className="flex-1 truncate">{e.label}</span>
+                  <span className="flex-1 truncate">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}</span></span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(entryTotal(e))}</span>
                   <button
                     className="text-mute hover:text-accent cursor-pointer"

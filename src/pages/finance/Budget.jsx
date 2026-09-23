@@ -3,7 +3,7 @@ import { Plus, Trash2, AlertTriangle, Bell, BellOff, ChevronRight, ChevronDown, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useAccountingStore } from '../../store/accountingStore';
 import { DEFAULT_BUDGET_PERIOD } from '../../utils/accounting-engine';
-import { fmtMAD, fmtPct } from '../../utils/formatters';
+import { fmtMAD, fmtPct, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
 import { useFinanceMode } from '../../components/finance/financeMode';
 import AccountSelect from '../../components/common/AccountSelect';
@@ -397,7 +397,7 @@ export default function Budget() {
           <Field label={simple ? "Catégorie (dépense à plafonner ou revenu à viser)" : "Compte (charge à plafonner ou produit à viser)"} hint="Plusieurs budgets peuvent coexister sur le même compte (ex : un plafond hebdo ET un plafond annuel).">
             <AccountSelect simple={simple} classes={[6, 7]} value={form.account} onChange={(e) => setForm({ ...form, account: e.target.value })} />
           </Field>
-          <Field label="Montant du plafond/objectif sur la période (DH)">
+          <Field label={`Montant du plafond/objectif sur la période (${baseCurrencyShort()})`}>
             <Input type="number" step="any" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} autoFocus />
           </Field>
           <PeriodFields value={periodForm} onChange={setPeriodForm} />

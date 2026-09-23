@@ -3,7 +3,7 @@ import { Building2, Plus, Trash2, Pencil, TrendingUp } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useRealEstateStore } from '../store/realEstateStore';
 import { PROPERTY_TYPES, PROPERTY_STATUSES } from '../utils/constants';
-import { fmtDateShort, fmtMAD, todayKey } from '../utils/formatters';
+import { fmtDateShort, fmtMAD, todayKey, baseCurrencyShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
@@ -17,10 +17,10 @@ const propertyFields = [
   { name: 'type', label: 'Type', type: 'select', options: PROPERTY_TYPES },
   { name: 'status', label: 'Statut', type: 'select', options: PROPERTY_STATUSES },
   { name: 'address', label: 'Adresse', type: 'text' },
-  { name: 'purchasePrice', label: "Prix d'achat (DH)", type: 'number' },
-  { name: 'currentValue', label: 'Valeur actuelle (DH)', type: 'number' },
-  { name: 'monthlyRent', label: 'Loyer mensuel (DH)', type: 'number' },
-  { name: 'monthlyExpenses', label: 'Charges mensuelles (DH)', type: 'number' },
+  { name: 'purchasePrice', label: `Prix d'achat (${baseCurrencyShort()})`, type: 'number' },
+  { name: 'currentValue', label: `Valeur actuelle (${baseCurrencyShort()})`, type: 'number' },
+  { name: 'monthlyRent', label: `Loyer mensuel (${baseCurrencyShort()})`, type: 'number' },
+  { name: 'monthlyExpenses', label: `Charges mensuelles (${baseCurrencyShort()})`, type: 'number' },
   { name: 'purchaseDate', label: "Date d'acquisition", type: 'date' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
@@ -143,11 +143,11 @@ export default function RealEstate() {
           <Field label="Adresse"><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Statut"><Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={PROPERTY_STATUSES} /></Field>
-            <Field label="Prix d'achat (DH)"><Input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} /></Field>
+            <Field label={`Prix d'achat (${baseCurrencyShort()})`}><Input type="number" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Loyer mensuel (DH)"><Input type="number" value={form.monthlyRent} onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })} /></Field>
-            <Field label="Charges mensuelles (DH)"><Input type="number" value={form.monthlyExpenses} onChange={(e) => setForm({ ...form, monthlyExpenses: e.target.value })} /></Field>
+            <Field label={`Loyer mensuel (${baseCurrencyShort()})`}><Input type="number" value={form.monthlyRent} onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })} /></Field>
+            <Field label={`Charges mensuelles (${baseCurrencyShort()})`}><Input type="number" value={form.monthlyExpenses} onChange={(e) => setForm({ ...form, monthlyExpenses: e.target.value })} /></Field>
           </div>
           <Field label="Notes"><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
           <div className="flex justify-end gap-3">
@@ -159,7 +159,7 @@ export default function RealEstate() {
 
       <Modal open={!!rentModal} onClose={() => setRentModal(null)} title="Logger un loyer reçu">
         <form onSubmit={submitRent} className="space-y-3">
-          <Field label="Montant (DH)"><Input type="number" value={rentForm.amount} onChange={(e) => setRentForm({ ...rentForm, amount: e.target.value })} autoFocus /></Field>
+          <Field label={`Montant (${baseCurrencyShort()})`}><Input type="number" value={rentForm.amount} onChange={(e) => setRentForm({ ...rentForm, amount: e.target.value })} autoFocus /></Field>
           <Field label="Note"><Input value={rentForm.note} onChange={(e) => setRentForm({ ...rentForm, note: e.target.value })} placeholder="ex. Loyer août" /></Field>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setRentModal(null)}>Annuler</Button>

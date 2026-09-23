@@ -1,15 +1,22 @@
 import { format } from 'date-fns';
 import { CURRENCY_SYMBOL } from './constants';
+import { currencyMeta, formatMoney, toBase } from './currency';
 
 // ---- Currency ----
 // Trading is denominated per-account (each Demo/Broker/Prop Firm account picks
 // its own currency — see tradingStore.js `accounts[].currency`, default 'USD').
-// Everything else (personal finance: net worth, budgets, transactions, goals)
-// is in Moroccan dirhams (DH). USD_TO_MAD is a fixed peg used only for cross-
-// domain figures (e.g. a USD trading account counted toward MAD net worth) —
-// it does NOT convert between trading account currencies themselves.
-export const USD_TO_MAD = 10;
-export const usdToMad = (usd) => (usd ?? 0) * USD_TO_MAD;
+// Personal finance (net worth, budgets, journal, goals) is kept in the user's
+// BASE currency (accountingStore.baseCurrency, default MAD — see
+// utils/currency.js). The accounting store pushes its base + rate table here
+// so these plain formatters stay synchronous and dependency-free.
+let FX = { base: 'MAD', rates: null };
+export const setFxContext = (base, rates) => { FX = { base: base || 'MAD', rates: rates || null }; };
+export const getBaseCurrency = () => FX.base;
+export const baseCurrencyShort = () => currencyMeta(FX.base).short;
+
+export const USD_TO_MAD = 10; // legacy fixed peg — kept for old imports
+// USD → base currency at the user's rate (name kept for existing callers).
+export const usdToMad = (usd) => toBase(usd ?? 0, 'USD', FX.base, FX.rates);
 
 // Trading money, symbol per account currency (defaults to USD for callers that
 // don't pass one — i.e. anywhere not yet scoped to a specific account).
@@ -23,11 +30,11 @@ export const fmtSignedMoney = (n, currency = 'USD') => {
   return (n >= 0 ? '+' : '-') + sym + Math.abs(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
 
-// MAD (personal finance) — dirham shown as a "DH" suffix
-export const fmtMAD = (n, digits = 0) =>
-  (n < 0 ? '-' : '') + Math.abs(n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 2) }) + ' DH';
+// Personal-finance money in the user's base currency ("3 000 DH", "3 000 €",
+// "$3,000"…). Name kept from when everything was MAD.
+export const fmtMAD = (n, digits = 0) => formatMoney(n, FX.base, digits);
 
-export const fmtSignedMAD = (n) => (n >= 0 ? '+' : '-') + Math.abs(n ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' DH';
+export const fmtSignedMAD = (n) => (n >= 0 ? '+' : '') + formatMoney(n, FX.base, 0);
 
 export const fmtPct = (n, digits = 0) => `${(n ?? 0).toFixed(digits)}%`;
 

@@ -3,7 +3,7 @@ import { Briefcase, Plus, Trash2, Pencil, Clock, DollarSign } from 'lucide-react
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useFreelanceStore } from '../store/freelanceStore';
 import { ENGAGEMENT_STATUSES } from '../utils/constants';
-import { fmtDateShort, fmtMAD, todayKey } from '../utils/formatters';
+import { fmtDateShort, fmtMAD, todayKey, baseCurrencyShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
@@ -16,7 +16,7 @@ const engagementFields = [
   { name: 'clientName', label: 'Client', type: 'text' },
   { name: 'description', label: 'Description de la mission', type: 'text' },
   { name: 'status', label: 'Statut', type: 'select', options: ENGAGEMENT_STATUSES },
-  { name: 'hourlyRate', label: 'Taux horaire (DH)', type: 'number' },
+  { name: 'hourlyRate', label: `Taux horaire (${baseCurrencyShort()})`, type: 'number' },
   { name: 'startDate', label: 'Date de début', type: 'date' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
@@ -187,7 +187,7 @@ export default function Freelance() {
           <Field label="Description de la mission"><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Statut"><Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={ENGAGEMENT_STATUSES} /></Field>
-            <Field label="Taux horaire (DH)"><Input type="number" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></Field>
+            <Field label={`Taux horaire (${baseCurrencyShort()})`}><Input type="number" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} /></Field>
             <Field label="Date de début"><Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></Field>
           </div>
           <Field label="Notes"><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>

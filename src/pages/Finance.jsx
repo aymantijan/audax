@@ -8,6 +8,9 @@ import { useHabitStore } from '../store/habitStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { todayKey } from '../utils/formatters';
 import { useFinanceMode } from '../components/finance/financeMode';
+import { CurrencySettingsModal } from '../components/finance/CurrencyUI';
+import { currencyMeta } from '../utils/currency';
+import { Coins } from 'lucide-react';
 import AccountingOverview from './finance/AccountingOverview';
 import FinanceToday from './finance/FinanceToday';
 import Journal from './finance/Journal';
@@ -92,6 +95,9 @@ export default function Finance() {
   // Post the automatic échéances that fell due since the last visit.
   const autoPostEcheances = useAccountingStore((s) => s.autoPostEcheances);
   useEffect(() => { autoPostEcheances(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const baseCurrency = useAccountingStore((s) => s.baseCurrency);
+  const [fxOpen, setFxOpen] = useState(false);
+  const cur = currencyMeta(baseCurrency);
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 
   const spaces = useMemo(() => SPACES.filter((sp) => !sp.expertOnly || mode === 'expert'), [mode]);
@@ -123,11 +129,17 @@ export default function Finance() {
           <h1 className="text-2xl font-bold text-ink">Finances</h1>
           <p className="text-mute text-sm mt-1">
             {mode === 'simple'
-              ? 'Vos dépenses, revenus, budget, épargne et patrimoine — sans jargon comptable. Montants en dirhams (DH).'
-              : 'Comptabilité personnelle en partie double : journal, états de synthèse, analyse, budget, trésorerie et objectifs. Montants en dirhams (DH).'}
+              ? `Vos dépenses, revenus, budget, épargne et patrimoine — sans jargon comptable. Montants en ${cur.label.toLowerCase()} (${cur.short}).`
+              : `Comptabilité personnelle en partie double : journal, états de synthèse, analyse, budget, trésorerie et objectifs. Montants en ${cur.label.toLowerCase()} (${cur.short}).`}
           </p>
         </div>
-        <ModeSwitch mode={mode} onChange={setUiMode} />
+        <div className="flex items-center gap-2">
+          <button onClick={() => setFxOpen(true)} title="Devises et taux de change"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-mute hover:text-ink cursor-pointer">
+            <Coins size={13} className="text-accent" /> {cur.code}
+          </button>
+          <ModeSwitch mode={mode} onChange={setUiMode} />
+        </div>
       </div>
 
       {todayEnergyLog && todayEnergyLog.stressLevel > 7 && (
@@ -172,6 +184,7 @@ export default function Finance() {
       )}
 
       <Active />
+      <CurrencySettingsModal open={fxOpen} onClose={() => setFxOpen(false)} />
     </div>
   );
 }

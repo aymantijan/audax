@@ -9,7 +9,7 @@ import { useBusinessStore } from '../store/businessStore';
 import GanttTab from './BusinessGanttChart';
 import { BUSINESS_CHART_OF_ACCOUNTS, BUSINESS_ACCOUNT_CLASSES, BUSINESS_ENTRY_TEMPLATES } from '../utils/business-accounts';
 import { PROJECT_STAGES } from '../utils/constants';
-import { fmtMAD, fmtDate, todayKey } from '../utils/formatters';
+import { fmtMAD, fmtDate, todayKey, baseCurrencyShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 
@@ -687,7 +687,7 @@ export default function BusinessDetail() {
             <Field label="Date">
               <Input type="date" value={entryForm.date} onChange={(e) => setEntryForm({ ...entryForm, date: e.target.value })} />
             </Field>
-            <Field label="Montant (DH)">
+            <Field label={`Montant (${baseCurrencyShort()})`}>
               <Input type="number" step="any" min="0" value={entryForm.amount} onChange={(e) => setEntryForm({ ...entryForm, amount: e.target.value })} />
             </Field>
           </div>
@@ -728,7 +728,7 @@ export default function BusinessDetail() {
             <Field label="Date">
               <Input type="date" value={transferForm.date} onChange={(e) => setTransferForm({ ...transferForm, date: e.target.value })} />
             </Field>
-            <Field label="Montant (DH)">
+            <Field label={`Montant (${baseCurrencyShort()})`}>
               <Input type="number" step="any" min="0" value={transferForm.amount} onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })} />
             </Field>
           </div>
