@@ -1,5 +1,6 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { Sun, GraduationCap, CalendarDays, CalendarClock, Library, BookOpen } from 'lucide-react';
+import { Sun, GraduationCap, CalendarDays, CalendarClock, Library, BookOpen, Brain } from 'lucide-react';
+import { useFlashcardStore, buildQueue } from '../store/flashcardStore';
 import { useLearningStore } from '../store/learningStore';
 import { Button } from '../components/common/ui';
 import { SegmentedTabs, useAcademicSettings } from '../components/learning/design';
@@ -8,6 +9,7 @@ import CursusView from '../components/learning/CursusView';
 import TimetableView from '../components/learning/TimetableView';
 import ExamsView from '../components/learning/ExamsView';
 import CoursesView from '../components/learning/CoursesView';
+import ReviewView from '../components/learning/ReviewView';
 import { upcomingEvaluations, normGrade } from '../utils/academic';
 import { todayKey } from '../utils/formatters';
 
@@ -16,6 +18,7 @@ const TABS = [
   { key: 'cursus', label: 'Cursus', icon: GraduationCap, Component: CursusView },
   { key: 'timetable', label: 'Emploi du temps', icon: CalendarDays, Component: TimetableView },
   { key: 'exams', label: 'Évaluations', icon: CalendarClock, Component: ExamsView },
+  { key: 'review', label: 'Révisions', icon: Brain, Component: ReviewView },
   { key: 'courses', label: 'Tous les cours', icon: Library, Component: CoursesView },
 ];
 
@@ -29,9 +32,11 @@ export default function Learning() {
   const today = todayKey();
   const upcomingCount = upcomingEvaluations(courses, today).filter((x) => !x.past && normGrade(x.ev, settings) == null).length;
   const activeCount = courses.filter((c) => c.status === 'active').length;
+  const fc = useFlashcardStore();
+  const reviewCount = buildQueue({ cards: fc.cards, decks: fc.decks, reviewLog: fc.reviewLog, settings: fc.settings }).length;
   const tabs = TABS.map((t) => ({
     ...t,
-    count: t.key === 'exams' ? upcomingCount || null : t.key === 'courses' ? activeCount || null : null,
+    count: t.key === 'exams' ? upcomingCount || null : t.key === 'courses' ? activeCount || null : t.key === 'review' ? reviewCount || null : null,
   }));
 
   return (

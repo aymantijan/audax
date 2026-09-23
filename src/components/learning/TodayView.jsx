@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Sun, Flame, Clock, MapPin, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check,
+  Sun, Flame, Clock, MapPin, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check, Brain,
 } from 'lucide-react';
+import { useFlashcardStore, buildQueue } from '../../store/flashcardStore';
+import ReviewSession from './ReviewSession';
 import { useLearningStore } from '../../store/learningStore';
 import { useFocusStore } from '../../store/focusStore';
 import { upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, requiredGrade, fmtGrade, isAcademic } from '../../utils/academic';
@@ -120,6 +122,9 @@ export default function TodayView() {
   const settings = useAcademicSettings();
   const today = todayKey();
   const [manualOpen, setManualOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const fc = useFlashcardStore();
+  const reviewQueue = useMemo(() => buildQueue({ cards: fc.cards, decks: fc.decks, reviewLog: fc.reviewLog, settings: fc.settings }), [fc.cards, fc.decks, fc.reviewLog, fc.settings]);
 
   const sessions = useMemo(() => studySessions(allSessions), [allSessions]);
   const priorities = useMemo(
@@ -165,6 +170,19 @@ export default function TodayView() {
         <div className="lg:col-span-3"><StudyTimerCard /></div>
         <div className="lg:col-span-2"><WeekCard sessions={sessions} today={today} settings={settings} /></div>
       </div>
+
+      {/* Flashcards due */}
+      {fc.cards.length > 0 && (
+        <div className="rounded-xl border px-4 py-3 flex items-center gap-3 flex-wrap"
+          style={{ borderColor: tint('var(--accent-secondary)', reviewQueue.length ? 45 : 20), background: tint('var(--accent-secondary)', reviewQueue.length ? 10 : 4) }}>
+          <Brain size={18} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-ink">{reviewQueue.length ? `${reviewQueue.length} fiche(s) à réviser` : 'Révisions à jour ✓'}</div>
+            <div className="text-[11px] text-mute">{reviewQueue.length ? `≈ ${Math.max(1, Math.round((reviewQueue.length * 10) / 60))} min · à faire avant d'apprendre du nouveau` : 'Les prochaines fiches reviendront au bon moment.'}</div>
+          </div>
+          {reviewQueue.length > 0 && <Button className="!py-1.5" onClick={() => setReviewing(true)}><span className="flex items-center gap-1.5"><Play size={13} /> Réviser</span></Button>}
+        </div>
+      )}
 
       {/* Priorities */}
       <div>
@@ -285,6 +303,7 @@ export default function TodayView() {
       </div>
 
       <ManualSessionModal open={manualOpen} onClose={() => setManualOpen(false)} />
+      {reviewing && <ReviewSession title="Révisions du jour" onClose={() => setReviewing(false)} />}
     </div>
   );
 }

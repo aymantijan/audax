@@ -2,13 +2,16 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight, GraduationCap, CalendarPlus, CalendarCheck, ClipboardCheck,
-  CalendarDays, ListChecks, Calculator, BookOpen, Sparkles, CheckCircle2, AlertTriangle, RotateCcw, Flag, Play, Clock,
+  CalendarDays, ListChecks, Calculator, BookOpen, Sparkles, CheckCircle2, AlertTriangle, RotateCcw, Flag, Play, Clock, Brain, Upload,
 } from 'lucide-react';
 import { useLearningStore } from '../store/learningStore';
 import { useFocusStore } from '../store/focusStore';
 import { minutesBetween, weekStart, fmtMinutes } from '../utils/study';
 import { todayKey } from '../utils/formatters';
 import { ManualSessionModal } from '../components/learning/StudyTimer';
+import { useFlashcardStore, buildQueue, deckStats } from '../store/flashcardStore';
+import ReviewSession from '../components/learning/ReviewSession';
+import { CardModal, BulkCardsModal } from '../components/learning/ReviewView';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADES, GRADE_XP, SKILL_MAP } from '../utils/constants';
 import { uid } from '../utils/formatters';
@@ -272,6 +275,31 @@ function ProgrammeCard({ course }) {
   );
 }
 
+// ── Flashcards of this subject ───────────────────────────────────────────
+function FlashcardsCard({ course }) {
+  const fc = useFlashcardStore();
+  const deck = fc.decks.find((d) => d.courseId === course.id);
+  const [cardOpen, setCardOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const st = deck ? deckStats(deck.id, fc.cards) : null;
+  const pending = deck ? buildQueue({ cards: fc.cards, decks: fc.decks, deckIds: [deck.id], reviewLog: fc.reviewLog, settings: fc.settings }).length : 0;
+  const ensure = () => fc.ensureCourseDeck(course.id);
+  return (
+    <Card>
+      <SectionHeader icon={Brain} title="Fiches de révision" subtitle={st ? `${st.total} fiche(s) · ${st.due} à revoir · ${st.mature} maîtrisée(s)` : 'Définitions, formules, notions clés : révision espacée.'} />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" className="!py-1.5" onClick={() => { ensure(); setCardOpen(true); }}><span className="flex items-center gap-1"><Plus size={13} /> Fiche</span></Button>
+        <Button variant="secondary" className="!py-1.5" onClick={() => { ensure(); setBulkOpen(true); }}><span className="flex items-center gap-1"><Upload size={13} /> Importer</span></Button>
+        {deck && <Button className="!py-1.5" disabled={!pending} onClick={() => setReviewing(true)}><span className="flex items-center gap-1"><Play size={13} /> {pending ? `Réviser (${pending})` : 'À jour'}</span></Button>}
+      </div>
+      {deck && <CardModal open={cardOpen} onClose={() => setCardOpen(false)} deckId={deck.id} />}
+      {deck && <BulkCardsModal open={bulkOpen} onClose={() => setBulkOpen(false)} deckId={deck.id} />}
+      {reviewing && deck && <ReviewSession deckIds={[deck.id]} title={`Révision — ${course.name}`} onClose={() => setReviewing(false)} />}
+    </Card>
+  );
+}
+
 // ── Course readings ──────────────────────────────────────────────────────
 function ReadingsCard({ course }) {
   const { toggleReading, addReading } = useLearningStore();
@@ -419,6 +447,7 @@ export default function CoursePage() {
             </div>
             <div className="lg:col-span-2 space-y-5 order-first lg:order-none">
               <SimulatorCard key={`${course.id}-${course.targetGrade}`} course={course} settings={settings} />
+              <FlashcardsCard course={course} />
               <SlotsCard course={course} />
               <ReadingsCard course={course} />
             </div>
@@ -428,6 +457,7 @@ export default function CoursePage() {
         <div className="grid lg:grid-cols-5 gap-5">
           <div className="lg:col-span-3"><ProgrammeCard course={course} /></div>
           <div className="lg:col-span-2 space-y-5">
+            <FlashcardsCard course={course} />
             <SlotsCard course={course} />
             <ReadingsCard course={course} />
           </div>

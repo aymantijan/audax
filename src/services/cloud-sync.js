@@ -12,6 +12,7 @@ import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useFocusStore } from '../store/focusStore';
+import { useFlashcardStore } from '../store/flashcardStore';
 
 const TABLE = 'app_state';
 
@@ -33,6 +34,7 @@ const REGISTRY = [
   // Focus/study sessions (+ the running timer) — was local-only before the
   // Apprentissage study timer; synced so study time follows the user.
   { name: 'focus', store: useFocusStore },
+  { name: 'flashcards', store: useFlashcardStore },
 ];
 
 // Strip actions (functions) off a store's state — same filter zustand/persist
