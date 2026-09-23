@@ -1,8 +1,7 @@
-import { useSearchParams, Link } from 'react-router-dom';
-import { Sun, GraduationCap, CalendarDays, CalendarClock, Library, BookOpen, Brain } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Sun, GraduationCap, CalendarDays, CalendarClock, Library, BookOpen, Brain, Compass } from 'lucide-react';
 import { useFlashcardStore, buildQueue } from '../store/flashcardStore';
 import { useLearningStore } from '../store/learningStore';
-import { Button } from '../components/common/ui';
 import { SegmentedTabs, useAcademicSettings } from '../components/learning/design';
 import TodayView from '../components/learning/TodayView';
 import CursusView from '../components/learning/CursusView';
@@ -10,15 +9,19 @@ import TimetableView from '../components/learning/TimetableView';
 import ExamsView from '../components/learning/ExamsView';
 import CoursesView from '../components/learning/CoursesView';
 import ReviewView from '../components/learning/ReviewView';
+import TracksView from '../components/learning/TracksView';
+import Readings from './Readings';
 import { upcomingEvaluations, normGrade } from '../utils/academic';
 import { todayKey } from '../utils/formatters';
 
 const TABS = [
   { key: 'today', label: 'Aujourd’hui', icon: Sun, Component: TodayView },
   { key: 'cursus', label: 'Cursus', icon: GraduationCap, Component: CursusView },
+  { key: 'tracks', label: 'Parcours', icon: Compass, Component: TracksView },
   { key: 'timetable', label: 'Emploi du temps', icon: CalendarDays, Component: TimetableView },
   { key: 'exams', label: 'Évaluations', icon: CalendarClock, Component: ExamsView },
   { key: 'review', label: 'Révisions', icon: Brain, Component: ReviewView },
+  { key: 'readings', label: 'Lectures', icon: BookOpen, Component: () => <Readings embedded /> },
   { key: 'courses', label: 'Tous les cours', icon: Library, Component: CoursesView },
 ];
 
@@ -44,11 +47,8 @@ export default function Learning() {
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-ink">Apprentissage</h1>
-          <p className="text-mute text-sm mt-1">Études, formations et lectures : notes, échéances et progression au même endroit.</p>
+          <p className="text-mute text-sm mt-1">Études, parcours et lectures : notes, échéances, révisions et progression au même endroit.</p>
         </div>
-        <Link to="/learning/readings" className="hidden sm:block">
-          <Button variant="secondary"><span className="flex items-center gap-1.5"><BookOpen size={14} /> Lectures</span></Button>
-        </Link>
       </div>
       <SegmentedTabs tabs={tabs} value={tab.key} onChange={(k) => setParams(k === 'today' ? {} : { tab: k }, { replace: true })} />
       <Active />

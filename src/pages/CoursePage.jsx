@@ -12,6 +12,9 @@ import { ManualSessionModal } from '../components/learning/StudyTimer';
 import { useFlashcardStore, buildQueue, deckStats } from '../store/flashcardStore';
 import ReviewSession from '../components/learning/ReviewSession';
 import { CardModal, BulkCardsModal } from '../components/learning/ReviewView';
+import { ResourcesCard, TrackFormModal } from '../components/learning/TrackModals';
+import { TrackLevelCard } from '../components/learning/TracksView';
+import { trackMeta } from '../utils/tracks';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADES, GRADE_XP, SKILL_MAP } from '../utils/constants';
 import { uid } from '../utils/formatters';
@@ -300,30 +303,6 @@ function FlashcardsCard({ course }) {
   );
 }
 
-// ── Course readings ──────────────────────────────────────────────────────
-function ReadingsCard({ course }) {
-  const { toggleReading, addReading } = useLearningStore();
-  const [draft, setDraft] = useState('');
-  const readings = course.readings || [];
-  return (
-    <Card>
-      <SectionHeader icon={BookOpen} title="Lectures & ressources" subtitle={`${readings.filter((r) => r.completed).length}/${readings.length} terminée(s)`} />
-      <ul className="space-y-1.5 mb-3">
-        {readings.map((r, i) => (
-          <li key={i} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={!!r.completed} onChange={() => toggleReading(course.id, i)} className="accent-[var(--accent-primary)]" />
-            <span className={r.completed ? 'line-through text-mute' : ''}>{r.title}</span>
-          </li>
-        ))}
-      </ul>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (!draft.trim()) return; addReading(course.id, { title: draft.trim(), type: 'article' }); setDraft(''); }}>
-        <input className={cellCls} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Polycopié, chapitre de manuel, vidéo…" />
-        <Button type="submit" variant="secondary" className="!py-1.5">Ajouter</Button>
-      </form>
-    </Card>
-  );
-}
-
 export default function CoursePage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -361,7 +340,7 @@ export default function CoursePage() {
   const color = courseColor(course.id);
   const target = course.targetGrade ?? settings.passMark;
   const req = acad ? requiredGrade(course, target, settings) : null;
-  const backTo = acad ? '/learning?tab=cursus' : '/learning?tab=courses';
+  const backTo = acad ? '/learning?tab=cursus' : '/learning?tab=tracks';
   const today = todayKey();
   const mySessions = sessions.filter((s) => s.courseId === course.id);
   const weekMin = minutesBetween(mySessions, weekStart(today), today);
@@ -378,7 +357,7 @@ export default function CoursePage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ background: tint(color, 18), color }}>
-                {acad ? <GraduationCap size={12} /> : <Sparkles size={12} />}{acad ? 'Matière' : 'Cours libre'}
+                {acad ? <GraduationCap size={12} /> : <Sparkles size={12} />}{acad ? 'Matière' : course.trackType ? `Parcours · ${trackMeta(course.trackType).label}` : 'Cours libre'}
               </span>
               {term && <span className="text-mute">{term.name}{module ? ` · ${module.name}` : ''}</span>}
               {course.status !== 'active' && <Badge color={course.status === 'completed' ? 'var(--success)' : 'var(--error)'}>{course.status === 'completed' ? 'Terminé' : 'Abandonné'}</Badge>}
@@ -449,17 +428,25 @@ export default function CoursePage() {
               <SimulatorCard key={`${course.id}-${course.targetGrade}`} course={course} settings={settings} />
               <FlashcardsCard course={course} />
               <SlotsCard course={course} />
-              <ReadingsCard course={course} />
+              <ResourcesCard course={course} />
             </div>
           </div>
         </>
       ) : (
         <div className="grid lg:grid-cols-5 gap-5">
-          <div className="lg:col-span-3"><ProgrammeCard course={course} /></div>
-          <div className="lg:col-span-2 space-y-5">
+          <div className="lg:col-span-3 space-y-5">
+            <ProgrammeCard course={course} />
+            <ResourcesCard course={course} />
+          </div>
+          <div className="lg:col-span-2 space-y-5 order-first lg:order-none">
+            {course.trackType ? <TrackLevelCard course={course} /> : (
+              <Card>
+                <p className="text-sm text-mute">Transformez ce cours en <b className="text-ink">parcours</b> (langue, trading, compétence…) pour suivre un niveau, un objectif et un temps hebdomadaire.</p>
+                <Button variant="secondary" className="mt-3 !py-1.5" onClick={() => setEditOpen(true)}>Définir le parcours</Button>
+              </Card>
+            )}
             <FlashcardsCard course={course} />
             <SlotsCard course={course} />
-            <ReadingsCard course={course} />
           </div>
         </div>
       )}
@@ -492,7 +479,9 @@ export default function CoursePage() {
       </Card>
 
       <ManualSessionModal open={manualOpen} onClose={() => setManualOpen(false)} defaultCourseId={course.id} />
-      <CourseFormModal open={editOpen} onClose={() => setEditOpen(false)} course={course} />
+      {acad
+        ? <CourseFormModal open={editOpen} onClose={() => setEditOpen(false)} course={course} />
+        : <TrackFormModal open={editOpen} onClose={() => setEditOpen(false)} course={course} />}
 
       <Modal open={completing} onClose={() => setCompleting(false)} title={`Terminer : ${course.name}`}>
         {acad ? (

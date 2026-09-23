@@ -13,7 +13,7 @@ import { subjectResult, isAcademic } from '../../utils/academic';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Modal, ProgressBar } from '../common/ui';
 import CourseCsvTools from './CourseCsvTools';
-import { CourseFormModal } from './CursusModals';
+import { TrackFormModal } from './TrackModals';
 import { SectionHeader, SegmentedTabs, useAcademicSettings, GradePill, BigStat, tint } from './design';
 import { courseColor } from './TimetableView';
 
@@ -115,7 +115,7 @@ export default function CoursesView() {
             <Button variant="danger" onClick={() => setDeleting([...selected])}><span className="flex items-center gap-1.5"><Trash2 size={14} /> Supprimer ({selected.size})</span></Button>
           )}
           <Link to="/learning/readings"><Button variant="secondary"><span className="flex items-center gap-1.5"><BookOpen size={14} /> Lectures</span></Button></Link>
-          <Button onClick={() => setNewOpen(true)}><span className="flex items-center gap-1.5"><Plus size={15} /> Cours</span></Button>
+          <Button onClick={() => setNewOpen(true)}><span className="flex items-center gap-1.5"><Plus size={15} /> Parcours</span></Button>
         </div>
       </div>
 
@@ -177,7 +177,7 @@ export default function CoursesView() {
 
       <CourseCsvTools courses={courses} />
 
-      <CourseFormModal open={newOpen} onClose={() => setNewOpen(false)} kind="free" />
+      <TrackFormModal open={newOpen} onClose={() => setNewOpen(false)} />
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title={deleting?.length > 1 ? `Supprimer ${deleting.length} cours ?` : 'Supprimer ce cours ?'}>
         <p className="text-sm text-mute">Le cours, ses chapitres, ses notes et sa progression seront supprimés définitivement.</p>
         <div className="flex justify-end gap-2 mt-5">

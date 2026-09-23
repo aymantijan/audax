@@ -8,6 +8,7 @@ import { useSkillStore } from './skillStore';
 import { toast } from './uiStore';
 import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calendar';
 import { DEFAULT_ACADEMIC_SETTINGS, EVALUATION_PRESETS, subjectResult, letterFor, isAcademic } from '../utils/academic';
+import { resourcesOf } from '../utils/tracks';
 
 export const useLearningStore = create(
   persist(
@@ -249,6 +250,26 @@ export const useLearningStore = create(
         set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, slots: (c.slots || []).map((sl) => (sl.id === slotId ? { ...sl, ...updates } : sl)) } : c)) }),
       deleteSlot: (courseId, slotId) =>
         set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, slots: (c.slots || []).filter((sl) => sl.id !== slotId) } : c)) }),
+
+      // ── Resources (books from the Library, videos, courses, links…) ──
+      // Materialises legacy `readings` into `resources` on first write.
+      addResource: (courseId, res) =>
+        set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, resources: [...resourcesOf(c), { id: uid(), type: 'link', status: 'todo', url: '', ...res, addedAt: Date.now() }] } : c)) }),
+      editResource: (courseId, resId, updates) =>
+        set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, resources: resourcesOf(c).map((r) => (r.id === resId ? { ...r, ...updates } : r)) } : c)) }),
+      deleteResource: (courseId, resId) =>
+        set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, resources: resourcesOf(c).filter((r) => r.id !== resId) } : c)) }),
+
+      // Track level (CEFR for languages) — history kept for the progress timeline.
+      setTrackLevel: (courseId, level) => {
+        set({
+          courses: get().courses.map((c) => (c.id === courseId
+            ? { ...c, level, levelHistory: [...(c.levelHistory || []), { level, date: todayKey() }], updatedAt: Date.now() }
+            : c)),
+        });
+        get().recordActivity();
+        toast(`Nouveau niveau : ${level} 🎉`, 'success');
+      },
 
       resetAll: () => set({ courses: [], momentum: freshMomentumState(), academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] } }),
     }),

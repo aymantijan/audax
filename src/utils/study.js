@@ -118,9 +118,23 @@ export function studyPriorities({ courses, sessions, settings, today }) {
         score += Math.min(1, (due - studied) / Math.max(30, due)) * 20;
         reasons.push(studied ? `${fmtMinutes(studied)} cette semaine (visé ≈ ${fmtMinutes(Math.round(due))})` : 'pas encore étudiée cette semaine');
       }
+    } else if (!isAcademic(c) && Number(c.weeklyHours) > 0) {
+      const due = Number(c.weeklyHours) * 60 * weekFrac;
+      if (studied < due) {
+        score += Math.min(1, (due - studied) / Math.max(30, due)) * 18;
+        reasons.push(studied ? `${fmtMinutes(studied)} / ${c.weeklyHours} h cette semaine` : `objectif ${c.weeklyHours} h / semaine, pas encore commencé`);
+      }
     } else if (!isAcademic(c) && !studied) {
       score += 6;
       reasons.push('pas de session cette semaine');
+    }
+    if (!isAcademic(c) && c.targetDate) {
+      const d = daysUntil(c.targetDate, today);
+      const prog = calculateCourseProgress(c);
+      if (d >= 0 && d <= 30 && prog < 80) {
+        score += ((30 - d) / 30) * 15;
+        reasons.push(`échéance dans ${d} j, feuille de route à ${prog}%`);
+      }
     }
     const progress = calculateCourseProgress(c);
     if (c.chapters?.length && exam && days <= 21 && progress < 70) {

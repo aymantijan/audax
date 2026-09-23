@@ -56,7 +56,7 @@ export const useReadingsStore = create(
         if (added.length || get().seededKeys === null || backfilled) {
           set({ library: [...enriched, ...added], seededKeys: [...seen], catalogSeeded: true });
         }
-        if (added.length) toast(`Library: ${added.length} nouveaux livres ajoutés au catalogue`, 'success');
+        if (added.length) toast(`Bibliothèque : ${added.length} nouveaux livres ajoutés au catalogue`, 'success');
       },
 
       // ─────────── Library (catalog) ───────────
@@ -72,7 +72,7 @@ export const useReadingsStore = create(
           updatedAt: Date.now(),
         };
         set({ library: [...get().library, book] });
-        toast(`Added to library: ${book.title}`, 'success');
+        toast(`Ajouté à la bibliothèque : ${book.title}`, 'success');
         return book.id;
       },
       editBook: (id, updates) =>
@@ -85,7 +85,7 @@ export const useReadingsStore = create(
         }),
       deleteBook: (id) => {
         set({ library: get().library.filter((b) => b.id !== id), progress: get().progress.filter((p) => p.bookId !== id) });
-        toast('Book removed from library', 'info');
+        toast('Livre retiré de la bibliothèque', 'info');
       },
 
       // ─────────── Reading progress ───────────
@@ -107,7 +107,7 @@ export const useReadingsStore = create(
           updatedAt: Date.now(),
         };
         set({ progress: [...get().progress, entry] });
-        toast(`Started reading: ${book.title}`, 'success');
+        toast(`Lecture commencée : ${book.title}`, 'success');
       },
 
       removeFromReading: (progressId) => set({ progress: get().progress.filter((p) => p.id !== progressId) }),
@@ -168,7 +168,7 @@ export const useReadingsStore = create(
           if (total >= 500) award('book-finisher-lv2', 10, `long read: ${book?.title || 'book'}`);
           const readerSkill = GENRE_TO_READER_SKILL[book?.genre];
           if (readerSkill) award(readerSkill, 8, `genre: ${book?.genre} — ${book?.title || 'book'}`);
-          toast(`📖 Finished "${book?.title}"! +${XP_ON_COMPLETE} XP`, 'success');
+          toast(`📖 « ${book?.title} » terminé ! +${XP_ON_COMPLETE} XP`, 'success');
         }
       },
 
@@ -194,6 +194,21 @@ export const useReadingsStore = create(
         }
         if (wasCompleted && total > 0 && pagesRead < total) {
           for (const sid of skillIds) remove(sid, XP_ON_COMPLETE, `completion undo: ${book?.title || 'book'}`);
+        }
+      },
+
+      // Jump to a page number (used by resource cards): replays addPage /
+      // removePage so XP and completion stay consistent.
+      setPagesRead: (progressId, target) => {
+        const p = get().progress.find((x) => x.id === progressId);
+        if (!p) return;
+        const total = get().totalPagesFor(p);
+        const goal = Math.max(0, total > 0 ? Math.min(total, Math.round(target)) : Math.round(target));
+        let guard = 5000;
+        while (guard-- > 0) {
+          const cur = get().progress.find((x) => x.id === progressId);
+          if (!cur || cur.pagesRead === goal) break;
+          if (cur.pagesRead < goal) { if (cur.status === 'completed') break; get().addPage(progressId); } else get().removePage(progressId);
         }
       },
 
