@@ -10,7 +10,7 @@ import GlobalSearch from './GlobalSearch';
 // of its children are enabled for this account.
 const DIRECT_ITEMS = [
   { to: '/today', label: 'Aujourd’hui', end: true },
-  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/dashboard', label: 'Tableau de bord' },
   { to: '/goals', label: 'Objectifs' },
 ];
 
@@ -22,46 +22,46 @@ const DIRECT_ITEMS = [
 // the "everything but Today/Dashboard is a dropdown" rule.
 const NAV_GROUPS = [
   {
-    label: 'Deals',
+    label: 'Investissement',
     items: [
-      { to: '/deals', label: 'Deals (PE)', enabledKey: 'pe', defaultEnabled: true },
-      { to: '/fundraising', label: 'Fundraising', enabledKey: 'fundraising', defaultEnabled: false },
+      { to: '/deals', label: 'Private equity', enabledKey: 'pe', defaultEnabled: true },
+      { to: '/fundraising', label: 'Levée de fonds', enabledKey: 'fundraising', defaultEnabled: false },
     ],
   },
   {
-    label: 'Growth',
+    label: 'Progression',
     items: [
-      { to: '/learning', label: 'Learning' },
+      { to: '/learning', label: 'Apprentissage' },
       { to: '/focus', label: 'Deep Work', enabledKey: 'focus', defaultEnabled: false },
-      { to: '/creative', label: 'Creative', enabledKey: 'creative', defaultEnabled: false },
+      { to: '/creative', label: 'Création', enabledKey: 'creative', defaultEnabled: false },
     ],
   },
   {
-    label: 'Career',
+    label: 'Carrière',
     items: [
       { to: '/trading', label: 'Trading', enabledKey: 'trading', defaultEnabled: true },
-      { to: '/engineering', label: 'Engineering', enabledKey: 'engineering', defaultEnabled: false },
-      { to: '/businesses', label: 'Business Projects', enabledKey: 'business', defaultEnabled: true },
-      { to: '/career', label: 'Career', enabledKey: 'career', defaultEnabled: false },
-      { to: '/networking', label: 'Networking', enabledKey: 'networking', defaultEnabled: false },
-      { to: '/content', label: 'Content', enabledKey: 'content', defaultEnabled: false },
+      { to: '/engineering', label: 'Ingénierie', enabledKey: 'engineering', defaultEnabled: false },
+      { to: '/businesses', label: 'Projets business', enabledKey: 'business', defaultEnabled: true },
+      { to: '/career', label: 'Carrière', enabledKey: 'career', defaultEnabled: false },
+      { to: '/networking', label: 'Réseau', enabledKey: 'networking', defaultEnabled: false },
+      { to: '/content', label: 'Contenu', enabledKey: 'content', defaultEnabled: false },
       { to: '/freelance', label: 'Freelance', enabledKey: 'freelance', defaultEnabled: false },
     ],
   },
   {
-    label: 'Life',
+    label: 'Vie',
     items: [
-      { to: '/habits', label: 'Habits' },
-      { to: '/health', label: 'Health' },
-      { to: '/finance', label: 'Finance' },
-      { to: '/real-estate', label: 'Real Estate', enabledKey: 'realEstate', defaultEnabled: false },
+      { to: '/habits', label: 'Habitudes' },
+      { to: '/health', label: 'Santé' },
+      { to: '/finance', label: 'Finances' },
+      { to: '/real-estate', label: 'Immobilier', enabledKey: 'realEstate', defaultEnabled: false },
     ],
   },
   {
-    label: 'Others',
+    label: 'Autres',
     items: [
-      { to: '/skills', label: 'Skill Tree' },
-      { to: '/leaderboard', label: 'Leaderboard' },
+      { to: '/skills', label: 'Arbre de compétences' },
+      { to: '/leaderboard', label: 'Classement' },
     ],
   },
 ];
@@ -155,7 +155,7 @@ export default function Navbar() {
         </button>
 
         {/* Center: nav links */}
-        <div className="hidden md:flex items-center gap-7">
+        <div className="hidden xl:flex items-center gap-5 2xl:gap-7">
           {directItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
               {item.label}
@@ -169,13 +169,13 @@ export default function Navbar() {
         {/* Right: theme + settings + profile + logout */}
         <div className="flex items-center gap-2 shrink-0">
           <GlobalSearch />
-          <button onClick={toggleTheme} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Toggle theme">
+          <button onClick={toggleTheme} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Changer de thème">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <NavLink
             to="/settings"
             className={({ isActive }) => `p-2 rounded-lg transition-colors cursor-pointer ${isActive ? 'text-accent' : 'text-mute hover:text-ink hover:bg-card'}`}
-            title="Settings"
+            title="Paramètres"
           >
             <Settings size={18} />
           </NavLink>
@@ -185,10 +185,10 @@ export default function Navbar() {
             </span>
             <span className="text-sm text-ink truncate max-w-24">{user?.name}</span>
           </div>
-          <button onClick={handleLogout} className="p-2 rounded-lg text-mute hover:text-bad hover:bg-card transition-colors cursor-pointer" title="Log out">
+          <button onClick={handleLogout} className="p-2 rounded-lg text-mute hover:text-bad hover:bg-card transition-colors cursor-pointer" title="Se déconnecter">
             <LogOut size={18} />
           </button>
-          <button onClick={() => setMobileOpen((v) => !v)} className="md:hidden p-2 rounded-lg text-mute hover:text-ink cursor-pointer">
+          <button onClick={() => setMobileOpen((v) => !v)} className="xl:hidden p-2 rounded-lg text-mute hover:text-ink cursor-pointer">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -196,9 +196,9 @@ export default function Navbar() {
 
       {/* Mobile dropdown — flat list, grouping is a desktop-crowding fix only */}
       {mobileOpen && (
-        <div className="md:hidden bg-surface border-b border-line">
+        <div className="xl:hidden bg-surface border-b border-line">
           <div className="flex flex-col p-3 gap-1">
-            {[...mobileItems, { to: '/settings', label: 'Settings' }].map((item) => (
+            {[...mobileItems, { to: '/settings', label: 'Paramètres' }].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

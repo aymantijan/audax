@@ -28,7 +28,7 @@ export function buildSearchIndex() {
 
   const trading = useTradingStore.getState();
   for (const acc of trading.accounts) {
-    items.push({ id: `acct-${acc.id}`, domain: 'Trading', label: acc.name, sub: `${acc.type} account`, to: `/trading/account/${acc.id}` });
+    items.push({ id: `acct-${acc.id}`, domain: 'Trading', label: acc.name, sub: `compte ${acc.type}`, to: `/trading/account/${acc.id}` });
   }
   for (const t of trading.trades.slice(-300)) {
     items.push({ id: `trade-${t.id}`, domain: 'Trading', label: `${t.instrument} ${t.direction || ''}`.trim(), sub: `${t.date} · ${t.strategy || ''}`, to: '/trading' });

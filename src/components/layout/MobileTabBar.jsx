@@ -10,31 +10,31 @@ import { useAuthStore } from '../../store/authStore';
 // can't fit AUDAX's ~10 top-level sections as tabs without them becoming
 // unreadable.
 const PRIMARY_TABS = [
-  { to: '/today', label: 'Today', icon: Sun, end: true },
+  { to: '/today', label: 'Aujourd’hui', icon: Sun, end: true },
   { to: '/trading', label: 'Trading', icon: TrendingUp },
-  { to: '/finance', label: 'Finance', icon: Wallet },
-  { to: '/health', label: 'Health', icon: HeartPulse },
+  { to: '/finance', label: 'Finances', icon: Wallet },
+  { to: '/health', label: 'Santé', icon: HeartPulse },
 ];
 
 const MORE_ITEMS = [
   { to: '/goals', label: 'Objectifs', icon: Target },
-  { to: '/learning', label: 'Learning', icon: BookOpen },
-  { to: '/habits', label: 'Habits', icon: Flame },
-  { to: '/deals', label: 'Deals (PE)', icon: Handshake },
-  { to: '/businesses', label: 'Business Projects', icon: Rocket },
-  { to: '/engineering', label: 'Engineering', icon: FlaskConical },
-  { to: '/networking', label: 'Networking', icon: Users },
-  { to: '/career', label: 'Career', icon: Briefcase },
-  { to: '/content', label: 'Content', icon: Megaphone },
+  { to: '/learning', label: 'Apprentissage', icon: BookOpen },
+  { to: '/habits', label: 'Habitudes', icon: Flame },
+  { to: '/deals', label: 'Private equity', icon: Handshake },
+  { to: '/businesses', label: 'Projets business', icon: Rocket },
+  { to: '/engineering', label: 'Ingénierie', icon: FlaskConical },
+  { to: '/networking', label: 'Réseau', icon: Users },
+  { to: '/career', label: 'Carrière', icon: Briefcase },
+  { to: '/content', label: 'Contenu', icon: Megaphone },
   { to: '/focus', label: 'Deep Work', icon: Timer },
-  { to: '/fundraising', label: 'Fundraising', icon: Rocket },
+  { to: '/fundraising', label: 'Levée de fonds', icon: Rocket },
   { to: '/freelance', label: 'Freelance', icon: Briefcase },
-  { to: '/creative', label: 'Creative', icon: Palette },
-  { to: '/real-estate', label: 'Real Estate', icon: Building2 },
-  { to: '/skills', label: 'Skill Tree', icon: GitBranch },
-  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { to: '/dashboard', label: 'Dashboard', icon: TrendingUp },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/creative', label: 'Création', icon: Palette },
+  { to: '/real-estate', label: 'Immobilier', icon: Building2 },
+  { to: '/skills', label: 'Compétences', icon: GitBranch },
+  { to: '/leaderboard', label: 'Classement', icon: Trophy },
+  { to: '/dashboard', label: 'Tableau de bord', icon: TrendingUp },
+  { to: '/settings', label: 'Paramètres', icon: Settings },
 ];
 
 export default function MobileTabBar() {
@@ -84,7 +84,7 @@ export default function MobileTabBar() {
         ))}
         <button onClick={() => setMoreOpen(true)} className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-[10px] text-mute cursor-pointer">
           <MoreHorizontal size={19} />
-          More
+          Plus
         </button>
       </nav>
 
@@ -97,7 +97,7 @@ export default function MobileTabBar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-mute uppercase tracking-wide">More</span>
+              <span className="text-sm font-semibold text-mute uppercase tracking-wide">Plus</span>
               <button onClick={() => setMoreOpen(false)} className="text-mute hover:text-ink cursor-pointer">
                 <X size={18} />
               </button>

@@ -12,6 +12,13 @@ const DOMAIN_ICON = {
 // the navbar. Reads a fresh index from every relevant store on each open
 // (buildSearchIndex is a `.getState()` snapshot, cheap enough to rebuild per
 // open rather than kept live — see global-search.js for why that's safe).
+// Display names (the English keys stay as-is: they also index DOMAIN_ICON).
+const DOMAIN_FR = {
+  Trading: 'Trading', Finance: 'Finances', Habits: 'Habitudes', Learning: 'Apprentissage', Reading: 'Lecture', Deals: 'Private equity',
+  Projects: 'Projets', Business: 'Business', Engineering: 'Ingénierie', Networking: 'Réseau', Career: 'Carrière', Content: 'Contenu',
+  Fundraising: 'Levée de fonds', Freelance: 'Freelance', Creative: 'Création', 'Real Estate': 'Immobilier', Skills: 'Compétences',
+};
+
 export default function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -56,7 +63,7 @@ export default function GlobalSearch() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Search (Ctrl/Cmd+K)">
+      <button onClick={() => setOpen(true)} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Rechercher (Ctrl/Cmd+K)">
         <Search size={18} />
       </button>
     );
@@ -73,7 +80,7 @@ export default function GlobalSearch() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
             onKeyDown={onKeyDownInput}
-            placeholder="Search trades, transactions, habits, courses, books, deals, projects, skills…"
+            placeholder="Rechercher un trade, une opération, une habitude, un cours, un livre, un projet…"
             className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-mute"
           />
           <button onClick={() => setOpen(false)} className="text-mute hover:text-ink cursor-pointer shrink-0">
@@ -82,10 +89,10 @@ export default function GlobalSearch() {
         </div>
         <div className="max-h-96 overflow-y-auto">
           {query.trim() && results.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-mute">No matches for "{query}".</div>
+            <div className="px-4 py-8 text-center text-sm text-mute">Aucun résultat pour « {query} ».</div>
           )}
           {!query.trim() && (
-            <div className="px-4 py-8 text-center text-sm text-mute">Start typing to search across the whole app.</div>
+            <div className="px-4 py-8 text-center text-sm text-mute">Tapez pour chercher dans toute l’application.</div>
           )}
           {results.map((item, i) => {
             const Icon = DOMAIN_ICON[item.domain] || Search;
@@ -101,7 +108,7 @@ export default function GlobalSearch() {
                   <div className="text-sm truncate">{item.label}</div>
                   {item.sub && <div className="text-[11px] text-mute truncate">{item.sub}</div>}
                 </div>
-                <span className="text-[10px] text-mute uppercase tracking-wide shrink-0">{item.domain}</span>
+                <span className="text-[10px] text-mute uppercase tracking-wide shrink-0">{DOMAIN_FR[item.domain] || item.domain}</span>
               </button>
             );
           })}
