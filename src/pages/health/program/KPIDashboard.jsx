@@ -167,7 +167,6 @@ function KpiRow({ kpi }) {
     try {
       await store.saveKpiValue(kpi.id, { value_date: todayStr, value: Number(val), source: 'manual' });
       setVal(''); setEntering(false);
-      store.syncGoals();
     } catch (err) { toast(err?.message || 'Enregistrement impossible', 'error'); }
   };
 

@@ -266,8 +266,6 @@ export default function SessionLogger({ event, date, onClose }) {
             });
           }
         }
-        // New performance → goals linked to KPIs may have moved / been reached
-        store.syncGoals();
       } catch (mirrorErr) {
         console.error('healthStore mirror failed:', mirrorErr);
       }

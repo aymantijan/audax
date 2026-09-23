@@ -15,7 +15,8 @@ import HabitLinker from './HabitLinker';
 import DisciplineCard from './DisciplineCard';
 import ReadinessCard from './ReadinessCard';
 import KPIDashboard from './KPIDashboard';
-import GoalsEditor from './GoalsEditor';
+import GoalsBoard from '../goals/GoalsBoard';
+import { useHealthStore } from '../../../store/healthStore';
 import TrophyBoard from './TrophyBoard';
 import AlertsBanner from './AlertsBanner';
 import AnalyticsView from './AnalyticsView';
@@ -23,7 +24,8 @@ import { ProgramHero, SegmentedTabs, SectionHeader } from './shared/design';
 
 export default function ProgramTab() {
   const store = useProgramStore();
-  const { available, initialized, loading, error, activeProgram, draftProgram, archivedPrograms, phases, canActivate, kpis = [], goals = [] } = store;
+  const { available, initialized, loading, error, activeProgram, draftProgram, archivedPrograms, phases, canActivate, kpis = [] } = store;
+  const allGoals = useHealthStore((st) => st.goals);
 
   useEffect(() => { store.initialize(); }, []);
 
@@ -88,7 +90,7 @@ export default function ProgramTab() {
     const editTabs = [
       { key: 'structure', label: 'Phases & séances', icon: Layers, count: phases.length },
       { key: 'nutrition', label: 'Nutrition', icon: Salad },
-      { key: 'tracking', label: 'KPIs & objectifs', icon: Target, count: kpis.length + goals.length || null },
+      { key: 'tracking', label: 'KPIs & objectifs', icon: Target, count: kpis.length + allGoals.filter((g) => g.programId === currentProgram.id && !g.achieved).length || null },
       { key: 'links', label: 'Habitudes & lieux', icon: Link2 },
     ];
     return (
@@ -145,7 +147,7 @@ export default function ProgramTab() {
         {editTab === 'tracking' && (
           <div className="space-y-6">
             <div><SectionHeader icon={BarChart3} title="KPIs" subtitle="Indicateurs mesurés automatiquement depuis vos séances" /><KPIDashboard /></div>
-            <div><SectionHeader icon={Target} title="Objectifs" /><GoalsEditor /></div>
+            <GoalsBoard programId={currentProgram.id} phases={phases} />
           </div>
         )}
 
@@ -232,7 +234,7 @@ export default function ProgramTab() {
           {mainTab === 'tracking' && (
             <div className="space-y-6">
               <div><SectionHeader icon={BarChart3} title="KPIs" /><KPIDashboard /></div>
-              <div><SectionHeader icon={Target} title="Objectifs" /><GoalsEditor /></div>
+              <GoalsBoard programId={currentProgram.id} phases={phases} />
               <div><SectionHeader title="Trophées" /><TrophyBoard /></div>
             </div>
           )}

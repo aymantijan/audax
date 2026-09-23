@@ -16,82 +16,14 @@ import {
   computeSleepScore, computeRecoveryScore, computeHabitsScore, computeDailyDiscipline,
 } from '../utils/discipline-engine';
 import { getKpiDefinition, computeKpiValue } from '../utils/kpi-library';
+import { buildMetricSource, metricInfo } from '../utils/metric-engine';
 
-// --- KPI data adapter ------------------------------------------------------
-// The compute() functions in kpi-library expect a specific shape (gymSessions,
-// cardioSessions, sleepLogs, bodyCompositionLogs, habitCompletions...) that no
-// store actually exposed, so every library KPI silently read nothing. This
-// builds that shape from the REAL stores (healthStore + habitStore).
+// KPI data adapter lives in utils/metric-engine (shared with the unified goals).
 function buildKpiSource() {
   let h = {}; let hb = {};
   try { h = useHealthStore.getState(); } catch { /* noop */ }
   try { hb = useHabitStore.getState(); } catch { /* noop */ }
-  const workouts = h.workouts || [];
-
-  // Strength: one "session" per sessionId (a gym session = N exercise entries)
-  const gymMap = {};
-  for (const w of workouts) {
-    if (w.type !== 'strength') continue;
-    const k = w.sessionId || w.id;
-    const g = (gymMap[k] ||= { date: w.date, sets: [], duration_min: 0 });
-    for (const st of (w.sets || [])) g.sets.push({ reps: Number(st.reps) || 0, weight: Number(st.weight) || 0, rpe: Number(st.rpe) || null });
-    g.duration_min += Number(w.durationMin) || 0;
-  }
-  const num = (v) => (v != null && v !== '' ? Number(v) : null);
-  const cardioSessions = workouts.filter((w) => w.type === 'cardio').map((w) => ({
-    date: w.date,
-    duration_min: Number(w.durationMin) || 0,
-    distance_km: num(w.cardio?.distance) || 0,
-    calories: num(w.cardio?.calories) || 0,
-    avg_heart_rate: num(w.cardio?.avgHr),
-  }));
-
-  const waterByDate = {};
-  for (const wl of (h.waterLogs || [])) waterByDate[wl.date] = (waterByDate[wl.date] || 0) + (Number(wl.amountMl) || 0);
-
-  const heightFallback = Number(h.healthProfile?.heightCm) || null;
-  const bodyCompositionLogs = (h.bodyComp || []).map((b) => ({
-    date: b.date,
-    weight: Number(b.weightKg) || null,
-    bodyFatPct: num(b.bodyFatPct),
-    waistCm: num(b.waistCm),
-    heightCm: Number(b.heightCm) || heightFallback,
-  }));
-
-  const energyLogs = hb.energyLogs || [];
-  const sleepLogs = energyLogs.filter((l) => l.sleepData).map((l) => ({
-    date: l.date,
-    hoursSlept: l.sleepData.sleepHours ?? l.sleepData.hoursSlept ?? null,
-    sleepQualityScore: l.sleepData.sleepQualityScore ?? null,
-    latencyMin: l.sleepData.latencyMin ?? null,
-  }));
-
-  const recMap = {};
-  for (const r of (h.recoveryLogs || [])) {
-    recMap[r.date] = { ...(recMap[r.date] || {}), date: r.date, score: Math.min(100, Math.round(((r.activities?.length || 0) / 5) * 100)) };
-  }
-  for (const l of energyLogs) {
-    recMap[l.date] = { ...(recMap[l.date] || { date: l.date }), energyLevel: l.energyStartLevel ?? null, stressLevel: l.stressLevel ?? null };
-  }
-
-  const activeHabitIds = (hb.habits || []).filter((x) => !x.archived).map((x) => x.id);
-  const habitCompletions = {};
-  for (const lg of (hb.logs || [])) {
-    if (!activeHabitIds.includes(lg.habitId)) continue;
-    const day = (habitCompletions[lg.date] ||= Object.fromEntries(activeHabitIds.map((id) => [id, false])));
-    if (lg.completed) day[lg.habitId] = true;
-  }
-
-  return {
-    gymSessions: Object.values(gymMap),
-    cardioSessions,
-    nutritionLogs: h.nutritionLogs || [],
-    waterByDate,
-    bodyCompositionLogs,
-    sleepLogs,
-    recoveryLogs: Object.values(recMap),
-    habitCompletions,
-  };
+  return buildMetricSource(h, hb);
 }
 
 const isoDay = (offset) => {
@@ -181,6 +113,8 @@ export const useProgramStore = create((set, get) => ({
           get().loadTrophies(target.id),
           get().loadAlerts(target.id),
         ]);
+        // Goals now live in ONE system (healthStore) — bring over program goals.
+        get().importProgramGoalsToUnified();
       }
     } catch (err) {
       console.error('[programStore] init failed:', err);
@@ -1154,24 +1088,85 @@ export const useProgramStore = create((set, get) => ({
    * Push live goal progress to the DB and auto-achieve goals whose KPI reached
    * the target (which awards the trophy). Guarded against concurrent runs.
    */
-  syncGoals: async () => {
-    if (get()._syncingGoals) return;
-    set({ _syncingGoals: true });
-    try {
-      for (const goal of get().goals.filter((g) => !g.achieved && g.kpi_id)) {
-        const { current, pct, reached } = get().getGoalProgress(goal);
-        if (current == null) continue;
-        if (reached) {
-          await get().updateGoal(goal.id, { current_value: current, progress_pct: 100 });
-          await get().achieveGoal(goal.id);
-        } else if (Math.abs((goal.progress_pct ?? 0) - pct) >= 1 || Number(goal.current_value) !== current) {
-          await get().updateGoal(goal.id, { current_value: current, progress_pct: pct });
-        }
+  // Superseded by the unified goals (healthStore.getGoalsWithProgress), which
+  // track progress live and fire the trophy event — kept as a no-op so an old
+  // caller can't validate a program goal a second time.
+  syncGoals: async () => {},
+
+  /**
+   * Copy this program's goals (Supabase program_goals) into the unified goal
+   * system (healthStore). Idempotent via sourceProgramGoalId; Supabase rows
+   * are left untouched. KPI links become metrics: exercise-bound gym KPIs keep
+   * their exercise, library KPIs keep their key, custom KPIs carry their saved
+   * values as a manual measure.
+   */
+  importProgramGoalsToUnified: () => {
+    const s = get();
+    if (!s.goals.length) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const list = s.goals.map((pg) => {
+      const kpi = s.kpis.find((k) => k.id === pg.kpi_id);
+      let metric = { key: 'manual' };
+      let manualValues = [];
+      if (kpi) {
+        const src = kpi.custom_source || '';
+        const i = src.indexOf('::');
+        if (i !== -1) metric = { key: src.slice(0, i), exercise: src.slice(i + 2) };
+        else if (kpi.kpi_key && metricInfo(kpi.kpi_key) && !kpi.kpi_key.startsWith('discipline_')) metric = { key: kpi.kpi_key };
+        else manualValues = (s.kpiValuesByKpi[kpi.id] || []).map((v) => ({ date: v.value_date, value: Number(v.value) }));
+      } else if (pg.current_value != null) {
+        manualValues = [{ date: today, value: Number(pg.current_value) }];
       }
+      return {
+        sourceProgramGoalId: pg.id,
+        title: pg.title,
+        metric,
+        manualValues,
+        target: pg.target_value,
+        direction: pg.target_direction === 'lower' || pg.target_direction === 'higher' ? pg.target_direction : null,
+        priority: pg.priority || 'medium',
+        programId: pg.program_id,
+        phaseId: pg.phase_id || null,
+        achieved: !!pg.achieved,
+        achievedAt: pg.achieved_at ? Date.parse(pg.achieved_at) : null,
+        createdAt: pg.created_at ? Date.parse(pg.created_at) : Date.now(),
+      };
+    });
+    try { return useHealthStore.getState().importGoals(list); } catch { return 0; }
+  },
+
+  /** Trophy for a unified goal linked to a program (fired on 'audax:goal-achieved'). */
+  awardGoalTrophy: async (goal) => {
+    const s = get();
+    const program = [s.activeProgram, s.draftProgram].find((p) => p && p.id === goal.programId);
+    if (!program) return null;
+    try {
+      const trend = s.getDisciplineTrend(30);
+      const avg = trend.length ? trend.reduce((a, t) => a + t.overall_score, 0) / trend.length : 50;
+      const tier = avg >= 90 ? 'diamond' : avg >= 75 ? 'gold' : avg >= 60 ? 'silver' : 'bronze';
+      const phase = s.phases.find((p) => p.id === goal.phaseId);
+      if (goal.sourceProgramGoalId) {
+        try { await api.updateGoal(goal.sourceProgramGoalId, { achieved: true, achieved_at: new Date().toISOString(), progress_pct: 100, current_value: goal.current }); } catch { /* row may be gone */ }
+      }
+      const trophy = await api.createTrophy({
+        program_id: program.id,
+        goal_id: goal.sourceProgramGoalId || null,
+        title: goal.label,
+        description: goal.what || null,
+        trophy_type: 'goal',
+        achieved_value: goal.current,
+        target_value: goal.target,
+        discipline_score: Math.round(avg * 100) / 100,
+        phase_name: phase?.name || null,
+        program_name: program.name,
+        duration_days: Math.max(0, Math.round((Date.now() - (goal.createdAt || Date.now())) / 86400000)),
+        tier,
+      });
+      set({ trophies: [trophy, ...get().trophies] });
+      return trophy;
     } catch (err) {
-      console.error('[programStore] syncGoals failed:', err);
-    } finally {
-      set({ _syncingGoals: false });
+      console.error('[programStore] awardGoalTrophy failed:', err);
+      return null;
     }
   },
 
@@ -1405,3 +1400,10 @@ export const useProgramStore = create((set, get) => ({
     alerts: [],
   }),
 }));
+
+// Unified goals live in healthStore (which can't import this store without a
+// cycle); it announces achievements with an event, we award the trophy.
+if (typeof window !== 'undefined' && !window.__audaxGoalTrophyListener) {
+  window.__audaxGoalTrophyListener = true;
+  window.addEventListener('audax:goal-achieved', (e) => { useProgramStore.getState().awardGoalTrophy(e.detail); });
+}

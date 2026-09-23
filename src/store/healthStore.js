@@ -18,6 +18,29 @@ import { useTradingStore } from './tradingStore';
 import { detectTiltSequences, detectRevengeTrades } from '../utils/trading-psychology';
 import { useAccountingStore } from './accountingStore';
 import { toast } from './uiStore';
+import { buildMetricSource, evaluateMetric, weeklySlope, metricInfo as metricDef } from '../utils/metric-engine';
+
+const numOrNull = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+
+// Legacy goal ({type:'weight'|'strength'|'sleep'|'bodyfat'|'workoutFrequency'})
+// → unified shape {metric, target, start}. Already-unified goals pass through.
+function normalizeGoal(g) {
+  if (g.metric) return g;
+  const legacy = {
+    weight: { metric: { key: 'body_weight' }, target: g.targetKg, start: g.startWeightKg ?? null },
+    strength: { metric: { key: 'max_weight_lifted', exercise: g.exercise || '' }, target: g.targetKg, start: null },
+    sleep: { metric: { key: 'sleep_quality' }, target: g.targetScore, start: null },
+    bodyfat: { metric: { key: 'body_fat_pct' }, target: g.targetBodyFatPct, start: g.startBodyFatPct ?? null },
+    workoutFrequency: { metric: { key: 'workout_frequency' }, target: g.targetPerWeek, start: null },
+  }[g.type] || { metric: { key: 'manual' }, target: null, start: null };
+  return { priority: 'medium', manualValues: [], ...g, ...legacy, target: numOrNull(legacy.target), start: legacy.start != null ? Number(legacy.start) : null };
+}
+
+function goalDirection(g) {
+  if (g.direction) return g.direction;
+  if (g.start != null && g.target != null && g.target !== g.start) return g.target < g.start ? 'lower' : 'higher';
+  return metricDef(g.metric?.key)?.dir || 'higher';
+}
 // Old curated/generated program system removed (2026-09-08) — replaced by
 // Supabase-backed programStore.js (see src/store/programStore.js).
 import { generateNutritionPlan } from '../utils/nutrition-plan-generator';
@@ -866,61 +889,121 @@ export const useHealthStore = create(
       getPerformanceTrend: () =>
         [...get().performanceLogs].sort((a, b) => (a.date < b.date ? -1 : 1)).map((p) => ({ date: p.date.slice(5), restingHr: p.restingHr, vitality: p.vitality, mobility: p.mobility })),
 
-      // ─────────── Health goals ───────────
-      addGoal: (goal) => {
-        const latestBodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+      // ─────────── Goals (unified) ───────────
+      // ONE goal system for the whole app (Santé > Progrès AND Programme).
+      // A goal = a metric from utils/metric-engine (body weight, 1RM on an
+      // exercise, sleep quality, protein, sessions/week, manual measure…) +
+      // target + direction + baseline, optionally linked to a program/phase
+      // (reaching it then awards that program's trophy). Legacy goals
+      // ({type:'weight'|'strength'|…}) are normalised on read — nothing lost.
+      addGoal: (input) => {
+        const base = normalizeGoal({ ...input });
+        const def = metricDef(base.metric?.key);
+        let start = input.start != null ? Number(input.start) : null;
+        if (start == null && def && def.agg !== 'week') {
+          const src = buildMetricSource(get(), useHabitStore.getState());
+          start = evaluateMetric(base.metric, src, { manualValues: base.manualValues }).current;
+        }
         const entry = {
           id: uid(),
-          type: goal.type,
-          targetKg: goal.targetKg != null ? Number(goal.targetKg) : undefined,
-          exercise: goal.exercise || undefined,
-          targetScore: goal.targetScore != null ? Number(goal.targetScore) : undefined,
-          targetBodyFatPct: goal.targetBodyFatPct != null ? Number(goal.targetBodyFatPct) : undefined,
-          targetPerWeek: goal.targetPerWeek != null ? Number(goal.targetPerWeek) : undefined,
-          startWeightKg: goal.type === 'weight' ? (latestBodyComp?.weightKg ?? null) : undefined,
-          startBodyFatPct: goal.type === 'bodyfat' ? (latestBodyComp?.bodyFatPct ?? null) : undefined,
-          targetDate: goal.targetDate || undefined,
-          achieved: false,
-          createdAt: Date.now(),
+          title: input.title?.trim() || null,
+          metric: base.metric,
+          target: numOrNull(base.target),
+          direction: input.direction || null,
+          start,
+          targetDate: input.targetDate || null,
+          priority: input.priority || 'medium',
+          programId: input.programId || null,
+          phaseId: input.phaseId || null,
+          manualValues: input.manualValues || [],
+          sourceProgramGoalId: input.sourceProgramGoalId || null,
+          achieved: !!input.achieved,
+          achievedAt: input.achievedAt || null,
+          createdAt: input.createdAt || Date.now(),
         };
         set({ goals: [...get().goals, entry] });
-        toast('Goal added', 'success');
+        if (!input.silent) toast('Objectif ajouté', 'success');
+        return entry;
       },
-      // Only the target value(s) + date are editable — type is fixed once
-      // created (same reasoning as Trading account type: changing it after
-      // the fact would make the stored start* baseline incoherent).
-      editGoal: (id, updates) => set({ goals: get().goals.map((g) => (g.id === id ? { ...g, ...updates } : g)) }),
+      editGoal: (id, updates) => set({
+        goals: get().goals.map((g) => {
+          if (g.id !== id) return g;
+          const n = normalizeGoal(g);
+          return { ...n, ...updates, target: updates.target !== undefined ? numOrNull(updates.target) : n.target };
+        }),
+      }),
       deleteGoal: (id) => set({ goals: get().goals.filter((g) => g.id !== id) }),
 
-      // Progress for every goal, computed from data the app already tracks
-      // (body comp, PRs, sleep quality) — flags newly-achieved goals once.
-      getGoalsWithProgress: () => {
-        const bodyComp = [...get().bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1));
-        const currentWeightKg = bodyComp[0]?.weightKg ?? null;
-        const currentBodyFatPct = bodyComp[0]?.bodyFatPct ?? null;
-        const currentPRs = get().getPRs();
-        const sleepLogs = useHabitStore.getState().energyLogs;
-        const prediction = get().getWeightPrediction();
-        const weekAgo = Date.now() - 7 * dayMs;
-        const workoutsPerWeek = get().workouts.filter((w) => new Date(w.date).getTime() >= weekAgo).length;
+      // Manual measure goals: record today's (or a given day's) value.
+      logGoalValue: (id, value, date = todayKey()) => set({
+        goals: get().goals.map((g) => {
+          if (g.id !== id) return g;
+          const vals = (g.manualValues || []).filter((v) => v.date !== date);
+          return { ...normalizeGoal(g), manualValues: [...vals, { date, value: Number(value) }].sort((a, b) => (a.date < b.date ? -1 : 1)) };
+        }),
+      }),
 
-        const results = get().goals.map((g) => {
-          const progress = computeGoalProgress(g, {
-            startWeightKg: g.startWeightKg,
-            currentWeightKg,
-            currentPRs,
-            sleepLogs,
-            weeklyRateKg: prediction.weeklyRateKg.realistic,
-            currentBodyFatPct,
-            workoutsPerWeek,
-          });
-          return { ...g, ...progress };
+      // One-shot import of Programme goals (previously a separate Supabase
+      // system) — deduped by sourceProgramGoalId, the Supabase rows are left
+      // untouched.
+      importGoals: (list) => {
+        const known = new Set(get().goals.map((g) => g.sourceProgramGoalId).filter(Boolean));
+        const fresh = list.filter((g) => g.sourceProgramGoalId && !known.has(g.sourceProgramGoalId));
+        for (const g of fresh) get().addGoal({ ...g, silent: true });
+        return fresh.length;
+      },
+
+      // Progress for every goal from the shared metric engine; newly reached
+      // goals are marked achieved once (+ a trophy event for program goals).
+      getGoalsWithProgress: () => {
+        const src = buildMetricSource(get(), useHabitStore.getState());
+        const results = get().goals.map((raw) => {
+          const g = normalizeGoal(raw);
+          const def = metricDef(g.metric?.key) || { label: 'Mesure', unit: '' };
+          const { series, current, unit } = evaluateMetric(g.metric, src, { manualValues: g.manualValues });
+          const direction = goalDirection(g);
+          const t = g.target;
+          let percent = 0; let reached = false; let etaWeeks = null;
+          if (current != null && t != null) {
+            // Body measurements (weight, waist…) and anything that must go DOWN
+            // are measured from the baseline (82 → 77 kg: 79.2 = 56 %). Records,
+            // averages, frequencies and manual measures read as current/target
+            // (bench 104.5 / 110 = 95 %), which is what people expect.
+            const fromBaseline = direction === 'lower' || (def.agg === 'latest' && g.metric?.key !== 'manual');
+            if (direction === 'lower') percent = g.start != null && g.start !== t ? ((g.start - current) / (g.start - t)) * 100 : (current <= t ? 100 : 0);
+            else if (fromBaseline && g.start != null && g.start < t) percent = ((current - g.start) / (t - g.start)) * 100;
+            else percent = t ? (current / t) * 100 : 0;
+            percent = Math.round(Math.max(0, Math.min(100, percent)) * 10) / 10;
+            reached = direction === 'lower' ? current <= t : current >= t;
+            const slope = weeklySlope(series);
+            const remaining = t - current;
+            if (!reached && slope && Math.sign(slope) === Math.sign(remaining)) {
+              const w = Math.ceil(Math.abs(remaining / slope));
+              etaWeeks = w <= 104 ? w : null;
+            }
+          }
+          const what = `${def.label}${g.metric?.exercise ? ` — ${g.metric.exercise}` : ''}`;
+          const label = g.title || (t != null ? `${what} : ${t} ${unit || ''}`.trim() : what);
+          return { ...g, def, what, label, unit, series, current, percent, reached, direction, etaWeeks };
         });
 
-        const newlyAchieved = results.filter((g) => g.percent >= 100 && !g.achieved);
-        if (newlyAchieved.length) {
-          set({ goals: get().goals.map((g) => (newlyAchieved.some((n) => n.id === g.id) ? { ...g, achieved: true } : g)) });
-          for (const g of newlyAchieved) toast(`🎯 Goal reached: ${g.label}`, 'success');
+        const newly = results.filter((g) => g.reached && !g.achieved);
+        if (newly.length) {
+          // Deferred: this runs during render.
+          queueMicrotask(() => {
+            // Several renders can queue this before the first one lands —
+            // only act on goals that are STILL unachieved (no double toast/trophy).
+            const pending = newly.filter((n) => get().goals.some((g) => g.id === n.id && !g.achieved));
+            if (!pending.length) return;
+            const now = Date.now();
+            set({ goals: get().goals.map((g) => (pending.some((n) => n.id === g.id) ? { ...g, achieved: true, achievedAt: now } : g)) });
+            for (const g of pending) {
+              toast(`🎯 Objectif atteint : ${g.label}`, 'success');
+              if (g.programId && typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('audax:goal-achieved', { detail: { ...g, series: undefined, def: undefined } }));
+              }
+            }
+          });
         }
         return results;
       },
