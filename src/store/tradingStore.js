@@ -765,6 +765,28 @@ export const useTradingStore = create(
         toast('Trade updated', 'success');
       },
 
+      // Bulk import (MT5 report). No XP / per-trade toasts: these trades are
+      // history being brought in, not new actions. Unknown symbols become
+      // custom instruments (preset specs when we have them).
+      importTrades: (trades, newInstruments = []) => {
+        for (const ins of newInstruments) {
+          if (!get().getInstrumentList().includes(ins.code)) {
+            set({ customInstruments: [...get().customInstruments, { id: uid(), code: ins.code, kind: ins.kind, assetClass: ins.assetClass || null, pipSize: ins.kind === 'pip' ? Number(ins.pipSize) : undefined, pipValuePerLot: ins.kind === 'pip' ? Number(ins.pipValuePerLot) : undefined, createdAt: Date.now() }] });
+          }
+        }
+        const specs = get().getInstrumentSpecs();
+        const known = new Set(get().trades.map((t) => t.external).filter(Boolean));
+        const now = Date.now();
+        const added = trades.filter((t) => !t.external || !known.has(t.external)).map((t, i) => ({
+          ...t, id: uid(), pnl: round2(Number(t.pnl)), pnlPips: computeTradeDerived(t, specs).pnlPips, pnlPercent: 0,
+          createdAt: now + i, updatedAt: now + i,
+        }));
+        set({ trades: [...get().trades, ...added] });
+        get().checkBadges();
+        toast(`${added.length} trade${added.length === 1 ? '' : 's'} imported from MT5`, 'success');
+        return added.length;
+      },
+
       deleteTrade: (id) => {
         const trade = get().trades.find((t) => t.id === id);
         set({ trades: get().trades.filter((t) => t.id !== id) });

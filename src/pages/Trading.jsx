@@ -34,6 +34,8 @@ import { planSplit } from '../utils/trading-plan';
 import { mistakeStats, mistakesOf } from '../utils/trading-journal';
 import PlaybookCard from '../components/trading/PlaybookCard';
 import { SessionPlanCard, DayReviewCard, WeeklyReviewCard } from '../components/trading/RoutineCards';
+import Mt5ImportModal from '../components/trading/Mt5ImportModal';
+import EdgeFinder from '../components/trading/EdgeFinder';
 import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
@@ -230,6 +232,7 @@ export default function Trading() {
   const [space, setSpace] = useState(() => (SPACES.some((s) => s.key === searchParams.get('tab')) ? searchParams.get('tab') : 'today'));
   const [editing, setEditing] = useState(null);
   const [posForm, setPosForm] = useState(null); // { position, mode: 'close' | 'edit' }
+  const [mt5Open, setMt5Open] = useState(false);
   const [filterInstrument, setFilterInstrument] = useState('all');
   const [filterStrategy, setFilterStrategy] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
@@ -433,6 +436,7 @@ export default function Trading() {
                 <Select value={filterPlan} onChange={(e) => setFilterPlan(e.target.value)} options={[{ value: 'all', label: 'On & off plan' }, { value: 'on', label: 'On plan' }, { value: 'off', label: 'Off plan' }, { value: 'untagged', label: 'Not tagged' }]} />
                 <Select value={filterInstrument} onChange={(e) => setFilterInstrument(e.target.value)} options={[{ value: 'all', label: 'All instruments' }, ...instrumentList.map((i) => ({ value: i, label: i }))]} />
                 <Select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)} options={[{ value: 'all', label: 'All strategies' }, ...strategyList.map((s) => ({ value: s, label: s }))]} />
+                <Button variant="secondary" className="!px-2.5 !py-1.5 text-xs" onClick={() => setMt5Open(true)}>Import MT5</Button>
                 <TradeCsvTools trades={filtered} accountName={activeAccount?.name} />
               </div>
             }
@@ -498,6 +502,7 @@ export default function Trading() {
             <Stat label="Expectancy" value={expectancy.value} sub={expectancy.sub} color={rStats ? (rStats.expectancyR >= 0 ? 'var(--success)' : 'var(--error)') : undefined} />
             <Stat label="Max DD (month)" value={fmtPct(maxDd, 1)} color={maxDd > 10 ? 'var(--error)' : undefined} />
           </div>
+          <EdgeFinder trades={trades} currency={currency} />
           <PlanDisciplineCard trades={trades} currency={currency} />
           <Card title="Equity Curve">
             {trades.length ? (
@@ -526,6 +531,10 @@ export default function Trading() {
 
       {space === 'accounts' && (
         <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 text-sm">
+            <span className="flex-1 text-mute">Trading on MetaTrader 5? Import the History report — new account or an existing one, duplicates skipped.</span>
+            <Button variant="secondary" onClick={() => setMt5Open(true)}>Import MT5 report</Button>
+          </div>
           <ScorePanel />
           <TradingAccounts embedded />
         </div>
@@ -534,6 +543,7 @@ export default function Trading() {
       <TradeForm open={formOpen} onClose={() => setFormOpen(false)} editing={editing} />
       <TradeForm open={!!posForm} onClose={() => setPosForm(null)} editing={null} position={posForm?.position || null} positionMode={posForm?.mode || null} />
       <CustomizeTradingModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
+      <Mt5ImportModal open={mt5Open} onClose={() => setMt5Open(false)} onDone={(accountId) => { tradingStore.setActiveAccount(accountId); setMt5Open(false); setSpace('journal'); }} />
 
       <Modal open={balModal} onClose={() => setBalModal(false)} title={`Edit ${activeAccount?.name || 'account'} balance`}>
         <form
