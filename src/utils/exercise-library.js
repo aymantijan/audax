@@ -418,6 +418,10 @@ export const CARDIO_LIBRARY = [
 
 export const CARDIO_BY_ID = Object.fromEntries(CARDIO_LIBRARY.map((m) => [m.id, m]));
 
+// Value stored in workout.sessionType for cardio: it feeds the training-load
+// model (health-science CARDIO_ZONE_LOAD_MULT: zone1..zone5, hiit).
+export const cardioSessionType = (modalityId, zone) => (modalityId === 'cardio-hiit' ? 'hiit' : `zone${Number(zone) || 2}`);
+
 export const CARDIO_CATEGORIES = [
   { value: 'machine', label: 'Machine' },
   { value: 'outdoor', label: 'Extérieur' },

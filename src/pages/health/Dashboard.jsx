@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown } from 'lucide-react';
+import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown, Target, ChevronRight, CalendarDays } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { readinessBand } from '../../utils/health-science';
@@ -7,9 +7,17 @@ import { todayKey } from '../../utils/formatters';
 import { Card, Stat, Button, Input, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
 import BadgeList from '../../components/common/BadgeList';
 import QuickCheckin from './QuickCheckin';
+import { useProgramStore } from '../../store/programStore';
+import DailyView from './program/DailyView';
+import DisciplineCard from './program/DisciplineCard';
+import { tierFor } from './program/ReadinessCard';
 
 export default function Dashboard({ goTo }) {
-  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap } = useHealthStore();
+  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap, nutritionPlans, proteinTargetG, waterLogs, waterTargetMl, getGoalsWithProgress } = useHealthStore();
+  const programAvailable = useProgramStore((s) => s.available);
+  const activeProgram = useProgramStore((s) => s.activeProgram);
+  // Aujourd'hui is also the Programme's daily cockpit — make sure it's loaded.
+  useEffect(() => { if (programAvailable) useProgramStore.getState().initialize(); }, [programAvailable]);
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const today = todayKey();
   const todayLog = energyLogs.find((l) => l.date === today);
@@ -54,7 +62,7 @@ export default function Dashboard({ goTo }) {
       const text = await askHealthQuestion(question.trim());
       setAnswer(text);
     } catch {
-      setAskError("AI coach isn't available right now (not configured or offline) — try again later.");
+      setAskError('Le coach IA n’est pas disponible pour le moment (non configuré ou hors ligne) — réessaie plus tard.');
     } finally {
       setAsking(false);
     }
@@ -62,9 +70,26 @@ export default function Dashboard({ goTo }) {
 
   const toneColor = { danger: 'var(--error)', warning: 'var(--warning)', success: 'var(--success)', info: 'var(--accent-primary)' };
 
+  const tier = tierFor(readiness.score);
+  const activePlan = (nutritionPlans || []).find((p) => p.active);
+  const waterToday = (waterLogs || []).filter((w) => w.date === today).reduce((a, w) => a + (Number(w.amountMl) || 0), 0);
+  const nutritionRows = [
+    { label: 'Calories', value: nutrition.totals.kcal, target: activePlan?.targetKcal, unit: 'kcal', color: 'var(--accent-primary)' },
+    { label: 'Protéines', value: nutrition.totals.protein, target: activePlan?.targetMacros?.proteinG ?? proteinTargetG, unit: 'g', color: 'var(--success)' },
+    { label: 'Glucides', value: nutrition.totals.carbs, target: activePlan?.targetMacros?.carbsG, unit: 'g', color: 'var(--warning)' },
+    { label: 'Lipides', value: nutrition.totals.fat, target: activePlan?.targetMacros?.fatG, unit: 'g', color: 'var(--accent-secondary)' },
+    { label: 'Eau', value: waterToday / 1000, target: (waterTargetMl || 0) / 1000, unit: 'L', color: '#38bdf8' },
+  ].filter((r) => r.target);
+  const nearGoals = getGoalsWithProgress().filter((g) => !g.achieved).sort((a, b) => b.percent - a.percent).slice(0, 3);
+  const r1 = (v) => Math.round(v * 10) / 10;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold capitalize text-ink">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+          <div className="text-xs text-mute">Ta journée santé en un coup d’œil</div>
+        </div>
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={toggleReminders}>
           <span className="flex items-center gap-2">
             {reminders.enabled ? <Bell size={13} /> : <BellOff size={13} />}
@@ -73,129 +98,183 @@ export default function Dashboard({ goTo }) {
         </Button>
       </div>
 
-      {!healthProfile.completedAt && (
-        <div className="flex items-center justify-between gap-3 border border-accent/40 bg-accent/10 rounded-lg px-4 py-3">
-          <span className="text-sm flex items-center gap-2"><ClipboardList size={16} /> Construis ton plan personnalisé (programme + nutrition) — 2 minutes.</span>
-          <Button className="!px-3 !py-1.5 text-xs shrink-0" onClick={() => goTo?.('setup')}>Commencer</Button>
+      {!healthProfile.completedAt && !activeProgram && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3">
+          <span className="flex items-center gap-2 text-sm"><ClipboardList size={16} /> Construis ton plan personnalisé (programme + nutrition) — 2 minutes.</span>
+          <Button className="shrink-0 !px-3 !py-1.5 text-xs" onClick={() => goTo?.('setup')}>Commencer</Button>
         </div>
       )}
 
-      <QuickCheckin />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* ── Left: the day ── */}
+        <div className="min-w-0 space-y-6">
+          {activeProgram ? (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><CalendarDays size={15} className="text-accent" /> Programme du jour</h3>
+                <button onClick={() => goTo?.('programs')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">{activeProgram.name} <ChevronRight size={13} /></button>
+              </div>
+              <DailyView />
+            </div>
+          ) : (
+            <Card title="Séance du jour" action={<Badge>{todayWorkouts.length ? 'Faite' : 'Pas encore'}</Badge>}>
+              {todayWorkouts.length ? (
+                <ul className="space-y-1.5">
+                  {todayWorkouts.map((w) => (
+                    <li key={w.id} className="flex items-center gap-2 text-sm">
+                      <Dumbbell size={13} className="text-mute" /> {w.exercise || w.type} {w.durationMin ? `· ${w.durationMin} min` : ''} {w.quality ? `· ressenti ${w.quality}/10` : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={() => goTo?.('workout')}>Commencer une séance</Button>
+                  <Button variant="secondary" onClick={() => logWorkout({ type: 'cardio', exercise: 'Rest day', durationMin: 0, quality: null, notes: 'Skipped' })}>Pas de séance aujourd’hui</Button>
+                </div>
+              )}
+            </Card>
+          )}
 
-      <Card>
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="relative w-32 h-32 shrink-0">
-            <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="10" />
-              <circle
-                cx="60" cy="60" r="52" fill="none" stroke={band.color} strokeWidth="10" strokeLinecap="round"
-                strokeDasharray={`${(readiness.score / 100) * 326.7} 326.7`}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold">{readiness.score}</span>
-              <span className="text-[11px] font-semibold" style={{ color: band.color }}>{band.label}</span>
+          <QuickCheckin />
+
+          <div className="flex items-start gap-3 rounded-xl border p-4" style={{ borderColor: toneColor[coach.tone], background: `color-mix(in srgb, ${toneColor[coach.tone]} 8%, transparent)` }}>
+            <Activity size={18} style={{ color: toneColor[coach.tone] }} className="mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="mb-1 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: toneColor[coach.tone] }}>Coach</div>
+                {coach.source === 'ai' && <span className="flex items-center gap-1 text-[10px] text-accent"><Sparkles size={10} /> IA</span>}
+              </div>
+              <div className="text-sm">{coach.text}</div>
             </div>
           </div>
-          <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {Object.entries(readiness.breakdown).map(([k, v]) => (
-              <div key={k} className="text-center">
-                <div className="text-xs text-mute mb-1">{({ sleep: 'Sommeil', energy: 'Énergie', stress: 'Stress', recovery: 'Récupération', consistency: 'Régularité' })[k] || k}</div>
-                <div className="text-sm font-semibold">{v}</div>
+
+          {alerts.length > 0 && (
+            <div className="space-y-2">
+              {alerts.map((a) => (
+                <div key={a.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${a.level === 'danger' ? 'border-bad/50 bg-bad/10 text-bad' : 'border-warn/50 bg-warn/10 text-warn'}`}>
+                  <AlertTriangle size={14} /> {a.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {trendAlerts.length > 0 && (
+            <Card title="Alertes de tendance" action={<TrendingUp size={14} className="text-mute" />}>
+              <div className="space-y-2">
+                {trendAlerts.map((a) => (
+                  <div key={a.id} className="text-sm">
+                    <div className={a.level === 'warning' ? 'text-warning' : 'text-ink'}>{a.message}</div>
+                    {a.explanation && <div className="mt-0.5 text-xs text-mute">{a.explanation}</div>}
+                  </div>
+                ))}
               </div>
-            ))}
+            </Card>
+          )}
+
+          <Card title="Nutrition du jour" action={<button onClick={() => goTo?.('nutrition')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">Ajouter un repas <ChevronRight size={13} /></button>}>
+            {nutritionRows.length ? (
+              <div className="space-y-3">
+                {nutritionRows.map((r) => {
+                  const left = r.target - r.value;
+                  return (
+                    <div key={r.label}>
+                      <div className="mb-1 flex items-baseline justify-between text-sm">
+                        <span className="text-ink">{r.label}</span>
+                        <span className="text-xs text-mute">
+                          <span className="font-semibold text-ink">{r1(r.value)}</span> / {r1(r.target)} {r.unit}
+                          {' · '}{left > 0 ? `reste ${r1(left)} ${r.unit}` : 'atteint ✓'}
+                        </span>
+                      </div>
+                      <ProgressBar value={r.value} max={r.target} color={r.color} height={6} />
+                    </div>
+                  );
+                })}
+                {nutrition.quality != null && <div className="text-xs text-mute">Qualité des aliments : {nutrition.quality} %</div>}
+              </div>
+            ) : (
+              <EmptyState>Pas encore de cibles nutritionnelles — crée ton plan dans Nutrition.</EmptyState>
+            )}
+          </Card>
+        </div>
+
+        {/* ── Right: how you are ── */}
+        <div className="space-y-6">
+          <Card>
+            <div className="flex items-center gap-4">
+              <div className="relative h-24 w-24 shrink-0">
+                <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="10" />
+                  <circle cx="60" cy="60" r="52" fill="none" stroke={band.color} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(readiness.score / 100) * 326.7} 326.7`} />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold">{readiness.score}</span>
+                  <span className="text-[10px] font-semibold" style={{ color: band.color }}>{band.label}</span>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-wide text-mute">Readiness</div>
+                <div className="text-sm font-semibold" style={{ color: tier.color }}>{tier.label}</div>
+                <p className="mt-0.5 text-xs text-mute">{tier.action}</p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center">
+              <div><div className="text-[11px] text-mute">Sommeil</div><div className="text-sm font-semibold">{todayLog?.sleepData ? `${todayLog.sleepData.sleepHours} h` : '—'}</div></div>
+              <div><div className="text-[11px] text-mute">Énergie</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.energyStartLevel}/10` : '—'}</div></div>
+              <div><div className="text-[11px] text-mute">Stress</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.stressLevel}/10` : '—'}</div></div>
+            </div>
+          </Card>
+
+          <Card title="Objectifs les plus proches" action={<button onClick={() => goTo?.('goals')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">Tous <ChevronRight size={13} /></button>}>
+            {nearGoals.length ? (
+              <ul className="space-y-3">
+                {nearGoals.map((g) => (
+                  <li key={g.id}>
+                    <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+                      <span className="flex min-w-0 items-center gap-1.5 truncate text-ink"><Target size={12} className="shrink-0 text-accent" /> <span className="truncate">{g.title || g.what}</span></span>
+                      <span className="shrink-0 text-xs font-semibold">{g.percent} %</span>
+                    </div>
+                    <ProgressBar value={g.percent} color={g.percent >= 90 ? 'var(--success)' : 'var(--accent-primary)'} height={6} />
+                    <div className="mt-0.5 text-[11px] text-mute">{g.current ?? '—'} → {g.target} {g.unit}{g.etaWeeks != null ? ` · ≈ ${g.etaWeeks} sem.` : ''}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState>Aucun objectif en cours.</EmptyState>
+            )}
+          </Card>
+
+          {activeProgram && <DisciplineCard />}
+        </div>
+      </div>
+
+      <Card title="Cette semaine" action={<Badge>7 derniers jours</Badge>}>
+        <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
+          <div><div className="mb-1 text-xs text-mute">Jours renseignés</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
+          <div>
+            <div className="mb-1 text-xs text-mute">Séances</div>
+            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
+          </div>
+          <div>
+            <div className="mb-1 text-xs text-mute">Sommeil moy.</div>
+            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
+          </div>
+          <div>
+            <div className="mb-1 text-xs text-mute">Énergie moy.</div>
+            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
           </div>
         </div>
       </Card>
 
-      <div className="border border-line rounded-xl p-4 flex items-start gap-3" style={{ borderColor: toneColor[coach.tone], background: `color-mix(in srgb, ${toneColor[coach.tone]} 8%, transparent)` }}>
-        <Activity size={18} style={{ color: toneColor[coach.tone] }} className="shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: toneColor[coach.tone] }}>Coach</div>
-            {coach.source === 'ai' && (
-              <span className="flex items-center gap-1 text-[10px] text-accent"><Sparkles size={10} /> AI</span>
-            )}
-          </div>
-          <div className="text-sm">{coach.text}</div>
-        </div>
-      </div>
-
       <Card title="Demander au coach santé IA">
-        <form onSubmit={submitQuestion} className="flex gap-2 mb-3">
+        <form onSubmit={submitQuestion} className="mb-3 flex gap-2">
           <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ex. Pourquoi mon énergie est-elle basse cette semaine ?" className="flex-1" />
           <Button type="submit" disabled={asking}>
             <span className="flex items-center gap-2">{asking ? 'Réflexion…' : <><Send size={13} /> Demander</>}</span>
           </Button>
         </form>
-        {answer && <div className="text-sm bg-surface border border-line rounded-lg p-3">{answer}</div>}
+        {answer && <div className="rounded-lg border border-line bg-surface p-3 text-sm">{answer}</div>}
         {askError && <div className="text-sm text-bad">{askError}</div>}
         {!answer && !askError && !asking && <div className="text-xs text-mute">Pose une question sur tes propres données santé — nécessite que le coach IA soit configuré.</div>}
-      </Card>
-
-      {alerts.length > 0 && (
-        <div className="space-y-2">
-          {alerts.map((a) => (
-            <div key={a.id} className={`flex items-center gap-2 text-sm border rounded-lg px-3 py-2 ${a.level === 'danger' ? 'border-bad/50 bg-bad/10 text-bad' : 'border-warn/50 bg-warn/10 text-warn'}`}>
-              <AlertTriangle size={14} /> {a.message}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {trendAlerts.length > 0 && (
-        <Card title="Alertes de tendance" action={<TrendingUp size={14} className="text-mute" />}>
-          <div className="space-y-2">
-            {trendAlerts.map((a) => (
-              <div key={a.id} className="text-sm">
-                <div className={a.level === 'warning' ? 'text-warning' : 'text-ink'}>{a.message}</div>
-                {a.explanation && <div className="text-xs text-mute mt-0.5">{a.explanation}</div>}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Sommeil" value={todayLog?.sleepData ? `${todayLog.sleepData.sleepHours}h · ${todayLog.sleepData.sleepQualityScore}/10` : '—'} />
-        <Stat label="Énergie" value={todayLog ? `${todayLog.energyStartLevel}/10` : '—'} />
-        <Stat label="Stress" value={todayLog ? `${todayLog.stressLevel}/10` : '—'} />
-        <Stat label="Qualité nutritionnelle" value={nutrition.quality != null ? `${nutrition.quality}%` : '—'} sub={`${Math.round(nutrition.totals.protein)} g de protéines aujourd’hui`} />
-      </div>
-
-      <Card title="Séance du jour" action={<Badge>{todayWorkouts.length ? 'Faite' : 'Pas encore'}</Badge>}>
-        {todayWorkouts.length ? (
-          <ul className="space-y-1.5">
-            {todayWorkouts.map((w) => (
-              <li key={w.id} className="text-sm flex items-center gap-2">
-                <Dumbbell size={13} className="text-mute" /> {w.exercise || w.type} {w.durationMin ? `· ${w.durationMin}m` : ''} {w.quality ? `· qualité ${w.quality}/10` : ''}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={() => goTo?.('workout')}>Commencer une séance</Button>
-            <Button variant="secondary" onClick={() => logWorkout({ type: 'cardio', exercise: 'Rest day', durationMin: 0, quality: null, notes: 'Skipped' })}>Pas de séance aujourd’hui</Button>
-          </div>
-        )}
-      </Card>
-
-      <Card title="Cette semaine" action={<Badge>7 derniers jours</Badge>}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-          <div><div className="text-xs text-mute mb-1">Jours renseignés</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
-          <div>
-            <div className="text-xs text-mute mb-1">Séances</div>
-            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
-          </div>
-          <div>
-            <div className="text-xs text-mute mb-1">Sommeil moy.</div>
-            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
-          </div>
-          <div>
-            <div className="text-xs text-mute mb-1">Énergie moy.</div>
-            <div className="text-lg font-semibold flex items-center justify-center gap-1.5">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
-          </div>
-        </div>
       </Card>
 
       {heatmap.some((h) => h.count > 0) && (

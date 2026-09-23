@@ -15,7 +15,7 @@ import { useHabitStore } from '../../../store/habitStore';
  */
 
 // PDF tiers: ≥80 full session · 60-79 reduce volume 20% · <60 Zone 1 only
-function tierFor(score) {
+export function tierFor(score) {
   if (score >= 80) return {
     key: 'full', label: 'Séance complète', color: 'var(--success)', Icon: CheckCircle2,
     action: 'Séance complète comme prévu — bonne journée pour pousser l\'intensité.',
@@ -66,7 +66,7 @@ export default function ReadinessCard() {
         {/* Tier action */}
         {tier ? (
           <div className="flex-1 flex items-start gap-2 rounded-lg border px-3 py-2"
-            style={{ borderColor: tier.color + '55', background: tier.color + '11' }}>
+            style={{ borderColor: `color-mix(in srgb, ${tier.color} 35%, transparent)`, background: `color-mix(in srgb, ${tier.color} 8%, transparent)` }}>
             <tier.Icon size={16} style={{ color: tier.color }} className="mt-0.5 shrink-0" />
             <div>
               <div className="text-xs font-semibold" style={{ color: tier.color }}>{tier.label}</div>

@@ -1063,13 +1063,18 @@ export const useHealthStore = create(
       // reachable; if it isn't, this local recommendation is what stays shown.
       getCoachRecommendation: () => {
         const today = todayKey();
-        if (get().coachCache?.date === today && get().coachCache?.lang === 'fr') return get().coachCache;
         const energyLogs = useHabitStore.getState().energyLogs;
         const todayLog = energyLogs.find((l) => l.date === today);
         const readiness = get().getReadiness();
         const alerts = get().getOvertrainingAlerts();
         const weekAgo = Date.now() - 7 * dayMs;
         const workoutsThisWeek = get().workouts.filter((w) => new Date(w.date).getTime() >= weekAgo).length;
+        // Cached for the day, but only while the inputs are unchanged — a new
+        // workout or check-in must refresh the advice (it used to say "no
+        // training this week" all day after a session was logged).
+        const sig = [workoutsThisWeek, todayLog?.sleepData?.sleepQualityScore, todayLog?.energyStartLevel, todayLog?.stressLevel, readiness.score, alerts.length].join('|');
+        const c = get().coachCache;
+        if (c?.date === today && c?.lang === 'fr' && (c.source === 'ai' || c.sig === sig)) return c;
         const rec = generateCoachRecommendation({
           sleepQuality: todayLog?.sleepData?.sleepQualityScore ?? null,
           energy: todayLog?.energyStartLevel ?? null,
@@ -1078,7 +1083,7 @@ export const useHealthStore = create(
           overtrainingAlerts: alerts,
           workoutsThisWeek,
         });
-        const cached = { date: today, source: 'local', lang: 'fr', ...rec };
+        const cached = { date: today, source: 'local', lang: 'fr', sig, ...rec };
         set({ coachCache: cached });
         return cached;
       },

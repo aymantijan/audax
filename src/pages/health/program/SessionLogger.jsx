@@ -3,7 +3,7 @@ import { Play, Save, X, Plus, Minus } from 'lucide-react';
 import { Modal, Button, Field, Input, Select, Badge } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
 import { useHealthStore } from '../../../store/healthStore';
-import { getCardioConfig, HR_ZONES, CARDIO_METRIC_LABELS } from '../../../utils/exercise-library';
+import { getCardioConfig, HR_ZONES, CARDIO_METRIC_LABELS, cardioSessionType } from '../../../utils/exercise-library';
 
 // ── Progressive overload ──────────────────────────────────────────
 // Last logged performance of an exercise (from healthStore, which every
@@ -253,7 +253,8 @@ export default function SessionLogger({ event, date, onClose }) {
               date,
               type: 'cardio',
               category: 'cardio',
-              sessionType: session.label,
+              // zone code (not the session label) so the training-load model weights it
+              sessionType: cardioSessionType(cardioModality?.id, cardioMetrics.zone ?? parsedCardio.zone),
               exercise: cardioModality?.name || session.label,
               durationMin: durationMin ? parseInt(durationMin) : 0,
               avgRpe: sessionRpe ? parseFloat(sessionRpe) : null,
