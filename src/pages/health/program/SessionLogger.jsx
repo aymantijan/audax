@@ -5,6 +5,51 @@ import { useProgramStore } from '../../../store/programStore';
 import { useHealthStore } from '../../../store/healthStore';
 import { getCardioConfig, HR_ZONES, CARDIO_METRIC_LABELS } from '../../../utils/exercise-library';
 
+// ── Progressive overload ──────────────────────────────────────────
+// Last logged performance of an exercise (from healthStore, which every
+// Programme strength log mirrors into), strictly before `beforeDate`.
+function lastPerformance(exerciseName, beforeDate) {
+  if (!exerciseName) return null;
+  const key = exerciseName.trim().toLowerCase();
+  let workouts = [];
+  try { workouts = useHealthStore.getState().workouts || []; } catch { return null; }
+  const past = workouts.filter((w) => w.type === 'strength' && (w.exercise || '').trim().toLowerCase() === key && w.date < beforeDate);
+  if (!past.length) return null;
+  const lastDate = past.reduce((m, w) => (w.date > m ? w.date : m), past[0].date);
+  const sets = past.filter((w) => w.date === lastDate).flatMap((w) => w.sets || [])
+    .map((st) => ({ reps: Number(st.reps) || 0, weight: Number(st.weight) || 0, rpe: Number(st.rpe) || null }))
+    .filter((st) => st.reps || st.weight);
+  return sets.length ? { date: lastDate, sets } : null;
+}
+
+// Double progression: all sets at the top of the rep range, at or under the
+// target RPE → add load (+2.5 kg, +1 kg for light loads). Any set under the
+// bottom of the range → keep the load. Otherwise → same load, chase reps.
+function suggestLoad(last, plan) {
+  if (!last) return null;
+  const top = Math.max(0, ...last.sets.map((st) => st.weight));
+  if (!top) return null;
+  const working = last.sets.filter((st) => st.weight >= top * 0.9);
+  const repsMax = Number(plan.reps_max) || null;
+  const repsMin = Number(plan.reps_min) || null;
+  const targetRpe = Number(plan.target_rpe) || null;
+  const rpes = working.map((st) => st.rpe).filter(Boolean);
+  const avgRpe = rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
+  const allTop = repsMax && working.every((st) => st.reps >= repsMax);
+  const rpeOk = !targetRpe || avgRpe == null || avgRpe <= targetRpe;
+  if (allTop && rpeOk) {
+    const inc = top >= 20 ? 2.5 : 1;
+    return { weight: Math.round((top + inc) * 4) / 4, kind: 'up', reason: `Toutes les séries à ${repsMax} reps${avgRpe ? ` (RPE ${avgRpe.toFixed(1)})` : ''} → +${inc} kg` };
+  }
+  if (allTop && !rpeOk) {
+    return { weight: top, kind: 'hold', reason: `Reps atteintes mais RPE ${avgRpe.toFixed(1)} > cible ${targetRpe} → garder ${top} kg` };
+  }
+  if (repsMin && working.some((st) => st.reps < repsMin)) {
+    return { weight: top, kind: 'hold', reason: `Une série sous ${repsMin} reps → garder ${top} kg` };
+  }
+  return { weight: top, kind: 'reps', reason: `Même charge, vise ${repsMax || 'plus de'} reps sur chaque série` };
+}
+
 /**
  * Log a programme session — exercises come prefilled from the plan,
  * user taps to change reps/weight/RPE for each set.
@@ -31,20 +76,27 @@ export default function SessionLogger({ event, date, onClose }) {
       }));
     }
     // Prefill from plan
-    return exercises.map((ex) => ({
-      exercise_name: ex.exercise_name,
-      exercise_key: ex.exercise_key,
-      planned_sets: ex.sets_count,
-      planned_reps: `${ex.reps_min}-${ex.reps_max}`,
-      planned_rpe: ex.target_rpe,
-      actual_sets: Array.from({ length: ex.sets_count }, () => ({
-        reps: ex.reps_prefill || Math.round((ex.reps_min + ex.reps_max) / 2),
-        weight_kg: '',
-        rpe: ex.target_rpe || 7,
-        rest_seconds: ex.rest_seconds || 90,
-        form_rating: 'good',
-      })),
-    }));
+    return exercises.map((ex) => {
+      const last = session.type === 'strength' ? lastPerformance(ex.exercise_name, date) : null;
+      const suggestion = suggestLoad(last, ex);
+      return {
+        exercise_name: ex.exercise_name,
+        exercise_key: ex.exercise_key,
+        planned_sets: ex.sets_count,
+        planned_reps: ex.reps_min === ex.reps_max ? `${ex.reps_min ?? ''}` : `${ex.reps_min}-${ex.reps_max}`,
+        planned_rpe: ex.target_rpe,
+        last,
+        suggestion,
+        actual_sets: Array.from({ length: ex.sets_count }, (_, k) => ({
+          reps: ex.reps_prefill || Math.round(((ex.reps_min || 0) + (ex.reps_max || 0)) / 2),
+          // Pre-filled with the suggested load (or last time's load)
+          weight_kg: suggestion?.weight ?? (last?.sets[k]?.weight || ''),
+          rpe: ex.target_rpe || 7,
+          rest_seconds: ex.rest_seconds || 90,
+          form_rating: 'good',
+        })),
+      };
+    });
   }, [exercises, logged]);
 
   const [exerciseRows, setExerciseRows] = useState(initialExercises);
@@ -134,7 +186,7 @@ export default function SessionLogger({ event, date, onClose }) {
               modality_name: cardioModality?.name || session.label,
               metrics: { ...cardioMetrics, duration: durationMin ? parseInt(durationMin) : null },
             }]
-          : exerciseRows,
+          : exerciseRows.map(({ last, suggestion, ...r }) => r), // helper fields stay client-side
         session_rpe: sessionRpe ? parseFloat(sessionRpe) : null,
         energy_level: energyLevel ? parseInt(energyLevel) : null,
         notes: notes || null,
@@ -290,13 +342,33 @@ export default function SessionLogger({ event, date, onClose }) {
 
         {/* Exercises */}
         {exerciseRows.map((row, exIdx) => (
-          <div key={exIdx} className="border border-line rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold">{row.exercise_name}</span>
+          <div key={exIdx} className="rounded-xl border border-line bg-surface/60 p-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-ink">{row.exercise_name}</span>
               <span className="text-xs text-mute">
-                Plan: {row.planned_sets}×{row.planned_reps} @ RPE {row.planned_rpe}
+                Plan : {row.planned_sets}×{row.planned_reps}{row.planned_rpe ? ` @ RPE ${row.planned_rpe}` : ''}
               </span>
             </div>
+            {(row.last || row.suggestion) && (
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+                {row.last && (
+                  <span className="rounded-md bg-card px-2 py-1 text-mute">
+                    Dernière fois ({new Date(row.last.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}) :{' '}
+                    <span className="text-ink">{row.last.sets.map((st) => `${st.reps}×${st.weight}`).join(' · ')} kg</span>
+                  </span>
+                )}
+                {row.suggestion && (
+                  <button
+                    type="button"
+                    onClick={() => setExerciseRows((prev) => prev.map((r, i) => (i !== exIdx ? r : { ...r, actual_sets: r.actual_sets.map((st) => ({ ...st, weight_kg: row.suggestion.weight })) })))}
+                    className={`rounded-md px-2 py-1 font-medium cursor-pointer ${row.suggestion.kind === 'up' ? 'bg-good/15 text-good' : 'bg-accent/10 text-accent'}`}
+                    title="Appliquer cette charge à toutes les séries"
+                  >
+                    {row.suggestion.kind === 'up' ? '↑ ' : ''}{row.suggestion.weight} kg — {row.suggestion.reason}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Sets table */}
             <div className="space-y-1">
