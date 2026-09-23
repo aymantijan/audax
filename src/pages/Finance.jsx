@@ -85,6 +85,9 @@ export default function Finance() {
   // Freeze the default on first visit — otherwise a new user's first entry
   // would silently flip the interface from Simple to Expert.
   useEffect(() => { if (!storedMode) setUiMode(mode); }, [storedMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Post the automatic échéances that fell due since the last visit.
+  const autoPostEcheances = useAccountingStore((s) => s.autoPostEcheances);
+  useEffect(() => { autoPostEcheances(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const todayEnergyLog = useHabitStore((s) => s.energyLogs.find((l) => l.date === todayKey()));
 
   const spaces = useMemo(() => SPACES.filter((sp) => !sp.expertOnly || mode === 'expert'), [mode]);

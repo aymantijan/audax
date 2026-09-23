@@ -5,6 +5,7 @@ import { ENTRY_TEMPLATES } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtDate, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import { useFinanceMode, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
+import { toast } from '../../store/uiStore';
 import AccountSelect from '../../components/common/AccountSelect';
 
 // Seuls les modèles pertinents pour un mouvement RÉCURRENT/PROGRAMMÉ (pas les
@@ -36,7 +37,7 @@ const WEEKDAY_OPTIONS = [
 
 const blank = () => {
   const t = ECHEANCE_TEMPLATES.find((x) => x.id === 'expense');
-  return { label: '', templateId: 'expense', debitAccount: t.debit.default, creditAccount: t.credit.default, amount: '', dueDate: todayKey(), recurrence: 'monthly', weekday: 'mon', endDate: '' };
+  return { label: '', templateId: 'expense', debitAccount: t.debit.default, creditAccount: t.credit.default, amount: '', dueDate: todayKey(), recurrence: 'monthly', weekday: 'mon', endDate: '', autoPost: false };
 };
 
 export default function Echeances() {
@@ -72,7 +73,7 @@ export default function Echeances() {
     // Rétro-compatibilité : une échéance créée avant la généralisation porte encore type+natureAccount+treasuryAccount.
     const debitAccount = e.debitAccount ?? (e.type === 'produit' ? e.treasuryAccount : e.natureAccount);
     const creditAccount = e.creditAccount ?? (e.type === 'produit' ? e.natureAccount : e.treasuryAccount);
-    setForm({ label: e.label, templateId: e.templateId || (e.type === 'produit' ? 'income' : 'expense'), debitAccount, creditAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, weekday: e.weekday || 'mon', endDate: e.endDate || '' });
+    setForm({ label: e.label, templateId: e.templateId || (e.type === 'produit' ? 'income' : 'expense'), debitAccount, creditAccount, amount: e.amount, dueDate: e.dueDate, recurrence: e.recurrence, weekday: e.weekday || 'mon', endDate: e.endDate || '', autoPost: !!e.autoPost });
     setModal(true);
   };
 
@@ -84,7 +85,7 @@ export default function Echeances() {
   const submit = (ev) => {
     ev.preventDefault();
     const res = editing ? editEcheance(editing.id, form) : addEcheance(form);
-    if (res && res.ok === false) return alert(res.error);
+    if (res && res.ok === false) return toast(res.error, 'error');
     setModal(false);
     setEditing(null);
   };
@@ -96,7 +97,7 @@ export default function Echeances() {
     // "payé à temps" streak); `date` is only the entry's own date, which
     // may have been overridden separately in the form.
     const res = markEcheancePaid(row.id, row.occurrenceDate, date);
-    if (!res.ok) alert(res.error);
+    if (!res.ok) toast(res.error, 'error');
   };
 
   const templateOf = (e) => ECHEANCE_TEMPLATES.find((t) => t.id === e.templateId) || ECHEANCE_TEMPLATES.find((t) => t.id === (e.type === 'produit' ? 'income' : 'expense'));
@@ -181,6 +182,7 @@ export default function Echeances() {
                     {e.recurrence === 'weekly' && e.weekday ? ` (${WEEKDAY_OPTIONS.find((w) => w.value === e.weekday)?.label})` : ''}
                   </span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
+                  {e.autoPost && e.active && <Badge color="var(--accent-primary)">Auto</Badge>}
                   {!e.active && <Badge color="var(--text-secondary)">Inactive</Badge>}
                   <button className="text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
                     {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
@@ -245,6 +247,13 @@ export default function Echeances() {
               <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} disabled={form.recurrence === 'once'} />
             </Field>
           </div>
+          <label className="flex items-start gap-2 text-sm cursor-pointer rounded-lg border border-line p-3">
+            <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={!!form.autoPost} onChange={(e) => setForm({ ...form, autoPost: e.target.checked })} />
+            <span>
+              <span className="text-ink">Enregistrer automatiquement à chaque échéance</span>
+              <span className="block text-[11px] text-mute">Pour les montants fixes (loyer, abonnement, salaire, bourse) : l'opération est ajoutée toute seule à sa date, sans avoir à la marquer payée.</span>
+            </span>
+          </label>
           <div className="flex justify-between gap-3 pt-2 border-t border-line">
             {editing ? (
               <Button type="button" variant="danger" onClick={() => { deleteEcheance(editing.id); setModal(false); setEditing(null); }}>

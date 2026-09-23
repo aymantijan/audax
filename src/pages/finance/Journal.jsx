@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2, Pencil, ChevronDown, ChevronRight, Import, Scale, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Circle } from 'lucide-react';
 import { useFinanceMode, describeEntry, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
+import QuickEntryModal from '../../components/finance/QuickEntryModal';
+import BankImportModal from '../../components/finance/BankImportModal';
+import { Zap, FileUp } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useFinanceStore } from '../../store/financeStore';
 import { ENTRY_TEMPLATES, accountLabel, classOf } from '../../utils/chart-of-accounts';
@@ -226,6 +229,8 @@ export default function Journal() {
   const [expanded, setExpanded] = useState({});
   const [monthFilter, setMonthFilter] = useState('');
   const [deleting, setDeleting] = useState(null);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const mode = useFinanceMode();
   const simple = mode === 'simple';
   // Simple mode edits 2-line entries in the guided form; anything else opens the expert form.
@@ -269,6 +274,8 @@ export default function Journal() {
               <span className="flex items-center gap-2"><Import size={15} /> Importer {legacyCount} anciennes transactions</span>
             </Button>
           )}
+          <Button variant="secondary" onClick={() => setImportOpen(true)}><span className="flex items-center gap-1.5"><FileUp size={15} /> Relevé bancaire</span></Button>
+          <Button variant="secondary" onClick={() => setQuickOpen(true)}><span className="flex items-center gap-1.5"><Zap size={15} /> Saisie éclair</span></Button>
           {!simple && <Button variant="secondary" onClick={() => { setEditing(null); setModal('expert'); }}>Saisie experte</Button>}
           <Button onClick={() => { setEditing(null); setModal('template'); }}>
             <span className="flex items-center gap-2"><Plus size={16} /> {simple ? 'Nouvelle opération' : 'Nouvelle écriture'}</span>
@@ -371,6 +378,8 @@ export default function Journal() {
           <TemplateForm key={editing?.id || 'new'} simple={simple} initial={editing} onSubmit={submit} onCancel={() => { setModal(null); setEditing(null); }} />
         )}
       </Modal>
+      <QuickEntryModal open={quickOpen} onClose={() => setQuickOpen(false)} />
+      <BankImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title={simple ? 'Supprimer cette opération ?' : 'Supprimer cette écriture ?'}>
         <p className="text-sm text-mute">« {deleting?.label} » sera supprimée, ainsi que son effet sur vos soldes, budgets et états.</p>
         <div className="flex justify-end gap-2 mt-5">

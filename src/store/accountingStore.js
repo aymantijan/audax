@@ -589,6 +589,8 @@ export const useAccountingStore = create(
           recurrence: data.recurrence || 'once',
           weekday: data.recurrence === 'weekly' ? data.weekday || 'mon' : null,
           endDate: data.endDate || null,
+          // Posted to the journal automatically on its date (Finances n°2).
+          autoPost: !!data.autoPost,
           active: true,
           paidDates: [],
           createdAt: Date.now(),
@@ -614,14 +616,19 @@ export const useAccountingStore = create(
       // l'écriture si l'utilisateur l'a modifiée dans le formulaire —
       // distinction nécessaire pour ne pas confondre "j'ai backdaté une
       // écriture" avec "j'ai payé en retard".
-      markEcheancePaid: (id, occurrenceDate, entryDate) => {
+      markEcheancePaid: (id, occurrenceDate, entryDate, { auto = false } = {}) => {
         const ech = get().echeances.find((e) => e.id === id);
         if (!ech) return { ok: false, error: 'Échéance introuvable.' };
         const amount = Number(ech.amount);
         const { debitAccount, creditAccount } = resolveEcheanceLines(ech);
         const lines = [{ account: debitAccount, debit: amount, credit: 0 }, { account: creditAccount, debit: 0, credit: amount }];
-        const res = get().addEntry({ date: entryDate || occurrenceDate, label: ech.label, lines });
+        const res = get().addEntry({ date: entryDate || occurrenceDate, label: ech.label, lines, ...(auto ? { auto: true, echeanceId: id } : {}) });
         if (!res.ok) return res;
+        if (auto) {
+          // Automatic posting: no punctuality streak / XP (nobody "paid on time").
+          set({ echeances: get().echeances.map((e) => (e.id === id ? stamp({ ...e, paidDates: [...(e.paidDates || []), occurrenceDate], ...(e.recurrence === 'once' ? { active: false } : {}) }) : e)) });
+          return { ok: true };
+        }
         // "À temps" = marqué payé au plus tard le jour de son échéance
         // théorique — comparé à AUJOURD'HUI (l'instant du clic), pas à la
         // date de l'écriture (qui peut être backdatée sans rapport avec la
@@ -640,6 +647,24 @@ export const useAccountingStore = create(
           ),
         });
         return { ok: true };
+      },
+
+      // Enregistre au journal toutes les occurrences échues (jusqu'à aujourd'hui
+      // inclus) des échéances en mode automatique — salaire, loyer, abonnements…
+      // Idempotent grâce à paidDates. Renvoie le nombre d'écritures créées.
+      autoPostEcheances: () => {
+        const today = localDateKey(new Date());
+        let posted = 0;
+        for (const e of get().echeances.filter((x) => x.active && x.autoPost)) {
+          const done = new Set(e.paidDates || []);
+          for (const occ of echeanceOccurrences(e, e.dueDate, today)) {
+            if (done.has(occ)) continue;
+            const res = get().markEcheancePaid(e.id, occ, occ, { auto: true });
+            if (res.ok) posted += 1;
+          }
+        }
+        if (posted) toast(`${posted} échéance(s) enregistrée(s) automatiquement`, 'success');
+        return posted;
       },
 
       // Occurrences à venir dans les `daysAhead` prochains jours, toutes échéances

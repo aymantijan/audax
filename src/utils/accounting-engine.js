@@ -698,6 +698,8 @@ const WEEKDAY_JS_DAY = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 
 // prévision, pas un relevé. weekly avance de 7 jours pile, sans cette dérive —
 // la 1ère occurrence est calée sur ech.weekday à partir de dueDate (le jour de
 // la semaine choisi prime sur le jour du mois de dueDate).
+const localKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export function echeanceOccurrences(ech, fromDate, toDate) {
   if (!ech.active) return [];
   const from = new Date(fromDate + 'T00:00:00');
@@ -721,8 +723,13 @@ export function echeanceOccurrences(ech, fromDate, toDate) {
   while (d <= to && guard < 600) {
     guard++;
     if (end && d > end) break;
-    const key = d.toISOString().slice(0, 10);
-    if (d >= from && !paid.has(key)) out.push(key);
+    // Local calendar date (toISOString() shifted every occurrence one day
+    // early east of UTC, e.g. Morocco). paidDates saved before this fix hold
+    // that shifted key, so an occurrence also counts as paid if the day
+    // before it is in paidDates.
+    const key = localKey(d);
+    const prevKey = localKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+    if (d >= from && !paid.has(key) && !paid.has(prevKey)) out.push(key);
     d = isWeekly ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7) : new Date(d.getFullYear(), d.getMonth() + stepMonths, d.getDate());
   }
   return out;
