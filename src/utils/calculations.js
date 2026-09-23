@@ -132,13 +132,14 @@ export function weeklyProgress(habit, logs, dateKey) {
   const from = weekStartKey(dateKey);
   const end = new Date(from + 'T12:00:00'); end.setDate(end.getDate() + 6);
   const to = isoDay(end);
-  const done = logs.filter((l) => l.habitId === habit.id && l.completed && l.date >= from && l.date <= to).length;
+  const done = logs.filter((l) => l.habitId === habit.id && (l.completed || l.joker) && l.date >= from && l.date <= to).length;
   return { done, target, met: done >= target };
 }
 
 // Should a habit appear on the checklist of `dateKey`? Weekly habits stay
 // listed until their weekly quota is met (and on the days they were done).
 export function isHabitShownOn(habit, logs, dateKey) {
+  if (habit.kind === 'quit') return false;
   if (habit.startDate && habit.startDate > dateKey) return false;
   if (habit.frequency === 'weekly') {
     const doneThatDay = logs.some((l) => l.habitId === habit.id && l.date === dateKey && l.completed);
@@ -149,6 +150,29 @@ export function isHabitShownOn(habit, logs, dateKey) {
 
 // Unit of habitStreak(): weeks for weekly habits, days otherwise.
 export const streakUnit = (habit) => (habit?.frequency === 'weekly' ? 'sem.' : 'j');
+
+// Habits to quit ("jours sans…"): days since the last relapse (or since the
+// habit started), today included.
+export function quitStreak(habit, today) {
+  const relapses = (habit.relapses || []).filter((d) => d <= today).sort();
+  const last = relapses[relapses.length - 1];
+  let from = habit.startDate || today;
+  if (last) {
+    const d = new Date(last + 'T12:00:00'); d.setDate(d.getDate() + 1); from = isoDay(d);
+  }
+  if (from > today) return 0;
+  return Math.round((new Date(today + 'T12:00:00') - new Date(from + 'T12:00:00')) / 86400000) + 1;
+}
+
+// Longest clean run ever for a quit habit.
+export function quitBest(habit, today) {
+  const start = habit.startDate || today;
+  const cuts = [...new Set((habit.relapses || []).filter((d) => d >= start && d <= today))].sort();
+  let best = 0; let from = start;
+  const days = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
+  for (const r of cuts) { best = Math.max(best, days(from, r)); const d = new Date(r + 'T12:00:00'); d.setDate(d.getDate() + 1); from = isoDay(d); }
+  return Math.max(best, from <= today ? days(from, today) + 1 : 0);
+}
 
 // Weekly habits: consecutive weeks that met their quota. The running week
 // counts once met; until then the streak is carried by the previous weeks.
@@ -167,17 +191,20 @@ function weeklyStreak(habit, logs, today) {
 }
 
 export function habitStreak(habitId, logs, today, habit) {
+  if (habit?.kind === 'quit') return quitStreak(habit, today);
   if (habit?.frequency === 'weekly') return weeklyStreak(habit, logs, today);
   const done = new Set(logs.filter((l) => l.habitId === habitId && l.completed).map((l) => l.date));
+  const joker = new Set(logs.filter((l) => l.habitId === habitId && l.joker && !l.completed).map((l) => l.date));
   const d = new Date(today + 'T00:00:00');
   if (isHabitDueOn(habit, isoDay(d)) && !done.has(isoDay(d))) d.setDate(d.getDate() - 1); // today not done yet → count from yesterday
   let streak = 0;
   for (let guard = 0; guard < 3660; guard++) {
     const key = isoDay(d);
-    if (!isHabitDueOn(habit, key)) {
+    if (!isHabitDueOn(habit, key) || joker.has(key)) {
       d.setDate(d.getDate() - 1);
       continue;
     }
+    if (habit?.startDate && key < habit.startDate) break;
     if (!done.has(key)) break;
     streak++;
     d.setDate(d.getDate() - 1);
@@ -189,9 +216,10 @@ export function habitStreak(habitId, logs, today, habit) {
 // habit would otherwise count as 6 misses per week. Custom (specific-weekday)
 // habits only count on the days they're actually scheduled.
 export function habitCompliance(habits, logs, days = 7, today) {
-  const active = habits.filter((h) => !h.archived && h.frequency !== 'weekly');
+  const active = habits.filter((h) => !h.archived && h.frequency !== 'weekly' && h.kind !== 'quit');
   if (!active.length) return { completed: 0, total: 0, rate: 0 };
   const doneKeys = new Set(logs.filter((l) => l.completed).map((l) => `${l.habitId}|${l.date}`));
+  const jokerKeys = new Set(logs.filter((l) => l.joker && !l.completed).map((l) => `${l.habitId}|${l.date}`));
   let completed = 0;
   let total = 0;
   for (let i = 0; i < days; i++) {
@@ -202,6 +230,7 @@ export function habitCompliance(habits, logs, days = 7, today) {
       const started = !h.startDate || h.startDate <= key;
       if (!started) continue;
       if (!isHabitDueOn(h, key)) continue;
+      if (jokerKeys.has(`${h.id}|${key}`)) continue;
       total++;
       if (doneKeys.has(`${h.id}|${key}`)) completed++;
     }

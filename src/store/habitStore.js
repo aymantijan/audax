@@ -42,6 +42,8 @@ export const useHabitStore = create(
       logs: [], // { habitId, date: 'YYYY-MM-DD', completed, createdAt }
       energyLogs: [], // one per date, keyed by log.date
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
+      pauses: [], // vacation / sick periods: [{ id, from, to, reason }] — covered days are jokers for every habit
+      habitSettings: { jokersPerMonth: 2 }, // jokers per habit per calendar month (streak protection)
 
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'decision-discipline-lv1');
@@ -56,6 +58,12 @@ export const useHabitStore = create(
           xpReward: Number(data.xpReward) || 5,
           timesPerWeek: data.frequency === 'weekly' ? Math.max(1, Math.min(7, Number(data.timesPerWeek) || 1)) : null,
           moment: data.moment || 'any',
+          kind: data.kind || 'check', // 'check' | 'quantity' | 'quit'
+          target: data.kind === 'quantity' ? Number(data.target) || 1 : null,
+          unit: data.kind === 'quantity' ? data.unit || '' : null,
+          direction: data.kind === 'quantity' ? data.direction || 'atLeast' : null, // 'atLeast' | 'atMost'
+          source: data.kind === 'quantity' ? data.source || null : null, // auto source (utils/habit-sources.js)
+          relapses: [],
           archived: false,
           startDate: todayKey(),
           createdAt: Date.now(),
@@ -72,6 +80,7 @@ export const useHabitStore = create(
             h.id === id ? {
               ...h, ...updates, xpReward: Number(updates.xpReward ?? h.xpReward),
               timesPerWeek: (updates.frequency ?? h.frequency) === 'weekly' ? Math.max(1, Math.min(7, Number(updates.timesPerWeek ?? h.timesPerWeek) || 1)) : null,
+              ...((updates.kind ?? h.kind) === 'quantity' ? { target: Number(updates.target ?? h.target) || 1 } : {}),
               updatedAt: Date.now(),
             } : h
           ),
@@ -97,6 +106,20 @@ export const useHabitStore = create(
       toggleHabit: (habitId, date = todayKey()) => {
         const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
         const habit = get().habits.find((h) => h.id === habitId);
+        // Measured habits: a tick means "target reached" (manual ones only).
+        if (habit?.kind === 'quantity') {
+          if (habit.source) { toast('Suivi automatique : cette habitude se met à jour toute seule', 'info'); return; }
+          get().setHabitValue(habitId, date, existing?.completed ? 0 : habit.target);
+          return;
+        }
+        if (habit?.kind === 'quit') return;
+        // Ticking a joker day turns it into a real completion.
+        if (existing?.joker && !existing.completed) {
+          set({ logs: get().logs.map((l) => (l === existing ? { ...l, joker: false, pause: false, completed: true } : l)) });
+          if (habit?.linkedSkill) useSkillStore.getState().awardXP(habit.linkedSkill, habit.xpReward, `habit: ${habit.name}`);
+          get().checkBadges();
+          return;
+        }
         if (existing) {
           const nowCompleted = !existing.completed;
           set({ logs: get().logs.map((l) => (l === existing ? { ...l, completed: nowCompleted } : l)) });
@@ -122,6 +145,91 @@ export const useHabitStore = create(
       // as completed for that date — no queueHabitPrompt call here, since
       // the health log this is reacting to already exists (nothing to
       // prompt "log it?" about).
+      // ── Measured habits ──
+      // Writes the day's value and derives completion; XP follows completion.
+      // 'atMost' habits (≤ 2 cafés…) only count once the day is over.
+      setHabitValue: (habitId, date, value, { auto = false } = {}) => {
+        const habit = get().habits.find((h) => h.id === habitId);
+        if (!habit) return;
+        const v = Math.max(0, Math.round(Number(value) * 100) / 100 || 0);
+        const target = Number(habit.target) || 1;
+        const completed = habit.direction === 'atMost' ? date < todayKey() && v <= target : v >= target;
+        const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
+        if (existing && existing.value === v && !!existing.completed === completed) return;
+        const wasDone = !!existing?.completed;
+        const entry = { ...(existing || { habitId, date, createdAt: Date.now() }), value: v, completed, auto, joker: existing?.joker && !completed ? existing.joker : false };
+        set({ logs: existing ? get().logs.map((l) => (l === existing ? entry : l)) : [...get().logs, entry] });
+        if (habit.linkedSkill && completed !== wasDone) {
+          if (completed) useSkillStore.getState().awardXP(habit.linkedSkill, habit.xpReward, `habitude : ${habit.name}`);
+          else useSkillStore.getState().removeXP(habit.linkedSkill, habit.xpReward, `habitude annulée : ${habit.name}`);
+        }
+        if (completed && !wasDone) get().checkBadges();
+      },
+
+      // ── Streak protection ──
+      jokersLeft: (habitId, date = todayKey()) => {
+        const month = date.slice(0, 7);
+        const used = get().logs.filter((l) => l.habitId === habitId && l.joker && !l.pause && l.date.startsWith(month)).length;
+        return Math.max(0, (get().habitSettings?.jokersPerMonth ?? 2) - used);
+      },
+      useJoker: (habitId, date = todayKey()) => {
+        if (get().jokersLeft(habitId, date) <= 0) { toast('Plus de joker ce mois-ci pour cette habitude', 'error'); return; }
+        const existing = get().logs.find((l) => l.habitId === habitId && l.date === date);
+        if (existing?.completed) return;
+        const entry = { ...(existing || { habitId, date, createdAt: Date.now() }), joker: true, completed: false };
+        set({ logs: existing ? get().logs.map((l) => (l === existing ? entry : l)) : [...get().logs, entry] });
+        toast('Joker utilisé : la série est protégée', 'success');
+      },
+      removeJoker: (habitId, date) =>
+        set({ logs: get().logs.map((l) => (l.habitId === habitId && l.date === date ? { ...l, joker: false, pause: false } : l)) }),
+      setJokersPerMonth: (n) => set({ habitSettings: { ...(get().habitSettings || {}), jokersPerMonth: Math.max(0, Math.min(10, Number(n) || 0)) } }),
+
+      // Vacation / illness: every covered day is a joker for every habit (not
+      // counted against the monthly allowance).
+      startPause: ({ from, to, reason = '' }) => {
+        if (!from || !to || to < from) return { ok: false, error: 'Dates invalides.' };
+        const days = [];
+        const d = new Date(from + 'T12:00:00');
+        for (let i = 0; i < 92; i++) {
+          const k = todayKey(d);
+          if (k > to) break;
+          days.push(k); d.setDate(d.getDate() + 1);
+        }
+        const pause = { id: uid(), from, to: days[days.length - 1], reason };
+        let logs = [...get().logs];
+        for (const h of get().habits.filter((x) => !x.archived && x.kind !== 'quit')) {
+          for (const k of days) {
+            const i = logs.findIndex((l) => l.habitId === h.id && l.date === k);
+            // Keep a joker the user already placed as theirs (pause: false), so ending the pause doesn't remove it.
+            if (i >= 0) { if (!logs[i].completed && !logs[i].joker) logs[i] = { ...logs[i], joker: true, pause: true }; }
+            else logs.push({ habitId: h.id, date: k, completed: false, joker: true, pause: true, createdAt: Date.now() });
+          }
+        }
+        set({ pauses: [...(get().pauses || []), pause], logs });
+        toast(`Pause du ${from} au ${pause.to} : vos séries sont protégées`, 'success');
+        return { ok: true };
+      },
+      // Ends a pause now: keeps past pause days, frees today and the future.
+      endPause: (id) => {
+        const pause = (get().pauses || []).find((p) => p.id === id);
+        if (!pause) return;
+        const today = todayKey();
+        set({
+          logs: get().logs.filter((l) => !(l.pause && l.date >= today && l.date >= pause.from && l.date <= pause.to && !l.completed)),
+          // Ends yesterday; a pause that started today disappears entirely.
+          pauses: get().pauses.map((p) => (p.id === id ? { ...p, to: todayKey(new Date(Date.now() - 86400000)), ended: true } : p)).filter((p) => p.to >= p.from),
+        });
+        toast('Pause terminée', 'info');
+      },
+
+      // ── Habits to quit ──
+      logRelapse: (habitId, date = todayKey()) => {
+        set({ habits: get().habits.map((h) => (h.id === habitId ? { ...h, relapses: [...new Set([...(h.relapses || []), date])].sort(), updatedAt: Date.now() } : h)) });
+        toast('Noté. Une rechute n’efface pas vos progrès : on repart.', 'info');
+      },
+      undoRelapse: (habitId, date) =>
+        set({ habits: get().habits.map((h) => (h.id === habitId ? { ...h, relapses: (h.relapses || []).filter((d) => d !== date), updatedAt: Date.now() } : h)) }),
+
       completeLinkedHabits: (linkType, date = todayKey()) => {
         const matches = get().habits.filter((h) => !h.archived && h.healthLink === linkType);
         for (const habit of matches) {
@@ -169,7 +277,7 @@ export const useHabitStore = create(
         toast('Sieste enregistrée', 'success');
       },
 
-      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [] }),
+      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 } }),
     }),
     { name: 'audax-habits' }
   )

@@ -163,6 +163,7 @@ export default function Today() {
                       {HABIT_CATEGORY_LABELS[h.category] || h.category}
                       {h.mandatory ? ' · obligatoire' : ''}
                       {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
+                      {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
                     </div>
                   </div>
                   {streak >= 3 && <Flame size={14} className="text-warn shrink-0" />}

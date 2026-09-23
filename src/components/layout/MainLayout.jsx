@@ -3,12 +3,14 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
 import { StudyTimerDock } from '../learning/StudyTimer';
+import { useAutoHabitSync } from '../../hooks/useAutoHabitSync';
 import QuickAdd from './QuickAdd';
 import ErrorBoundary from '../common/ErrorBoundary';
 import { ToastContainer, PageLoader } from '../common/ui';
 
 export default function MainLayout() {
   const location = useLocation();
+  useAutoHabitSync(); // measured habits tick themselves from the other sections
   return (
     <div className="min-h-screen bg-base text-ink">
       <Navbar />

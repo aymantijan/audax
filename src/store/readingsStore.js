@@ -24,6 +24,7 @@ export const useReadingsStore = create(
       library: [], // master catalog: [{ id, title, author, genre, pages, words, description, year, popularity, linkedSkills, addedAt }]
       progress: [], // reading state: [{ id, bookId, pagesRead, customPages, customWords, status, startedAt, completedAt, updatedAt }]
       readLog: [], // [{ date: 'YYYY-MM-DD' }] one entry per day any page was read — powers the streak
+      pagesByDate: {}, // { 'YYYY-MM-DD': pages read that day } — feeds auto-tracked habits ("lire 20 pages")
       catalogSeeded: false, // legacy flag (v1) — kept for migration
       seededKeys: null, // keys (title|author) already offered by a catalog — user deletions stay deleted
 
@@ -149,9 +150,11 @@ export const useReadingsStore = create(
           ),
         });
 
-        // Log today for the streak (idempotent per day)
+        // Log today for the streak (idempotent per day) + per-day page count
         const today = todayKey();
         if (!get().readLog.some((l) => l.date === today)) set({ readLog: [...get().readLog, { date: today }] });
+        const pbd = get().pagesByDate || {};
+        set({ pagesByDate: { ...pbd, [today]: (pbd[today] || 0) + 1 } });
 
         const book = get().library.find((b) => b.id === p.bookId);
         const skillIds = book?.linkedSkills?.length ? book.linkedSkills : [DEFAULT_SKILL];
@@ -179,6 +182,9 @@ export const useReadingsStore = create(
         const wasCompleted = p.status === 'completed';
         const pagesRead = p.pagesRead - 1;
         const total = get().totalPagesFor(p);
+        const pbd = get().pagesByDate || {};
+        const tk = todayKey();
+        if (pbd[tk]) set({ pagesByDate: { ...pbd, [tk]: pbd[tk] - 1 } });
 
         set({
           progress: get().progress.map((x) =>
@@ -227,7 +233,7 @@ export const useReadingsStore = create(
         return streak;
       },
 
-      resetAll: () => set({ library: [], progress: [], readLog: [], catalogSeeded: false, seededKeys: null }),
+      resetAll: () => set({ library: [], progress: [], readLog: [], pagesByDate: {}, catalogSeeded: false, seededKeys: null }),
     }),
     { name: 'audax-readings' }
   )

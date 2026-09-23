@@ -2,13 +2,15 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck, Check, Sunrise, Sun, Moon,
-  Clock, Archive, ArchiveRestore, ShieldAlert, HeartPulse, Target, ListChecks, ChevronDown,
+  Clock, Archive, ArchiveRestore, ShieldAlert, HeartPulse, Target, ListChecks, ChevronDown, Snowflake, Minus, Ban, Gauge, Zap, Palmtree, Trophy,
 } from 'lucide-react';
+import { HABIT_SOURCES, sourceMeta } from '../utils/habit-sources';
+import { baseCurrencyShort } from '../utils/formatters';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useSkillStore } from '../store/skillStore';
-import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit } from '../utils/calculations';
+import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit, quitStreak, quitBest } from '../utils/calculations';
 import { calculateSleepScore, SLEEP_BAND_COLOR, SLEEP_BAND_LABEL } from '../utils/sleep-quality';
 import { calculateStressLevel, stressLabel } from '../utils/stress-calculator';
 import { checkBurnoutTriggers } from '../utils/burnout';
@@ -128,7 +130,13 @@ function CheckinModal({ open, onClose, date }) {
 }
 
 // ── Add / edit a habit ───────────────────────────────────────────────────
-const blankHabit = () => ({ name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30 });
+const blankHabit = () => ({ kind: 'check', name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30, target: 8, unit: '', direction: 'atLeast', source: '' });
+const KINDS = [
+  { value: 'check', label: 'À cocher', Icon: Check, desc: 'Fait / pas fait' },
+  { value: 'quantity', label: 'Mesurable', Icon: Gauge, desc: 'Verres, pages, minutes… (peut être automatique)' },
+  { value: 'quit', label: 'À arrêter', Icon: Ban, desc: 'Compteur de jours sans (cigarette, réseaux…)' },
+];
+const unitOf = (src) => (src?.value === 'spent_amount' ? baseCurrencyShort() : src?.unit || '');
 
 function HabitFormModal({ open, onClose, habit }) {
   const { addHabit, editHabit } = useHabitStore();
@@ -139,7 +147,7 @@ function HabitFormModal({ open, onClose, habit }) {
   useEffect(() => {
     if (!open) return;
     setError(''); setTemplate('');
-    setF(habit ? { ...blankHabit(), ...habit, linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1 } : blankHabit());
+    setF(habit ? { ...blankHabit(), ...habit, kind: habit.kind || 'check', linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1, source: habit.source || '', target: habit.target ?? 8, unit: habit.unit || '', direction: habit.direction || 'atLeast' } : blankHabit());
   }, [open, habit]);
 
   const applyTemplate = (value) => {
@@ -148,15 +156,18 @@ function HabitFormModal({ open, onClose, habit }) {
     const tpl = HABIT_TEMPLATES.find((g) => g.group === group)?.items.find((i) => i.name === name);
     if (!tpl) return;
     const linkedSkill = tpl.linkedSkill && skills[tpl.linkedSkill] && !skills[tpl.linkedSkill].locked ? tpl.linkedSkill : '';
-    setF({ ...blankHabit(), ...tpl, linkedSkill, timesPerWeek: tpl.frequency === 'weekly' ? 1 : 3 });
+    setF({ ...blankHabit(), ...tpl, linkedSkill, timesPerWeek: tpl.frequency === 'weekly' ? 1 : 3, source: tpl.source || '', unit: tpl.unit || unitOf(sourceMeta(tpl.source)) });
   };
   const submit = (e) => {
     e.preventDefault();
     const res = validate(habitSchema, { ...f, linkedSkill: f.linkedSkill || undefined, healthLink: f.healthLink || undefined });
     if (!res.ok) return setError(res.error);
-    if (f.frequency === 'custom' && !f.weekdays?.length) return setError('Choisissez au moins un jour.');
+    if (f.kind !== 'quit' && f.frequency === 'custom' && !f.weekdays?.length) return setError('Choisissez au moins un jour.');
+    if (f.kind === 'quantity' && !(Number(f.target) > 0) && f.direction === 'atLeast') return setError('Indiquez une cible supérieure à 0.');
     const data = {
-      ...res.data, moment: f.moment, frequency: f.frequency,
+      ...res.data, kind: f.kind, moment: f.kind === 'quit' ? 'any' : f.moment, frequency: f.kind === 'quit' ? 'daily' : f.frequency,
+      target: f.kind === 'quantity' ? Number(f.target) : null, unit: f.kind === 'quantity' ? f.unit : null,
+      direction: f.kind === 'quantity' ? f.direction : null, source: f.kind === 'quantity' ? f.source || null : null,
       weekdays: f.frequency === 'custom' ? f.weekdays : [],
       timesPerWeek: f.frequency === 'weekly' ? Number(f.timesPerWeek) || 1 : null,
       duration: Number(f.duration) || 15, targetStreak: Number(f.targetStreak) || 30,
@@ -170,7 +181,7 @@ function HabitFormModal({ open, onClose, habit }) {
     <Modal open={open} onClose={onClose} title={habit ? 'Modifier l’habitude' : 'Nouvelle habitude'} wide>
       <form onSubmit={submit} className="space-y-4">
         {!habit && (
-          <Field label="Partir d’un modèle (optionnel)" hint="70 modèles : trading, apprentissage, finances, santé, réflexion…">
+          <Field label="Partir d’un modèle (optionnel)" hint="89 modèles : à cocher, mesurables (souvent automatiques) et à arrêter">
             <Select value={template} onChange={(e) => applyTemplate(e.target.value)}>
               <option value="">— Partir de zéro —</option>
               {HABIT_TEMPLATES.map((g) => (
@@ -181,9 +192,38 @@ function HabitFormModal({ open, onClose, habit }) {
             </Select>
           </Field>
         )}
-        <Field label="Habitude"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ex. Lire 20 pages" autoFocus /></Field>
+        <div className="grid grid-cols-3 gap-2">
+          {KINDS.map((k) => (
+            <button key={k.value} type="button" onClick={() => setF({ ...f, kind: k.value })}
+              className={`rounded-xl border p-2.5 text-left cursor-pointer ${f.kind === k.value ? 'border-accent bg-accent/10' : 'border-line hover:border-accent/50'}`}>
+              <k.Icon size={15} className={f.kind === k.value ? 'text-accent' : 'text-mute'} />
+              <div className="text-xs font-semibold text-ink mt-1">{k.label}</div>
+              <div className="text-[10px] text-mute leading-snug">{k.desc}</div>
+            </button>
+          ))}
+        </div>
+        <Field label="Habitude"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={f.kind === 'quit' ? 'ex. Pas de réseaux sociaux avant midi' : f.kind === 'quantity' ? 'ex. Lire 20 pages' : 'ex. Méditer 10 min'} autoFocus /></Field>
 
-        <div>
+        {f.kind === 'quantity' && (
+          <div className="rounded-xl border border-line p-3 space-y-3">
+            <Field label="Suivi" hint={f.source ? 'La valeur du jour est lue automatiquement : rien à cocher.' : 'Vous saisissez la valeur du jour (+ / −).'}>
+              <Select value={f.source} onChange={(e) => { const src = sourceMeta(e.target.value); setF({ ...f, source: e.target.value, unit: src ? unitOf(src) : f.unit }); }}>
+                <option value="">Saisie manuelle</option>
+                <optgroup label="Automatique, depuis vos autres sections">
+                  {HABIT_SOURCES.map((src) => <option key={src.value} value={src.value}>{src.label}</option>)}
+                </optgroup>
+              </Select>
+            </Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Objectif"><Select value={f.direction} onChange={(e) => setF({ ...f, direction: e.target.value })} options={[{ value: 'atLeast', label: 'Au moins' }, { value: 'atMost', label: 'Au plus' }]} /></Field>
+              <Field label="Valeur"><Input type="number" min="0" step="any" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></Field>
+              <Field label="Unité"><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="verres, pages, min…" /></Field>
+            </div>
+            {f.direction === 'atMost' && <p className="text-[11px] text-mute">« Au plus » : la journée est réussie si vous restez sous la limite ; elle est validée une fois la journée terminée.</p>}
+          </div>
+        )}
+
+        {f.kind !== 'quit' && <div>
           <div className="text-xs text-mute mb-1.5">Moment de la journée</div>
           <div className="grid grid-cols-4 gap-2">
             {HABIT_MOMENTS.map((m) => {
@@ -196,16 +236,16 @@ function HabitFormModal({ open, onClose, habit }) {
               );
             })}
           </div>
-        </div>
+        </div>}
 
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="Catégorie"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={HABIT_CATEGORIES.map((c) => ({ value: c, label: catLabel(c) }))} /></Field>
-          <Field label="Fréquence"><Select value={f.frequency} onChange={(e) => setF({ ...f, frequency: e.target.value })} options={HABIT_FREQUENCIES} /></Field>
+          {f.kind !== 'quit' && <Field label="Fréquence"><Select value={f.frequency} onChange={(e) => setF({ ...f, frequency: e.target.value })} options={HABIT_FREQUENCIES} /></Field>}
         </div>
-        {f.frequency === 'custom' && (
+        {f.kind !== 'quit' && f.frequency === 'custom' && (
           <Field label="Jours"><WeekdayPicker value={f.weekdays} onChange={(v) => setF({ ...f, weekdays: v })} options={WEEKDAYS} /></Field>
         )}
-        {f.frequency === 'weekly' && (
+        {f.kind !== 'quit' && f.frequency === 'weekly' && (
           <Field label={`Nombre de fois par semaine : ${f.timesPerWeek}`} hint="N’importe quels jours de la semaine (lundi → dimanche). La série se compte en semaines réussies.">
             <input type="range" min="1" max="7" value={f.timesPerWeek} onChange={(e) => setF({ ...f, timesPerWeek: Number(e.target.value) })} className="w-full accent-[var(--accent-primary)]" />
           </Field>
@@ -238,9 +278,105 @@ function HabitFormModal({ open, onClose, habit }) {
   );
 }
 
+// ── Measured habit: value vs target (+/− for manual, read-only when auto) ──
+function QuantityControl({ h, value, date }) {
+  const setHabitValue = useHabitStore((st) => st.setHabitValue);
+  const [draft, setDraft] = useState(null);
+  const src = sourceMeta(h.source);
+  const target = Number(h.target) || 0;
+  const pct = target ? Math.min(100, (value / target) * 100) : 0;
+  const over = h.direction === 'atMost' && value > target;
+  const color = h.direction === 'atMost' ? (over ? 'var(--error)' : 'var(--success)') : value >= target ? 'var(--success)' : 'var(--accent-primary)';
+  const step = target >= 1000 ? 500 : target >= 100 ? 10 : 1;
+  return (
+    <div className="mt-1.5 flex items-center gap-2">
+      <div className="flex-1 max-w-[12rem]"><ProgressBar value={h.direction === 'atMost' ? (over ? 100 : pct) : pct} height={5} color={color} /></div>
+      {src ? (
+        <span className="text-[11px] tabular-nums" style={{ color }}>{value}/{target} {h.unit}</span>
+      ) : (
+        <div className="flex items-center gap-1">
+          <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, Math.max(0, value - step))}><Minus size={11} /></button>
+          {draft != null ? (
+            <form onSubmit={(e) => { e.preventDefault(); setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}>
+              <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => { setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}
+                className="w-14 bg-surface border border-accent rounded px-1 py-0.5 text-[11px] text-center tabular-nums text-ink" />
+            </form>
+          ) : (
+            <button onClick={() => setDraft(String(value))} className="text-[11px] tabular-nums px-1 cursor-pointer hover:underline" style={{ color }} title="Saisir la valeur">{value}/{target} {h.unit}</button>
+          )}
+          <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, value + step)}><Plus size={11} /></button>
+        </div>
+      )}
+      {h.direction === 'atMost' && <span className="text-[10px] text-mute">{over ? 'limite dépassée' : `max ${target}`}</span>}
+    </div>
+  );
+}
+
+const QUIT_MILESTONES = [1, 3, 7, 14, 30, 60, 90, 180, 365];
+
+function QuitCard({ h, today, onRelapse }) {
+  const undoRelapse = useHabitStore((st) => st.undoRelapse);
+  const days = quitStreak(h, today);
+  const best = quitBest(h, today);
+  const next = QUIT_MILESTONES.find((m) => m > days) || null;
+  const prev = [...QUIT_MILESTONES].reverse().find((m) => m <= days) || 0;
+  const lastRelapse = (h.relapses || []).slice(-1)[0];
+  return (
+    <div className="rounded-xl border border-line bg-card p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-ink truncate">{h.name}</div>
+          <div className="text-[11px] text-mute">{catLabel(h.category)} · record {best} j</div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold tabular-nums" style={{ color: days >= 7 ? 'var(--success)' : 'var(--accent-primary)' }}>{days}</div>
+          <div className="text-[10px] text-mute">jour{days > 1 ? 's' : ''} sans</div>
+        </div>
+      </div>
+      {next && (
+        <div className="mt-3">
+          <ProgressBar value={((days - prev) / (next - prev)) * 100} height={4} color="var(--success)" />
+          <div className="text-[10px] text-mute mt-1 flex items-center gap-1"><Trophy size={10} /> prochain palier : {next} jour{next > 1 ? 's' : ''}</div>
+        </div>
+      )}
+      <div className="flex items-center gap-2 mt-3">
+        <Button variant="secondary" className="!py-1 !px-2.5 text-xs" onClick={() => onRelapse(h)}>J’ai craqué</Button>
+        {lastRelapse === today && <button className="text-[11px] text-mute hover:text-ink underline cursor-pointer" onClick={() => undoRelapse(h.id, today)}>annuler</button>}
+      </div>
+    </div>
+  );
+}
+
+function PauseModal({ open, onClose }) {
+  const startPause = useHabitStore((st) => st.startPause);
+  const today = todayKey();
+  const [f, setF] = useState({ from: today, to: today, reason: '' });
+  const [error, setError] = useState('');
+  useEffect(() => { if (open) { setF({ from: today, to: todayKey(new Date(Date.now() + 6 * 86400000)), reason: '' }); setError(''); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <Modal open={open} onClose={onClose} title="Mode pause (vacances, maladie…)">
+      <div className="space-y-3">
+        <p className="text-sm text-mute">Pendant la pause, vos habitudes ne cassent pas leurs séries : chaque jour couvert compte comme un joker, sans entamer vos jokers du mois.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Du"><Input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field>
+          <Field label="Au"><Input type="date" value={f.to} min={f.from} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
+        </div>
+        <Field label="Raison (optionnel)"><Input value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Voyage, examens, malade…" /></Field>
+        {error && <p className="text-sm text-bad">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Annuler</Button>
+          <Button onClick={() => { const r = startPause(f); if (!r.ok) return setError(r.error); onClose(); }}><span className="flex items-center gap-1.5"><Palmtree size={14} /> Mettre en pause</span></Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────
 export default function Habits() {
-  const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges } = useHabitStore();
+  const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [relapsing, setRelapsing] = useState(null);
   const trades = useTradingStore((s) => s.trades);
   const today = todayKey();
   const [date, setDate] = useState(today);
@@ -259,14 +395,19 @@ export default function Habits() {
   };
 
   const active = habits.filter((h) => !h.archived);
+  const quitHabits = active.filter((h) => h.kind === 'quit');
+  const activePause = (pauses || []).find((p) => p.from <= today && p.to >= today);
   const archived = habits.filter((h) => h.archived);
   const isDone = (h, d) => logs.some((l) => l.habitId === h.id && l.date === d && l.completed);
   // A weekly habit stays on the list until its weekly quota is met (and on
   // the days it was done, so it can be unticked).
   const showOn = (h, d) => isHabitShownOn(h, logs, d);
   const dayList = active.filter((h) => showOn(h, date));
-  const doneCount = dayList.filter((h) => isDone(h, date)).length;
-  const pct = dayList.length ? Math.round((doneCount / dayList.length) * 100) : 0;
+  // Joker / pause days are neither due nor missed: out of today's count.
+  const isJokerDay = (h, d) => logs.some((l) => l.habitId === h.id && l.date === d && l.joker && !l.completed);
+  const countable = dayList.filter((h) => !isJokerDay(h, date));
+  const doneCount = countable.filter((h) => isDone(h, date)).length;
+  const pct = countable.length ? Math.round((doneCount / countable.length) * 100) : 0;
   const compliance = habitCompliance(active, logs, 7, today);
   const burnout = useMemo(() => checkBurnoutTriggers({ energyLogs, compliance, trades }), [energyLogs, compliance, trades]);
   const bestStreak = useMemo(() => active.map((h) => ({ h, s: habitStreak(h.id, logs, today, h) })).sort((a, b) => b.s - a.s)[0], [active, logs, today]);
@@ -297,7 +438,10 @@ export default function Habits() {
           <h1 className="text-2xl font-bold text-ink">Habitudes</h1>
           <p className="text-mute text-sm mt-1">Vos routines quotidiennes, vos séries et votre énergie — avec une alerte précoce d’épuisement.</p>
         </div>
-        <Button onClick={() => { setEditing(null); setFormOpen(true); }}><span className="flex items-center gap-1.5"><Plus size={16} /> Nouvelle habitude</span></Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setPauseOpen(true)}><span className="flex items-center gap-1.5"><Palmtree size={15} /> Pause</span></Button>
+          <Button onClick={() => { setEditing(null); setFormOpen(true); }}><span className="flex items-center gap-1.5"><Plus size={16} /> Nouvelle habitude</span></Button>
+        </div>
       </div>
 
       {burnout.burnoutRisk && (
@@ -316,11 +460,11 @@ export default function Habits() {
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--border)" strokeWidth="3.5" />
                 <circle cx="18" cy="18" r="15.5" fill="none" stroke={pct === 100 ? 'var(--success)' : 'var(--accent-primary)'} strokeWidth="3.5" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 97.4} 97.4`} />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-lg font-bold text-ink tabular-nums">{doneCount}/{dayList.length}</span></div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-lg font-bold text-ink tabular-nums">{doneCount}/{countable.length}</span></div>
             </div>
             <div>
               <div className="text-sm font-semibold text-ink">{isPast ? fmtDate(date) : 'Aujourd’hui'}</div>
-              <div className="text-xs text-mute">{pct === 100 && dayList.length ? 'Journée parfaite 🎉' : `${dayList.length - doneCount} restante(s)`}</div>
+              <div className="text-xs text-mute">{pct === 100 && countable.length ? 'Journée parfaite 🎉' : `${countable.length - doneCount} restante(s)`}</div>
             </div>
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
@@ -342,6 +486,14 @@ export default function Habits() {
           </button>
         </div>
       </div>
+
+      {activePause && (
+        <div className="rounded-xl border px-4 py-3 text-sm flex items-center gap-2" style={{ borderColor: tint('var(--accent-secondary)', 45), background: tint('var(--accent-secondary)', 8) }}>
+          <Palmtree size={16} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
+          <span className="flex-1 text-mute">En pause jusqu’au <b className="text-ink">{fmtDate(activePause.to)}</b>{activePause.reason ? ` (${activePause.reason})` : ''} : vos séries sont protégées.</span>
+          <Button variant="secondary" className="!py-1 !px-2.5 text-xs" onClick={() => endPause(activePause.id)}>Reprendre maintenant</Button>
+        </div>
+      )}
 
       {missedMandatory.length > 0 && (
         <div className="rounded-xl border px-4 py-3 text-sm flex items-start gap-2" style={{ borderColor: tint('var(--warning)', 45), background: tint('var(--warning)', 8) }}>
@@ -375,11 +527,14 @@ export default function Habits() {
                       const streak = habitStreak(h.id, logs, today, h);
                       const wk = h.frequency === 'weekly' ? weeklyProgress(h, logs, date) : null;
                       const target = Number(h.targetStreak) || 0;
+                      const log = logs.find((l) => l.habitId === h.id && l.date === date);
+                      const isJoker = !!log?.joker && !done;
+                      const canJoker = !done && !isJoker && !(h.kind === 'quantity' && h.direction === 'atMost') && jokersLeft(h.id, date) > 0;
                       return (
                         <div key={h.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${done ? 'border-good/40' : 'border-line bg-surface'}`} style={done ? { background: tint('var(--success)', 8) } : undefined}>
-                          <button onClick={() => toggleHabit(h.id, date)} title={done ? 'Décocher' : 'Fait'}
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer transition-colors ${done ? 'bg-good border-good text-black' : 'border-line hover:border-accent'}`}>
-                            {done && <Check size={16} strokeWidth={3} />}
+                          <button onClick={() => toggleHabit(h.id, date)} title={h.source ? 'Suivi automatique' : done ? 'Décocher' : 'Fait'}
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${h.source ? 'cursor-default' : 'cursor-pointer'} ${done ? 'bg-good border-good text-black' : isJoker ? 'border-accent2 text-accent2' : 'border-line hover:border-accent'}`}>
+                            {done ? <Check size={16} strokeWidth={3} /> : isJoker ? <Snowflake size={14} /> : h.source ? <Zap size={13} className="text-mute" /> : null}
                           </button>
                           <div className="min-w-0 flex-1">
                             <div className={`text-sm font-medium ${done ? 'text-mute line-through' : 'text-ink'}`}>{h.name}</div>
@@ -389,13 +544,18 @@ export default function Habits() {
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
                               <span>· +{h.xpReward} XP{h.linkedSkill && SKILL_MAP[h.linkedSkill] ? ` → ${SKILL_MAP[h.linkedSkill].name}` : ''}</span>
                               {h.mandatory && <span className="text-warning">· obligatoire</span>}
+                              {h.source && <span className="text-accent">· auto ({sourceMeta(h.source)?.section})</span>}
+                              {isJoker && <span style={{ color: 'var(--accent-secondary)' }}>· {log.pause ? 'en pause' : 'joker'} — série protégée</span>}
                             </div>
+                            {h.kind === 'quantity' && <QuantityControl h={h} value={Number(log?.value) || 0} date={date} />}
                           </div>
                           <div className="hidden sm:block w-24 shrink-0">
                             <div className="flex items-center justify-end gap-1 text-xs font-semibold" style={{ color: streak ? 'var(--warning)' : 'var(--text-secondary)' }}><Flame size={12} /> {streak} {streakUnit(h)}</div>
                             {target > 0 && <div className="mt-1"><ProgressBar value={Math.min(100, (streak / target) * 100)} height={3} color={streak >= target ? 'var(--success)' : 'var(--warning)'} /><div className="text-[9px] text-mute text-right mt-0.5">objectif {target} {streakUnit(h)}</div></div>}
                           </div>
                           <div className="flex items-center shrink-0">
+                            {canJoker && <button className="p-1.5 text-mute hover:text-accent2 cursor-pointer" onClick={() => useJoker(h.id, date)} title={`Utiliser un joker (${jokersLeft(h.id, date)} restant(s) ce mois-ci)`}><Snowflake size={13} /></button>}
+                            {isJoker && !log.pause && <button className="p-1.5 text-accent2 hover:text-ink cursor-pointer" onClick={() => removeJoker(h.id, date)} title="Retirer le joker"><Snowflake size={13} /></button>}
                             <button className={`p-1.5 cursor-pointer ${h.googleEventLink ? 'text-good' : 'text-mute hover:text-accent'}`} onClick={() => setScheduling(h)} title={h.googleEventLink ? 'Modifier dans Google Agenda' : 'Planifier dans Google Agenda'}>
                               {h.googleEventLink ? <CalendarCheck size={13} /> : <CalendarPlus size={13} />}
                             </button>
@@ -414,6 +574,15 @@ export default function Habits() {
         )}
       </Card>
 
+      {quitHabits.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold text-ink flex items-center gap-2 mb-3"><Ban size={15} className="text-accent" /> À éviter</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {quitHabits.map((h) => <QuitCard key={h.id} h={h} today={today} onRelapse={setRelapsing} />)}
+          </div>
+        </div>
+      )}
+
       {/* All habits */}
       <Card>
         <div className="text-sm font-semibold text-ink flex items-center gap-2 mb-3"><Target size={15} className="text-accent" /> Mes habitudes ({active.length})</div>
@@ -426,11 +595,15 @@ export default function Habits() {
                 <div key={h.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
                     <div className="text-sm text-ink truncate">{h.name}</div>
-                    <div className="text-[11px] text-mute">{catLabel(h.category)} · {freqText(h)} · {HABIT_MOMENTS.find((m) => m.value === (h.moment || 'any'))?.label}</div>
+                    <div className="text-[11px] text-mute">
+                      {h.kind === 'quit' ? `À arrêter · ${catLabel(h.category)}`
+                        : `${catLabel(h.category)} · ${freqText(h)} · ${HABIT_MOMENTS.find((m) => m.value === (h.moment || 'any'))?.label}`}
+                      {h.kind === 'quantity' && ` · ${h.direction === 'atMost' ? '≤' : '≥'} ${h.target} ${h.unit || ''}${h.source ? ` · auto (${sourceMeta(h.source)?.section})` : ''}`}
+                    </div>
                   </div>
                   <div className="text-right text-[11px] text-mute w-28 shrink-0">
-                    <div className="flex items-center justify-end gap-1" style={{ color: streak ? 'var(--warning)' : undefined }}><Flame size={11} /> {streak} {streakUnit(h)}</div>
-                    <div>{r == null ? (h.frequency === 'weekly' ? 'suivi par semaine' : '—') : `${r} % sur 30 j`}</div>
+                    <div className="flex items-center justify-end gap-1" style={{ color: streak ? 'var(--warning)' : undefined }}><Flame size={11} /> {streak} {h.kind === 'quit' ? 'j sans' : streakUnit(h)}</div>
+                    <div>{h.kind === 'quit' ? `record ${quitBest(h, today)} j` : r == null ? (h.frequency === 'weekly' ? 'suivi par semaine' : '—') : `${r} % sur 30 j`}</div>
                   </div>
                   <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
                   <button className="p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => archiveHabit(h.id)} title="Archiver (garde l’historique)"><Archive size={13} /></button>
@@ -494,6 +667,14 @@ export default function Habits() {
 
       <HabitFormModal open={formOpen} onClose={() => { setFormOpen(false); setEditing(null); }} habit={editing} />
       <CheckinModal open={checkinOpen} onClose={() => setCheckinOpen(false)} date={date} />
+      <PauseModal open={pauseOpen} onClose={() => setPauseOpen(false)} />
+      <Modal open={!!relapsing} onClose={() => setRelapsing(null)} title="Noter une rechute ?">
+        <p className="text-sm text-mute">Le compteur de « {relapsing?.name} » repartira de zéro demain. Votre record ({relapsing ? quitBest(relapsing, today) : 0} j) reste enregistré.</p>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="secondary" onClick={() => setRelapsing(null)}>Annuler</Button>
+          <Button onClick={() => { logRelapse(relapsing.id, today); setRelapsing(null); }}>Noter</Button>
+        </div>
+      </Modal>
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Supprimer définitivement ?">
         <p className="text-sm text-mute">« {deleting?.name} » et tout son historique seront supprimés. Pour garder l’historique, laissez-la archivée.</p>
         <div className="flex justify-end gap-2 mt-5">

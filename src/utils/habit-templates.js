@@ -1,4 +1,4 @@
-// 70 habit templates (French). Picking one prefills the add-habit form; everything stays editable.
+// 89 habit templates (French): to tick, measurable (often auto-tracked) and to quit. Picking one prefills the add-habit form; everything stays editable.
 // Moment of the day each template naturally belongs to (groups the checklist).
 const MOMENTS = { "Journal de trading quotidien": "evening", "Revoir toutes les positions ouvertes": "morning", "Consulter le calendrier économique": "morning", "Repérer les setups du jour": "morning", "Noter la thèse macro": "morning", "Respecter la perte max journalière": "day", "Pas de revenge trading": "day", "Prendre les profits à l’objectif": "day", "Revoir le P&L du jour": "evening", "Revue hebdomadaire des trades": "any", "Revue mensuelle de performance": "any", "Backtest hebdomadaire du système": "any", "Adapter la taille de position à la volatilité": "day", "Vérifier les règles prop firm avant de trader": "morning", "Pause après 2 pertes": "day", "Noter honnêtement l’émotion de chaque trade": "day", "Lecture quotidienne (30 min)": "evening", "Réviser un concept par jour": "any", "Bilan d’apprentissage hebdomadaire": "any", "Faire les devoirs du cours": "day", "Aller en cours": "day", "Séance de groupe de travail": "day", "Lire un article de recherche par semaine": "any", "Écouter un podcast éco": "day", "Regarder une vidéo finance": "any", "Tenir un journal d’apprentissage": "evening", "Relier les concepts à l’arbre de compétences": "any", "S’auto-interroger chaque semaine": "any", "Noter ses dépenses du jour": "evening", "Vérifier son budget chaque semaine": "any", "Mettre à jour son patrimoine chaque mois": "any", "Vérifier ses relevés de carte": "any", "Payer ses factures à temps": "any", "Vérifier son taux d’épargne": "any", "Revoir le rendement de ses placements": "any", "Rééquilibrer son portefeuille": "any", "Revoir ses objectifs financiers": "any", "Sport le matin": "morning", "Cardio zone 2": "day", "Musculation": "day", "Marche du soir": "evening", "Méditation (10 min)": "morning", "Exposition au froid": "morning", "Au lit avant 23 h": "evening", "8 h de sommeil ou plus": "evening", "Objectif de protéines": "day", "Hydratation (8 verres)": "day", "Repas sain fait maison": "day", "Réduire la caféine": "day", "Pas d’écran après 21 h": "evening", "Moment social": "evening", "Loisir sans écran": "evening", "Étirements / mobilité": "evening", "Journal du stress": "evening", "Intention du matin": "morning", "Journal quotidien": "evening", "Réflexion du soir": "evening", "Revue de la semaine (dimanche)": "any", "Bilan de vie mensuel": "any", "Journal des décisions": "evening", "Journal de gratitude": "evening", "Point sur ses objectifs": "any", "Calibrer sa confiance": "any", "Relire ses notes de cours": "evening", "Aller en TP": "day", "Avancer une tâche de projet": "day", "Revue de projet hebdomadaire": "any", "Pratiquer un simulateur (Aspen/HYSYS)": "any", "Revoir les déviations HAZOP": "any", "Noter l’expérience du jour": "evening" };
 const h = (name, category, xpReward, linkedSkill = '', extra = {}) => ({
@@ -106,6 +106,35 @@ export const HABIT_TEMPLATES = [
       h('Revue de projet hebdomadaire', 'engineering', 12, 'engineering-discipline-lv2', { frequency: 'weekly', duration: 30 }),
       h('Pratiquer un simulateur (Aspen/HYSYS)', 'engineering', 8, 'process-simulation-lv1', { frequency: 'weekly', duration: 45 }),
       h('Revoir les déviations HAZOP', 'engineering', 10, 'process-safety-lv1', { frequency: 'weekly', duration: 20 }),
+    ],
+  },
+  {
+    group: 'Mesurables (automatiques)',
+    items: [
+      h('Boire 8 verres d’eau', 'health', 4, '', { kind: 'quantity', target: 8, unit: 'verres', direction: 'atLeast', source: 'water_glasses', moment: 'day', duration: 1 }),
+      h('Lire 20 pages', 'learning', 6, '', { kind: 'quantity', target: 20, unit: 'pages', direction: 'atLeast', source: 'reading_pages', moment: 'evening', duration: 30 }),
+      h('Étudier 2 h', 'learning', 10, '', { kind: 'quantity', target: 120, unit: 'min', direction: 'atLeast', source: 'study_minutes', moment: 'day', duration: 120 }),
+      h('Réviser 20 fiches', 'learning', 5, '', { kind: 'quantity', target: 20, unit: 'fiches', direction: 'atLeast', source: 'flashcards', moment: 'morning', duration: 10 }),
+      h('2 h de deep work', 'reflection', 8, '', { kind: 'quantity', target: 120, unit: 'min', direction: 'atLeast', source: 'focus_minutes', moment: 'day', duration: 120 }),
+      h('Protéines : 120 g', 'health', 5, '', { kind: 'quantity', target: 120, unit: 'g', direction: 'atLeast', source: 'protein_g', moment: 'day', duration: 1 }),
+      h('Dormir 7 h', 'recovery', 5, '', { kind: 'quantity', target: 7, unit: 'h', direction: 'atLeast', source: 'sleep_hours', moment: 'morning', duration: 1 }),
+      h('Une séance de sport', 'health', 8, '', { kind: 'quantity', target: 1, unit: 'séance', direction: 'atLeast', source: 'workouts', moment: 'day', duration: 60 }),
+      h('Journaliser ses trades', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'trade', direction: 'atLeast', source: 'trades_journaled', moment: 'evening', duration: 10 }),
+      h('Noter ses dépenses', 'finance', 3, '', { kind: 'quantity', target: 1, unit: 'opération', direction: 'atLeast', source: 'expenses_logged', moment: 'evening', duration: 2 }),
+      h('10 000 pas', 'health', 5, '', { kind: 'quantity', target: 10000, unit: 'pas', direction: 'atLeast', moment: 'day', duration: 1 }),
+      h('Maximum 2 cafés', 'health', 3, '', { kind: 'quantity', target: 2, unit: 'cafés', direction: 'atMost', moment: 'day', duration: 1 }),
+      h('Max 1 h d’écran loisir', 'recovery', 4, '', { kind: 'quantity', target: 60, unit: 'min', direction: 'atMost', moment: 'evening', duration: 1 }),
+    ],
+  },
+  {
+    group: 'À arrêter',
+    items: [
+      h('Pas de cigarette', 'health', 0, '', { kind: 'quit' }),
+      h('Pas de réseaux sociaux avant midi', 'reflection', 0, '', { kind: 'quit' }),
+      h('Pas de sucre ajouté', 'health', 0, '', { kind: 'quit' }),
+      h('Pas de revenge trading', 'trading', 0, '', { kind: 'quit' }),
+      h('Pas d’achat impulsif', 'finance', 0, '', { kind: 'quit' }),
+      h('Pas de grignotage le soir', 'health', 0, '', { kind: 'quit' }),
     ],
   },
 ];
