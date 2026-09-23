@@ -1,8 +1,9 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { GraduationCap, CalendarDays, CalendarClock, Library, BookOpen } from 'lucide-react';
+import { Sun, GraduationCap, CalendarDays, CalendarClock, Library, BookOpen } from 'lucide-react';
 import { useLearningStore } from '../store/learningStore';
 import { Button } from '../components/common/ui';
 import { SegmentedTabs, useAcademicSettings } from '../components/learning/design';
+import TodayView from '../components/learning/TodayView';
 import CursusView from '../components/learning/CursusView';
 import TimetableView from '../components/learning/TimetableView';
 import ExamsView from '../components/learning/ExamsView';
@@ -11,6 +12,7 @@ import { upcomingEvaluations, normGrade } from '../utils/academic';
 import { todayKey } from '../utils/formatters';
 
 const TABS = [
+  { key: 'today', label: 'Aujourd’hui', icon: Sun, Component: TodayView },
   { key: 'cursus', label: 'Cursus', icon: GraduationCap, Component: CursusView },
   { key: 'timetable', label: 'Emploi du temps', icon: CalendarDays, Component: TimetableView },
   { key: 'exams', label: 'Évaluations', icon: CalendarClock, Component: ExamsView },
@@ -43,7 +45,7 @@ export default function Learning() {
           <Button variant="secondary"><span className="flex items-center gap-1.5"><BookOpen size={14} /> Lectures</span></Button>
         </Link>
       </div>
-      <SegmentedTabs tabs={tabs} value={tab.key} onChange={(k) => setParams(k === 'cursus' ? {} : { tab: k }, { replace: true })} />
+      <SegmentedTabs tabs={tabs} value={tab.key} onChange={(k) => setParams(k === 'today' ? {} : { tab: k }, { replace: true })} />
       <Active />
     </div>
   );

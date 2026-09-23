@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
+import { StudyTimerDock } from '../learning/StudyTimer';
 import QuickAdd from './QuickAdd';
 import ErrorBoundary from '../common/ErrorBoundary';
 import { ToastContainer, PageLoader } from '../common/ui';
@@ -25,6 +26,7 @@ export default function MainLayout() {
         </div>
       </main>
       <QuickAdd />
+      <StudyTimerDock />
       <MobileTabBar />
       <ToastContainer />
     </div>

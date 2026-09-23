@@ -11,6 +11,7 @@ import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
 import { useBusinessStore } from '../store/businessStore';
+import { useFocusStore } from '../store/focusStore';
 
 const TABLE = 'app_state';
 
@@ -29,6 +30,9 @@ const REGISTRY = [
   { name: 'accounting', store: useAccountingStore },
   { name: 'health', store: useHealthStore },
   { name: 'business', store: useBusinessStore },
+  // Focus/study sessions (+ the running timer) — was local-only before the
+  // Apprentissage study timer; synced so study time follows the user.
+  { name: 'focus', store: useFocusStore },
 ];
 
 // Strip actions (functions) off a store's state — same filter zustand/persist

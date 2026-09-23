@@ -18,6 +18,7 @@ export const DEFAULT_ACADEMIC_SETTINGS = {
   moduleCompensation: true, // modules compensate each other inside a semester
   retakeRule: 'capped', // 'capped' (max(avg, retake) capped at pass mark) | 'max' | 'replace'
   activeTermId: null,
+  weeklyStudyTarget: 15, // hours of personal study per week (outside class)
 };
 
 export const GRADING_PRESETS = [
@@ -66,7 +67,8 @@ export const WEEKDAYS = [
 const num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 const round2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
 
-export const fmtGrade = (v, digits = 2) => (v == null ? '—' : Number(v).toFixed(digits).replace(/\.?0+$/, '') || '0');
+// French display: decimal comma, trailing zeros trimmed (12,5 · 11,33 · 10).
+export const fmtGrade = (v, digits = 2) => (v == null ? '—' : (Number(v).toFixed(digits).replace(/\.?0+$/, '') || '0').replace('.', ','));
 
 // An evaluation grade normalised onto the grading scale (a quiz may be /10).
 export function normGrade(ev, settings) {

@@ -36,8 +36,13 @@ const BADGE_DEFS = [
 export const useFocusStore = create(
   persist(
     (set, get) => ({
-      sessions: [], // [{id, domain, durationMinutes, date, notes, createdAt}]
+      sessions: [], // [{id, domain, durationMinutes, date, notes, createdAt, courseId?, startedAt?}]
       awardedBadges: [],
+      // Running study/focus timer — persisted (and cloud-synced) so it survives
+      // navigation, reloads and switching device. Elapsed time is always
+      // derived from timestamps, never from a ticking counter.
+      // { startedAt, accumulatedMs, pausedAt, domain, courseId, targetMin }
+      activeTimer: null,
 
       checkBadges: () => {
         const awardedBadges = evaluateBadges(BADGE_DEFS, get(), 'deep-focus-lv1');
@@ -49,7 +54,11 @@ export const useFocusStore = create(
         const minutes = Math.round(Number(data.durationMinutes)) || 0;
         if (minutes <= 0) return { ok: false, error: 'La durée doit être positive.' };
         const domain = data.domain || 'General';
-        const session = { id: uid(), domain, durationMinutes: minutes, date: data.date || todayKey(), notes: data.notes || '', createdAt: Date.now() };
+        const session = {
+          id: uid(), domain, durationMinutes: minutes, date: data.date || todayKey(), notes: data.notes || '', createdAt: Date.now(),
+          ...(data.courseId ? { courseId: data.courseId } : {}),
+          ...(data.startedAt ? { startedAt: data.startedAt } : {}),
+        };
         set({ sessions: [session, ...get().sessions] });
 
         const skillId = FOCUS_DOMAIN_SKILL[domain] || 'deep-focus-lv1';
@@ -59,7 +68,7 @@ export const useFocusStore = create(
         // Learning-tagged focus session counts as genuine learning-momentum
         // activity, the same mechanism a checklist tick uses.
         if (domain === 'Learning') useLearningStore.getState().recordActivity();
-        toast(`Session loggée : ${minutes} min (${domain}) · +${xp} XP`, 'success');
+        toast(`Session enregistrée : ${minutes} min${data.courseLabel ? ` · ${data.courseLabel}` : ` (${domain})`} · +${xp} XP`, 'success');
         get().checkBadges();
         return { ok: true, id: session.id };
       },
@@ -73,13 +82,42 @@ export const useFocusStore = create(
         toast('Session supprimée', 'info');
       },
 
+      // ── Live timer ──
+      startTimer: ({ domain = 'Learning', courseId = null, targetMin = null } = {}) =>
+        set({ activeTimer: { startedAt: Date.now(), accumulatedMs: 0, pausedAt: null, domain, courseId, targetMin } }),
+      pauseTimer: () => {
+        const t = get().activeTimer;
+        if (!t || t.pausedAt) return;
+        const now = Date.now();
+        set({ activeTimer: { ...t, accumulatedMs: t.accumulatedMs + (now - t.startedAt), pausedAt: now } });
+      },
+      resumeTimer: () => {
+        const t = get().activeTimer;
+        if (!t || !t.pausedAt) return;
+        set({ activeTimer: { ...t, startedAt: Date.now(), pausedAt: null } });
+      },
+      cancelTimer: () => set({ activeTimer: null }),
+      // Stops the timer and logs it (sessions under a minute are discarded).
+      stopTimer: ({ courseLabel, notes } = {}) => {
+        const t = get().activeTimer;
+        if (!t) return { ok: false };
+        const ms = t.accumulatedMs + (t.pausedAt ? 0 : Date.now() - t.startedAt);
+        set({ activeTimer: null });
+        const minutes = Math.round(ms / 60000);
+        if (minutes < 1) {
+          toast('Session de moins d’une minute : non enregistrée', 'info');
+          return { ok: false };
+        }
+        return get().logSession({ domain: t.domain, courseId: t.courseId, durationMinutes: minutes, date: todayKey(), courseLabel, notes, startedAt: Date.now() - ms });
+      },
+
       getTodayMinutes: (today = todayKey()) => get().sessions.filter((s) => s.date === today).reduce((a, s) => a + s.durationMinutes, 0),
       getWeekMinutes: (today = todayKey()) => {
         const weekAgo = new Date(new Date(`${today}T00:00:00`).getTime() - 7 * 86400000).toISOString().slice(0, 10);
         return get().sessions.filter((s) => s.date >= weekAgo && s.date <= today).reduce((a, s) => a + s.durationMinutes, 0);
       },
 
-      resetAll: () => set({ sessions: [], awardedBadges: [] }),
+      resetAll: () => set({ sessions: [], awardedBadges: [], activeTimer: null }),
     }),
     { name: 'audax-focus' }
   )

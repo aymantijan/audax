@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Pencil, Trash2, ChevronDown, ChevronRight, GraduationCap, CalendarPlus, CalendarCheck, ClipboardCheck,
-  CalendarDays, ListChecks, Calculator, BookOpen, Sparkles, CheckCircle2, AlertTriangle, RotateCcw, Flag,
+  CalendarDays, ListChecks, Calculator, BookOpen, Sparkles, CheckCircle2, AlertTriangle, RotateCcw, Flag, Play, Clock,
 } from 'lucide-react';
 import { useLearningStore } from '../store/learningStore';
+import { useFocusStore } from '../store/focusStore';
+import { minutesBetween, weekStart, fmtMinutes } from '../utils/study';
+import { todayKey } from '../utils/formatters';
+import { ManualSessionModal } from '../components/learning/StudyTimer';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADES, GRADE_XP, SKILL_MAP } from '../utils/constants';
 import { uid } from '../utils/formatters';
@@ -304,6 +308,10 @@ export default function CoursePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [grade, setGrade] = useState('A');
+  const [manualOpen, setManualOpen] = useState(false);
+  const sessions = useFocusStore((s) => s.sessions);
+  const activeTimer = useFocusStore((s) => s.activeTimer);
+  const startTimer = useFocusStore((s) => s.startTimer);
 
   const r = useMemo(() => (course && isAcademic(course) ? subjectResult(course, settings) : null), [course, settings.scale, settings.passMark, settings.retakeRule]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -325,7 +333,12 @@ export default function CoursePage() {
   const color = courseColor(course.id);
   const target = course.targetGrade ?? settings.passMark;
   const req = acad ? requiredGrade(course, target, settings) : null;
-  const backTo = acad ? '/learning' : '/learning?tab=courses';
+  const backTo = acad ? '/learning?tab=cursus' : '/learning?tab=courses';
+  const today = todayKey();
+  const mySessions = sessions.filter((s) => s.courseId === course.id);
+  const weekMin = minutesBetween(mySessions, weekStart(today), today);
+  const totalMin = mySessions.reduce((a, s) => a + (s.durationMinutes || 0), 0);
+  const timingThis = activeTimer?.courseId === course.id;
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
@@ -352,6 +365,12 @@ export default function CoursePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
+            {course.status === 'active' && (
+              <Button disabled={!!activeTimer} title={activeTimer && !timingThis ? 'Un chrono tourne déjà' : undefined}
+                onClick={() => startTimer({ domain: 'Learning', courseId: course.id, targetMin: 50 })}>
+                <span className="flex items-center gap-1.5"><Play size={14} /> {timingThis ? 'Chrono en cours' : 'Étudier'}</span>
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setScheduleModal(true)}>
               <span className="flex items-center gap-1.5">{course.googleEventLink ? <CalendarCheck size={14} className="text-good" /> : <CalendarPlus size={14} />}{course.googleEventLink ? 'Planifié' : 'Planifier'}</span>
             </Button>
@@ -378,13 +397,13 @@ export default function CoursePage() {
               <BigStat label="Note nécessaire" color={req?.status === 'impossible' ? 'var(--error)' : req?.status === 'secured' ? 'var(--success)' : req ? gradeColor(req.needed, settings) : undefined}
                 value={!req ? '—' : req.status === 'secured' ? 'Assuré' : req.status === 'impossible' ? 'Hors de portée' : fmtGrade(req.needed)}
                 sub={!req ? 'plus rien à passer' : `sur ce qui reste, ${course.targetGrade != null ? 'pour l’objectif' : 'pour valider'}`} />
-              <BigStat label="Programme" value={`${progress}%`} sub={`score ${getCourseScore(course)}% avec la régularité`} />
+              <BigStat label="Temps d'étude" value={fmtMinutes(weekMin)} sub={`cette semaine · ${fmtMinutes(totalMin)} au total · programme ${progress}%`} />
             </>
           ) : (
             <>
               <BigStat label="Avancement" value={`${progress}%`} sub={`${(course.chapters || []).length} chapitre(s)`} />
               <BigStat label="Score" value={`${getCourseScore(course)}%`} sub="avancement × régularité" color="var(--accent-primary)" />
-              <BigStat label="Lectures" value={`${(course.readings || []).filter((x) => x.completed).length}/${(course.readings || []).length}`} sub="terminées" />
+              <BigStat label="Temps d'étude" value={fmtMinutes(weekMin)} sub={`cette semaine · ${fmtMinutes(totalMin)} au total`} />
               <BigStat label="Statut" value={course.status === 'completed' ? 'Terminé' : course.status === 'dropped' ? 'Abandonné' : 'En cours'} sub={course.actualGrade ? `note ${course.actualGrade}` : ''} />
             </>
           )}
@@ -424,6 +443,25 @@ export default function CoursePage() {
         </Card>
       )}
 
+      <Card>
+        <SectionHeader icon={Clock} title="Sessions d'étude" subtitle={`${mySessions.length} session(s) · ${fmtMinutes(totalMin)} au total`}
+          action={<Button variant="secondary" className="!py-1.5" onClick={() => setManualOpen(true)}><span className="flex items-center gap-1"><Plus size={13} /> Session</span></Button>} />
+        {mySessions.length ? (
+          <div className="divide-y divide-line/60">
+            {mySessions.slice(0, 8).map((s) => (
+              <div key={s.id} className="flex items-center gap-3 py-2 text-sm">
+                <span className="text-mute w-24 shrink-0 text-xs">{new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                <span className="flex-1 min-w-0 text-mute truncate">{s.notes || '—'}</span>
+                <span className="tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-mute">Lancez « Étudier » ou ajoutez une session : le temps passé par matière alimente vos priorités du jour.</p>
+        )}
+      </Card>
+
+      <ManualSessionModal open={manualOpen} onClose={() => setManualOpen(false)} defaultCourseId={course.id} />
       <CourseFormModal open={editOpen} onClose={() => setEditOpen(false)} course={course} />
 
       <Modal open={completing} onClose={() => setCompleting(false)} title={`Terminer : ${course.name}`}>

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Trash2, Archive, ChevronDown, ChevronRight, BookOpen, Flame, GraduationCap, Sparkles, Plus, ListChecks } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import { useReadingsStore } from '../../store/readingsStore';
+import { useFocusStore } from '../../store/focusStore';
+import { minutesByCourse, weekStart, fmtMinutes } from '../../utils/study';
 import { weightedGPA } from '../../utils/calculations';
 import { GRADE_POINTS } from '../../utils/constants';
 import { calculateCourseProgress } from '../../utils/course-progress';
@@ -25,7 +27,7 @@ function nextTask(c) {
   return null;
 }
 
-function CourseCard({ c, settings, selected, onSelect, onDelete }) {
+function CourseCard({ c, settings, selected, onSelect, onDelete, weekMin = 0 }) {
   const p = progressOf(c);
   const acad = isAcademic(c);
   const r = acad ? subjectResult(c, settings) : null;
@@ -60,6 +62,7 @@ function CourseCard({ c, settings, selected, onSelect, onDelete }) {
       </div>
       <div className="flex items-center gap-2 mt-auto">
         <Link to={`/learning/course/${c.id}`} className="px-3 py-1.5 rounded-lg text-xs bg-surface border border-line text-ink hover:border-accent">Ouvrir</Link>
+        <span className="text-[11px] text-mute">{weekMin ? `${fmtMinutes(weekMin)} cette semaine` : 'pas étudié cette semaine'}</span>
         <button className="ml-auto p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={onDelete}><Trash2 size={13} /></button>
       </div>
     </div>
@@ -76,6 +79,8 @@ export default function CoursesView() {
   const [deleting, setDeleting] = useState(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const sessions = useFocusStore((s) => s.sessions);
+  const weekMins = useMemo(() => { const t = todayKey(); return minutesByCourse(sessions, weekStart(t), t); }, [sessions]);
 
   // See Learning history: the live momentum preview must be memoised on the
   // raw persisted object, never computed inside the zustand selector.
@@ -117,7 +122,7 @@ export default function CoursesView() {
       {shown.length ? (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
           {shown.map((c) => (
-            <CourseCard key={c.id} c={c} settings={settings} selected={selected.has(c.id)} onSelect={() => toggle(c.id)} onDelete={() => setDeleting([c.id])} />
+            <CourseCard key={c.id} c={c} settings={settings} selected={selected.has(c.id)} onSelect={() => toggle(c.id)} onDelete={() => setDeleting([c.id])} weekMin={weekMins[c.id]} />
           ))}
         </div>
       ) : (
