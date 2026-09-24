@@ -49,6 +49,7 @@ export const useCareerStore = create(
           url: data.url || '',
           notes: data.notes || '',
           referralContactId: data.referralContactId || '', // links to a networkingStore contact — see setStage
+          planId: data.planId || '', // career objective this application serves (Carrière n°2)
           stageHistory: [{ stage: 'Applied', date: todayKey() }],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -134,6 +135,37 @@ export const useCareerStore = create(
         };
       },
 
+      // ── Career plan (Carrière n°2) ──
+      // Objectives: a target role with a date, the skills it requires (linked
+      // to the skill tree / a Learning course when possible) and milestones.
+      plans: [], // [{ id, title, domain, type, targetDate, why, status: 'active'|'achieved'|'dropped', skills: [{ id, name, skillId, targetLevel, courseId, done }], milestones: [{ id, title, due, done, doneAt }], createdAt }]
+      weeklyTargets: { applications: 3, touches: 3, posts: 1 },
+      setWeeklyTargets: (t) => set({ weeklyTargets: { ...get().weeklyTargets, ...Object.fromEntries(Object.entries(t).map(([k, v]) => [k, Math.max(0, Number(v) || 0)])) } }),
+      addPlan: (data) => {
+        if (!data.title?.trim()) return { ok: false, error: 'Donnez un intitulé à l’objectif.' };
+        const plan = { id: uid(), title: data.title.trim(), domain: data.domain || 'Général', type: data.type || '', targetDate: data.targetDate || '', why: data.why || '', status: 'active', skills: [], milestones: [], createdAt: Date.now() };
+        set({ plans: [...(get().plans || []), plan] });
+        toast('Objectif de carrière créé', 'success');
+        return { ok: true, id: plan.id };
+      },
+      editPlan: (id, updates) => {
+        const before = (get().plans || []).find((p) => p.id === id);
+        set({ plans: (get().plans || []).map((p) => (p.id === id ? { ...p, ...updates, ...(updates.status === 'achieved' && p.status !== 'achieved' ? { achievedAt: todayKey() } : {}) } : p)) });
+        if (updates.status === 'achieved' && before?.status !== 'achieved') {
+          useSkillStore.getState().awardXP('written-communication-lv1', 25, `objectif atteint : ${before.title}`);
+          toast(`Objectif atteint : ${before.title} 🎉`, 'success');
+        }
+      },
+      deletePlan: (id) => set({
+        plans: (get().plans || []).filter((p) => p.id !== id),
+        applications: get().applications.map((a) => (a.planId === id ? { ...a, planId: '' } : a)),
+      }),
+      addPlanItem: (planId, list, data) => set({ plans: (get().plans || []).map((p) => (p.id === planId ? { ...p, [list]: [...(p[list] || []), { done: false, ...data, id: uid() }] } : p)) }),
+      editPlanItem: (planId, list, itemId, updates) => set({
+        plans: (get().plans || []).map((p) => (p.id === planId ? { ...p, [list]: (p[list] || []).map((x) => (x.id === itemId ? { ...x, ...updates, ...(updates.done === true && !x.done ? { doneAt: todayKey() } : {}) } : x)) } : p)),
+      }),
+      deletePlanItem: (planId, list, itemId) => set({ plans: (get().plans || []).map((p) => (p.id === planId ? { ...p, [list]: (p[list] || []).filter((x) => x.id !== itemId) } : p)) }),
+
       // ── Domains (user-editable; empty = DEFAULT_CAREER_DOMAINS) ──
       domains: [],
       setDomains: (list) => set({ domains: [...new Set(list.map((d) => String(d).trim()).filter(Boolean))] }),
@@ -159,12 +191,12 @@ export const useCareerStore = create(
       editProfileItem: (section, id, data) => set({ profile: { ...get().profile, [section]: (get().profile[section] || []).map((x) => (x.id === id ? { ...x, ...data } : x)) } }),
       deleteProfileItem: (section, id) => set({ profile: { ...get().profile, [section]: (get().profile[section] || []).filter((x) => x.id !== id) } }),
 
-      resetAll: () => set({ applications: [], awardedBadges: [], domains: [], profile: { headline: '', summary: '', location: '', email: '', phone: '', links: [], languages: [], education: [], experiences: [], certifications: [], skills: [] } }),
+      resetAll: () => set({ applications: [], awardedBadges: [], domains: [], plans: [], weeklyTargets: { applications: 3, touches: 3, posts: 1 }, profile: { headline: '', summary: '', location: '', email: '', phone: '', links: [], languages: [], education: [], experiences: [], certifications: [], skills: [] } }),
     }),
     {
       name: 'audax-career',
       // Older saves have no profile: keep the defaults for every missing field.
-      merge: (persisted, current) => ({ ...current, ...persisted, profile: { ...current.profile, ...(persisted?.profile || {}) } }),
+      merge: (persisted, current) => ({ ...current, ...persisted, profile: { ...current.profile, ...(persisted?.profile || {}) }, weeklyTargets: { ...current.weeklyTargets, ...(persisted?.weeklyTargets || {}) } }),
     }
   )
 );

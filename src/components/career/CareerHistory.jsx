@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Briefcase, GraduationCap, Award, Send, Users, Megaphone, Flag } from 'lucide-react';
+import { Briefcase, GraduationCap, Award, Send, Users, Megaphone, Flag, Target } from 'lucide-react';
 import { useCareerStore } from '../../store/careerStore';
 import { useNetworkingStore } from '../../store/networkingStore';
 import { useContentStore } from '../../store/contentStore';
@@ -9,6 +9,7 @@ import { fmtMonth } from '../../utils/cv-pdf';
 import { Card, EmptyState } from '../common/ui';
 
 const KINDS = {
+  plan: { label: 'Objectifs', icon: Target, color: '#f97316' },
   experience: { label: 'Expériences', icon: Briefcase, color: 'var(--accent-primary)' },
   education: { label: 'Formation', icon: GraduationCap, color: '#a78bfa' },
   certification: { label: 'Certifications', icon: Award, color: '#f59e0b' },
@@ -27,6 +28,7 @@ const MONTHS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'jui
 export default function CareerHistory() {
   const profile = useCareerStore((s) => s.profile);
   const applications = useCareerStore((s) => s.applications);
+  const plans = useCareerStore((s) => s.plans);
   const contacts = useNetworkingStore((s) => s.contacts);
   const posts = useContentStore((s) => s.posts);
   const [hidden, setHidden] = useState([]);
@@ -42,6 +44,11 @@ export default function CareerHistory() {
       if (x.start) out.push({ kind: 'education', month: true, date: day(x.start), title: `Rentrée — ${x.degree}`, sub: [x.school, x.field].filter(Boolean).join(' · '), milestone: true });
       if (x.end && !x.current) out.push({ kind: 'education', month: true, date: day(x.end), title: `Diplômé — ${x.degree}`, sub: x.school, milestone: true });
     }
+    for (const p of plans || []) {
+      if (p.createdAt) out.push({ kind: 'plan', date: new Date(p.createdAt).toLocaleDateString('sv-SE'), title: `Nouvel objectif — ${p.title}`, sub: p.targetDate ? `échéance ${p.targetDate.split('-').reverse().join('/')}` : '' });
+      for (const m of p.milestones || []) if (m.done && m.doneAt) out.push({ kind: 'plan', date: m.doneAt, title: `Étape franchie — ${m.title}`, sub: p.title });
+      if (p.status === 'achieved' && p.achievedAt) out.push({ kind: 'plan', date: p.achievedAt, title: `Objectif atteint — ${p.title}`, sub: p.type, milestone: true });
+    }
     for (const x of profile.certifications || []) if (x.date) out.push({ kind: 'certification', month: true, date: day(x.date), title: `Certification — ${x.name}`, sub: x.issuer, milestone: true });
     for (const a of applications) {
       for (const h of a.stageHistory?.length ? a.stageHistory : [{ stage: 'Applied', date: a.appliedDate }]) {
@@ -55,7 +62,7 @@ export default function CareerHistory() {
     }
     for (const p of posts) if (p.publishedDate && p.status === 'Publié') out.push({ kind: 'content', date: p.publishedDate, title: `Publication ${p.platform} — ${p.title}`, sub: [p.likes ? `${p.likes} likes` : '', p.views ? `${p.views} vues` : ''].filter(Boolean).join(' · ') });
     return out.filter((e) => e.date).sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [profile, applications, contacts, posts]);
+  }, [profile, applications, contacts, posts, plans]);
 
   const shown = events.filter((e) => !hidden.includes(e.kind));
   const groups = useMemo(() => {

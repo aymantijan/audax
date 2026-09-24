@@ -161,7 +161,7 @@ function HabitFormModal({ open, onClose, habit }) {
     const tpl = HABIT_TEMPLATES.find((g) => g.group === group)?.items.find((i) => i.name === name);
     if (!tpl) return;
     const linkedSkill = tpl.linkedSkill && skills[tpl.linkedSkill] && !skills[tpl.linkedSkill].locked ? tpl.linkedSkill : '';
-    setF({ ...blankHabit(), ...tpl, linkedSkill, timesPerWeek: tpl.frequency === 'weekly' ? 1 : 3, source: tpl.source || '', unit: tpl.unit || unitOf(sourceMeta(tpl.source)) });
+    setF({ ...blankHabit(), ...tpl, linkedSkill, timesPerWeek: tpl.frequency === 'weekly' ? tpl.timesPerWeek || 1 : 3, source: tpl.source || '', unit: tpl.unit || unitOf(sourceMeta(tpl.source)) });
   };
   const submit = (e) => {
     e.preventDefault();
@@ -188,7 +188,7 @@ function HabitFormModal({ open, onClose, habit }) {
     <Modal open={open} onClose={onClose} title={habit ? 'Modifier l’habitude' : 'Nouvelle habitude'} wide>
       <form onSubmit={submit} className="space-y-4">
         {!habit && (
-          <Field label="Partir d’un modèle (optionnel)" hint="91 modèles : à cocher, mesurables (souvent automatiques) et à arrêter">
+          <Field label="Partir d’un modèle (optionnel)" hint="94 modèles : à cocher, mesurables (souvent automatiques) et à arrêter">
             <Select value={template} onChange={(e) => applyTemplate(e.target.value)}>
               <option value="">— Partir de zéro —</option>
               {HABIT_TEMPLATES.map((g) => (

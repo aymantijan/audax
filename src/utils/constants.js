@@ -258,7 +258,7 @@ export const LIABILITY_TYPES = [
   { key: 'otherLiabilities', label: 'Other liabilities' },
 ];
 
-export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery', 'engineering'];
+export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery', 'engineering', 'career'];
 // 'custom' = repeats only on the specific weekdays chosen in `habit.weekdays`
 // (e.g. Heavy Weight Lifting on Mon/Wed/Fri) — see utils/calculations.js#isHabitDueOn.
 // Labeled explicitly (not plain strings) so the day-picker option is discoverable
@@ -281,7 +281,7 @@ export const MOODS = ['great', 'good', 'okay', 'bad', 'terrible'];
 export const MOOD_LABELS = { great: 'Excellente', good: 'Bonne', okay: 'Correcte', bad: 'Mauvaise', terrible: 'Très mauvaise' };
 export const RECOVERY_ACTIVITIES = ['exercise', 'meditation', 'walk', 'social', 'hobby', 'rest'];
 export const RECOVERY_LABELS = { exercise: 'Sport', meditation: 'Méditation', walk: 'Marche', social: 'Moment social', hobby: 'Loisir', rest: 'Repos' };
-export const HABIT_CATEGORY_LABELS = { trading: 'Trading', learning: 'Apprentissage', finance: 'Finances', health: 'Santé', reflection: 'Réflexion', recovery: 'Récupération', engineering: 'Ingénierie' };
+export const HABIT_CATEGORY_LABELS = { trading: 'Trading', learning: 'Apprentissage', finance: 'Finances', health: 'Santé', reflection: 'Réflexion', recovery: 'Récupération', engineering: 'Ingénierie', career: 'Carrière' };
 // When in the day a habit happens — groups the daily checklist.
 export const HABIT_MOMENTS = [
   { value: 'morning', label: 'Matin' },

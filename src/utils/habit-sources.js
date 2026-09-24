@@ -11,6 +11,9 @@ import { useFocusStore } from '../store/focusStore';
 import { useFlashcardStore } from '../store/flashcardStore';
 import { useTradingStore } from '../store/tradingStore';
 import { useAccountingStore } from '../store/accountingStore';
+import { useCareerStore } from '../store/careerStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useContentStore } from '../store/contentStore';
 import { classOf } from './chart-of-accounts';
 
 const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
@@ -28,6 +31,9 @@ export const HABIT_SOURCES = [
   { value: 'trades_journaled', label: 'Trades journalisés (Trading)', unit: 'trade(s)', section: 'Trading', get: (d) => (useTradingStore.getState().trades || []).filter((t) => t.date === d && t.journal?.reasoning?.trim()).length },
   { value: 'trading_plan', label: 'Plan de séance écrit (Trading)', unit: 'plan(s)', section: 'Trading', get: (d) => Object.keys(useTradingStore.getState().dailyPlans || {}).filter((k) => k.endsWith(`|${d}`)).length },
   { value: 'trading_review', label: 'Revue de fin de journée (Trading)', unit: 'revue(s)', section: 'Trading', get: (d) => Object.keys(useTradingStore.getState().dayReviews || {}).filter((k) => k.endsWith(`|${d}`)).length },
+  { value: 'career_applications', label: 'Candidatures envoyées (Carrière)', unit: 'candidature(s)', section: 'Carrière', get: (d) => (useCareerStore.getState().applications || []).filter((a) => a.appliedDate === d).length },
+  { value: 'career_touches', label: 'Échanges avec des contacts (Carrière › Réseau)', unit: 'échange(s)', section: 'Carrière', get: (d) => (useNetworkingStore.getState().contacts || []).reduce((n, c) => n + (c.touches || []).filter((t) => t.date === d).length, 0) },
+  { value: 'career_posts', label: 'Publications (Carrière › Visibilité)', unit: 'publication(s)', section: 'Carrière', get: (d) => (useContentStore.getState().posts || []).filter((p) => p.status === 'Publié' && p.publishedDate === d).length },
   { value: 'expenses_logged', label: 'Opérations saisies (Finances)', unit: 'opération(s)', section: 'Finances', get: (d) => (useAccountingStore.getState().journal || []).filter((e) => e.date === d).length },
   { value: 'spent_amount', label: 'Montant dépensé (Finances)', unit: 'DH', section: 'Finances', get: (d) => Math.round(sum((useAccountingStore.getState().journal || []).filter((e) => e.date === d), (e) => sum(e.lines.filter((l) => classOf(l.account) === 6), (l) => (Number(l.debit) || 0) - (Number(l.credit) || 0)))) },
 ];
@@ -41,4 +47,4 @@ export function sourceValue(habit, date) {
 }
 
 /** Every store an auto source depends on — subscribe to re-sync. */
-export const SOURCE_STORES = [useHealthStore, useHabitStore, useReadingsStore, useFocusStore, useFlashcardStore, useTradingStore, useAccountingStore];
+export const SOURCE_STORES = [useHealthStore, useHabitStore, useReadingsStore, useFocusStore, useFlashcardStore, useTradingStore, useAccountingStore, useCareerStore, useNetworkingStore, useContentStore];

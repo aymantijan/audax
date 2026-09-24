@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Trophy, AlertTriangle, CheckCircle2, Clock, Plus, HeartPulse, Wallet, GraduationCap, Megaphone, ChevronRight, Repeat, Flame } from 'lucide-react';
+import { Target, Trophy, AlertTriangle, CheckCircle2, Clock, Plus, HeartPulse, Wallet, GraduationCap, Megaphone, ChevronRight, Repeat, Flame, Briefcase } from 'lucide-react';
 import { useAllGoals, GOAL_DOMAINS } from '../hooks/useAllGoals';
 import { todayKey } from '../utils/formatters';
 import { Card, ProgressBar } from '../components/common/ui';
 import { SegmentedTabs, tint, countdownLabel } from '../components/learning/design';
 
-const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, content: Megaphone, habits: Flame };
+const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, content: Megaphone, habits: Flame, career: Briefcase };
 const STATUS = {
   achieved: { label: 'Atteint', color: 'var(--success)', Icon: CheckCircle2 },
   ontrack: { label: 'En bonne voie', color: 'var(--success)', Icon: CheckCircle2 },
@@ -65,7 +65,7 @@ export default function GoalsHub() {
     <div className="space-y-5 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-ink">Objectifs</h1>
-        <p className="text-mute text-sm mt-1">Tous vos objectifs au même endroit — santé, argent, études, contenu, habitudes. Chacun se modifie dans sa section.</p>
+        <p className="text-mute text-sm mt-1">Tous vos objectifs au même endroit — santé, argent, études, carrière, contenu, habitudes. Chacun se modifie dans sa section.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -106,13 +106,14 @@ export default function GoalsHub() {
 
       <Card>
         <div className="text-sm font-semibold text-ink mb-3 flex items-center gap-1.5"><Plus size={14} className="text-accent" /> Créer un objectif</div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {[
             ['health', 'Poids, force, sommeil, cardio…', '/health?tab=goals'],
             ['finance', 'Épargne, fonds d’urgence, patrimoine', '/finance?tab=goals'],
             ['learning', 'Note visée par matière, niveau de langue', '/learning?tab=cursus'],
             ['content', 'Publications par mois', '/content'],
             ['habits', 'Série visée sur une habitude', '/habits'],
+            ['career', 'Poste visé, stage, date', '/career?tab=plan'],
           ].map(([k, desc, to]) => {
             const Icon = DOMAIN_ICONS[k];
             return (

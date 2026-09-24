@@ -11,6 +11,9 @@ import { minutesBetween, weekStart, fmtMinutes, studySessions } from '../utils/s
 import { levelLabel } from '../utils/tracks';
 import { fmtMAD, todayKey } from '../utils/formatters';
 import { habitStreak, habitBestStreak, streakUnit } from '../utils/calculations';
+import { useCareerStore } from '../store/careerStore';
+import { useSkillStore } from '../store/skillStore';
+import { planProgress } from '../utils/career-plan';
 
 export const GOAL_DOMAINS = {
   health: { label: 'Santé', color: '#ef4444', link: '/health?tab=goals' },
@@ -18,6 +21,7 @@ export const GOAL_DOMAINS = {
   learning: { label: 'Apprentissage', color: '#6366f1', link: '/learning' },
   content: { label: 'Contenu', color: '#f59e0b', link: '/content' },
   habits: { label: 'Habitudes', color: '#f97316', link: '/habits' },
+  career: { label: 'Carrière', color: '#0ea5e9', link: '/career?tab=plan' },
 };
 
 const nf = (v) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -37,6 +41,8 @@ export function useAllGoals() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
+  const careerPlans = useCareerStore((s) => s.plans);
+  const skillLevels = useSkillStore((s) => s.skills);
   const journal = useAccountingStore((s) => s.journal);
   const financeGoals = useAccountingStore((s) => s.goals);
   const courses = useLearningStore((s) => s.courses);
@@ -128,6 +134,19 @@ export function useAllGoals() {
         targetDate: null, status: p.count >= p.goal ? 'achieved' : 'active', recurring: true, link: GOAL_DOMAINS.content.link,
       });
     }
+    // ── Carrière (objectifs datés) ──
+    for (const p of careerPlans || []) {
+      if (p.status === 'dropped') continue;
+      const pr = planProgress(p, skillLevels, today);
+      out.push({
+        key: `cr-${p.id}`, domain: 'career', title: p.title,
+        progress: p.status === 'achieved' ? 100 : pr.pct,
+        valueText: `préparation ${pr.pct}%${pr.skillsLeft ? ` · ${pr.skillsLeft} compétence${pr.skillsLeft > 1 ? 's' : ''} à acquérir` : ''}`,
+        detail: pr.overdueMilestones.length ? `${pr.overdueMilestones.length} étape(s) en retard` : p.type || null,
+        targetDate: p.targetDate || null, status: pr.status, link: GOAL_DOMAINS.career.link,
+      });
+    }
+
     // ── Habitudes (série visée) ──
     for (const h of habits) {
       const target = Number(h.targetStreak) || 0;
@@ -143,5 +162,5 @@ export function useAllGoals() {
       });
     }
     return out;
-  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, careerPlans, skillLevels, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
 }

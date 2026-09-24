@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Briefcase, Plus, Trash2, Pencil, ArrowRight, AlertTriangle, Download, UserRound, Compass, IdCard, Users, Megaphone, History, Tags, BellRing } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Pencil, ArrowRight, AlertTriangle, Download, UserRound, Compass, IdCard, Users, Megaphone, History, Tags, BellRing, Target, Flag } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
@@ -13,6 +13,7 @@ import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 import CareerProfile from '../components/career/CareerProfile';
 import CareerHistory from '../components/career/CareerHistory';
+import CareerPlan, { useWeeklyRoutine } from '../components/career/CareerPlan';
 import Networking from './Networking';
 import Content from './Content';
 
@@ -26,16 +27,17 @@ const STAGE_OPTIONS = CAREER_STAGES.map((s) => ({ value: s, label: stageLabel(s)
 
 const SPACES = [
   { key: 'pilotage', label: 'Pilotage', desc: 'Candidatures & prochaines actions', icon: Compass },
+  { key: 'plan', label: 'Plan', desc: 'Objectifs, écarts, routine', icon: Target },
   { key: 'profil', label: 'Profil', desc: 'CV, parcours, compétences', icon: IdCard },
   { key: 'reseau', label: 'Réseau', desc: 'Contacts & relances', icon: Users },
   { key: 'visibilite', label: 'Visibilité', desc: 'Publications & marque perso', icon: Megaphone },
   { key: 'historique', label: 'Historique', desc: 'Tout votre parcours', icon: History },
 ];
 
-const blank = () => ({ company: '', role: '', domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '' });
+const blank = () => ({ company: '', role: '', domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
 // referralContactId's options depend on the live contacts list, so this is a
 // function of contacts rather than a static array.
-const appFields = (contacts, domainOptions) => [
+const appFields = (contacts, domainOptions, planOptions = []) => [
   { name: 'company', label: 'Entreprise', type: 'text' },
   { name: 'role', label: 'Poste', type: 'text' },
   { name: 'domain', label: 'Domaine', type: 'select', options: domainOptions },
@@ -48,6 +50,7 @@ const appFields = (contacts, domainOptions) => [
     options: [{ value: '', label: '— Aucun —' }, ...contacts.map((c) => ({ value: c.id, label: c.org ? `${c.name} · ${c.org}` : c.name }))],
     hint: "Un contact lié reçoit une relance planifiée quand la candidature avance d'étape.",
   },
+  ...(planOptions.length ? [{ name: 'planId', label: 'Objectif de carrière', type: 'select', options: [{ value: '', label: '— Aucun —' }, ...planOptions] }] : []),
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 
@@ -76,6 +79,15 @@ function Pilotage() {
   const contacts = useNetworkingStore((s) => s.contacts);
   const getFollowUpAlerts = useNetworkingStore((s) => s.getFollowUpAlerts);
   const domainOptions = useCareerDomains();
+  const plans = useCareerStore((s) => s.plans) || [];
+  const planOptions = plans.filter((p) => p.status !== 'achieved' && p.status !== 'dropped').map((p) => ({ value: p.id, label: p.title }));
+  const routine = useWeeklyRoutine();
+  const today = todayKey();
+  const in7 = new Date(`${today}T12:00:00`); in7.setDate(in7.getDate() + 7);
+  const soon = in7.toLocaleDateString('sv-SE');
+  const dueMilestones = plans.filter((p) => p.status !== 'achieved' && p.status !== 'dropped')
+    .flatMap((p) => (p.milestones || []).filter((m) => !m.done && m.due && m.due <= soon).map((m) => ({ ...m, plan: p })))
+    .sort((a, b) => a.due.localeCompare(b.due));
   const navigate = useNavigate();
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -115,9 +127,26 @@ function Pilotage() {
         <Stat label="Offres" value={offers} color={offers ? 'var(--success)' : undefined} />
       </div>
 
-      {(stale.length > 0 || followUps.length > 0) && (
+      <div className="grid grid-cols-3 gap-3">
+        {routine.map((r) => (
+          <button key={r.key} onClick={() => navigate('/career?tab=plan')} className="text-left rounded-xl border border-line bg-card px-3 py-2 cursor-pointer hover:border-accent">
+            <div className="text-[11px] text-mute">{r.label} cette semaine</div>
+            <div className="text-lg font-bold tabular-nums" style={{ color: r.done >= r.target && r.target ? 'var(--success)' : undefined }}>{r.done}<span className="text-sm text-mute font-normal">/{r.target}</span></div>
+          </button>
+        ))}
+      </div>
+
+      {(stale.length > 0 || followUps.length > 0 || dueMilestones.length > 0) && (
         <Card title="Prochaines actions">
           <div className="space-y-1.5">
+            {dueMilestones.map((m) => (
+              <button key={`m-${m.id}`} onClick={() => navigate('/career?tab=plan')}
+                className={`w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border ${m.due < today ? 'border-bad/40 bg-bad/5' : 'border-line'}`}>
+                <Flag size={14} className={m.due < today ? 'text-bad' : 'text-accent'} />
+                <span className="flex-1"><b>{m.title}</b> <span className="text-mute">— {m.plan.title}</span></span>
+                <span className="text-xs text-mute">{m.due < today ? 'en retard' : fmtDateShort(m.due)}</span>
+              </button>
+            ))}
             {followUps.map(({ contact, overdue }) => (
               <button key={`f-${contact.id}`} onClick={() => navigate(`/career?tab=reseau&contact=${contact.id}`)}
                 className={`w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border ${overdue ? 'border-bad/40 bg-bad/5' : 'border-line'}`}>
@@ -273,6 +302,11 @@ function Pilotage() {
                 }).map((c) => ({ value: c.id, label: c.org ? `${c.name} · ${c.org}` : c.name })),
               ]} />
           </Field>
+          {planOptions.length > 0 && (
+            <Field label="Objectif de carrière servi par cette candidature">
+              <Select value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })} options={[{ value: '', label: '— Aucun —' }, ...planOptions]} />
+            </Field>
+          )}
           <Field label="Notes"><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
@@ -282,7 +316,7 @@ function Pilotage() {
       </Modal>
 
       {editing && (
-        <EntityFormModal open={!!editing} onClose={() => setEditing(null)} title="Modifier la candidature" fields={appFields(contacts, domainOptions)}
+        <EntityFormModal open={!!editing} onClose={() => setEditing(null)} title="Modifier la candidature" fields={appFields(contacts, domainOptions, planOptions)}
           initial={editing} wide onSave={(values) => editApplication(editing.id, values)} onDelete={() => deleteApplication(editing.id)} />
       )}
     </div>
@@ -315,7 +349,7 @@ export default function Career({ initialTab }) {
         <Button variant="secondary" onClick={() => setDomainsOpen(true)}><span className="flex items-center gap-1.5"><Tags size={15} /> Domaines</span></Button>
       </div>
 
-      <nav className="grid grid-cols-5 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces carrière">
+      <nav className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces carrière">
         {SPACES.map((sp) => {
           const Icon = sp.icon;
           const active = sp.key === space;
@@ -333,6 +367,7 @@ export default function Career({ initialTab }) {
       </nav>
 
       {space === 'pilotage' && <Pilotage />}
+      {space === 'plan' && <CareerPlan />}
       {space === 'profil' && <CareerProfile />}
       {space === 'reseau' && <Networking embedded />}
       {space === 'visibilite' && <Content embedded />}
