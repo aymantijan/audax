@@ -10,6 +10,7 @@ import { Card, Stat, Button, Field, Input, Modal, Badge, EmptyState } from '../c
 import AccountFormModal from '../components/trading/AccountFormModal';
 import RuleGauge from '../components/trading/RuleGauge';
 import PropFirmSimConfig from '../components/trading/PropFirmSimConfig';
+import BrokerSimCard from '../components/trading/BrokerSimCard';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
@@ -138,6 +139,7 @@ export default function TradingAccountDetail() {
         </Card>
       )}
 
+      {account.type === 'demo' && <BrokerSimCard account={account} trades={getAccountTrades(account.id)} />}
       {account.type === 'demo' && <PropFirmSimConfig account={account} />}
 
       {brokerHealth && (

@@ -83,7 +83,7 @@ export default function AccountsCompare({ accounts, currency }) {
               <tr key={a.id} className="border-b border-line/50">
                 <td className="py-2 pr-3">
                   <div className="font-medium">{a.name}{a.status === 'archived' ? <span className="text-[10px] text-mute"> · archived</span> : null}</div>
-                  <div className="text-[11px] text-mute">{TYPE_LABEL[a.type]} · {fmtMoney(a.initialBalance || 0, 0, a.currency || currency)}{a.simEnabled ? ' · prop sim' : ''}</div>
+                  <div className="text-[11px] text-mute">{TYPE_LABEL[a.type]} · {fmtMoney(a.initialBalance || 0, 0, a.currency || currency)}{a.simEnabled ? ' · prop sim' : ''}{a.brokerSim ? ` · broker sim ${fmtMoney(a.brokerSim.realCapital, 0, a.brokerSim.currency || a.currency || currency)}` : ''}</div>
                 </td>
                 <Cells s={s} cur={a.currency || currency} />
                 <td className="py-2 text-right tabular-nums">{score ?? '—'}</td>

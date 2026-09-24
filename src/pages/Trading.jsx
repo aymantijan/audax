@@ -38,6 +38,7 @@ import Mt5ImportModal from '../components/trading/Mt5ImportModal';
 import EdgeFinder from '../components/trading/EdgeFinder';
 import Mt5SyncCard from '../components/trading/Mt5SyncCard';
 import AccountsCompare from '../components/trading/AccountsCompare';
+import BrokerSimCard from '../components/trading/BrokerSimCard';
 import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
@@ -564,6 +565,7 @@ export default function Trading() {
             <Stat label="Expectancy" value={expectancy.value} sub={expectancy.sub} color={rStats ? (rStats.expectancyR >= 0 ? 'var(--success)' : 'var(--error)') : undefined} />
             <Stat label="Max DD (month)" value={fmtPct(maxDd, 1)} color={maxDd > 10 ? 'var(--error)' : undefined} />
           </div>
+          {activeAccount?.type === 'demo' && activeAccount.brokerSim && <BrokerSimCard account={activeAccount} trades={trades} />}
           <EdgeFinder trades={trades} currency={currency} />
           <PlanDisciplineCard trades={trades} currency={currency} />
           <Card title="Equity Curve">
