@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Briefcase, Plus, Trash2, Pencil, ArrowRight, AlertTriangle, Download, UserRound, Compass, IdCard, Users, Megaphone, History, Tags, BellRing, Target, Flag } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Pencil, ArrowRight, AlertTriangle, Download, UserRound, Compass, IdCard, Users, Megaphone, History, Tags, BellRing, Target, Flag, MessagesSquare, Mail, CalendarClock, BadgeCheck } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
-import { CAREER_STAGES, DEFAULT_CAREER_DOMAINS, stageLabel, domainLabel } from '../utils/constants';
+import { CAREER_STAGES, DEFAULT_CAREER_DOMAINS, APPLICATION_TYPES, stageLabel, domainLabel } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { exportCareerReportPDF } from '../utils/career-report-pdf';
 import { useCareerDomains } from '../hooks/useCareerDomains';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
-import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 import CareerProfile from '../components/career/CareerProfile';
 import CareerHistory from '../components/career/CareerHistory';
 import CareerPlan, { useWeeklyRoutine } from '../components/career/CareerPlan';
+import ApplicationDetail from '../components/career/ApplicationDetail';
+import InterviewsSpace from '../components/career/InterviewsSpace';
 import Networking from './Networking';
 import Content from './Content';
 
@@ -28,32 +29,14 @@ const STAGE_OPTIONS = CAREER_STAGES.map((s) => ({ value: s, label: stageLabel(s)
 const SPACES = [
   { key: 'pilotage', label: 'Pilotage', desc: 'Candidatures & prochaines actions', icon: Compass },
   { key: 'plan', label: 'Plan', desc: 'Objectifs, écarts, routine', icon: Target },
+  { key: 'entretiens', label: 'Entretiens', desc: 'Préparation & offres', icon: MessagesSquare },
   { key: 'profil', label: 'Profil', desc: 'CV, parcours, compétences', icon: IdCard },
   { key: 'reseau', label: 'Réseau', desc: 'Contacts & relances', icon: Users },
   { key: 'visibilite', label: 'Visibilité', desc: 'Publications & marque perso', icon: Megaphone },
   { key: 'historique', label: 'Historique', desc: 'Tout votre parcours', icon: History },
 ];
 
-const blank = () => ({ company: '', role: '', domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
-// referralContactId's options depend on the live contacts list, so this is a
-// function of contacts rather than a static array.
-const appFields = (contacts, domainOptions, planOptions = []) => [
-  { name: 'company', label: 'Entreprise', type: 'text' },
-  { name: 'role', label: 'Poste', type: 'text' },
-  { name: 'domain', label: 'Domaine', type: 'select', options: domainOptions },
-  { name: 'appliedDate', label: 'Date de candidature', type: 'date' },
-  { name: 'location', label: 'Lieu', type: 'text' },
-  { name: 'salary', label: 'Salaire / rémunération', type: 'text' },
-  { name: 'url', label: 'Lien annonce', type: 'text' },
-  {
-    name: 'referralContactId', label: 'Contact référent (Réseau)', type: 'select',
-    options: [{ value: '', label: '— Aucun —' }, ...contacts.map((c) => ({ value: c.id, label: c.org ? `${c.name} · ${c.org}` : c.name }))],
-    hint: "Un contact lié reçoit une relance planifiée quand la candidature avance d'étape.",
-  },
-  ...(planOptions.length ? [{ name: 'planId', label: 'Objectif de carrière', type: 'select', options: [{ value: '', label: '— Aucun —' }, ...planOptions] }] : []),
-  { name: 'notes', label: 'Notes', type: 'textarea' },
-];
-
+const blank = () => ({ company: '', role: '', type: APPLICATION_TYPES[0], domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
 function DomainsModal({ onClose }) {
   const { domains, setDomains } = useCareerStore();
   const [text, setText] = useState((domains?.length ? domains : DEFAULT_CAREER_DOMAINS).join('\n'));
@@ -75,7 +58,7 @@ function DomainsModal({ onClose }) {
 }
 
 function Pilotage() {
-  const { applications, addApplication, editApplication, deleteApplication, setStage, getBadges, getStaleApplications, getConversionStats } = useCareerStore();
+  const { applications, addApplication, deleteApplication, setStage, getBadges, getStaleApplications, getConversionStats } = useCareerStore();
   const contacts = useNetworkingStore((s) => s.contacts);
   const getFollowUpAlerts = useNetworkingStore((s) => s.getFollowUpAlerts);
   const domainOptions = useCareerDomains();
@@ -88,6 +71,10 @@ function Pilotage() {
   const dueMilestones = plans.filter((p) => p.status !== 'achieved' && p.status !== 'dropped')
     .flatMap((p) => (p.milestones || []).filter((m) => !m.done && m.due && m.due <= soon).map((m) => ({ ...m, plan: p })))
     .sort((a, b) => a.due.localeCompare(b.due));
+  const inDays = (n) => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
+  const soonItw = applications.flatMap((a) => (a.interviews || []).filter((i) => i.date >= today && i.date <= inDays(3)).map((i) => ({ ...i, app: a })));
+  const thanks = applications.flatMap((a) => (a.interviews || []).filter((i) => i.date <= today && i.date >= inDays(-7) && !i.thankYouSent).map((i) => ({ ...i, app: a })));
+  const offerDeadlines = applications.filter((a) => a.offer?.deadline && a.offer.deadline <= inDays(7) && !['Accepted', 'Rejected', 'Withdrawn'].includes(a.stage));
   const navigate = useNavigate();
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -136,9 +123,30 @@ function Pilotage() {
         ))}
       </div>
 
-      {(stale.length > 0 || followUps.length > 0 || dueMilestones.length > 0) && (
+      {(stale.length > 0 || followUps.length > 0 || dueMilestones.length > 0 || soonItw.length > 0 || thanks.length > 0 || offerDeadlines.length > 0) && (
         <Card title="Prochaines actions">
           <div className="space-y-1.5">
+            {soonItw.map((i) => (
+              <button key={`i-${i.id}`} onClick={() => setEditing({ ...i.app, _tab: 'prep' })} className="w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border border-accent/40 bg-accent/5">
+                <CalendarClock size={14} className="text-accent" />
+                <span className="flex-1">Préparer l’entretien <b>{i.app.company}</b> <span className="text-mute">({i.kind})</span></span>
+                <span className="text-xs text-mute">{i.date === today ? 'aujourd’hui' : fmtDateShort(i.date)}{i.time ? ` · ${i.time}` : ''}</span>
+              </button>
+            ))}
+            {thanks.map((i) => (
+              <button key={`t-${i.id}`} onClick={() => setEditing({ ...i.app, _tab: 'entretiens' })} className="w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border border-line">
+                <Mail size={14} className="text-accent" />
+                <span className="flex-1">Envoyer un remerciement — <b>{i.app.company}</b>{i.with ? ` (${i.with})` : ''}</span>
+                <span className="text-xs text-mute">entretien du {fmtDateShort(i.date)}</span>
+              </button>
+            ))}
+            {offerDeadlines.map((a) => (
+              <button key={`o-${a.id}`} onClick={() => setEditing({ ...a, _tab: 'offre' })} className={`w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border ${a.offer.deadline < today ? 'border-bad/40 bg-bad/5' : 'border-warn/40 bg-warn/5'}`}>
+                <BadgeCheck size={14} className="text-warn" />
+                <span className="flex-1">Répondre à l’offre <b>{a.company}</b></span>
+                <span className="text-xs text-mute">avant le {fmtDateShort(a.offer.deadline)}</span>
+              </button>
+            ))}
             {dueMilestones.map((m) => (
               <button key={`m-${m.id}`} onClick={() => navigate('/career?tab=plan')}
                 className={`w-full text-left flex items-center gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer border ${m.due < today ? 'border-bad/40 bg-bad/5' : 'border-line'}`}>
@@ -208,12 +216,14 @@ function Pilotage() {
                       <div key={a.id} className="bg-card border border-line rounded-lg p-3 text-sm">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-medium">{a.role}</div>
+                            <button className="font-medium text-left hover:underline cursor-pointer" onClick={() => setEditing(a)}>{a.role}</button>
                             <div className="text-xs text-mute">{a.company}</div>
                           </div>
                           <button className="text-mute hover:text-accent cursor-pointer shrink-0" onClick={() => setEditing(a)}><Pencil size={12} /></button>
                         </div>
-                        <div className="text-[11px] text-mute mt-1.5">{fmtDateShort(a.appliedDate)} · {domainLabel(a.domain)}</div>
+                        <div className="text-[11px] text-mute mt-1.5">{fmtDateShort(a.appliedDate)} · {a.type || domainLabel(a.domain)}</div>
+                        {(() => { const next = (a.interviews || []).filter((i) => i.date >= todayKey()).sort((x, y) => x.date.localeCompare(y.date))[0]; return next ? <div className="text-[11px] text-accent mt-1 flex items-center gap-1"><CalendarClock size={10} /> {next.kind} · {fmtDateShort(next.date)}</div> : null; })()}
+                        {a.offer && <div className="text-[11px] text-good mt-1 flex items-center gap-1"><BadgeCheck size={10} /> Offre{a.offer.salary ? ` · ${Number(a.offer.salary).toLocaleString('fr-FR')} ${a.offer.currency || ''}/mois` : ''}</div>}
                         {a.referralContactId && contactName(a.referralContactId) && (
                           <button className="flex items-center gap-1 text-[11px] text-accent hover:underline cursor-pointer mt-1" onClick={() => navigate(`/career?tab=reseau&contact=${a.referralContactId}`)} title="Ouvrir le contact référent">
                             <UserRound size={10} /> {contactName(a.referralContactId)}
@@ -281,6 +291,7 @@ function Pilotage() {
             <Field label="Entreprise"><Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} autoFocus /></Field>
             <Field label="Poste"><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="ex. Stage analyste M&A" /></Field>
           </div>
+          <Field label="Type"><Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={APPLICATION_TYPES} /></Field>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={domainOptions} /></Field>
             <Field label="Date"><Input type="date" value={form.appliedDate} onChange={(e) => setForm({ ...form, appliedDate: e.target.value })} /></Field>
@@ -315,10 +326,7 @@ function Pilotage() {
         </form>
       </Modal>
 
-      {editing && (
-        <EntityFormModal open={!!editing} onClose={() => setEditing(null)} title="Modifier la candidature" fields={appFields(contacts, domainOptions, planOptions)}
-          initial={editing} wide onSave={(values) => editApplication(editing.id, values)} onDelete={() => deleteApplication(editing.id)} />
-      )}
+      {editing && <ApplicationDetail key={editing.id} appId={editing.id} initialTab={editing._tab || 'infos'} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -328,6 +336,7 @@ export default function Career({ initialTab }) {
   const tabParam = searchParams.get('tab');
   const [space, setSpace] = useState(() => (SPACES.some((s) => s.key === tabParam) ? tabParam : initialTab || 'pilotage'));
   const [domainsOpen, setDomainsOpen] = useState(false);
+  const [detail, setDetail] = useState(null); // { id, tab }
 
   useEffect(() => { if (tabParam && tabParam !== space && SPACES.some((s) => s.key === tabParam)) setSpace(tabParam); }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -349,7 +358,7 @@ export default function Career({ initialTab }) {
         <Button variant="secondary" onClick={() => setDomainsOpen(true)}><span className="flex items-center gap-1.5"><Tags size={15} /> Domaines</span></Button>
       </div>
 
-      <nav className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces carrière">
+      <nav className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces carrière">
         {SPACES.map((sp) => {
           const Icon = sp.icon;
           const active = sp.key === space;
@@ -368,11 +377,13 @@ export default function Career({ initialTab }) {
 
       {space === 'pilotage' && <Pilotage />}
       {space === 'plan' && <CareerPlan />}
+      {space === 'entretiens' && <InterviewsSpace onOpenApp={(id, tab) => setDetail({ id, tab })} />}
       {space === 'profil' && <CareerProfile />}
       {space === 'reseau' && <Networking embedded />}
       {space === 'visibilite' && <Content embedded />}
       {space === 'historique' && <CareerHistory />}
       {domainsOpen && <DomainsModal onClose={() => setDomainsOpen(false)} />}
+      {detail && <ApplicationDetail key={detail.id} appId={detail.id} initialTab={detail.tab} onClose={() => setDetail(null)} />}
     </div>
   );
 }

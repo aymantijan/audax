@@ -109,6 +109,32 @@ const LEGACY_DOMAIN_LABEL = { General: 'Général', Engineering: 'Ingénierie', 
 export const domainLabel = (d) => LEGACY_DOMAIN_LABEL[d] || d;
 export const EXPERIENCE_TYPES = ['Stage', 'CDI', 'CDD', 'Alternance', 'Freelance', 'Emploi étudiant', 'Associatif', 'Projet'];
 export const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Langue maternelle'];
+export const APPLICATION_TYPES = ['Stage', 'Stage de fin d’études (PFE)', 'Alternance', 'CDI', 'CDD', 'VIE / international', 'Freelance / mission', 'Programme (graduate…)', 'Autre'];
+export const INTERVIEW_KINDS = ['Appel RH', 'Entretien opérationnel', 'Technique', 'Étude de cas', 'Test / assessment', 'Final / associé', 'Autre'];
+export const QUESTION_CATEGORIES = ['Motivation', 'Parcours', 'Comportemental (STAR)', 'Technique finance', 'Marchés', 'Étude de cas'];
+// Starter bank (editable) — generic business-school / finance interviews.
+export const DEFAULT_INTERVIEW_QUESTIONS = [
+  ['Motivation', 'Présentez-vous en 2 minutes.'],
+  ['Motivation', 'Pourquoi notre entreprise ?'],
+  ['Motivation', 'Pourquoi ce poste, ce métier ?'],
+  ['Motivation', 'Où vous voyez-vous dans 5 ans ?'],
+  ['Parcours', 'Parlez-moi de l’expérience dont vous êtes le plus fier.'],
+  ['Parcours', 'Pourquoi avoir choisi votre formation ?'],
+  ['Parcours', 'Quelle est votre plus grande faiblesse ?'],
+  ['Comportemental (STAR)', 'Racontez un échec et ce que vous en avez appris.'],
+  ['Comportemental (STAR)', 'Un conflit dans une équipe : comment l’avez-vous géré ?'],
+  ['Comportemental (STAR)', 'Une situation où vous avez pris le leadership.'],
+  ['Comportemental (STAR)', 'Un moment où vous avez travaillé sous forte pression.'],
+  ['Technique finance', 'Comment valorise-t-on une entreprise ? (DCF, multiples, transactions)'],
+  ['Technique finance', 'Expliquez les liens entre les trois états financiers.'],
+  ['Technique finance', 'Si les amortissements augmentent de 10, quel impact sur les trois états ?'],
+  ['Technique finance', 'Qu’est-ce que le WACC et comment le calcule-t-on ?'],
+  ['Technique finance', 'Qu’est-ce qu’un LBO et pourquoi utiliser de la dette ?'],
+  ['Marchés', 'Quelle est votre lecture actuelle des marchés ?'],
+  ['Marchés', 'Pitchez-moi une action ou une opération récente.'],
+  ['Étude de cas', 'Un client veut racheter un concurrent : quelles questions poser ?'],
+];
+export const DEFAULT_ASK_THEM = 'À quoi ressemble une journée type ?\nComment la performance est-elle évaluée ?\nQu’est-ce qui distingue ceux qui réussissent ici ?\nQuelles sont les prochaines étapes du processus ?';
 // Which skill a career-application stage advance targets — mirrors
 // ENGINEERING_STAGE_SKILL's keyed-by-stage pattern. All three ids are real,
 // unlocked-from-start Communication-category nodes (see skill-tree-data.js).

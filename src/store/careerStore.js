@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
-import { CAREER_STAGES, CAREER_STAGE_SKILL } from '../utils/constants';
+import { CAREER_STAGES, CAREER_STAGE_SKILL, DEFAULT_INTERVIEW_QUESTIONS } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useNetworkingStore } from './networkingStore';
 import { toast } from './uiStore';
@@ -50,6 +50,10 @@ export const useCareerStore = create(
           notes: data.notes || '',
           referralContactId: data.referralContactId || '', // links to a networkingStore contact — see setStage
           planId: data.planId || '', // career objective this application serves (Carrière n°2)
+          type: data.type || '', // APPLICATION_TYPES (Carrière n°3)
+          interviews: [], // [{ id, date, time, kind, with, notes, feeling (1-5), thankYouSent, createdAt }]
+          prep: { companyNotes: '', questionIds: [], storyIds: [], askThem: '' },
+          offer: null, // { salary, currency, bonus, benefits, location, startDate, deadline, learning, career, culture, notes }
           stageHistory: [{ stage: 'Applied', date: todayKey() }],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -135,6 +139,38 @@ export const useCareerStore = create(
         };
       },
 
+      // ── Interviews, preparation, offers (Carrière n°3) ──
+      addInterview: (appId, data) => {
+        const app = get().applications.find((a) => a.id === appId);
+        if (!app) return;
+        const itw = { id: uid(), date: data.date || todayKey(), time: data.time || '', kind: data.kind || 'Autre', with: data.with || '', notes: data.notes || '', feeling: data.feeling || null, thankYouSent: false, createdAt: Date.now() };
+        set({ applications: get().applications.map((a) => (a.id === appId ? { ...a, interviews: [...(a.interviews || []), itw], updatedAt: Date.now() } : a)) });
+        // A scheduled interview means the application reached (at least) that stage.
+        if (CAREER_STAGES.indexOf(app.stage) < CAREER_STAGES.indexOf('Interview')) get().setStage(appId, 'Interview');
+        toast(`Entretien ajouté — ${app.company}`, 'success');
+      },
+      editInterview: (appId, id, updates) => set({ applications: get().applications.map((a) => (a.id === appId ? { ...a, interviews: (a.interviews || []).map((i) => (i.id === id ? { ...i, ...updates } : i)), updatedAt: Date.now() } : a)) }),
+      deleteInterview: (appId, id) => set({ applications: get().applications.map((a) => (a.id === appId ? { ...a, interviews: (a.interviews || []).filter((i) => i.id !== id) } : a)) }),
+      setPrep: (appId, patch) => set({ applications: get().applications.map((a) => (a.id === appId ? { ...a, prep: { companyNotes: '', questionIds: [], storyIds: [], askThem: '', ...(a.prep || {}), ...patch } } : a)) }),
+      setOffer: (appId, offer) => {
+        const app = get().applications.find((a) => a.id === appId);
+        set({ applications: get().applications.map((a) => (a.id === appId ? { ...a, offer: offer ? { ...(a.offer || {}), ...offer } : null, updatedAt: Date.now() } : a)) });
+        if (offer && app && CAREER_STAGES.indexOf(app.stage) < CAREER_STAGES.indexOf('Offer')) get().setStage(appId, 'Offer');
+      },
+
+      // Question bank (starter questions, editable) + STAR stories
+      questions: DEFAULT_INTERVIEW_QUESTIONS.map(([category, question], i) => ({ id: `q${i + 1}`, category, question, answer: '', practiced: 0, lastPracticed: null })),
+      addQuestion: (data) => set({ questions: [...(get().questions || []), { id: uid(), category: data.category || 'Motivation', question: data.question.trim(), answer: data.answer || '', practiced: 0, lastPracticed: null }] }),
+      editQuestion: (id, updates) => set({ questions: (get().questions || []).map((q) => (q.id === id ? { ...q, ...updates } : q)) }),
+      deleteQuestion: (id) => set({ questions: (get().questions || []).filter((q) => q.id !== id) }),
+      practiceQuestion: (id) => set({ questions: (get().questions || []).map((q) => (q.id === id ? { ...q, practiced: (q.practiced || 0) + 1, lastPracticed: todayKey() } : q)) }),
+      stories: [], // [{ id, title, situation, task, action, result, tags: [] }]
+      addStory: (data) => { const s = { id: uid(), title: '', situation: '', task: '', action: '', result: '', tags: [], ...data }; set({ stories: [...(get().stories || []), s] }); return s.id; },
+      editStory: (id, updates) => set({ stories: (get().stories || []).map((s) => (s.id === id ? { ...s, ...updates } : s)) }),
+      deleteStory: (id) => set({ stories: (get().stories || []).filter((s) => s.id !== id) }),
+      offerWeights: { salary: 3, learning: 3, career: 3, culture: 2 },
+      setOfferWeights: (w) => set({ offerWeights: { ...get().offerWeights, ...w } }),
+
       // ── Career plan (Carrière n°2) ──
       // Objectives: a target role with a date, the skills it requires (linked
       // to the skill tree / a Learning course when possible) and milestones.
@@ -196,7 +232,7 @@ export const useCareerStore = create(
     {
       name: 'audax-career',
       // Older saves have no profile: keep the defaults for every missing field.
-      merge: (persisted, current) => ({ ...current, ...persisted, profile: { ...current.profile, ...(persisted?.profile || {}) }, weeklyTargets: { ...current.weeklyTargets, ...(persisted?.weeklyTargets || {}) } }),
+      merge: (persisted, current) => ({ ...current, ...persisted, profile: { ...current.profile, ...(persisted?.profile || {}) }, weeklyTargets: { ...current.weeklyTargets, ...(persisted?.weeklyTargets || {}) }, offerWeights: { ...current.offerWeights, ...(persisted?.offerWeights || {}) } }),
     }
   )
 );

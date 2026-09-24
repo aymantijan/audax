@@ -55,6 +55,7 @@ export default function CareerHistory() {
         const date = h.stage === 'Applied' ? a.appliedDate || h.date : h.date;
         out.push({ kind: 'application', date, title: `${STAGE_TEXT[h.stage] || stageLabel(h.stage)} — ${a.role}`, sub: a.company, milestone: h.stage === 'Offer' || h.stage === 'Accepted' });
       }
+      for (const i of a.interviews || []) out.push({ kind: 'application', date: i.date, title: `${i.kind} — ${a.role}`, sub: [a.company, i.with, i.feeling ? `ressenti ${i.feeling}/5` : ''].filter(Boolean).join(' · ') });
     }
     for (const c of contacts) {
       if (c.createdAt) out.push({ kind: 'network', date: new Date(c.createdAt).toLocaleDateString('sv-SE'), title: `Nouveau contact — ${c.name}`, sub: [c.role, c.org].filter(Boolean).join(' · ') });
