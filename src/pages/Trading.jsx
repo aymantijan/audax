@@ -36,6 +36,7 @@ import PlaybookCard from '../components/trading/PlaybookCard';
 import { SessionPlanCard, DayReviewCard, WeeklyReviewCard } from '../components/trading/RoutineCards';
 import Mt5ImportModal from '../components/trading/Mt5ImportModal';
 import EdgeFinder from '../components/trading/EdgeFinder';
+import Mt5SyncCard from '../components/trading/Mt5SyncCard';
 import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
@@ -535,6 +536,7 @@ export default function Trading() {
             <span className="flex-1 text-mute">Trading on MetaTrader 5? Import the History report — new account or an existing one, duplicates skipped.</span>
             <Button variant="secondary" onClick={() => setMt5Open(true)}>Import MT5 report</Button>
           </div>
+          <Mt5SyncCard />
           <ScorePanel />
           <TradingAccounts embedded />
         </div>

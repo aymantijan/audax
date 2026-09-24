@@ -150,39 +150,72 @@ export function serverToLocal(stamp, offsetHours) {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+const localOf = (ms) => {
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, '0');
+  return { ms, date: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, time: `${p(d.getHours())}:${p(d.getMinutes())}` };
+};
+
 /**
- * → { trades, newSymbols[], duplicates, net } — trades are ready for
- * tradingStore.importTrades (P&L = profit + commission + swap, i.e. what
- * hit the balance; risk from the INITIAL stop so moved stops don't fake R).
+ * One closed MT5 position → AUDAX trade. `open` / `close` are local
+ * { ms, date, time }. P&L = profit + commission + swap (what hit the
+ * balance); risk from the INITIAL stop so moved stops don't fake R.
  */
+function buildTrade(p, { external, accountId, strategy, instrument, open, close }) {
+  const dir = p.type.startsWith('sell') ? 'short' : 'long';
+  const sign = dir === 'short' ? -1 : 1;
+  const move = (p.closePrice - p.openPrice) * sign;
+  // Money per 1.0 price unit for this position size, read from the position itself.
+  const perUnit = move ? p.profit / move : null;
+  const stop = p.initialSL || (p.sl && (dir === 'long' ? p.sl < p.openPrice : p.sl > p.openPrice) ? p.sl : 0);
+  const riskAmount = perUnit && stop ? round2(Math.abs(p.openPrice - stop) * Math.abs(perUnit)) : 0;
+  return {
+    external, source: 'mt5', accountId,
+    date: close?.date, entryTime: open?.time || '', session: open ? sessionOf(open.date, open.time) : null,
+    instrument, strategy, direction: dir, timeframe: '',
+    entryPrice: p.openPrice, exitPrice: p.closePrice, stopLoss: stop || 0, takeProfit: p.tp || 0,
+    positionSize: p.volume, riskAmount, pnl: round2(p.profit + p.commission + p.swap), fees: round2(-(p.commission + p.swap)),
+    holdingTime: open && close ? Math.max(0, Math.round((close.ms - open.ms) / 60000)) : 0,
+    chartUrl: '', journal: { reasoning: '', emotion: 'neutral', processQuality: 7, exitReason: '' },
+    lesson: '', linkedSkills: [], macro: {}, followedPlan: null, mistakes: [],
+  };
+}
+
+/** Report (file import) → { trades, newSymbols[], duplicates, net } for tradingStore.importTrades. */
 export function positionsToTrades(report, { accountId, offsetHours = 3, strategy = 'Trend', knownInstruments = [], existingExternal = new Set() }) {
   const trades = []; const newSymbols = new Set(); let duplicates = 0; let net = 0;
   for (const p of report.positions) {
     const external = `mt5:${report.meta.login || 'x'}:${p.position}`;
-    const pnl = round2(p.profit + p.commission + p.swap);
-    net += pnl;
+    net += round2(p.profit + p.commission + p.swap);
     if (existingExternal.has(external)) { duplicates++; continue; }
     const instrument = baseSymbol(p.symbol, knownInstruments);
     if (!knownInstruments.includes(instrument)) newSymbols.add(instrument);
     const open = serverToLocal(p.openTime, offsetHours);
     const close = serverToLocal(p.closeTime, offsetHours) || open;
-    const dir = p.type.startsWith('sell') ? 'short' : 'long';
-    const sign = dir === 'short' ? -1 : 1;
-    const move = (p.closePrice - p.openPrice) * sign;
-    // Money per 1.0 price unit for this position size, read from the position itself.
-    const perUnit = move ? p.profit / move : null;
-    const stop = p.initialSL || (p.sl && (dir === 'long' ? p.sl < p.openPrice : p.sl > p.openPrice) ? p.sl : 0);
-    const riskAmount = perUnit && stop ? round2(Math.abs(p.openPrice - stop) * Math.abs(perUnit)) : 0;
-    trades.push({
-      external, source: 'mt5', accountId,
-      date: close?.date, entryTime: open?.time || '', session: open ? sessionOf(open.date, open.time) : null,
-      instrument, strategy, direction: dir, timeframe: '',
-      entryPrice: p.openPrice, exitPrice: p.closePrice, stopLoss: stop || 0, takeProfit: p.tp || 0,
-      positionSize: p.volume, riskAmount, pnl, fees: round2(-(p.commission + p.swap)),
-      holdingTime: open && close ? Math.max(0, Math.round((close.ms - open.ms) / 60000)) : 0,
-      chartUrl: '', journal: { reasoning: '', emotion: 'neutral', processQuality: 7, exitReason: '' },
-      lesson: '', linkedSkills: [], macro: {}, followedPlan: null, mistakes: [],
-    });
+    trades.push(buildTrade(p, { external, accountId, strategy, instrument, open, close }));
   }
   return { trades, newSymbols: [...newSymbols], duplicates, net: round2(net) };
+}
+
+/**
+ * Live sync (AUDAX_Sync EA) → same shape. EA times are already UTC unix
+ * seconds and `sl` is the opening order's (initial) stop. Same `external`
+ * key as the file import, so file + live sync never duplicate each other.
+ */
+export function syncPositionsToTrades(login, positions, { accountId, strategy = 'Trend', knownInstruments = [], existingExternal = new Set() }) {
+  const trades = []; const newSymbols = new Set();
+  for (const p of positions || []) {
+    const external = `mt5:${login}:${p.position}`;
+    if (existingExternal.has(external)) continue;
+    const instrument = baseSymbol(p.symbol, knownInstruments);
+    if (!knownInstruments.includes(instrument)) newSymbols.add(instrument);
+    trades.push(buildTrade({ ...p, initialSL: p.sl || null }, { external, accountId, strategy, instrument, open: localOf(p.openTime * 1000), close: localOf(p.closeTime * 1000) }));
+  }
+  return { trades, newSymbols: [...newSymbols] };
+}
+
+/** Instrument definitions for symbols AUDAX doesn't know yet. */
+export function newInstrumentDefs(codes, presets) {
+  const guessClass = (code) => (/^(US|NAS|SPX|GER|UK|JP|DE|FR|HK|AUS)\d/.test(code) ? 'index' : /^(XAU|XAG|XPT|USOIL|UKOIL|WTI|BRENT)/.test(code) ? 'commodity' : /^(BTC|ETH|SOL|XRP|LTC|DOGE)/.test(code) ? 'crypto' : /^[A-Z]{6}$/.test(code) ? 'forex' : 'stock');
+  return codes.map((code) => presets.find((p) => p.code === code) || { code, kind: 'direct', assetClass: guessClass(code) });
 }

@@ -2,13 +2,12 @@ import { useMemo, useState } from 'react';
 import { FileUp, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
 import { INSTRUMENTS, STRATEGIES } from '../../utils/constants';
-import { readReportFile, parseMt5Report, positionsToTrades } from '../../utils/mt5-import';
+import { readReportFile, parseMt5Report, positionsToTrades, newInstrumentDefs } from '../../utils/mt5-import';
 import { INSTRUMENT_PRESETS } from '../../utils/trading-journal';
 import { fmtMoney, fmtSignedMoney } from '../../utils/formatters';
 import { Button, Field, Input, Select, Modal } from '../common/ui';
 
 const OFFSETS = Array.from({ length: 27 }, (_, i) => i - 12);
-const guessClass = (code) => (/^(US|NAS|SPX|GER|UK|JP|DE|FR|HK|AUS)\d/.test(code) ? 'index' : /^(XAU|XAG|XPT|USOIL|UKOIL|WTI|BRENT)/.test(code) ? 'commodity' : /^(BTC|ETH|SOL|XRP|LTC|DOGE)/.test(code) ? 'crypto' : /^[A-Z]{6}$/.test(code) ? 'forex' : 'stock');
 
 export default function Mt5ImportModal({ open, onClose, onDone }) {
   const { accounts, activeAccountId, trades: allTrades, customInstruments, customStrategies, addAccount, editAccount, importTrades } = useTradingStore();
@@ -60,7 +59,7 @@ export default function Mt5ImportModal({ open, onClose, onDone }) {
       if (dep) editAccount(accountId, { currentPhaseStartAt: new Date(+dep[1], +dep[2] - 1, +dep[3]).getTime() });
     }
     const { trades } = positionsToTrades(report, { accountId, offsetHours: Number(opt.offset), strategy: opt.strategy, knownInstruments: known, existingExternal: existing });
-    const newInstruments = preview.newSymbols.map((code) => INSTRUMENT_PRESETS.find((p) => p.code === code) || { code, kind: 'direct', assetClass: guessClass(code) });
+    const newInstruments = newInstrumentDefs(preview.newSymbols, INSTRUMENT_PRESETS);
     importTrades(trades, newInstruments);
     reset();
     onDone?.(accountId);

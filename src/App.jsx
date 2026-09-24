@@ -13,6 +13,7 @@ import { useHealthReminders } from './hooks/useHealthReminders';
 import { useTradingAlerts } from './hooks/useTradingAlerts';
 import { useEcheanceAlerts } from './hooks/useEcheanceAlerts';
 import { useHabitReminders } from './hooks/useHabitReminders';
+import { useMt5AutoSync } from './hooks/useMt5Sync';
 import { useBudgetAlerts } from './hooks/useBudgetAlerts';
 import MainLayout from './components/layout/MainLayout';
 import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
@@ -112,6 +113,7 @@ export default function App() {
   useTradingAlerts(); // local-only browser-notification alerts for rule breaches/tilt/deadlines
   useEcheanceAlerts(); // local-only browser-notification alerts for overdue échéances
   useHabitReminders(); // habit reminders at their chosen time (local only)
+  useMt5AutoSync(); // imports positions sent by the AUDAX_Sync MT5 Expert Advisor
   useBudgetAlerts(); // local-only browser-notification alerts for budget overruns
 
   // Cloud sync: only active when Supabase is configured AND the user has a

@@ -178,6 +178,16 @@ export const useTradingStore = create(
         toast(`Week reviewed — grade ${data.grade}`, 'success');
       },
 
+      // ─────────── MT5 live sync (Trading n°5) ───────────
+      // MT5 login → AUDAX account that receives its synced positions.
+      mt5Links: {},
+      mt5Strategy: '', // setup given to synced trades (edit per trade in the Journal)
+      setMt5Strategy: (name) => set({ mt5Strategy: name }),
+      setMt5Link: (login, accountId) => {
+        const { [login]: _old, ...rest } = get().mt5Links || {};
+        set({ mt5Links: accountId ? { ...rest, [login]: accountId } : rest });
+      },
+
       // ─────────── Open positions (Trading n°2) ───────────
       // Kept apart from trades[] so stats/equity/prop-firm rules only ever see
       // closed trades. Partial closes are stored on the position and summed
@@ -783,7 +793,7 @@ export const useTradingStore = create(
         }));
         set({ trades: [...get().trades, ...added] });
         get().checkBadges();
-        toast(`${added.length} trade${added.length === 1 ? '' : 's'} imported from MT5`, 'success');
+        if (added.length) toast(`${added.length} trade${added.length === 1 ? '' : 's'} imported from MT5`, 'success');
         return added.length;
       },
 
@@ -804,7 +814,7 @@ export const useTradingStore = create(
           alerts: { enabled: false, lastShown: {} }, coachCache: {},
           scoreSettings: { includedTypes: { demo: true, broker: true, propfirm: true }, weights: DEFAULT_SCORE_WEIGHTS, mode: 'fixed' },
           customInstruments: [], customStrategies: [], playbook: {}, customMistakes: [], openPositions: [],
-          dailyPlans: {}, dayReviews: {}, weekReviews: {},
+          dailyPlans: {}, dayReviews: {}, weekReviews: {}, mt5Links: {},
         }),
     }),
     { name: 'audax-trading' }
