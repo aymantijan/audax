@@ -37,6 +37,7 @@ import { SessionPlanCard, DayReviewCard, WeeklyReviewCard } from '../components/
 import Mt5ImportModal from '../components/trading/Mt5ImportModal';
 import EdgeFinder from '../components/trading/EdgeFinder';
 import Mt5SyncCard from '../components/trading/Mt5SyncCard';
+import AccountsCompare from '../components/trading/AccountsCompare';
 import { toast } from '../store/uiStore';
 import { exportTradingReportPDF } from '../utils/trading-report-pdf';
 
@@ -234,6 +235,7 @@ export default function Trading() {
   const [editing, setEditing] = useState(null);
   const [posForm, setPosForm] = useState(null); // { position, mode: 'close' | 'edit' }
   const [mt5Open, setMt5Open] = useState(false);
+  const [anScope, setAnScope] = useState('account'); // analytics scope: 'account' | 'all' | account type
   const [filterInstrument, setFilterInstrument] = useState('all');
   const [filterStrategy, setFilterStrategy] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
@@ -294,15 +296,39 @@ export default function Trading() {
   const dailyLimitPct = activeAccount?.type === 'propfirm' ? activeAccount?.propFirmRules?.maxDailyLossPct : activeAccount?.riskLimits?.maxDailyLossPct;
   const dailyRoom = dailyLimitPct != null && initialBalance > 0 ? (initialBalance * dailyLimitPct) / 100 - Math.max(0, -todayPnl) : null;
 
+  // ── Analytics scope: this account, all accounts, or one account type ──
+  const TYPE_NAMES = { demo: 'Demo', propfirm: 'Prop Firm', broker: 'Broker' };
+  const scopeAccounts = useMemo(() => (anScope === 'account' ? (activeAccount ? [activeAccount] : [])
+    : tradingStore.accounts.filter((a) => anScope === 'all' || a.type === anScope)), [anScope, activeAccount, tradingStore.accounts]);
+  const multi = anScope !== 'account';
+  const aTrades = useMemo(() => {
+    if (!multi) return trades;
+    const ids = new Set(scopeAccounts.map((a) => a.id));
+    return tradingStore.trades.filter((t) => ids.has(t.accountId));
+  }, [multi, trades, scopeAccounts, tradingStore.trades]);
+  const scopeCurrencies = [...new Set(scopeAccounts.map((a) => a.currency || 'USD'))];
+  const aCurrency = multi ? scopeCurrencies[0] || 'USD' : currency;
+  const aStats = useMemo(() => {
+    const pnl = aTrades.reduce((s, t) => s + t.pnl, 0);
+    const initial = scopeAccounts.reduce((s, a) => s + (a.initialBalance || 0), 0);
+    const r = rMultipleStats(aTrades);
+    return { pnl, count: aTrades.length, winRate: aTrades.length ? (aTrades.filter((t) => t.pnl > 0).length / aTrades.length) * 100 : null, expR: r?.expectancyR ?? null, returnPct: initial > 0 ? (pnl / initial) * 100 : null };
+  }, [aTrades, scopeAccounts]);
+  const scopeOptions = [
+    { key: 'account', label: activeAccount?.name || 'This account' },
+    { key: 'all', label: `All accounts (${tradingStore.accounts.length})` },
+    ...['demo', 'propfirm', 'broker'].map((t) => ({ key: t, n: tradingStore.accounts.filter((a) => a.type === t).length })).filter((o) => o.n > 0).map((o) => ({ key: o.key, label: `${TYPE_NAMES[o.key]} (${o.n})` })),
+  ];
+
   const instrumentList = useMemo(() => [...INSTRUMENTS, ...tradingStore.customInstruments.map((c) => c.code)], [tradingStore.customInstruments]);
   const strategyList = useMemo(() => [...STRATEGIES, ...tradingStore.customStrategies.map((c) => c.name)], [tradingStore.customStrategies]);
   const byStrategy = useMemo(
-    () => strategyList.map((s) => ({ name: s, pnl: trades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
-    [trades, strategyList]
+    () => strategyList.map((s) => ({ name: s, pnl: aTrades.filter((t) => t.strategy === s).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
+    [aTrades, strategyList]
   );
   const byInstrument = useMemo(
-    () => instrumentList.map((i) => ({ name: i, pnl: trades.filter((t) => t.instrument === i).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
-    [trades, instrumentList]
+    () => instrumentList.map((i) => ({ name: i, pnl: aTrades.filter((t) => t.instrument === i).reduce((a, t) => a + t.pnl, 0) })).filter((d) => d.pnl !== 0),
+    [aTrades, instrumentList]
   );
   const filtered = useMemo(
     () => [...trades]
@@ -495,6 +521,41 @@ export default function Trading() {
 
       {space === 'analytics' && (
         <div className="space-y-5">
+          {tradingStore.accounts.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-mute mr-1">Analyse</span>
+              {scopeOptions.map((o) => (
+                <button key={o.key} onClick={() => setAnScope(o.key)}
+                  className={`px-3 py-1 rounded-lg border text-xs cursor-pointer ${anScope === o.key ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'}`}>{o.label}</button>
+              ))}
+            </div>
+          )}
+          {multi && scopeCurrencies.length > 1 && (
+            <div className="text-xs rounded-lg px-3 py-2 text-warn" style={{ background: tint('var(--warning)', 10) }}>
+              These accounts use different currencies ({scopeCurrencies.join(', ')}): amounts are added as-is. Compare them in R and % return, which don’t depend on currency.
+            </div>
+          )}
+          {multi ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <Stat label="Accounts" value={scopeAccounts.length} sub={`${aStats.count} trades`} />
+                <Stat label="Net P&L" value={fmtSignedMoney(aStats.pnl, aCurrency)} color={aStats.pnl >= 0 ? 'var(--success)' : 'var(--error)'} />
+                <Stat label="Return" value={aStats.returnPct == null ? '—' : `${aStats.returnPct >= 0 ? '+' : ''}${aStats.returnPct.toFixed(2)}%`} sub="on combined starting balances" />
+                <Stat label="Win rate" value={aStats.winRate == null ? '—' : fmtPct(aStats.winRate)} />
+                <Stat label="Expectancy" value={aStats.expR == null ? '—' : `${aStats.expR >= 0 ? '+' : ''}${aStats.expR.toFixed(2)}R`} color={aStats.expR == null ? undefined : aStats.expR >= 0 ? 'var(--success)' : 'var(--error)'} />
+              </div>
+              <AccountsCompare accounts={scopeAccounts} currency={aCurrency} />
+              <EdgeFinder trades={aTrades} currency={aCurrency} />
+              <PlanDisciplineCard trades={aTrades} currency={aCurrency} />
+              <div className="grid lg:grid-cols-2 gap-5">
+                <PnLBarCard title="Strategy P&L" data={byStrategy} currency={aCurrency} empty="No strategy data yet." />
+                <PnLBarCard title="Instrument P&L" data={byInstrument} currency={aCurrency} empty="No instrument data yet." />
+              </div>
+              <AdvancedAnalytics trades={aTrades} currency={aCurrency} instruments={instrumentList} strategies={strategyList} />
+              <TradingPsychology trades={aTrades} currency={aCurrency} />
+            </>
+          ) : (
+          <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {accountValueCard}
             <Stat label="Total P&L" value={fmtSignedMoney(stats.totalPnl, currency)} color={stats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} />
@@ -527,6 +588,8 @@ export default function Trading() {
           <TradingPsychology trades={trades} currency={currency} />
           <PredictionsPanel account={activeAccount} trades={trades} currency={currency} />
           <BadgeList badges={badges} />
+          </>
+          )}
         </div>
       )}
 
