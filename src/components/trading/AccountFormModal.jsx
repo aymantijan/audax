@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useTradingStore } from '../../store/tradingStore';
 import { CURRENCIES } from '../../utils/constants';
 import { Button, Field, Input, Select, Modal } from '../common/ui';
+import { PROP_FIRM_PRESETS, PRESETS_CHECKED_AT, presetById, presetLabel, presetRulesFor } from '../../utils/prop-firm-presets';
+
+const numOrNull = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
+const RULE_KEYS = ['maxDailyLossPct', 'maxTotalDrawdownPct', 'profitTargetPct', 'minTradingDays', 'consistencyRulePct', 'maxPhaseDurationDays', 'minDayProfitPct', 'maxDailyProfitAmount'];
 
 const blank = () => ({
   type: 'demo',
@@ -18,6 +22,10 @@ const blank = () => ({
   minTradingDays: '',
   consistencyRulePct: '',
   maxPhaseDurationDays: '',
+  maxTotalDrawdownType: 'trailing',
+  minDayProfitPct: '',
+  maxDailyProfitAmount: '',
+  rulePreset: '',
   riskMaxDailyLossPct: '',
   riskMaxTotalDrawdownPct: '',
 });
@@ -27,6 +35,38 @@ const TYPE_OPTIONS = [
   { value: 'broker', label: 'Broker — your own real capital' },
   { value: 'propfirm', label: 'Prop Firm — evaluation or funded' },
 ];
+
+// One click fills the rules of the chosen firm/program for the account's phase;
+// with a preset stored on the account, advancing a phase applies the next rules.
+function PresetPicker({ form, setForm, phase }) {
+  const preset = presetById(form.rulePreset);
+  const apply = (id) => {
+    const p = presetById(id);
+    if (!p) return setForm({ ...form, rulePreset: '' });
+    const r = presetRulesFor(p, phase) || {};
+    setForm({
+      ...form, rulePreset: id, broker: form.broker || p.firm,
+      ...Object.fromEntries(RULE_KEYS.map((k) => [k, r[k] ?? ''])),
+      maxTotalDrawdownType: r.maxTotalDrawdownType || 'trailing',
+    });
+  };
+  return (
+    <div className="rounded-lg border border-line p-3 space-y-2">
+      <Field label="Fill from a firm preset (optional)">
+        <Select value={form.rulePreset} onChange={(e) => apply(e.target.value)}
+          options={[{ value: '', label: '— Enter the rules myself —' }, ...PROP_FIRM_PRESETS.map((p) => ({ value: p.id, label: presetLabel(p) }))]} />
+      </Field>
+      {preset && (
+        <div className="text-[11px] text-mute space-y-1">
+          <div>{preset.notes}</div>
+          <div>
+            Checked on {PRESETS_CHECKED_AT} on the <a href={preset.source} target="_blank" rel="noopener noreferrer" className="text-accent underline">official page</a> — firms change their rules: confirm yours. Next phases get their own rules automatically when you advance.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Create/edit any account type. Type is locked once an account exists — changing
 // it after the fact would make its rule-tracking history incoherent.
@@ -55,6 +95,10 @@ export default function AccountFormModal({ open, onClose, account }) {
             minTradingDays: account.propFirmRules?.minTradingDays ?? '',
             consistencyRulePct: account.propFirmRules?.consistencyRulePct ?? '',
             maxPhaseDurationDays: account.propFirmRules?.maxPhaseDurationDays ?? '',
+            maxTotalDrawdownType: account.propFirmRules?.maxTotalDrawdownType || 'trailing',
+            minDayProfitPct: account.propFirmRules?.minDayProfitPct ?? '',
+            maxDailyProfitAmount: account.propFirmRules?.maxDailyProfitAmount ?? '',
+            rulePreset: account.rulePreset || '',
             riskMaxDailyLossPct: account.riskLimits?.maxDailyLossPct ?? '',
             riskMaxTotalDrawdownPct: account.riskLimits?.maxTotalDrawdownPct ?? '',
           }
@@ -73,17 +117,12 @@ export default function AccountFormModal({ open, onClose, account }) {
         accountNumber: form.accountNumber,
         leverage: form.leverage,
         initialBalance: form.initialBalance,
+        // Numbers or null — an empty field used to be saved as '' and read as 0 by the rules engine.
         propFirmRules:
           form.type === 'propfirm'
-            ? {
-                maxDailyLossPct: form.maxDailyLossPct,
-                maxTotalDrawdownPct: form.maxTotalDrawdownPct,
-                profitTargetPct: form.profitTargetPct,
-                minTradingDays: form.minTradingDays,
-                consistencyRulePct: form.consistencyRulePct,
-                maxPhaseDurationDays: form.maxPhaseDurationDays,
-              }
+            ? { ...Object.fromEntries(RULE_KEYS.map((k) => [k, numOrNull(form[k])])), maxTotalDrawdownType: form.maxTotalDrawdownType }
             : undefined,
+        rulePreset: form.type === 'propfirm' ? form.rulePreset || null : null,
         riskLimits:
           form.type !== 'propfirm' && (form.riskMaxDailyLossPct || form.riskMaxTotalDrawdownPct)
             ? { maxDailyLossPct: form.riskMaxDailyLossPct, maxTotalDrawdownPct: form.riskMaxTotalDrawdownPct }
@@ -129,6 +168,7 @@ export default function AccountFormModal({ open, onClose, account }) {
         {form.type === 'propfirm' && (
           <div className="border-t border-line pt-4 space-y-3">
             <h4 className="text-xs font-semibold text-mute uppercase tracking-wide">Firm Rules (enter your firm's actual terms — leave blank to skip a check)</h4>
+            <PresetPicker form={form} setForm={setForm} phase={isEdit ? account.phase || 'phase1' : form.startFunded ? 'funded' : 'phase1'} />
             {!isEdit && (
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={form.startFunded} onChange={(e) => setForm({ ...form, startFunded: e.target.checked })} />
@@ -155,6 +195,15 @@ export default function AccountFormModal({ open, onClose, account }) {
               </Field>
               <Field label="Phase time limit (days)" hint="Leave blank if the firm gives unlimited time">
                 <Input type="number" value={form.maxPhaseDurationDays} onChange={(e) => setForm({ ...form, maxPhaseDurationDays: e.target.value })} placeholder="e.g. 30" />
+              </Field>
+              <Field label="Max loss measured">
+                <Select value={form.maxTotalDrawdownType} onChange={(e) => setForm({ ...form, maxTotalDrawdownType: e.target.value })} options={[{ value: 'static', label: 'Static — from the starting balance' }, { value: 'trailing', label: 'Trailing — from the highest balance' }]} />
+              </Field>
+              <Field label="Min profit for a day to count (%)" hint="e.g. 0.5 at Goat Funded · 0 = any profitable day · blank = any day traded">
+                <Input type="number" step="0.1" value={form.minDayProfitPct} onChange={(e) => setForm({ ...form, minDayProfitPct: e.target.value })} />
+              </Field>
+              <Field label="Max profit per day (amount)" hint="Optional cap, e.g. $3,000 funded at Goat">
+                <Input type="number" step="any" value={form.maxDailyProfitAmount} onChange={(e) => setForm({ ...form, maxDailyProfitAmount: e.target.value })} />
               </Field>
             </div>
           </div>

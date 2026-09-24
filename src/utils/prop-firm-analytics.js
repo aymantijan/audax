@@ -39,7 +39,8 @@ function dailyPnL(trades) {
 // profit (some firms flag/disqualify unusually large single-day gains as
 // a sign of over-leveraging or exploiting a pricing glitch).
 export function computeRulesProgress(rules, phaseStart, initialBalance, trades, today = todayKey()) {
-  rules = rules || {};
+  // Empty strings (saved by older versions of the account form) mean "no rule", not 0.
+  rules = Object.fromEntries(Object.entries(rules || {}).map(([k, v]) => [k, v === '' ? null : v]));
   // Compare at CALENDAR-DAY granularity, not raw milliseconds: `t.date` is a
   // day-only string ('YYYY-MM-DD', midnight), while `phaseStart` is a precise
   // timestamp (whatever moment the phase/simulation was started/advanced). A
@@ -70,7 +71,12 @@ export function computeRulesProgress(rules, phaseStart, initialBalance, trades, 
   const dailyLossPct = todayPnL < 0 && initial > 0 ? (Math.abs(todayPnL) / initial) * 100 : 0;
   const todayProfitAmount = todayPnL > 0 ? todayPnL : 0;
 
-  const tradingDays = Object.keys(daily).length;
+  // `minDayProfitPct`: some firms only count a day that made at least X% of the
+  // starting balance (0 = any profitable day); null/undefined = any day traded.
+  const minDay = rules.minDayProfitPct;
+  const tradingDays = minDay == null || minDay === ''
+    ? Object.keys(daily).length
+    : Object.values(daily).filter((v) => (Number(minDay) > 0 ? v >= (initial * Number(minDay)) / 100 : v > 0)).length;
 
   // Consistency rule: no single day should represent too large a share of total
   // profit (the classic prop-firm anti-gambling clause) — only meaningful once

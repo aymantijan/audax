@@ -4,12 +4,13 @@ import { useTradingStore } from '../../store/tradingStore';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../common/ui';
 import RuleGauge from './RuleGauge';
 import { toast } from '../../store/uiStore';
+import { PROP_FIRM_PRESETS, PRESETS_CHECKED_AT, presetById, presetLabel } from '../../utils/prop-firm-presets';
 
 const PHASE_NUMBERS = [1, 2, 3];
 
 const blankPhaseForm = () => ({
   profitTargetPct: '', maxDailyLossPct: '', maxTotalDrawdownPct: '', maxTotalDrawdownType: 'trailing',
-  minTradingDays: '', consistencyRulePct: '', maxDailyProfitAmount: '', maxPhaseDurationDays: '',
+  minTradingDays: '', consistencyRulePct: '', maxDailyProfitAmount: '', maxPhaseDurationDays: '', minDayProfitPct: '',
 });
 
 function PhaseRuleForm({ n, value, onChange }) {
@@ -32,6 +33,9 @@ function PhaseRuleForm({ n, value, onChange }) {
             onChange={(e) => onChange({ ...value, maxTotalDrawdownType: e.target.value })}
             options={[{ value: 'trailing', label: 'Trailing (from peak equity)' }, { value: 'static', label: 'Static (from starting balance)' }]}
           />
+        </Field>
+        <Field label="Min profit for a day to count (%)" hint="0 = any profitable day · blank = any day traded">
+          <Input type="number" step="0.1" value={value.minDayProfitPct ?? ''} onChange={(e) => onChange({ ...value, minDayProfitPct: e.target.value })} placeholder="e.g. 0.5" />
         </Field>
         <Field label="Min trading days">
           <Input type="number" value={value.minTradingDays} onChange={(e) => onChange({ ...value, minTradingDays: e.target.value })} placeholder="e.g. 4" />
@@ -72,6 +76,7 @@ function ConfigForm({ account, onDone }) {
         maxTotalDrawdownPct: numOrNull(f.maxTotalDrawdownPct), maxTotalDrawdownType: f.maxTotalDrawdownType,
         minTradingDays: numOrNull(f.minTradingDays), consistencyRulePct: numOrNull(f.consistencyRulePct),
         maxDailyProfitAmount: numOrNull(f.maxDailyProfitAmount), maxPhaseDurationDays: numOrNull(f.maxPhaseDurationDays),
+        minDayProfitPct: numOrNull(f.minDayProfitPct),
       };
     });
     const res = setSimPhases(account.id, phases);
@@ -79,8 +84,29 @@ function ConfigForm({ account, onDone }) {
     onDone();
   };
 
+  const [presetId, setPresetId] = useState('');
+  const preset = presetById(presetId);
+  // Rehearse a real firm's challenge on this demo: fills every phase at once.
+  const applyPreset = (id) => {
+    setPresetId(id);
+    const p = presetById(id);
+    if (!p) return;
+    const str = (v) => (v == null ? '' : String(v));
+    const next = { 1: blankPhaseForm(), 2: blankPhaseForm(), 3: blankPhaseForm() };
+    p.phases.forEach((r, i) => { next[i + 1] = { ...blankPhaseForm(), ...Object.fromEntries(Object.entries(r).map(([k, v]) => [k, k === 'maxTotalDrawdownType' ? v : str(v)])) }; });
+    setForms(next);
+    setChecked({ 1: p.phases.length >= 1, 2: p.phases.length >= 2, 3: p.phases.length >= 3 });
+  };
+
   return (
     <form onSubmit={submit} className="space-y-4">
+      <div className="rounded-lg border border-line p-3 space-y-2">
+        <Field label="Rehearse a real firm's challenge (optional)">
+          <Select value={presetId} onChange={(e) => applyPreset(e.target.value)}
+            options={[{ value: '', label: '— My own rules —' }, ...PROP_FIRM_PRESETS.map((p) => ({ value: p.id, label: presetLabel(p) }))]} />
+        </Field>
+        {preset && <div className="text-[11px] text-mute">{preset.notes} Checked on {PRESETS_CHECKED_AT} on the <a href={preset.source} target="_blank" rel="noopener noreferrer" className="text-accent underline">official page</a> — confirm before paying for a challenge.</div>}
+      </div>
       <p className="text-xs text-mute">
         Simulate a real prop-firm evaluation on this Demo account — pick how many phases you want to rehearse and set each one's rules (enter your target firm's actual terms, or your own training goals). Starting/restarting resets simulation progress and history.
       </p>

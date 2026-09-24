@@ -4,6 +4,7 @@ import { startOfMonth } from 'date-fns';
 import { uid, todayKey } from '../utils/formatters';
 import { computeTradeDerived, round2, tradeStats, equityCurve, maxDrawdown } from '../utils/calculations';
 import { computePropFirmProgress, computeRulesProgress, nextPhase } from '../utils/prop-firm-analytics';
+import { presetById, presetRulesFor } from '../utils/prop-firm-presets';
 import { computeRiskLimitBreaches } from '../utils/risk-management';
 import { computeDisciplineScore, detectRevengeTrades, detectTiltSequences } from '../utils/trading-psychology';
 import { generateTradingCoachRecommendation } from '../utils/trading-coach';
@@ -436,8 +437,12 @@ export const useTradingStore = create(
                   minTradingDays: numOrNull(data.minTradingDays),
                   consistencyRulePct: numOrNull(data.consistencyRulePct),
                   maxPhaseDurationDays: numOrNull(data.maxPhaseDurationDays),
+                  maxTotalDrawdownType: data.maxTotalDrawdownType || 'trailing',
+                  minDayProfitPct: numOrNull(data.minDayProfitPct),
+                  maxDailyProfitAmount: numOrNull(data.maxDailyProfitAmount),
                 }
               : undefined,
+          rulePreset: data.type === 'propfirm' ? data.rulePreset || null : null,
           // Demo/Broker only — prop-firm accounts use propFirmRules instead.
           riskLimits:
             data.type !== 'propfirm' && (data.riskMaxDailyLossPct || data.riskMaxTotalDrawdownPct)
@@ -561,13 +566,17 @@ export const useTradingStore = create(
         if (outcome === 'failed') {
           newStatus = 'failed';
         } else {
-          const np = nextPhase(acct.phase);
+          const preset = presetById(acct.rulePreset);
+          // A 1-step program goes straight from phase 1 to funded.
+          const np = preset && preset.phases.length === 1 && acct.phase === 'phase1' ? 'funded' : nextPhase(acct.phase);
           newPhase = np || acct.phase;
           newStatus = newPhase === 'funded' ? 'funded' : 'active';
         }
+        // With a firm preset, the next phase's rules are applied automatically.
+        const presetRules = outcome !== 'failed' ? presetRulesFor(presetById(acct.rulePreset), newPhase) : null;
         set({
           accounts: get().accounts.map((a) =>
-            a.id === id ? stamp({ ...a, phase: newPhase, status: newStatus, currentPhaseStartAt: Date.now(), phaseHistory: [...(a.phaseHistory || []), historyEntry] }) : a
+            a.id === id ? stamp({ ...a, phase: newPhase, status: newStatus, currentPhaseStartAt: Date.now(), phaseHistory: [...(a.phaseHistory || []), historyEntry], ...(presetRules ? { propFirmRules: presetRules } : {}) }) : a
           ),
         });
         if (outcome !== 'failed') useSkillStore.getState().awardXP('discipline-execution-lv1', 15, `prop firm phase passed: ${acct.name}`);
