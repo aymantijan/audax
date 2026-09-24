@@ -42,9 +42,8 @@ const NAV_GROUPS = [
       { to: '/trading', label: 'Trading', enabledKey: 'trading', defaultEnabled: true },
       { to: '/engineering', label: 'Ingénierie', enabledKey: 'engineering', defaultEnabled: false },
       { to: '/businesses', label: 'Projets business', enabledKey: 'business', defaultEnabled: true },
-      { to: '/career', label: 'Carrière', enabledKey: 'career', defaultEnabled: false },
-      { to: '/networking', label: 'Réseau', enabledKey: 'networking', defaultEnabled: false },
-      { to: '/content', label: 'Contenu', enabledKey: 'content', defaultEnabled: false },
+      // Hub: candidatures, profil/CV, réseau, visibilité, historique — on if any of its former modules is.
+      { to: '/career', label: 'Carrière', enabledKeys: ['career', 'networking', 'content'], defaultEnabled: false },
       { to: '/freelance', label: 'Freelance', enabledKey: 'freelance', defaultEnabled: false },
     ],
   },
@@ -66,7 +65,10 @@ const NAV_GROUPS = [
   },
 ];
 
-const isItemEnabled = (user, item) => (item.enabledKey ? user?.enabledModules?.[item.enabledKey] ?? item.defaultEnabled ?? true : true);
+const isItemEnabled = (user, item) => {
+  if (item.enabledKeys) return item.enabledKeys.some((k) => user?.enabledModules?.[k] ?? item.defaultEnabled ?? true);
+  return item.enabledKey ? user?.enabledModules?.[item.enabledKey] ?? item.defaultEnabled ?? true : true;
+};
 
 const linkClass = ({ isActive }) =>
   `text-sm font-medium transition-colors pb-0.5 border-b-2 ${

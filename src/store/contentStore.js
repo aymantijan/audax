@@ -12,11 +12,11 @@ import { evaluateBadges } from '../utils/badges';
 const POST_XP = 6;
 
 const BADGE_DEFS = [
-  { id: 'first-post', name: 'First Post', tier: 'bronze', check: (s) => s.posts.some((p) => p.status === 'Publié') },
-  { id: 'consistent-publisher', name: 'Consistent Publisher', tier: 'silver', check: (s) => s.posts.filter((p) => p.status === 'Publié' && p.publishedDate >= new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)).length >= 4 },
-  { id: 'prolific', name: 'Prolific', tier: 'gold', check: (s) => s.posts.filter((p) => p.status === 'Publié').length >= 30 },
-  { id: 'engaged-audience', name: 'Engaged Audience', tier: 'silver', check: (s) => s.posts.some((p) => (p.likes || 0) + (p.comments || 0) + (p.shares || 0) >= 100) },
-  { id: 'multi-platform', name: 'Multi-Platform', tier: 'bronze', check: (s) => new Set(s.posts.filter((p) => p.status === 'Publié').map((p) => p.platform)).size >= 3 },
+  { id: 'first-post', name: 'Première publication', tier: 'bronze', check: (s) => s.posts.some((p) => p.status === 'Publié') },
+  { id: 'consistent-publisher', name: 'Publication régulière', tier: 'silver', check: (s) => s.posts.filter((p) => p.status === 'Publié' && p.publishedDate >= new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)).length >= 4 },
+  { id: 'prolific', name: 'Prolifique', tier: 'gold', check: (s) => s.posts.filter((p) => p.status === 'Publié').length >= 30 },
+  { id: 'engaged-audience', name: 'Audience engagée', tier: 'silver', check: (s) => s.posts.some((p) => (p.likes || 0) + (p.comments || 0) + (p.shares || 0) >= 100) },
+  { id: 'multi-platform', name: 'Multi-plateforme', tier: 'bronze', check: (s) => new Set(s.posts.filter((p) => p.status === 'Publié').map((p) => p.platform)).size >= 3 },
 ];
 
 // LinkedIn cross-link (2026-08-27, user request: "lien avec LinkedIn ou

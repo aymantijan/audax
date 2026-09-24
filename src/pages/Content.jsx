@@ -4,7 +4,8 @@ import { Megaphone, Plus, Trash2, Pencil, ExternalLink, Target, TrendingUp, Book
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
 import { useContentStore, detectPlatformFromUrl } from '../store/contentStore';
 import { useLearningStore } from '../store/learningStore';
-import { CONTENT_PLATFORMS, CONTENT_STATUSES, LIFE_DOMAINS } from '../utils/constants';
+import { CONTENT_PLATFORMS, CONTENT_STATUSES } from '../utils/constants';
+import { useCareerDomains } from '../hooks/useCareerDomains';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -14,15 +15,15 @@ const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border
 const PLATFORM_COLOR = { LinkedIn: '#0a66c2', Blog: '#66ccff', Portfolio: '#b366ff', 'X/Twitter': '#e2e8f0', YouTube: '#ff4444', Newsletter: 'var(--success)', Autre: 'var(--text-secondary)' };
 const STATUS_COLOR = { 'Idée': 'var(--text-secondary)', Brouillon: 'var(--warning)', Planifié: 'var(--accent-secondary)', Publié: 'var(--success)' };
 
-const blank = () => ({ platform: 'LinkedIn', title: '', url: '', status: 'Publié', publishedDate: todayKey(), domain: 'General', courseId: '', likes: '', comments: '', shares: '', views: '', notes: '' });
+const blank = () => ({ platform: 'LinkedIn', title: '', url: '', status: 'Publié', publishedDate: todayKey(), domain: 'Général', courseId: '', likes: '', comments: '', shares: '', views: '', notes: '' });
 // courseId's options depend on the live courses list, so this is a function
 // of courses rather than a static array (same pattern Career.jsx's
 // appFields(contacts) already established for a store-dependent select).
-const postFields = (courses) => [
+const postFields = (courses, domainOptions) => [
   { name: 'title', label: 'Titre', type: 'text' },
   { name: 'platform', label: 'Plateforme', type: 'select', options: CONTENT_PLATFORMS },
   { name: 'status', label: 'Statut', type: 'select', options: CONTENT_STATUSES },
-  { name: 'domain', label: 'Domaine', type: 'select', options: LIFE_DOMAINS },
+  { name: 'domain', label: 'Domaine', type: 'select', options: domainOptions },
   { name: 'publishedDate', label: 'Date de publication', type: 'date', hint: "Laisser vide tant que ce n'est pas encore publié." },
   { name: 'url', label: 'Lien', type: 'text' },
   { name: 'courseId', label: 'Dérivé du cours (Learning)', type: 'select', options: [{ value: '', label: '— Aucun —' }, ...courses.map((c) => ({ value: c.id, label: c.name }))] },
@@ -33,7 +34,8 @@ const postFields = (courses) => [
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 
-export default function Content() {
+export default function Content({ embedded = false }) {
+  const domainOptions = useCareerDomains();
   const { posts, addPost, editPost, deletePost, getTotalEngagement, getBadges, getGoalProgress, setMonthlyGoal, getBestPerformers } = useContentStore();
   const courses = useLearningStore((s) => s.courses);
   const [modal, setModal] = useState(false);
@@ -71,10 +73,10 @@ export default function Content() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className={embedded ? 'space-y-6' : 'space-y-6 max-w-6xl mx-auto'}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Content</h1>
+          {!embedded && <h1 className="text-2xl font-bold">Contenu</h1>}
           <p className="text-mute text-sm mt-1">Publications et engagement — transformer le travail en visibilité.</p>
         </div>
         <Button onClick={() => setModal(true)}><span className="flex items-center gap-2"><Plus size={16} /> Nouvelle publication</span></Button>
@@ -222,7 +224,7 @@ export default function Content() {
           <div className="grid grid-cols-3 gap-3">
             <Field label="Statut"><Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={CONTENT_STATUSES} /></Field>
             <Field label="Plateforme"><Select value={form.platform} onChange={(e) => { setDetailAuto(true); setForm({ ...form, platform: e.target.value }); }} options={CONTENT_PLATFORMS} /></Field>
-            <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={LIFE_DOMAINS} /></Field>
+            <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={domainOptions} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label={form.status === 'Publié' ? 'Date de publication' : 'Date prévue (optionnel)'}><Input type="date" value={form.publishedDate} onChange={(e) => setForm({ ...form, publishedDate: e.target.value })} /></Field>
@@ -250,7 +252,7 @@ export default function Content() {
           open={!!editing}
           onClose={() => setEditing(null)}
           title="Éditer la publication"
-          fields={postFields(courses)}
+          fields={postFields(courses, domainOptions)}
           initial={editing}
           wide
           onSave={(values) => editPost(editing.id, values)}

@@ -16,11 +16,11 @@ const APP_XP = 4; // logging an application — the "did the outreach" credit
 const STAGE_XP = 8; // advancing a stage — awarded to the stage-specific skill
 
 const BADGE_DEFS = [
-  { id: 'first-application', name: 'First Application', tier: 'bronze', check: (s) => s.applications.length >= 1 },
-  { id: 'persistent', name: 'Persistent', tier: 'silver', check: (s) => s.applications.length >= 15 },
-  { id: 'interview-landed', name: 'Interview Landed', tier: 'silver', check: (s) => s.applications.some((a) => CAREER_STAGES.indexOf(a.stage) >= CAREER_STAGES.indexOf('Interview')) },
-  { id: 'offer-received', name: 'Offer Received', tier: 'gold', check: (s) => s.applications.some((a) => a.stage === 'Offer' || a.stage === 'Accepted') },
-  { id: 'domain-diverse', name: 'Wide Net', tier: 'bronze', check: (s) => new Set(s.applications.map((a) => a.domain).filter(Boolean)).size >= 3 },
+  { id: 'first-application', name: 'Première candidature', tier: 'bronze', check: (s) => s.applications.length >= 1 },
+  { id: 'persistent', name: 'Persévérant', tier: 'silver', check: (s) => s.applications.length >= 15 },
+  { id: 'interview-landed', name: 'Entretien décroché', tier: 'silver', check: (s) => s.applications.some((a) => CAREER_STAGES.indexOf(a.stage) >= CAREER_STAGES.indexOf('Interview')) },
+  { id: 'offer-received', name: 'Offre reçue', tier: 'gold', check: (s) => s.applications.some((a) => a.stage === 'Offer' || a.stage === 'Accepted') },
+  { id: 'domain-diverse', name: 'Large filet', tier: 'bronze', check: (s) => new Set(s.applications.map((a) => a.domain).filter(Boolean)).size >= 3 },
 ];
 
 export const useCareerStore = create(
@@ -134,8 +134,37 @@ export const useCareerStore = create(
         };
       },
 
-      resetAll: () => set({ applications: [], awardedBadges: [] }),
+      // ── Domains (user-editable; empty = DEFAULT_CAREER_DOMAINS) ──
+      domains: [],
+      setDomains: (list) => set({ domains: [...new Set(list.map((d) => String(d).trim()).filter(Boolean))] }),
+
+      // ── Profile / CV (Carrière n°1) ──
+      // Sections are lists of dated items; `history` view merges them with the
+      // pipeline, contacts and posts into one career timeline.
+      profile: {
+        headline: '', summary: '', location: '', email: '', phone: '',
+        links: [], // [{ id, label, url }]
+        languages: [], // [{ id, name, level }]
+        education: [], // [{ id, school, degree, field, start, end, current, notes }]
+        experiences: [], // [{ id, org, title, type, start, end, current, location, description }]
+        certifications: [], // [{ id, name, issuer, date, url }]
+        skills: [], // strings
+      },
+      setProfileFields: (data) => set({ profile: { ...get().profile, ...data } }),
+      addProfileItem: (section, data) => {
+        const item = { ...data, id: uid() };
+        set({ profile: { ...get().profile, [section]: [...(get().profile[section] || []), item] } });
+        return item.id;
+      },
+      editProfileItem: (section, id, data) => set({ profile: { ...get().profile, [section]: (get().profile[section] || []).map((x) => (x.id === id ? { ...x, ...data } : x)) } }),
+      deleteProfileItem: (section, id) => set({ profile: { ...get().profile, [section]: (get().profile[section] || []).filter((x) => x.id !== id) } }),
+
+      resetAll: () => set({ applications: [], awardedBadges: [], domains: [], profile: { headline: '', summary: '', location: '', email: '', phone: '', links: [], languages: [], education: [], experiences: [], certifications: [], skills: [] } }),
     }),
-    { name: 'audax-career' }
+    {
+      name: 'audax-career',
+      // Older saves have no profile: keep the defaults for every missing field.
+      merge: (persisted, current) => ({ ...current, ...persisted, profile: { ...current.profile, ...(persisted?.profile || {}) } }),
+    }
   )
 );

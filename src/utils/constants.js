@@ -100,6 +100,15 @@ export const LIFE_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Genera
 export const TOUCH_TYPES = ['Appel', 'Café', 'Email', 'Message', 'Événement', 'Autre'];
 
 export const CAREER_STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+// Stored values stay in English (existing data, XP maps); the UI shows these.
+export const CAREER_STAGE_LABEL = { Applied: 'Postulé', Screening: 'Présélection', Interview: 'Entretien', Offer: 'Offre', Accepted: 'Acceptée', Rejected: 'Refusée', Withdrawn: 'Retirée' };
+export const stageLabel = (s) => CAREER_STAGE_LABEL[s] || s;
+// Career domains are user-editable (careerStore.domains); these are the defaults.
+export const DEFAULT_CAREER_DOMAINS = ['Finance de marché', 'Trading', 'Private equity', 'Audit & expertise', 'Conseil', 'Finance d’entreprise', 'Marketing', 'Entrepreneuriat', 'Ingénierie', 'Général'];
+const LEGACY_DOMAIN_LABEL = { General: 'Général', Engineering: 'Ingénierie', PE: 'Private equity' };
+export const domainLabel = (d) => LEGACY_DOMAIN_LABEL[d] || d;
+export const EXPERIENCE_TYPES = ['Stage', 'CDI', 'CDD', 'Alternance', 'Freelance', 'Emploi étudiant', 'Associatif', 'Projet'];
+export const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Langue maternelle'];
 // Which skill a career-application stage advance targets — mirrors
 // ENGINEERING_STAGE_SKILL's keyed-by-stage pattern. All three ids are real,
 // unlocked-from-start Communication-category nodes (see skill-tree-data.js).

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, Target, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Users, Briefcase, Megaphone, Timer, Palette, Building2 } from 'lucide-react';
+import { Sun, TrendingUp, Wallet, HeartPulse, MoreHorizontal, X, Target, BookOpen, Flame, Handshake, Rocket, GitBranch, Trophy, Settings, FlaskConical, Briefcase, Timer, Palette, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 // Bottom tab bar, mobile only (hidden md:up — the existing Navbar's horizontal
@@ -23,9 +23,7 @@ const MORE_ITEMS = [
   { to: '/deals', label: 'Private equity', icon: Handshake },
   { to: '/businesses', label: 'Projets business', icon: Rocket },
   { to: '/engineering', label: 'Ingénierie', icon: FlaskConical },
-  { to: '/networking', label: 'Réseau', icon: Users },
   { to: '/career', label: 'Carrière', icon: Briefcase },
-  { to: '/content', label: 'Contenu', icon: Megaphone },
   { to: '/focus', label: 'Deep Work', icon: Timer },
   { to: '/fundraising', label: 'Levée de fonds', icon: Rocket },
   { to: '/freelance', label: 'Freelance', icon: Briefcase },
@@ -44,9 +42,7 @@ export default function MobileTabBar() {
   const peEnabled = user?.enabledModules?.pe ?? true;
   const businessEnabled = user?.enabledModules?.business ?? true;
   const engineeringEnabled = user?.enabledModules?.engineering ?? false;
-  const networkingEnabled = user?.enabledModules?.networking ?? false;
-  const careerEnabled = user?.enabledModules?.career ?? false;
-  const contentEnabled = user?.enabledModules?.content ?? false;
+  const careerEnabled = (user?.enabledModules?.career || user?.enabledModules?.networking || user?.enabledModules?.content) ?? false;
   const focusEnabled = user?.enabledModules?.focus ?? false;
   const fundraisingEnabled = user?.enabledModules?.fundraising ?? false;
   const freelanceEnabled = user?.enabledModules?.freelance ?? false;
@@ -58,9 +54,7 @@ export default function MobileTabBar() {
       (t.to !== '/deals' || peEnabled) &&
       (t.to !== '/businesses' || businessEnabled) &&
       (t.to !== '/engineering' || engineeringEnabled) &&
-      (t.to !== '/networking' || networkingEnabled) &&
       (t.to !== '/career' || careerEnabled) &&
-      (t.to !== '/content' || contentEnabled) &&
       (t.to !== '/focus' || focusEnabled) &&
       (t.to !== '/fundraising' || fundraisingEnabled) &&
       (t.to !== '/freelance' || freelanceEnabled) &&

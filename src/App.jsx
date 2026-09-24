@@ -1,5 +1,5 @@
 import { useEffect, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useSkillStore } from './store/skillStore';
 import { useTradingStore } from './store/tradingStore';
@@ -42,9 +42,7 @@ const Businesses = lazy(lazyWithRetry(() => import('./pages/Businesses'), 'Busin
 const BusinessDetail = lazy(lazyWithRetry(() => import('./pages/BusinessDetail'), 'BusinessDetail'));
 const Engineering = lazy(lazyWithRetry(() => import('./pages/Engineering'), 'Engineering'));
 const EngineeringProjectDetail = lazy(lazyWithRetry(() => import('./pages/EngineeringProjectDetail'), 'EngineeringProjectDetail'));
-const Networking = lazy(lazyWithRetry(() => import('./pages/Networking'), 'Networking'));
 const Career = lazy(lazyWithRetry(() => import('./pages/Career'), 'Career'));
-const Content = lazy(lazyWithRetry(() => import('./pages/Content'), 'Content'));
 const FocusSessions = lazy(lazyWithRetry(() => import('./pages/FocusSessions'), 'FocusSessions'));
 const Fundraising = lazy(lazyWithRetry(() => import('./pages/Fundraising'), 'Fundraising'));
 const Freelance = lazy(lazyWithRetry(() => import('./pages/Freelance'), 'Freelance'));
@@ -64,6 +62,15 @@ function AuthGuard({ children }) {
   // with zero context on what to do first.
   if (!user.onboarded) return <Navigate to="/onboarding" replace />;
   return children;
+}
+
+// Réseau and Contenu are spaces of the Carrière hub (Carrière n°1); old links
+// (/networking?contact=…, /content) keep working, query string included.
+function CareerRedirect({ tab }) {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('tab', tab);
+  return <Navigate to={`/career?${params}`} replace />;
 }
 
 export default function App() {
@@ -181,9 +188,9 @@ export default function App() {
         <Route path="/businesses/:id" element={<BusinessDetail />} />
         <Route path="/engineering" element={<Engineering />} />
         <Route path="/engineering/:id" element={<EngineeringProjectDetail />} />
-        <Route path="/networking" element={<Networking />} />
+        <Route path="/networking" element={<CareerRedirect tab="reseau" />} />
         <Route path="/career" element={<Career />} />
-        <Route path="/content" element={<Content />} />
+        <Route path="/content" element={<CareerRedirect tab="visibilite" />} />
         {/* Projects merged into Business Projects (2026-09-01) — same store, tier: 'leger' */}
         <Route path="/projects" element={<Navigate to="/businesses" replace />} />
         <Route path="/projects/:id" element={<Navigate to="/businesses" replace />} />

@@ -78,17 +78,17 @@ export function buildSearchIndex() {
 
   const contacts = useNetworkingStore.getState().contacts;
   for (const c of contacts) {
-    items.push({ id: `contact-${c.id}`, domain: 'Networking', label: c.name, sub: [c.role, c.org].filter(Boolean).join(' · '), to: '/networking' });
+    items.push({ id: `contact-${c.id}`, domain: 'Networking', label: c.name, sub: [c.role, c.org].filter(Boolean).join(' · '), to: '/career?tab=reseau' });
   }
 
   const applications = useCareerStore.getState().applications;
   for (const a of applications) {
-    items.push({ id: `app-${a.id}`, domain: 'Career', label: `${a.role} @ ${a.company}`, sub: a.stage, to: '/career' });
+    items.push({ id: `app-${a.id}`, domain: 'Career', label: `${a.role} @ ${a.company}`, sub: a.stage, to: '/career?tab=pilotage' });
   }
 
   const posts = useContentStore.getState().posts;
   for (const p of posts) {
-    items.push({ id: `post-${p.id}`, domain: 'Content', label: p.title, sub: `${p.platform} · ${p.publishedDate}`, to: '/content' });
+    items.push({ id: `post-${p.id}`, domain: 'Content', label: p.title, sub: `${p.platform} · ${p.publishedDate}`, to: '/career?tab=visibilite' });
   }
 
   const investors = useFundraisingStore.getState().investors;

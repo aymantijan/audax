@@ -371,9 +371,7 @@ export default function SettingsPage() {
             { key: 'pe', label: 'Deals (Private Equity)', default: true },
             { key: 'business', label: 'Business Projects (+ side-projects)', default: true },
             { key: 'engineering', label: 'Ingénierie', default: false },
-            { key: 'networking', label: 'Networking', default: false },
-            { key: 'career', label: 'Career', default: false },
-            { key: 'content', label: 'Content', default: false },
+            { key: 'career', label: 'Carrière (candidatures, profil & CV, réseau, contenu)', default: false, keys: ['career', 'networking', 'content'] },
             { key: 'focus', label: 'Deep Work', default: false },
             { key: 'fundraising', label: 'Fundraising', default: false },
             { key: 'freelance', label: 'Freelance', default: false },
@@ -383,8 +381,8 @@ export default function SettingsPage() {
             <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
-                checked={user?.enabledModules?.[m.key] ?? m.default}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, focus: false, fundraising: false, freelance: false, creative: false, realEstate: false }), [m.key]: e.target.checked } })}
+                checked={m.keys ? m.keys.some((k) => user?.enabledModules?.[k]) : user?.enabledModules?.[m.key] ?? m.default}
+                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, focus: false, fundraising: false, freelance: false, creative: false, realEstate: false }), ...Object.fromEntries((m.keys || [m.key]).map((k) => [k, e.target.checked])) } })}
                 className="cursor-pointer"
               />
               {m.label}

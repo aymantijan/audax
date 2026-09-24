@@ -3,7 +3,8 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Users, Plus, Trash2, Pencil, AlertTriangle, MessageCircle, Star, Flame, Snowflake, Sun, Phone, Coffee, Mail, CalendarDays, MoreHorizontal, Briefcase } from 'lucide-react';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useCareerStore } from '../store/careerStore';
-import { LIFE_DOMAINS, TOUCH_TYPES } from '../utils/constants';
+import { TOUCH_TYPES, domainLabel } from '../utils/constants';
+import { useCareerDomains } from '../hooks/useCareerDomains';
 import { PERSONALITIES } from '../utils/personalities';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
@@ -17,12 +18,12 @@ const PERSONALITY_OPTIONS = [{ value: '', label: '— Aucune —' }, ...PERSONAL
 const TIER_CONFIG = { hot: { label: 'Chaud', color: 'var(--error)', icon: Flame }, warm: { label: 'Tiède', color: 'var(--warning)', icon: Sun }, cold: { label: 'Froid', color: 'var(--text-secondary)', icon: Snowflake } };
 const TOUCH_ICON = { Appel: Phone, Café: Coffee, Email: Mail, Message: MessageCircle, Événement: CalendarDays, Autre: MoreHorizontal };
 
-const blankContact = () => ({ name: '', role: '', org: '', domain: 'General', email: '', phone: '', notes: '', linkedPersonalityName: '', nextFollowUpDate: '' });
-const contactFields = [
+const blankContact = () => ({ name: '', role: '', org: '', domain: 'Général', email: '', phone: '', notes: '', linkedPersonalityName: '', nextFollowUpDate: '' });
+const contactFields = (domainOptions) => [
   { name: 'name', label: 'Nom', type: 'text' },
   { name: 'role', label: 'Rôle / poste', type: 'text' },
   { name: 'org', label: 'Organisation', type: 'text' },
-  { name: 'domain', label: 'Domaine', type: 'select', options: LIFE_DOMAINS },
+  { name: 'domain', label: 'Domaine', type: 'select', options: domainOptions },
   { name: 'email', label: 'Email', type: 'text' },
   { name: 'phone', label: 'Téléphone', type: 'text' },
   { name: 'nextFollowUpDate', label: 'Prochaine relance', type: 'date' },
@@ -51,7 +52,7 @@ function ContactDetailModal({ contact, onClose, logTouch, deleteTouch, tier, ref
         <div className="flex flex-wrap items-center gap-2 text-sm text-mute">
           {contact.role && <span>{contact.role}</span>}
           {contact.org && <span>· {contact.org}</span>}
-          <Badge color={DOMAIN_COLOR[contact.domain]}>{contact.domain}</Badge>
+          <Badge color={DOMAIN_COLOR[contact.domain]}>{domainLabel(contact.domain)}</Badge>
           <span className="flex items-center gap-1" style={{ color: TIER_CONFIG[tier].color }}><TierIcon size={12} /> {TIER_CONFIG[tier].label}</span>
           {contact.linkedPersonalityName && (
             <span className="flex items-center gap-1 text-accent"><Star size={12} /> {contact.linkedPersonalityName}</span>
@@ -111,7 +112,8 @@ function ContactDetailModal({ contact, onClose, logTouch, deleteTouch, tier, ref
   );
 }
 
-export default function Networking() {
+export default function Networking({ embedded = false }) {
+  const domainOptions = useCareerDomains();
   const { contacts, addContact, editContact, deleteContact, logTouch, deleteTouch, getFollowUpAlerts, getContactTier, getBadges } = useNetworkingStore();
   const applications = useCareerStore((s) => s.applications);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -169,10 +171,10 @@ export default function Networking() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className={embedded ? 'space-y-6' : 'space-y-6 max-w-6xl mx-auto'}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Networking</h1>
+          {!embedded && <h1 className="text-2xl font-bold">Réseau</h1>}
           <p className="text-mute text-sm mt-1">Contacts, relances, et historique de relation — recruteurs, mentors, alumni.</p>
         </div>
         <Button onClick={() => setModal(true)}><span className="flex items-center gap-2"><Plus size={16} /> Nouveau contact</span></Button>
@@ -181,7 +183,7 @@ export default function Networking() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Contacts" value={contacts.length} />
         <Stat label="Interactions loggées" value={totalTouches} />
-        <Stat label="Domaines couverts" value={new Set(contacts.map((c) => c.domain)).size} sub={`sur ${LIFE_DOMAINS.length}`} />
+        <Stat label="Domaines couverts" value={new Set(contacts.map((c) => c.domain)).size} sub={`sur ${domainOptions.length}`} />
         <Stat label="Relances à venir" value={alerts.length} color={alerts.some((a) => a.overdue) ? 'var(--error)' : undefined} />
       </div>
 
@@ -210,7 +212,7 @@ export default function Networking() {
         action={
           <div className="flex items-center gap-2">
             <Select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} options={[{ value: 'all', label: 'Toute température' }, { value: 'hot', label: 'Chaud' }, { value: 'warm', label: 'Tiède' }, { value: 'cold', label: 'Froid' }]} className="w-36" />
-            <Select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} options={[{ value: 'all', label: 'Tous les domaines' }, ...LIFE_DOMAINS.map((d) => ({ value: d, label: d }))]} className="w-44" />
+            <Select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} options={[{ value: 'all', label: 'Tous les domaines' }, ...domainOptions]} className="w-44" />
           </div>
         }
       >
@@ -240,7 +242,7 @@ export default function Networking() {
                         {c.linkedPersonalityName && <span className="text-accent text-xs ml-1.5" title={c.linkedPersonalityName}><Star size={11} className="inline" /></span>}
                       </td>
                       <td className="py-2.5 pr-4 text-mute">{c.role}{c.org ? ` · ${c.org}` : ''}</td>
-                      <td className="py-2.5 pr-4"><Badge color={DOMAIN_COLOR[c.domain]}>{c.domain}</Badge></td>
+                      <td className="py-2.5 pr-4"><Badge color={DOMAIN_COLOR[c.domain]}>{domainLabel(c.domain)}</Badge></td>
                       <td className="py-2.5 pr-4">
                         <span className="flex items-center gap-1 text-xs" style={{ color: TIER_CONFIG[tier].color }}><TierIcon size={12} /> {TIER_CONFIG[tier].label}</span>
                       </td>
@@ -271,7 +273,7 @@ export default function Networking() {
             <Field label="Organisation"><Input value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={LIFE_DOMAINS} /></Field>
+            <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={domainOptions} /></Field>
             <Field label="Prochaine relance"><Input type="date" value={form.nextFollowUpDate} onChange={(e) => setForm({ ...form, nextFollowUpDate: e.target.value })} /></Field>
           </div>
           <Field label="Personnalité liée (optionnel)" hint="Fait le lien avec une personnalité suivie sur le Leaderboard.">
@@ -294,7 +296,7 @@ export default function Networking() {
           open={!!editing}
           onClose={() => setEditing(null)}
           title="Éditer le contact"
-          fields={contactFields}
+          fields={contactFields(domainOptions)}
           initial={editing}
           wide
           onSave={(values) => editContact(editing.id, values)}

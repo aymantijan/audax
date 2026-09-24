@@ -14,13 +14,13 @@ const TOUCH_XP = 3; // logging a real interaction
 const CONTACT_XP = 5; // adding a new contact — the "did the outreach work" credit
 
 const BADGE_DEFS = [
-  { id: 'first-contact', name: 'First Contact', tier: 'bronze', check: (s) => s.contacts.length >= 1 },
-  { id: 'network-builder', name: 'Network Builder', tier: 'silver', check: (s) => s.contacts.length >= 15 },
-  { id: 'network-veteran', name: 'Network Veteran', tier: 'gold', check: (s) => s.contacts.length >= 50 },
-  { id: 'first-touch', name: 'First Follow-Up', tier: 'bronze', check: (s) => s.contacts.some((c) => (c.touches || []).length >= 1) },
-  { id: 'consistent-networker', name: 'Consistent Networker', tier: 'silver', check: (s) => s.contacts.reduce((a, c) => a + (c.touches || []).length, 0) >= 20 },
-  { id: 'domain-diverse', name: 'Cross-Domain Network', tier: 'silver', check: (s) => new Set(s.contacts.map((c) => c.domain).filter(Boolean)).size >= 4 },
-  { id: 'role-model-linked', name: 'Role Model Linked', tier: 'bronze', check: (s) => s.contacts.some((c) => c.linkedPersonalityName) },
+  { id: 'first-contact', name: 'Premier contact', tier: 'bronze', check: (s) => s.contacts.length >= 1 },
+  { id: 'network-builder', name: 'Bâtisseur de réseau', tier: 'silver', check: (s) => s.contacts.length >= 15 },
+  { id: 'network-veteran', name: 'Réseau aguerri', tier: 'gold', check: (s) => s.contacts.length >= 50 },
+  { id: 'first-touch', name: 'Première relance', tier: 'bronze', check: (s) => s.contacts.some((c) => (c.touches || []).length >= 1) },
+  { id: 'consistent-networker', name: 'Réseauteur régulier', tier: 'silver', check: (s) => s.contacts.reduce((a, c) => a + (c.touches || []).length, 0) >= 20 },
+  { id: 'domain-diverse', name: 'Réseau transversal', tier: 'silver', check: (s) => new Set(s.contacts.map((c) => c.domain).filter(Boolean)).size >= 4 },
+  { id: 'role-model-linked', name: 'Modèle suivi', tier: 'bronze', check: (s) => s.contacts.some((c) => c.linkedPersonalityName) },
 ];
 
 export const useNetworkingStore = create(
