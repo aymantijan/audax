@@ -5,7 +5,7 @@ import { useLearningStore } from '../../store/learningStore';
 import { useHabitStore } from '../../store/habitStore';
 import {
   ATTENDANCE_STATUS, PAST_CORRECTIONS, classesOn, occurrenceState, arriveBy, fmtClock, dayAttendance,
-  courseAttendance, courseEnd, classWeekdays, dateKeyOf,
+  courseAttendance, courseEnd, classWeekdays, dateKeyOf, withDefaults,
 } from '../../utils/attendance';
 import { isAcademic } from '../../utils/academic';
 import { Button, Card } from '../common/ui';
@@ -199,7 +199,7 @@ export function AttendanceOverview() {
   const habits = useHabitStore((s) => s.habits);
   const addHabit = useHabitStore((s) => s.addHabit);
   const editHabit = useHabitStore((s) => s.editHabit);
-  const settings = academic.settings;
+  const settings = withDefaults(academic.settings);
   const term = academic.terms.find((t) => t.id === settings.activeTermId) || null;
 
   const subjects = useMemo(
@@ -212,11 +212,17 @@ export function AttendanceOverview() {
   const totals = rows.reduce((t, r) => ({ onTime: t.onTime + r.a.counts.on_time, req: t.req + r.a.required, absent: t.absent + r.a.counts.absent }), { onTime: 0, req: 0, absent: 0 });
   const before = Number(settings.arriveBeforeMin) || 0;
 
-  // Keep the habit's days in step with the timetable (a class moved to Thursday…).
+  // Keep the habit in step: its days follow the timetable (a class moved to
+  // Thursday…) and its default name follows the "minutes before" setting.
   const days = classWeekdays(courses, academic).join(',');
+  const autoName = `Être en cours ${before} min avant le début`;
   useEffect(() => {
-    if (habit && habit.frequency === 'custom' && days && (habit.weekdays || []).join(',') !== days) editHabit(habit.id, { weekdays: days.split(',') });
-  }, [habit?.id, days]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!habit) return;
+    const patch = {};
+    if (habit.frequency === 'custom' && days && (habit.weekdays || []).join(',') !== days) patch.weekdays = days.split(',');
+    if (/^Être en cours \d+ min avant le début$/.test(habit.name) && habit.name !== autoName) patch.name = autoName;
+    if (Object.keys(patch).length) editHabit(habit.id, patch);
+  }, [habit?.id, habit?.name, days, autoName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createHabit = () => addHabit({
     name: `Être en cours ${before} min avant le début`,

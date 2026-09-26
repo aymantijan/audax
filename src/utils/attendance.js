@@ -30,6 +30,10 @@ export const dateKeyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${p
 const addDays = (key, n) => { const d = new Date(`${key}T12:00:00`); d.setDate(d.getDate() + n); return dateKeyOf(d); };
 const at = (date, hhmm) => new Date(`${date}T${hhmm || '00:00'}:00`).getTime();
 
+// Settings with defaults filled in: cloud sync can replace `academic.settings`
+// with an older copy that predates the attendance keys.
+export const withDefaults = (settings) => ({ ...DEFAULT_ACADEMIC_SETTINGS, ...(settings || {}) });
+
 export const occurrenceKey = (courseId, slotId, date) => `${courseId}|${slotId}|${date}`;
 
 /** When a subject stops: { rule, date, pending } (date = first day WITHOUT class). */
@@ -74,7 +78,7 @@ export function occurrenceState(occ, records, nowMs = Date.now()) {
   return 'absent';
 }
 
-export const arriveBy = (occ, settings) => occ.startMs - (Number(settings?.arriveBeforeMin ?? DEFAULT_ACADEMIC_SETTINGS.arriveBeforeMin) || 0) * 60000;
+export const arriveBy = (occ, settings) => occ.startMs - (Number(withDefaults(settings).arriveBeforeMin) || 0) * 60000;
 export const checkInStatus = (occ, settings, nowMs = Date.now()) => (nowMs <= arriveBy(occ, settings) ? 'on_time' : 'late');
 export const fmtClock = (ms) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 

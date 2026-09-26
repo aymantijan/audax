@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLearningStore } from '../store/learningStore';
-import { classesOn, arriveBy, fmtClock, dateKeyOf } from '../utils/attendance';
+import { classesOn, arriveBy, fmtClock, dateKeyOf, withDefaults } from '../utils/attendance';
 import { toast } from '../store/uiStore';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
@@ -35,7 +35,7 @@ export function useClassReminders() {
   useEffect(() => {
     const check = () => {
       const { courses, academic, attendance } = useLearningStore.getState();
-      const lead = Number(academic.settings.classReminderMin);
+      const lead = Number(withDefaults(academic.settings).classReminderMin);
       if (!lead) return;
       const now = Date.now();
       const today = dateKeyOf(new Date(now));
