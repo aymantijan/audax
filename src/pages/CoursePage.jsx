@@ -27,6 +27,7 @@ import ScheduleEventModal from '../components/common/ScheduleEventModal';
 import { CourseFormModal } from '../components/learning/CursusModals';
 import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tint, gradeColor } from '../components/learning/design';
 import { courseColor } from '../components/learning/TimetableView';
+import { CourseEndControl, CourseAttendanceSummary } from '../components/learning/Attendance';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
 const parseNum = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
@@ -162,6 +163,8 @@ function SlotsCard({ course }) {
       ) : (
         <p className="text-sm text-mute">Ajoutez les créneaux hebdomadaires (cours, TD, TP) : ils alimentent l'emploi du temps.</p>
       )}
+      {slots.length > 0 && <CourseEndControl course={course} />}
+      {slots.length > 0 && <CourseAttendanceSummary course={course} />}
     </Card>
   );
 }

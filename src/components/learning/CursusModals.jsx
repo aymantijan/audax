@@ -50,6 +50,9 @@ export function TermModal({ open, onClose, term }) {
           <Field label="Année universitaire"><Input value={f.year || ''} onChange={(e) => setF({ ...f, year: e.target.value })} placeholder="2026-2027" /></Field>
           <Field label="Début"><Input type="date" value={f.startDate || ''} onChange={(e) => setF({ ...f, startDate: e.target.value })} /></Field>
           <Field label="Fin (après les examens)"><Input type="date" value={f.endDate || ''} onChange={(e) => setF({ ...f, endDate: e.target.value })} /></Field>
+          <Field label="Début des partiels" hint="Laissez vide si inconnue. Les matières réglées « jusqu’aux partiels » s’arrêtent à cette date.">
+            <Input type="date" value={f.midtermsDate || ''} onChange={(e) => setF({ ...f, midtermsDate: e.target.value })} />
+          </Field>
         </div>
         <div className="flex items-center gap-3 pt-2">
           {term && (confirmDel ? (
@@ -296,6 +299,8 @@ export function GradingSettingsModal({ open, onClose }) {
       subjectCompensation: !!f.subjectCompensation,
       moduleCompensation: !!f.moduleCompensation,
       retakeRule: f.retakeRule,
+      arriveBeforeMin: Math.max(0, numOrNull(f.arriveBeforeMin) ?? 5),
+      classReminderMin: Math.max(0, numOrNull(f.classReminderMin) ?? 0),
     });
     onClose();
   };
@@ -342,6 +347,15 @@ export function GradingSettingsModal({ open, onClose }) {
             { value: 'replace', label: 'La note de rattrapage remplace la moyenne' },
           ]} />
         </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Assiduité : être en salle (min avant)" hint="Pointer « En salle » avant compte comme à l’heure.">
+            <Input type="number" min="0" max="60" value={f.arriveBeforeMin ?? 5} onChange={(e) => setF({ ...f, arriveBeforeMin: e.target.value })} />
+          </Field>
+          <Field label="Rappel avant chaque cours (min)" hint="0 = pas de rappel. L’app doit être ouverte.">
+            <Input type="number" min="0" max="180" value={f.classReminderMin ?? 20} onChange={(e) => setF({ ...f, classReminderMin: e.target.value })} />
+          </Field>
+        </div>
 
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: tint('var(--accent-primary)', 8), color: 'var(--text-secondary)' }}>
           <Info size={14} className="shrink-0 mt-0.5 text-accent" />

@@ -144,21 +144,3 @@ export function studyPriorities({ courses, sessions, settings, today }) {
     return { course: c, score: Math.round(score), reasons, exam, days, weekMin: studied, expectedMin: Math.round(expected) };
   }).sort((a, b) => b.score - a.score);
 }
-
-// Today's classes from the weekly timetable, with their live state.
-export function todaysClasses(courses, settings, now = new Date()) {
-  const dow = now.getDay();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
-  const out = [];
-  for (const c of courses) {
-    if (c.status !== 'active') continue;
-    if (isAcademic(c) && settings.activeTermId && c.termId && c.termId !== settings.activeTermId) continue;
-    for (const s of c.slots || []) {
-      if (Number(s.day) !== dow) continue;
-      const a = toMin(s.start); const b = toMin(s.end);
-      out.push({ ...s, course: c, state: mins >= b ? 'done' : mins >= a ? 'now' : 'next' });
-    }
-  }
-  return out.sort((x, y) => toMin(x.start) - toMin(y.start));
-}

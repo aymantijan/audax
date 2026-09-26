@@ -9,6 +9,7 @@ import { toast } from './uiStore';
 import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calendar';
 import { DEFAULT_ACADEMIC_SETTINGS, EVALUATION_PRESETS, subjectResult, letterFor, isAcademic } from '../utils/academic';
 import { resourcesOf } from '../utils/tracks';
+import { checkInStatus, ATTENDANCE_STATUS, fmtClock, arriveBy } from '../utils/attendance';
 
 export const useLearningStore = create(
   persist(
@@ -19,6 +20,8 @@ export const useLearningStore = create(
       // Subjects themselves are `courses` with kind: 'academic' and
       // termId / moduleId / coefficient / evaluations[] / slots[].
       academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] },
+      // Class attendance: { 'courseId|slotId|YYYY-MM-DD': { status, at } } — see utils/attendance.js.
+      attendance: {},
 
       addCourse: (data) => {
         const course = {
@@ -165,7 +168,7 @@ export const useLearningStore = create(
         set({ academic: { ...get().academic, settings: { ...get().academic.settings, ...updates } } }),
 
       addTerm: (data) => {
-        const term = { id: uid(), name: data.name || 'Semestre', year: data.year || '', startDate: data.startDate || '', endDate: data.endDate || '', createdAt: Date.now() };
+        const term = { id: uid(), name: data.name || 'Semestre', year: data.year || '', startDate: data.startDate || '', endDate: data.endDate || '', midtermsDate: data.midtermsDate || '', createdAt: Date.now() };
         const a = get().academic;
         set({ academic: { ...a, terms: [...a.terms, term], settings: { ...a.settings, activeTermId: term.id } } });
         return term.id;
@@ -284,6 +287,29 @@ export const useLearningStore = create(
       deleteEvaluation: (courseId, evId) =>
         set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, evaluations: (c.evaluations || []).filter((e) => e.id !== evId) } : c)) }),
 
+      // ── Attendance ──
+      // "Je suis en salle": on time when done `arriveBeforeMin` before the start.
+      checkInClass: (occ) => {
+        if (get().attendance[occ.key]) return;
+        const now = Date.now();
+        if (now >= occ.endMs) return;
+        const status = checkInStatus(occ, get().academic.settings, now);
+        set({ attendance: { ...get().attendance, [occ.key]: { status, at: now } } });
+        if (status === 'on_time') {
+          get().recordActivity();
+          toast(`Présent à l’heure : ${occ.course.name} ✓`, 'success');
+        } else {
+          toast(`Pointé en retard (il fallait être là à ${fmtClock(arriveBy(occ, get().academic.settings))})`, 'info');
+        }
+      },
+      // Manual correction (status null = back to automatic).
+      setAttendance: (key, status) => {
+        const next = { ...get().attendance };
+        if (!status) delete next[key];
+        else if (ATTENDANCE_STATUS[status]) next[key] = { status, at: Date.now(), manual: true };
+        set({ attendance: next });
+      },
+
       // Weekly timetable slots of a subject.
       addSlot: (courseId, slot) =>
         set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, slots: [...(c.slots || []), { id: uid(), day: 1, start: '08:30', end: '10:30', kind: 'Cours', room: '', ...slot }] } : c)) }),
@@ -312,7 +338,7 @@ export const useLearningStore = create(
         toast(`Nouveau niveau : ${level} 🎉`, 'success');
       },
 
-      resetAll: () => set({ courses: [], momentum: freshMomentumState(), academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] } }),
+      resetAll: () => set({ attendance: {}, courses: [], momentum: freshMomentumState(), academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] } }),
     }),
     {
       name: 'audax-learning',

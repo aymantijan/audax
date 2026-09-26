@@ -29,6 +29,7 @@ import { ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
 import { Card, Button, Badge, EmptyState } from '../components/common/ui';
+import { NextClassBanner } from '../components/learning/Attendance';
 
 export default function Today() {
   const user = useAuthStore((s) => s.user);
@@ -141,6 +142,9 @@ export default function Today() {
           Tableau de bord complet <ArrowRight size={14} />
         </Link>
       </div>
+
+      {/* ---- Class check-in (attendance habit) ---- */}
+      <NextClassBanner />
 
       {/* ---- Habits: the primary daily checklist ---- */}
       <Card

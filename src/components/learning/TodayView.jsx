@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Sun, Flame, Clock, MapPin, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check, Brain,
+  Sun, Flame, Clock, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check, Brain,
 } from 'lucide-react';
 import { useFlashcardStore, buildQueue } from '../../store/flashcardStore';
 import ReviewSession from './ReviewSession';
@@ -9,13 +9,15 @@ import { useLearningStore } from '../../store/learningStore';
 import { useFocusStore } from '../../store/focusStore';
 import { upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, requiredGrade, fmtGrade, isAcademic } from '../../utils/academic';
 import {
-  studySessions, minutesBetween, dailySeries, studyStreak, fmtMinutes, weekStart, studyPriorities, todaysClasses, nextTaskOf,
+  studySessions, minutesBetween, dailySeries, studyStreak, fmtMinutes, weekStart, studyPriorities, nextTaskOf,
 } from '../../utils/study';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button } from '../common/ui';
 import { SectionHeader, useAcademicSettings, tint, gradeColor, countdownLabel } from './design';
 import { courseColor } from './TimetableView';
 import { StudyTimerCard, ManualSessionModal } from './StudyTimer';
+import { ClassesTodayCard } from './Attendance';
+import { classesOn } from '../../utils/attendance';
 
 const DAY_LETTER = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
@@ -131,7 +133,8 @@ export default function TodayView() {
     () => studyPriorities({ courses, sessions, settings, today }).filter((p) => p.score > 0).slice(0, 3),
     [courses, sessions, settings.weeklyStudyTarget, settings.activeTermId, settings.passMark, settings.scale, today] // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const classes = todaysClasses(courses, settings);
+  const academic = useLearningStore((s) => s.academic);
+  const classes = useMemo(() => classesOn(courses, academic, today), [courses, academic, today]);
   const deadlines = useMemo(
     () => upcomingEvaluations(courses, today).filter((x) => !x.past && normGrade(x.ev, settings) == null && daysUntil(x.ev.date, today) <= 21).slice(0, 5),
     [courses, today] // eslint-disable-line react-hooks/exhaustive-deps
@@ -202,30 +205,8 @@ export default function TodayView() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
-        {/* Today's classes */}
-        <Card>
-          <SectionHeader icon={Clock} title="Cours d'aujourd'hui" action={<Link to="/learning?tab=timetable" className="text-xs text-accent hover:underline">Emploi du temps</Link>} />
-          {classes.length ? (
-            <div className="space-y-2">
-              {classes.map((s) => {
-                const color = courseColor(s.course.id);
-                return (
-                  <Link key={s.id} to={`/learning/course/${s.course.id}`} className={`flex items-center gap-3 rounded-lg px-3 py-2 border-l-[3px] transition ${s.state === 'done' ? 'opacity-50' : ''}`}
-                    style={{ background: tint(color, s.state === 'now' ? 18 : 8), borderColor: color }}>
-                    <span className="text-xs tabular-nums text-mute w-24 shrink-0">{s.start}–{s.end}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium text-ink truncate">{s.course.name}</span>
-                      <span className="text-[11px] text-mute">{s.kind}{s.room && <> · <MapPin size={9} className="inline" /> {s.room}</>}</span>
-                    </span>
-                    {s.state === 'now' && <span className="text-[10px] font-semibold rounded-full px-2 py-0.5" style={{ background: tint(color, 25), color }}>En cours</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-mute py-2">Pas de cours aujourd'hui{courses.some((c) => c.slots?.length) ? '.' : ' — ajoutez vos créneaux dans chaque matière.'}</p>
-          )}
-        </Card>
+        {/* Today's classes + check-in */}
+        <ClassesTodayCard />
 
         {/* Deadlines */}
         <Card>

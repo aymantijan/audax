@@ -5,6 +5,9 @@ import { useLearningStore } from '../../store/learningStore';
 import { WEEKDAYS, isAcademic } from '../../utils/academic';
 import { Button, Card } from '../common/ui';
 import { TimetableImportModal } from './CursusModals';
+import { AttendanceOverview } from './Attendance';
+import { courseEnd } from '../../utils/attendance';
+import { todayKey } from '../../utils/formatters';
 import { SectionHeader, tint, useAcademicSettings } from './design';
 
 // Stable colour per subject so it reads the same across the grid and lists.
@@ -15,6 +18,7 @@ const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); retur
 
 export default function TimetableView() {
   const courses = useLearningStore((s) => s.courses);
+  const terms = useLearningStore((s) => s.academic.terms);
   const settings = useAcademicSettings();
   const todayDow = new Date().getDay();
   const [importOpen, setImportOpen] = useState(false);
@@ -25,10 +29,13 @@ export default function TimetableView() {
     for (const c of courses) {
       if (c.status !== 'active') continue;
       if (isAcademic(c) && settings.activeTermId && c.termId && c.termId !== settings.activeTermId) continue;
-      for (const sl of c.slots || []) out.push({ ...sl, course: c });
+      // Subjects that already stopped (after the partiels / an end date) leave the week.
+      const end = courseEnd(c, terms.find((t) => t.id === c.termId));
+      if (end.date && end.date <= todayKey()) continue;
+      for (const sl of c.slots || []) out.push({ ...sl, course: c, endRule: end.rule, endDate: end.date });
     }
     return out.sort((a, b) => toMin(a.start) - toMin(b.start));
-  }, [courses, settings.activeTermId]);
+  }, [courses, terms, settings.activeTermId]);
 
   const days = WEEKDAYS.filter((d) => d.value !== 0 || slots.some((s) => Number(s.day) === 0));
   const weeklyMinutes = slots.reduce((s, sl) => s + Math.max(0, toMin(sl.end) - toMin(sl.start)), 0);
@@ -61,6 +68,7 @@ export default function TimetableView() {
         </Button>
       </div>
       {importModal}
+      <AttendanceOverview />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {days.map((d) => {
           const daySlots = slots.filter((s) => Number(s.day) === d.value);
@@ -82,6 +90,8 @@ export default function TimetableView() {
                         <div className="text-[11px] tabular-nums flex items-center gap-1" style={{ color }}><Clock size={10} /> {s.start}–{s.end} · {s.kind}</div>
                         <div className="text-xs font-medium text-ink mt-0.5 leading-snug">{s.course.name}</div>
                         {s.room && <div className="text-[10px] text-mute mt-0.5 flex items-center gap-1"><MapPin size={9} /> {s.room}</div>}
+                        {s.endRule === 'midterms' && <div className="text-[10px] text-mute mt-0.5">jusqu’aux partiels{s.endDate ? ` (${new Date(`${s.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})` : ''}</div>}
+                        {s.endRule === 'date' && s.course.endDate && <div className="text-[10px] text-mute mt-0.5">jusqu’au {new Date(`${s.course.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>}
                       </Link>
                     );
                   })}

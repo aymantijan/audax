@@ -19,6 +19,8 @@ export const DEFAULT_ACADEMIC_SETTINGS = {
   retakeRule: 'capped', // 'capped' (max(avg, retake) capped at pass mark) | 'max' | 'replace'
   activeTermId: null,
   weeklyStudyTarget: 15, // hours of personal study per week (outside class)
+  arriveBeforeMin: 5, // attendance: "on time" = checked in this many minutes before the class starts
+  classReminderMin: 20, // attendance: heads-up notification this many minutes before a class
 };
 
 export const GRADING_PRESETS = [

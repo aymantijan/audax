@@ -15,6 +15,8 @@ import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useContentStore } from '../store/contentStore';
 import { classOf } from './chart-of-accounts';
+import { useLearningStore } from '../store/learningStore';
+import { dayAttendance } from './attendance';
 
 const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
 
@@ -26,6 +28,7 @@ export const HABIT_SOURCES = [
   { value: 'sleep_hours', label: 'Heures de sommeil (check-in)', unit: 'h', section: 'Check-in', get: (d) => Number(useHabitStore.getState().energyLogs.find((l) => l.date === d)?.sleepData?.sleepHours || 0) },
   { value: 'reading_pages', label: 'Pages lues (Lectures)', unit: 'pages', section: 'Lectures', get: (d) => (useReadingsStore.getState().pagesByDate || {})[d] || 0 },
   { value: 'study_minutes', label: 'Minutes d’étude (Apprentissage)', unit: 'min', section: 'Apprentissage', get: (d) => Math.round(sum(useFocusStore.getState().sessions.filter((s) => s.date === d && (s.domain === 'Learning' || s.courseId)), (s) => s.durationMinutes)) },
+  { value: 'class_attendance', label: 'Cours du jour pointés à l’heure (Apprentissage)', unit: '%', section: 'Apprentissage', get: (d) => { const s = useLearningStore.getState(); return dayAttendance(s.courses, s.academic, s.attendance, d).pct; } },
   { value: 'focus_minutes', label: 'Minutes de concentration (Deep Work)', unit: 'min', section: 'Deep Work', get: (d) => Math.round(sum(useFocusStore.getState().sessions.filter((s) => s.date === d), (s) => s.durationMinutes)) },
   { value: 'flashcards', label: 'Fiches révisées (Révisions)', unit: 'fiches', section: 'Révisions', get: (d) => (useFlashcardStore.getState().reviewLog || []).filter((e) => e.d === d).length },
   { value: 'trades_journaled', label: 'Trades journalisés (Trading)', unit: 'trade(s)', section: 'Trading', get: (d) => (useTradingStore.getState().trades || []).filter((t) => t.date === d && t.journal?.reasoning?.trim()).length },
@@ -47,4 +50,4 @@ export function sourceValue(habit, date) {
 }
 
 /** Every store an auto source depends on — subscribe to re-sync. */
-export const SOURCE_STORES = [useHealthStore, useHabitStore, useReadingsStore, useFocusStore, useFlashcardStore, useTradingStore, useAccountingStore, useCareerStore, useNetworkingStore, useContentStore];
+export const SOURCE_STORES = [useLearningStore, useHealthStore, useHabitStore, useReadingsStore, useFocusStore, useFlashcardStore, useTradingStore, useAccountingStore, useCareerStore, useNetworkingStore, useContentStore];
