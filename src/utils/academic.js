@@ -304,3 +304,58 @@ export function parseSubjectLines(text) {
     })
     .filter((r) => r.name);
 }
+
+const stripAccents = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// "Lundi", "lun", "MARDI", "1"… → 0-6 (Sunday = 0), or null.
+export function parseWeekday(raw) {
+  const s = stripAccents(String(raw || '').trim().toLowerCase());
+  if (!s) return null;
+  if (/^[0-6]$/.test(s)) return Number(s);
+  const d = WEEKDAYS.find((w) => {
+    const label = stripAccents(w.label.toLowerCase());
+    return label === s || (s.length >= 3 && label.startsWith(s.slice(0, 3)));
+  });
+  return d ? d.value : null;
+}
+
+// "8h30", "8H", "08:30", "14.45" → "HH:MM", or null.
+function parseClock(raw) {
+  const m = String(raw || '').trim().match(/^(\d{1,2})\s*(?:[h:.]\s*(\d{2})?)?$/i);
+  if (!m) return null;
+  const h = Number(m[1]); const min = Number(m[2] || 0);
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+// "8h30-10h00", "08:30 – 10:00", "13H00 à 14H30" → { start, end }, or null.
+export function parseTimeRange(raw) {
+  const parts = String(raw || '').split(/\s*(?:-|–|—|à|a|>)\s*/i).filter(Boolean);
+  if (parts.length !== 2) return null;
+  const start = parseClock(parts[0]); const end = parseClock(parts[1]);
+  return start && end && start < end ? { start, end } : null;
+}
+
+/**
+ * Timetable import — one weekly slot per line:
+ *   Matière ; Jour ; Début-Fin ; Enseignant ; Salle ; Type
+ * Several lines with the same subject become several slots of one subject.
+ * Returns { rows, errors } so the modal can flag unreadable lines.
+ */
+export function parseTimetableLines(text) {
+  const rows = []; const errors = [];
+  text.split(/\r?\n/).forEach((line, i) => {
+    const l = line.trim();
+    if (!l) return;
+    const [name, day, range, professor, room, kind] = l.split(/\s*[;|\t]\s*/);
+    const d = parseWeekday(day);
+    const t = parseTimeRange(range);
+    if (!name?.trim() || d == null || !t) {
+      errors.push({ line: i + 1, text: l, reason: !name?.trim() ? 'matière manquante' : d == null ? 'jour illisible' : 'horaire illisible' });
+      return;
+    }
+    const k = SLOT_KINDS.find((x) => stripAccents(x.toLowerCase()) === stripAccents((kind || '').trim().toLowerCase()));
+    rows.push({ name: name.trim(), day: d, ...t, professor: (professor || '').trim(), room: (room || '').trim(), kind: k || 'Cours' });
+  });
+  return { rows, errors };
+}

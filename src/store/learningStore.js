@@ -235,6 +235,47 @@ export const useLearningStore = create(
         toast(`${rows.length} matière(s) ajoutée(s)`, 'success');
       },
 
+      // Timetable import: one row per weekly slot. Rows sharing a subject name are
+      // grouped; a subject already in the semester gets the new slots (identical
+      // day+start skipped, so re-importing is harmless) instead of a duplicate.
+      importTimetable: (termId, rows, presetKey) => {
+        const preset = EVALUATION_PRESETS.find((p) => p.key === presetKey) || EVALUATION_PRESETS[0];
+        const groups = new Map();
+        for (const r of rows) {
+          const key = r.name.toLowerCase();
+          if (!groups.has(key)) groups.set(key, { name: r.name, professor: r.professor, slots: [] });
+          const g = groups.get(key);
+          if (!g.professor && r.professor) g.professor = r.professor;
+          g.slots.push({ day: r.day, start: r.start, end: r.end, kind: r.kind, room: r.room });
+        }
+        let created = 0; let added = 0;
+        for (const g of groups.values()) {
+          const existing = get().courses.find((c) => isAcademic(c) && c.termId === termId && c.name.toLowerCase() === g.name.toLowerCase());
+          if (existing) {
+            const fresh = g.slots.filter((s) => !(existing.slots || []).some((x) => Number(x.day) === s.day && x.start === s.start));
+            added += fresh.length;
+            set({
+              courses: get().courses.map((c) => (c.id === existing.id ? {
+                ...c,
+                professor: c.professor || g.professor,
+                slots: [...(c.slots || []), ...fresh.map((s) => ({ id: uid(), ...s }))],
+              } : c)),
+            });
+          } else {
+            get().addCourse({
+              kind: 'academic', silent: true, name: g.name, termId, moduleId: null,
+              coefficient: 1, credits: 0,
+              institution: get().academic.settings.institution || '', professor: g.professor,
+              targetGrade: null, linkedSkills: [], chapters: [],
+              evaluations: preset.evals.map(([type, name, weight]) => ({ type, name, weight })),
+              slots: g.slots,
+            });
+            created += 1; added += g.slots.length;
+          }
+        }
+        toast(`${added} créneau(x) importé(s)${created ? ` · ${created} matière(s) créée(s)` : ''}`, 'success');
+      },
+
       // Evaluations (CC, partiel, examen…) of a subject.
       addEvaluation: (courseId, ev) =>
         set({ courses: get().courses.map((c) => (c.id === courseId ? { ...c, evaluations: [...(c.evaluations || []), { id: uid(), type: 'cc', name: '', weight: 0, date: '', grade: null, ...ev }], updatedAt: Date.now() } : c)) }),

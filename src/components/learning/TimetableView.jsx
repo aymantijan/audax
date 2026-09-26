@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, MapPin, Clock } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, ClipboardList } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import { WEEKDAYS, isAcademic } from '../../utils/academic';
-import { Card } from '../common/ui';
+import { Button, Card } from '../common/ui';
+import { TimetableImportModal } from './CursusModals';
 import { SectionHeader, tint, useAcademicSettings } from './design';
 
 // Stable colour per subject so it reads the same across the grid and lists.
@@ -16,6 +17,8 @@ export default function TimetableView() {
   const courses = useLearningStore((s) => s.courses);
   const settings = useAcademicSettings();
   const todayDow = new Date().getDay();
+  const [importOpen, setImportOpen] = useState(false);
+  const importModal = <TimetableImportModal open={importOpen} onClose={() => setImportOpen(false)} />;
 
   const slots = useMemo(() => {
     const out = [];
@@ -37,17 +40,27 @@ export default function TimetableView() {
           <CalendarDays size={26} className="mx-auto text-mute mb-2" />
           <p className="text-sm font-medium text-ink">Emploi du temps vide</p>
           <p className="text-xs text-mute mt-1 max-w-md mx-auto">
-            Ouvrez une matière et ajoutez ses créneaux (jour, heure, salle, cours/TD/TP). Ils apparaîtront ici, semaine type du semestre actif.
+            Collez votre planning en une fois, ou ouvrez une matière pour ajouter ses créneaux (jour, heure, salle, cours/TD/TP). Ils apparaîtront ici, semaine type du semestre actif.
           </p>
+          <Button className="mt-4" onClick={() => setImportOpen(true)}>
+            <span className="flex items-center gap-1.5"><ClipboardList size={14} /> Importer un emploi du temps</span>
+          </Button>
         </div>
+        {importModal}
       </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <SectionHeader icon={CalendarDays} title="Semaine type"
-        subtitle={`${slots.length} créneau(x) · ${Math.floor(weeklyMinutes / 60)} h${weeklyMinutes % 60 ? String(weeklyMinutes % 60).padStart(2, '0') : ''} de cours par semaine`} />
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <SectionHeader icon={CalendarDays} title="Semaine type"
+          subtitle={`${slots.length} créneau(x) · ${Math.floor(weeklyMinutes / 60)} h${weeklyMinutes % 60 ? String(weeklyMinutes % 60).padStart(2, '0') : ''} de cours par semaine`} />
+        <Button variant="secondary" onClick={() => setImportOpen(true)}>
+          <span className="flex items-center gap-1.5"><ClipboardList size={14} /> Importer</span>
+        </Button>
+      </div>
+      {importModal}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {days.map((d) => {
           const daySlots = slots.filter((s) => Number(s.day) === d.value);
