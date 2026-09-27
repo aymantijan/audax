@@ -47,6 +47,34 @@ function serializableState(state) {
   return out;
 }
 
+const isPlainObject = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+
+// Remote rows can predate fields added to a store since they were written
+// (e.g. learning.academic.settings.arriveBeforeMin): replacing a nested object
+// wholesale silently dropped those new defaults. Fill every key the store's
+// INITIAL state defines but the remote copy lacks, recursively — remote values
+// always win, and keys absent from the defaults (records keyed by id, like
+// attendance) are left exactly as the remote has them, so deletions stick.
+export function fillDefaults(remote, defaults) {
+  if (!isPlainObject(remote) || !isPlainObject(defaults)) return remote;
+  const out = { ...remote };
+  for (const [k, def] of Object.entries(defaults)) {
+    if (typeof def === 'function') continue;
+    if (!(k in out) || out[k] === undefined) out[k] = def;
+    else if (isPlainObject(def) && isPlainObject(out[k])) out[k] = fillDefaults(out[k], def);
+  }
+  return out;
+}
+
+function applyRemote(store, data) {
+  applyingRemote = true;
+  try {
+    store.setState(fillDefaults(data, store.getInitialState?.() || {}));
+  } finally {
+    applyingRemote = false;
+  }
+}
+
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -168,9 +196,7 @@ export async function startCloudSync(userId) {
 
   for (const { name, store } of REGISTRY) {
     if (cloud.data[name]) {
-      applyingRemote = true;
-      store.setState(cloud.data[name]);
-      applyingRemote = false;
+      applyRemote(store, cloud.data[name]);
     } else {
       // Confirmed absent (the fetch succeeded and simply returned no row for
       // this store) — safe to seed the cloud from local.
@@ -212,9 +238,7 @@ export async function startCloudSync(userId) {
         if (!row) return;
         const entry = REGISTRY.find((r) => r.name === row.store_name);
         if (!entry) return;
-        applyingRemote = true;
-        entry.store.setState(row.data);
-        applyingRemote = false;
+        applyRemote(entry.store, row.data);
       }
     )
     .subscribe();
