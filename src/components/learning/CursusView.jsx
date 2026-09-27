@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Pencil, GraduationCap, Layers, ClipboardList, CalendarClock, Target, Settings2, ChevronRight, AlertTriangle, CheckCircle2,
+  Scale,
 } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import {
@@ -13,7 +14,7 @@ import { Button, Card } from '../common/ui';
 import {
   useAcademicSettings, GradePill, StatusPill, MentionTag, BigStat, SectionHeader, tint, gradeColor, frDate, countdownLabel,
 } from './design';
-import { TermModal, ModuleModal, BulkImportModal, GradingSettingsModal, CourseFormModal } from './CursusModals';
+import { TermModal, ModuleModal, BulkImportModal, GradingSettingsModal, CourseFormModal, EvaluationSplitModal } from './CursusModals';
 
 // Semester progress through its dates (week X / Y).
 function termProgress(term, today) {
@@ -164,6 +165,7 @@ export default function CursusView() {
   const [moduleModal, setModuleModal] = useState(null); // null | { module }
   const [subjectModal, setSubjectModal] = useState(null); // null | { moduleId }
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const terms = academic.terms;
@@ -184,6 +186,7 @@ export default function CursusView() {
       <ModuleModal open={!!moduleModal} onClose={() => setModuleModal(null)} termId={term?.id} module={moduleModal?.module} />
       <CourseFormModal open={!!subjectModal} onClose={() => setSubjectModal(null)} kind="academic" termId={term?.id} moduleId={subjectModal?.moduleId} />
       <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} termId={term?.id} />
+      <EvaluationSplitModal open={splitOpen} onClose={() => setSplitOpen(false)} termId={term?.id} />
       <GradingSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
@@ -243,6 +246,7 @@ export default function CursusView() {
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button variant="secondary" onClick={() => setModuleModal({})}><span className="flex items-center gap-1.5"><Layers size={14} /> Module</span></Button>
             <Button variant="secondary" onClick={() => setBulkOpen(true)}><span className="flex items-center gap-1.5"><ClipboardList size={14} /> Coller une liste</span></Button>
+            <Button variant="secondary" onClick={() => setSplitOpen(true)}><span className="flex items-center gap-1.5"><Scale size={14} /> Répartition des notes</span></Button>
             <Button onClick={() => setSubjectModal({})}><span className="flex items-center gap-1.5"><Plus size={15} /> Matière</span></Button>
           </div>
         </div>

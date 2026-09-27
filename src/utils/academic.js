@@ -20,7 +20,8 @@ export const DEFAULT_ACADEMIC_SETTINGS = {
   activeTermId: null,
   weeklyStudyTarget: 15, // hours of personal study per week (outside class)
   arriveBeforeMin: 5, // attendance: "on time" = checked in this many minutes before the class starts
-  classReminderMin: 20, // attendance: heads-up notification this many minutes before a class
+  classReminderMin: 20,
+  defaultEvalPreset: 'cc40', // evaluation split given to new subjects (EVALUATION_PRESETS key) // attendance: heads-up notification this many minutes before a class
 };
 
 export const GRADING_PRESETS = [
@@ -34,6 +35,8 @@ export const EVALUATION_TYPES = [
   { value: 'cc', label: 'Contrôle continu', short: 'CC' },
   { value: 'partiel', label: 'Partiel', short: 'Partiel' },
   { value: 'exam', label: 'Examen final', short: 'Examen' },
+  { value: 'cf', label: 'Examen final (CF)', short: 'CF' },
+  { value: 'tass', label: 'Travail & assiduité (TASS)', short: 'TASS' },
   { value: 'projet', label: 'Projet', short: 'Projet' },
   { value: 'oral', label: 'Exposé / oral', short: 'Oral' },
   { value: 'tp', label: 'TP / TD', short: 'TP' },
@@ -47,6 +50,7 @@ export const evalTypeLabel = (t, short = false) => {
 
 // Evaluation splits offered when a subject is created.
 export const EVALUATION_PRESETS = [
+  { key: 'cc_cf_tass', label: 'CC 30 % · CF 30 % · TASS 40 %', evals: [['cc', 'CC — partiels / contrôle continu', 30], ['cf', 'CF — examens finaux', 30], ['tass', 'TASS — participation, TD, TP, oral', 40]] },
   { key: 'cc40', label: 'CC 40 % · Examen 60 %', evals: [['cc', 'Contrôle continu', 40], ['exam', 'Examen final', 60]] },
   { key: 'cc30', label: 'CC 30 % · Examen 70 %', evals: [['cc', 'Contrôle continu', 30], ['exam', 'Examen final', 70]] },
   { key: 'part', label: 'Partiel 40 % · Final 60 %', evals: [['partiel', 'Partiel', 40], ['exam', 'Examen final', 60]] },

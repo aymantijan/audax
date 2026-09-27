@@ -127,9 +127,10 @@ export function ModuleModal({ open, onClose, termId, module }) {
 export function BulkImportModal({ open, onClose, termId }) {
   const importSubjects = useLearningStore((s) => s.importSubjects);
   const [text, setText] = useState('');
-  const [preset, setPreset] = useState('cc40');
+  const defaultPreset = useAcademicSettings().defaultEvalPreset || 'cc40';
+  const [preset, setPreset] = useState(defaultPreset);
   const rows = useMemo(() => parseSubjectLines(text), [text]);
-  useEffect(() => { if (open) setText(''); }, [open]);
+  useEffect(() => { if (open) { setText(''); setPreset(defaultPreset); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Modal open={open} onClose={onClose} title="Ajouter plusieurs matières" wide>
@@ -191,7 +192,7 @@ export function TimetableImportModal({ open, onClose }) {
   const terms = useLearningStore((s) => s.academic.terms);
   const settings = useAcademicSettings();
   const [text, setText] = useState('');
-  const [preset, setPreset] = useState('cc40');
+  const [preset, setPreset] = useState(settings.defaultEvalPreset || 'cc40');
   const [termId, setTermId] = useState('');
   const [newTerm, setNewTerm] = useState({ name: '', startDate: '' });
   const { rows, errors } = useMemo(() => parseTimetableLines(text), [text]);
@@ -200,6 +201,7 @@ export function TimetableImportModal({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     setText('');
+    setPreset(settings.defaultEvalPreset || 'cc40');
     setTermId(settings.activeTermId || terms[terms.length - 1]?.id || '');
     setNewTerm({ name: '', startDate: '' });
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,6 +272,48 @@ export function TimetableImportModal({ open, onClose }) {
           {rows.length > 0 && <span className="mr-auto text-xs text-mute">{rows.length} créneau{rows.length > 1 ? 'x' : ''} · {subjects} matière{subjects > 1 ? 's' : ''}</span>}
           <Button variant="secondary" onClick={onClose}>Annuler</Button>
           <Button disabled={!canImport} onClick={submit}>Importer</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Same evaluation split for the whole semester ─────────────────────────
+export function EvaluationSplitModal({ open, onClose, termId }) {
+  const apply = useLearningStore((s) => s.applyEvaluationPreset);
+  const courses = useLearningStore((s) => s.courses);
+  const settings = useAcademicSettings();
+  const [preset, setPreset] = useState('cc_cf_tass');
+  useEffect(() => { if (open) setPreset(settings.defaultEvalPreset || 'cc_cf_tass'); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const subjects = courses.filter((c) => c.kind === 'academic' && c.termId === termId);
+  const graded = subjects.filter((c) => (c.evaluations || []).some((e) => e.grade != null && e.grade !== ''));
+  const chosen = EVALUATION_PRESETS.find((p) => p.key === preset);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Répartition des évaluations">
+      <div className="space-y-4">
+        <p className="text-sm text-mute">
+          Applique la même répartition à <b className="text-ink">toutes les matières du semestre</b> ({subjects.length}).
+          Elle devient aussi la répartition par défaut des nouvelles matières. Une matière différente se modifie ensuite sur sa page.
+        </p>
+        <Field label="Répartition">
+          <Select value={preset} onChange={(e) => setPreset(e.target.value)} options={EVALUATION_PRESETS.filter((p) => p.evals.length).map((p) => ({ value: p.key, label: p.label }))} />
+        </Field>
+        {chosen && (
+          <div className="flex flex-wrap gap-1.5">
+            {chosen.evals.map(([, name, w]) => <span key={name} className="text-xs rounded-md border border-line px-2 py-1 text-mute">{name} <b className="text-ink">{w} %</b></span>)}
+          </div>
+        )}
+        {graded.length > 0 && (
+          <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs text-mute">
+            Déjà notée{graded.length > 1 ? 's' : ''}, donc inchangée{graded.length > 1 ? 's' : ''} : {graded.map((c) => c.name).join(', ')}.
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Annuler</Button>
+          <Button disabled={!subjects.length || subjects.length === graded.length} onClick={() => { apply(termId, preset); onClose(); }}>
+            Appliquer à {subjects.length - graded.length} matière{subjects.length - graded.length > 1 ? 's' : ''}
+          </Button>
         </div>
       </div>
     </Modal>
@@ -372,9 +416,9 @@ export function GradingSettingsModal({ open, onClose }) {
 }
 
 // ── Subject (academic) or free course ────────────────────────────────────
-const blankForm = (kind, termId, moduleId, institution) => ({
+const blankForm = (kind, termId, moduleId, institution, preset) => ({
   kind, name: '', termId: termId || '', moduleId: moduleId || '', coefficient: 1, credits: '',
-  professor: '', institution: institution || '', targetGrade: '', preset: 'cc40', template: '',
+  professor: '', institution: institution || '', targetGrade: '', preset: preset || 'cc40', template: '',
   linkedSkills: [],
 });
 
@@ -398,7 +442,7 @@ export function CourseFormModal({ open, onClose, kind: initialKind = 'academic',
         credits: course.credits ?? '', targetGrade: course.targetGrade ?? '',
       });
     } else {
-      setF(blankForm(initialKind, termId || settings.activeTermId, moduleId, settings.institution));
+      setF(blankForm(initialKind, termId || settings.activeTermId, moduleId, settings.institution, settings.defaultEvalPreset));
     }
   }, [open, course]); // eslint-disable-line react-hooks/exhaustive-deps
 

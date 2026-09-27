@@ -238,6 +238,24 @@ export const useLearningStore = create(
         toast(`${rows.length} matière(s) ajoutée(s)`, 'success');
       },
 
+      // Same evaluation split for every subject of a semester. Subjects that
+      // already have a grade keep theirs (never overwrite results silently).
+      applyEvaluationPreset: (termId, presetKey) => {
+        const preset = EVALUATION_PRESETS.find((p) => p.key === presetKey);
+        if (!preset) return;
+        let applied = 0; const skipped = [];
+        set({
+          courses: get().courses.map((c) => {
+            if (!isAcademic(c) || c.termId !== termId) return c;
+            if ((c.evaluations || []).some((e) => e.grade != null && e.grade !== '')) { skipped.push(c.name); return c; }
+            applied += 1;
+            return { ...c, evaluations: preset.evals.map(([type, name, weight]) => ({ id: uid(), type, name, weight, date: '', grade: null })), updatedAt: Date.now() };
+          }),
+        });
+        get().updateAcademicSettings({ defaultEvalPreset: presetKey });
+        toast(`${preset.label} appliqué à ${applied} matière(s)${skipped.length ? ` · ${skipped.length} déjà notée(s) inchangée(s)` : ''}`, 'success');
+      },
+
       // Timetable import: one row per weekly slot. Rows sharing a subject name are
       // grouped; a subject already in the semester gets the new slots (identical
       // day+start skipped, so re-importing is harmless) instead of a duplicate.
