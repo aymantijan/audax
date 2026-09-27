@@ -13,7 +13,7 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
 ## Décisions prises (27 sept 2026) — ne pas rediscuter
 1. Nom : **VAUDAX** partout (l'onglet / le manifeste PWA disent encore « AUDAX » → à migrer en étape 2).
 2. Interface en **tutoiement** partout, en français. **Exception : le Trading reste en anglais.**
-3. IA : palier Claude payant avec **plafond mensuel strict** (montant à fixer par l'utilisateur) ; gratuit par défaut.
+3. IA du site : **Gemini** (Google), avec **plafond mensuel strict** (montant à fixer par l'utilisateur). Pas Claude/OpenRouter pour le futur assistant.
 4. **Cercle privé** d'abord (pas d'ouverture publique : loi 09-08 / CNDP non traitée).
 5. Mode de notation « classique » : une matière sous la note éliminatoire bloque le semestre.
 6. Modules secondaires (Ingénierie, Immobilier, Levée de fonds, Création) **masqués** pour les nouveaux utilisateurs, activables.
@@ -31,7 +31,7 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 - `financeStore.js` est l'ancienne compta (morte) ; la vraie est `accountingStore.js`.
 - Rappels push : `api/class-reminders.js` (cours + Santé), appelé toutes les 5 min par pg_cron Supabase
   (`supabase/migrations/005_class_reminders_cron.sql`, authentification par nonce, aucun secret dans le SQL).
-- Coachs IA actuels (`api/*-coach.js`) : modèles OpenRouter gratuits, réponses courtes → à remplacer (étape 4).
+- Coachs IA actuels (`api/*-coach.js`) : modèles OpenRouter gratuits, réponses courtes → à remplacer par un assistant unique sur **Gemini** (étape 4).
 
 ## Commandes
 - `npm run dev` — serveur de dev (le démarrer via preview_start, jamais en Bash).
