@@ -7,8 +7,8 @@ import { FOOD_DB, estimateMacros } from '../../../utils/nutrition-db';
 const TEMPLATE_TYPES = [
   { value: 'training', label: 'Jour d\'entraînement' },
   { value: 'rest', label: 'Jour de repos' },
-  { value: 'high_carb', label: 'High carb' },
-  { value: 'low_carb', label: 'Low carb' },
+  { value: 'high_carb', label: 'Riche en glucides' },
+  { value: 'low_carb', label: 'Pauvre en glucides' },
   { value: 'refeed', label: 'Refeed' },
   { value: 'custom', label: 'Personnalisé' },
 ];

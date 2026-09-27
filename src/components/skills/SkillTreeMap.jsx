@@ -296,12 +296,12 @@ export default function SkillTreeMap({ onSelect }) {
           {TRACKS.map((t) => <option key={t} value={t}>{t === 'all' ? 'All tracks' : t}</option>)}
         </select>
         <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-          <option value="all">All categories</option>
+          <option value="all">Toutes les catégories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <button onClick={() => setAll(true)} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Expand all"><Maximize2 size={14} /> Expand</button>
-        <button onClick={() => setAll(false)} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Collapse all"><Minimize2 size={14} /> Collapse</button>
-        <button onClick={recenter} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Recenter"><Crosshair size={14} /> Fit</button>
+        <button onClick={() => setAll(true)} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Tout déplier"><Maximize2 size={14} /> Déplier</button>
+        <button onClick={() => setAll(false)} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Tout replier"><Minimize2 size={14} /> Replier</button>
+        <button onClick={recenter} className="flex items-center gap-1.5 text-sm text-mute hover:text-ink border border-line rounded-lg px-3 py-2 cursor-pointer" title="Recentrer"><Crosshair size={14} /> Ajuster</button>
       </div>
 
       <div className="flex items-center gap-4 text-xs text-mute">

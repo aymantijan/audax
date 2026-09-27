@@ -345,7 +345,7 @@ export default function BodyComposition() {
                   <div className="text-[11px] text-mute">BMR × activity level</div>
                 </div>
               </div>
-              <Field label="Activity level">
+              <Field label="Niveau d’activité">
                 <Select
                   value={activityLevel}
                   onChange={(e) => setActivityLevel(e.target.value)}
@@ -442,7 +442,7 @@ export default function BodyComposition() {
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="weight" stroke="var(--accent-primary)" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Weight (raw)" />
+              <Line type="monotone" dataKey="weight" stroke="var(--accent-primary)" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Poids (brut)" />
               <Line type="monotone" dataKey="bodyFat" stroke="#ff6b6b" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Body fat (raw)" />
               <Line type="monotone" dataKey="waist" stroke="var(--success)" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Waist (raw)" />
               <Line type="monotone" data={smoothed.weight.map((e) => ({ date: e.date.slice(5), weightMA: e.weightKgMA }))} dataKey="weightMA" stroke="var(--accent-primary)" strokeWidth={2.5} dot={false} name="Weight (7j MA)" />

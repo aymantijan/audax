@@ -8,7 +8,18 @@ import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
+// Stored values stay in English (saved entries); the labels are French.
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
+// Shown on top of the usual list at perimenopause and menopause.
+const MENOPAUSE_SYMPTOMS = ['Hot flashes', 'Night sweats', 'Brain fog', 'Sleep trouble', 'Joint pain', 'Irregular cycle', 'Vaginal dryness', 'Low libido'];
+const SYMPTOM_LABEL = {
+  Cramps: 'Crampes', Fatigue: 'Fatigue', Bloating: 'Ballonnements', Headache: 'Maux de tête', 'Mood swings': 'Sautes d’humeur',
+  'Breast tenderness': 'Seins sensibles', Acne: 'Acné', Cravings: 'Fringales', 'Hot flashes': 'Bouffées de chaleur',
+  'Night sweats': 'Sueurs nocturnes', 'Brain fog': 'Brouillard mental', 'Sleep trouble': 'Troubles du sommeil', 'Joint pain': 'Douleurs articulaires',
+  'Irregular cycle': 'Cycle irrégulier', 'Vaginal dryness': 'Sécheresse vaginale', 'Low libido': 'Baisse de libido',
+};
+const FLOW_LABEL = { light: 'Léger', medium: 'Moyen', heavy: 'Abondant' };
+const symptomLabel = (s) => SYMPTOM_LABEL[s] || s;
 
 // Shared by energyByPhase and rpeByPhase below — which phase `dateStr` falls
 // in, given the cycle-start dates logged so far and an estimated cycle
@@ -46,7 +57,7 @@ export default function CycleTracking() {
   const coaching = getCyclePhaseCoaching();
   const healthFlag = getCycleHealthFlag();
   const activeProgram = null; // old curated program system removed — will be re-linked with Programme v2
-  const allSymptoms = [...SYMPTOMS, ...customCycleSymptoms];
+  const allSymptoms = [...SYMPTOMS, ...(['perimenopause', 'menopause'].includes(lifeStage) ? MENOPAUSE_SYMPTOMS : []), ...customCycleSymptoms];
 
   // Symptom "severity" proxied by count of symptoms logged per entry — a
   // simple, transparent trend without inventing a 1-10 severity scale nobody
@@ -302,7 +313,7 @@ export default function CycleTracking() {
       <Card title="Début des règles">
         <div className="grid grid-cols-3 gap-3 mb-3">
           <Field label="Flux">
-            <Select value={flow} onChange={(e) => setFlow(e.target.value)} options={[{ value: 'light', label: 'Light' }, { value: 'medium', label: 'Medium' }, { value: 'heavy', label: 'Heavy' }]} />
+            <Select value={flow} onChange={(e) => setFlow(e.target.value)} options={Object.entries(FLOW_LABEL).map(([value, label]) => ({ value, label }))} />
           </Field>
           <Field label="Date de début" hint="Antidater une saisie oubliée">
             <Input type="date" value={startDate} max={todayKey()} onChange={(e) => e.target.value && setStartDate(e.target.value)} />
@@ -321,7 +332,7 @@ export default function CycleTracking() {
                 symptoms.includes(s) ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute'
               }`}
             >
-              {s}
+              {symptomLabel(s)}
               {customCycleSymptoms.includes(s) && (
                 <span
                   role="button"
@@ -406,7 +417,7 @@ export default function CycleTracking() {
             {[...cycleLogs].reverse().map((c) => (
               <li key={c.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>
-                  {c.date}{c.endDate ? ` → ${c.endDate}` : ''} · {c.flow}{c.symptoms.length ? ` · ${c.symptoms.join(', ')}` : ''}
+                  {c.date}{c.endDate ? ` → ${c.endDate}` : ''} · {FLOW_LABEL[c.flow] || c.flow}{c.symptoms.length ? ` · ${c.symptoms.map(symptomLabel).join(', ')}` : ''}
                 </span>
                 <button onClick={() => deleteCycleLog(c.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>

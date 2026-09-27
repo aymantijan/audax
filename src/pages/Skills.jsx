@@ -60,7 +60,7 @@ export default function Skills() {
             )}
 
             <div className="text-xs text-mute">
-              Last practiced: <span className="text-ink">{skill.lastPracticed ? fmtDate(skill.lastPracticed) : 'never'}</span>
+              Dernière pratique : <span className="text-ink">{skill.lastPracticed ? fmtDate(skill.lastPracticed) : 'jamais'}</span>
             </div>
 
             {def.prereqs.length > 0 && (

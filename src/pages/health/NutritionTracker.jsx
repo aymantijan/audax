@@ -384,9 +384,9 @@ export default function NutritionTracker({ pendingPrompt }) {
       <Card title="Macros du jour" action={quality != null && <Badge color={quality >= 70 ? 'var(--success)' : quality >= 40 ? 'var(--warning)' : 'var(--error)'}>{quality}% whole foods</Badge>}>
         <div className="space-y-3">
           {[
-            { key: 'protein', label: 'Protein', unit: 'g' },
-            { key: 'carbs', label: 'Carbs', unit: 'g' },
-            { key: 'fat', label: 'Fat', unit: 'g' },
+            { key: 'protein', label: 'Protéines', unit: 'g' },
+            { key: 'carbs', label: 'Glucides', unit: 'g' },
+            { key: 'fat', label: 'Lipides', unit: 'g' },
             { key: 'kcal', label: 'Calories', unit: 'kcal' },
           ].map((m) => (
             <div key={m.key}>

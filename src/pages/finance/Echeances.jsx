@@ -183,7 +183,7 @@ export default function Echeances() {
                   </span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
                   {e.autoPost && e.active && <Badge color="var(--accent-primary)">Auto</Badge>}
-                  {!e.active && <Badge color="var(--text-secondary)">Inactive</Badge>}
+                  {!e.active && <Badge color="var(--text-secondary)">Désactivée</Badge>}
                   <button className="text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
                     {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
                   </button>

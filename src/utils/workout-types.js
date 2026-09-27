@@ -9,21 +9,21 @@
 // Zone 3 ≈ 70-80%, etc.) — kept as a label hint, not enforced (no HR input
 // in this app yet).
 export const CARDIO_TYPES = [
-  { value: 'zone1', label: 'Zone 1 — Recovery (very easy)' },
-  { value: 'zone2', label: 'Zone 2 — Aerobic / Fat-burn' },
+  { value: 'zone1', label: 'Zone 1 — Récupération (très facile)' },
+  { value: 'zone2', label: 'Zone 2 — Endurance fondamentale' },
   { value: 'zone3', label: 'Zone 3 — Tempo' },
-  { value: 'zone4', label: 'Zone 4 — Threshold' },
-  { value: 'zone5', label: 'Zone 5 — VO2 Max / Sprints' },
+  { value: 'zone4', label: 'Zone 4 — Seuil' },
+  { value: 'zone5', label: 'Zone 5 — VO2 max / sprints' },
   { value: 'hiit', label: 'HIIT' },
-  { value: 'liss', label: 'LISS (Low-Intensity Steady State)' },
-  { value: 'running', label: 'Running' },
-  { value: 'cycling', label: 'Cycling' },
-  { value: 'rowing', label: 'Rowing' },
-  { value: 'swimming', label: 'Swimming' },
-  { value: 'stairmaster', label: 'Stairmaster' },
-  { value: 'elliptical', label: 'Elliptical' },
-  { value: 'jump_rope', label: 'Jump Rope' },
-  { value: 'other_cardio', label: 'Other Cardio' },
+  { value: 'liss', label: 'LISS (basse intensité continue)' },
+  { value: 'running', label: 'Course à pied' },
+  { value: 'cycling', label: 'Vélo' },
+  { value: 'rowing', label: 'Rameur' },
+  { value: 'swimming', label: 'Natation' },
+  { value: 'stairmaster', label: 'Simulateur d’escalier' },
+  { value: 'elliptical', label: 'Vélo elliptique' },
+  { value: 'jump_rope', label: 'Corde à sauter' },
+  { value: 'other_cardio', label: 'Autre cardio' },
 ];
 
 // Session type = which split you're running today. `muscleGroups` pre-filters
@@ -31,19 +31,19 @@ export const CARDIO_TYPES = [
 // lets you search the full library, so this is a convenience default, not a
 // restriction). Mirrors the standard splits (PPL / Upper-Lower / Bro split).
 export const GYM_SESSION_TYPES = [
-  { value: 'push', label: 'Push (Chest/Shoulders/Triceps)', muscleGroups: ['chest', 'shoulders', 'triceps'] },
-  { value: 'pull', label: 'Pull (Back/Biceps)', muscleGroups: ['back', 'biceps', 'forearms'] },
-  { value: 'legs', label: 'Legs', muscleGroups: ['quads', 'hamstrings', 'glutes', 'calves'] },
-  { value: 'upper', label: 'Upper Body', muscleGroups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'] },
-  { value: 'lower', label: 'Lower Body', muscleGroups: ['quads', 'hamstrings', 'glutes', 'calves'] },
-  { value: 'full_body', label: 'Full Body', muscleGroups: [] },
-  { value: 'chest', label: 'Gym Session — Chest', muscleGroups: ['chest'] },
-  { value: 'back', label: 'Gym Session — Back', muscleGroups: ['back'] },
-  { value: 'shoulders', label: 'Gym Session — Shoulders', muscleGroups: ['shoulders'] },
-  { value: 'arms', label: 'Gym Session — Arms', muscleGroups: ['biceps', 'triceps', 'forearms'] },
-  { value: 'core', label: 'Gym Session — Core / Abs', muscleGroups: ['core'] },
-  { value: 'olympic', label: 'Olympic / Functional', muscleGroups: ['full_body'] },
-  { value: 'custom_gym', label: 'Custom', muscleGroups: [] },
+  { value: 'push', label: 'Push (pectoraux / épaules / triceps)', muscleGroups: ['chest', 'shoulders', 'triceps'] },
+  { value: 'pull', label: 'Pull (dos / biceps)', muscleGroups: ['back', 'biceps', 'forearms'] },
+  { value: 'legs', label: 'Jambes', muscleGroups: ['quads', 'hamstrings', 'glutes', 'calves'] },
+  { value: 'upper', label: 'Haut du corps', muscleGroups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'] },
+  { value: 'lower', label: 'Bas du corps', muscleGroups: ['quads', 'hamstrings', 'glutes', 'calves'] },
+  { value: 'full_body', label: 'Corps entier', muscleGroups: [] },
+  { value: 'chest', label: 'Muscu — pectoraux', muscleGroups: ['chest'] },
+  { value: 'back', label: 'Muscu — dos', muscleGroups: ['back'] },
+  { value: 'shoulders', label: 'Muscu — épaules', muscleGroups: ['shoulders'] },
+  { value: 'arms', label: 'Muscu — bras', muscleGroups: ['biceps', 'triceps', 'forearms'] },
+  { value: 'core', label: 'Muscu — abdos / gainage', muscleGroups: ['core'] },
+  { value: 'olympic', label: 'Haltérophilie / fonctionnel', muscleGroups: ['full_body'] },
+  { value: 'custom_gym', label: 'Personnalisée', muscleGroups: [] },
 ];
 
 // Small accessory muscles commonly tacked onto a bigger session (e.g. biceps
@@ -54,30 +54,30 @@ export const GYM_SESSION_TYPES = [
 export const SMALL_MUSCLE_OPTIONS = [
   { value: 'biceps', label: 'Biceps' },
   { value: 'triceps', label: 'Triceps' },
-  { value: 'core', label: 'Abs' },
-  { value: 'calves', label: 'Calves' },
-  { value: 'forearms', label: 'Forearm' },
+  { value: 'core', label: 'Abdos' },
+  { value: 'calves', label: 'Mollets' },
+  { value: 'forearms', label: 'Avant-bras' },
 ];
 
 export const SPORT_TYPES = [
-  { value: 'football', label: 'Football (Soccer)' },
+  { value: 'football', label: 'Football' },
   { value: 'basketball', label: 'Basketball' },
   { value: 'tennis', label: 'Tennis' },
   { value: 'padel', label: 'Padel' },
-  { value: 'boxing', label: 'Boxing' },
-  { value: 'martial_arts', label: 'Martial Arts / Grappling' },
-  { value: 'swimming_sport', label: 'Swimming (Sport/Laps)' },
-  { value: 'climbing', label: 'Climbing' },
-  { value: 'cycling_sport', label: 'Cycling (Sport)' },
-  { value: 'running_race', label: 'Running (Race/Casual)' },
+  { value: 'boxing', label: 'Boxe' },
+  { value: 'martial_arts', label: 'Arts martiaux / lutte' },
+  { value: 'swimming_sport', label: 'Natation (longueurs)' },
+  { value: 'climbing', label: 'Escalade' },
+  { value: 'cycling_sport', label: 'Vélo (sortie)' },
+  { value: 'running_race', label: 'Course (compétition / loisir)' },
   { value: 'golf', label: 'Golf' },
   { value: 'volleyball', label: 'Volleyball' },
-  { value: 'skiing', label: 'Skiing / Snowboarding' },
-  { value: 'hiking', label: 'Hiking' },
+  { value: 'skiing', label: 'Ski / snowboard' },
+  { value: 'hiking', label: 'Randonnée' },
   { value: 'yoga', label: 'Yoga' },
   { value: 'pilates', label: 'Pilates' },
-  { value: 'crossfit', label: 'CrossFit / HIIT Class' },
-  { value: 'other_sport', label: 'Other Sport' },
+  { value: 'crossfit', label: 'CrossFit / cours HIIT' },
+  { value: 'other_sport', label: 'Autre sport' },
 ];
 
 export const labelFor = (list, value) => list.find((o) => o.value === value)?.label || value;

@@ -1,11 +1,11 @@
 // Shared 0-100 "motivation" color scale: red -> amber -> green -> amethyst -> glowing gold.
 // Used for reading progress bars and library popularity scores.
 const STOPS = [
-  { max: 20, color: 'var(--error)', label: 'Just started' },
-  { max: 40, color: 'var(--warning)', label: 'Building' },
-  { max: 65, color: 'var(--success)', label: 'Good pace' },
-  { max: 90, color: 'var(--accent-secondary)', label: 'Strong' },
-  { max: 100, color: 'var(--accent-primary)', label: 'Elite', glow: true },
+  { max: 20, color: 'var(--error)', label: 'Tout juste commencé' },
+  { max: 40, color: 'var(--warning)', label: 'En construction' },
+  { max: 65, color: 'var(--success)', label: 'Bon rythme' },
+  { max: 90, color: 'var(--accent-secondary)', label: 'Solide' },
+  { max: 100, color: 'var(--accent-primary)', label: 'Excellent', glow: true },
 ];
 
 export function scoreColor(value) {

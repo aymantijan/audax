@@ -374,7 +374,7 @@ export default function SessionLogger({ event, date, onClose }) {
             {/* Sets table */}
             <div className="space-y-1">
               <div className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 text-[10px] text-mute font-semibold uppercase`}>
-                <span>Set</span><span>{isDrill ? 'Qté' : 'Reps'}</span>{!isDrill && <span>Poids (kg)</span>}<span>RPE</span><span>Forme</span>
+                <span>Série</span><span>{isDrill ? 'Qté' : 'Reps'}</span>{!isDrill && <span>Poids (kg)</span>}<span>RPE</span><span>Forme</span>
               </div>
               {row.actual_sets.map((s, setIdx) => (
                 <div key={setIdx} className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 items-center`}>

@@ -6,10 +6,10 @@ import { Card, Button, Field, Select, Input } from '../../components/common/ui';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 const SLOTS = [
-  { value: 'morning', label: 'Morning', color: 'var(--accent-primary)' },
-  { value: 'postWorkout', label: 'Post-workout', color: 'var(--success)' },
-  { value: 'afternoon', label: 'Afternoon', color: 'var(--warning)' },
-  { value: 'evening', label: 'Evening', color: '#7c5cff' },
+  { value: 'morning', label: 'Matin', color: 'var(--accent-primary)' },
+  { value: 'postWorkout', label: 'Après le sport', color: 'var(--success)' },
+  { value: 'afternoon', label: 'Après-midi', color: 'var(--warning)' },
+  { value: 'evening', label: 'Soir', color: '#7c5cff' },
 ];
 
 export default function EnergyStress() {
@@ -56,7 +56,7 @@ export default function EnergyStress() {
           <Field label={`Stress: ${stress}/10`}>
             <input type="range" min="1" max="10" value={stress} onChange={(e) => setStress(Number(e.target.value))} className="w-full" />
           </Field>
-          <Field label="Note (optional)">
+          <Field label="Note (facultatif)">
             <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           <Field label="Date" hint="Backdate a missed check-in">

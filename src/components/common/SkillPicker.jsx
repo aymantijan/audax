@@ -6,7 +6,7 @@ import { Badge } from './ui';
 
 // Searchable skill selector for a 200+ skill tree.
 // multi: value = [ids], onChange([ids]) · single: value = id|'', onChange(id)
-export default function SkillPicker({ value, onChange, multi = true, placeholder = 'Search skills…' }) {
+export default function SkillPicker({ value, onChange, multi = true, placeholder = 'Chercher une compétence…' }) {
   const skills = useSkillStore((s) => s.skills);
   const [query, setQuery] = useState('');
 

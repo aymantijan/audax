@@ -37,12 +37,12 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <Card title="Custom Correlation">
+      <Card title="Corrélation personnalisée">
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Metric A">
+          <Field label="Mesure A">
             <Select value={metricA} onChange={(e) => setMetricA(e.target.value)} options={registry} />
           </Field>
-          <Field label="Metric B">
+          <Field label="Mesure B">
             <Select value={metricB} onChange={(e) => setMetricB(e.target.value)} options={registry} />
           </Field>
         </div>

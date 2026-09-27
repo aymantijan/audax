@@ -99,7 +99,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
           {WATER_QUICK_ADD.map((ml) => (
             <Button key={ml} variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(ml, logDate)}>+{ml}ml</Button>
           ))}
-          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(-dateWater, logDate)}>Reset</Button>
+          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => logWater(-dateWater, logDate)}>Remettre à zéro</Button>
         </div>
         <Field label="Objectif quotidien (ml)">
           <Input type="number" min="0" step="250" value={waterTargetMl} onChange={(e) => setWaterTarget(e.target.value)} className="w-32" />

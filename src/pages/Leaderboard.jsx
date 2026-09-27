@@ -249,7 +249,7 @@ function RankingView() {
           {PERSONALITY_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
-          <Crosshair size={14} /> My position
+          <Crosshair size={14} /> Ma position
         </button>
       </div>
 
@@ -373,7 +373,7 @@ function MilestonesView({ currentLevel }) {
           {GRADE_ERAS.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
         <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
-          <Crosshair size={14} /> My grade
+          <Crosshair size={14} /> Mon grade
         </button>
       </div>
 
