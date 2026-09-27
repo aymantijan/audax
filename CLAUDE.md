@@ -13,7 +13,8 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
 ## Décisions prises (27 sept 2026) — ne pas rediscuter
 1. Nom : **VAUDAX** partout (l'onglet / le manifeste PWA disent encore « AUDAX » → à migrer en étape 2).
 2. Interface en **tutoiement** partout, en français. **Exception : le Trading reste en anglais.**
-3. IA du site : **Gemini** (Google), avec **plafond mensuel strict** (montant à fixer par l'utilisateur). Pas Claude/OpenRouter pour le futur assistant.
+3. IA du site : **Gemini, offre gratuite uniquement**. **Budget du projet = 0** : aucune dépense, jamais (pas d'IA payante,
+   pas de store payant, pas d'offre Vercel/Supabase payante). Ne JAMAIS redemander un budget ou un plafond.
 4. **Cercle privé** d'abord (pas d'ouverture publique : loi 09-08 / CNDP non traitée).
 5. Mode de notation « classique » : une matière sous la note éliminatoire bloque le semestre.
 6. Modules secondaires (Ingénierie, Immobilier, Levée de fonds, Création) **masqués** pour les nouveaux utilisateurs, activables.
