@@ -2,11 +2,11 @@ import { supabase, isSupabaseConfigured } from './supabase';
 
 // Password policy from the spec: min 12 chars, upper + lower + number + special.
 export function validatePasswordStrength(pw) {
-  if (!pw || pw.length < 12) return 'Password must be at least 12 characters';
-  if (!/[A-Z]/.test(pw)) return 'Add an uppercase letter';
-  if (!/[a-z]/.test(pw)) return 'Add a lowercase letter';
-  if (!/[0-9]/.test(pw)) return 'Add a number';
-  if (!/[^A-Za-z0-9]/.test(pw)) return 'Add a special character';
+  if (!pw || pw.length < 12) return 'Le mot de passe doit contenir au moins 12 caractères.';
+  if (!/[A-Z]/.test(pw)) return 'Ajoute une majuscule.';
+  if (!/[a-z]/.test(pw)) return 'Ajoute une minuscule.';
+  if (!/[0-9]/.test(pw)) return 'Ajoute un chiffre.';
+  if (!/[^A-Za-z0-9]/.test(pw)) return 'Ajoute un caractère spécial (par exemple ! ou #).';
   return null;
 }
 
@@ -14,24 +14,24 @@ const notConfigured = { error: 'Cloud auth is not configured. Set VITE_SUPABASE_
 
 // Register. Supabase hashes the password (bcrypt) server-side and sends the
 // verification email automatically. Profile fields ride along in user_metadata.
-export async function register({ email, password, fullName, careerGoal, gender }) {
+export async function register({ email, password, fullName, gender }) {
   if (!isSupabaseConfigured) return notConfigured;
   const strength = validatePasswordStrength(password);
   if (strength) return { error: strength };
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, career_goal: careerGoal, gender }, emailRedirectTo: `${window.location.origin}/welcome` },
+    options: { data: { full_name: fullName, gender }, emailRedirectTo: `${window.location.origin}/welcome` },
   });
   if (error) return { error: error.message };
-  return { user: data.user, needsVerification: !data.session, message: 'Check your email to verify your account.' };
+  return { user: data.user, needsVerification: !data.session, message: 'Vérifie ta boîte e-mail pour confirmer ton compte.' };
 }
 
 // Login. Returns a session (JWT + refresh token) the SDK persists & auto-rotates.
 export async function login({ email, password }) {
   if (!isSupabaseConfigured) return notConfigured;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: 'Invalid credentials' }; // don't reveal whether the email exists
+  if (error) return { error: 'E-mail ou mot de passe incorrect.' }; // don't reveal whether the email exists
   return { user: data.user, session: data.session };
 }
 
@@ -39,7 +39,7 @@ export async function login({ email, password }) {
 export async function requestPasswordReset(email) {
   if (!isSupabaseConfigured) return notConfigured;
   await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/welcome` });
-  return { message: 'If that email exists, a reset link has been sent.' };
+  return { message: 'Si un compte existe avec cet e-mail, un lien de réinitialisation vient d’être envoyé.' };
 }
 
 // Set a new password (used after the reset-email link establishes a recovery session).

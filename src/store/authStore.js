@@ -12,7 +12,8 @@ function withDefaults(user) {
   if (!user) return user;
   return {
     ...user,
-    careerGoal: user.careerGoal || 'Hybrid',
+    careerGoal: user.careerGoal || 'Hybrid', // legacy (finance-only), no longer asked
+    occupation: user.occupation || '', // free "Métier ou domaine" (Settings), optional
     // `??` (not `||`) so an explicit `false` (mid-onboarding) survives rehydration —
     // only truly-missing (pre-onboarding-feature accounts) defaults to true, so
     // existing users are never retroactively shown the wizard.
@@ -79,6 +80,7 @@ export const useAuthStore = create(
             email: profile.email || '',
             primaryDomain: profile.primaryDomain || 'metiersVentures',
             careerGoal: profile.careerGoal || 'Hybrid',
+            occupation: profile.occupation || '',
             // Gender is required at signup going forward (Welcome.jsx/
             // CloudAuthPanel.jsx enforce a choice before submit) — still
             // nullable here defensively for any caller that skips validation.

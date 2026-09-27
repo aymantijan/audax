@@ -42,9 +42,9 @@ export default defineConfig({
         importScripts: ['/sw-push.js'],
       },
       manifest: {
-        name: 'AUDAX — Life & Trading Companion',
-        short_name: 'AUDAX',
-        description: 'Track trading, learning, finance, habits, and skills — one gamified companion for ambitious people.',
+        name: 'VAUDAX — Organise ta vie',
+        short_name: 'VAUDAX',
+        description: 'Études, argent, santé, travail et habitudes au même endroit.',
         start_url: '/today',
         display: 'standalone',
         background_color: '#0b0e14',

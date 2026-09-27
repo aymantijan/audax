@@ -34,6 +34,8 @@ import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import AccountSwitcher from '../components/common/AccountSwitcher';
 import { startOfMonth } from 'date-fns';
+import { occupationOf } from '../utils/occupations';
+
 
 export default function Dashboard() {
   const [demoOpen, setDemoOpen] = useState(false);
@@ -265,7 +267,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold">Bon retour, {user?.name}</h1>
           <p className="text-mute text-sm mt-1">
-            Parcours : <span className="text-accent font-medium">{CAREER_FR[user?.careerGoal] || user?.careerGoal || 'Hybride'}</span> · voici où vous en êtes aujourd’hui.
+            {occupationOf(user) && <><span className="text-accent font-medium">{occupationOf(user)}</span> · </>}voici où tu en es aujourd’hui.
           </p>
         </div>
         {tradingEnabled && <AccountSwitcher />}
@@ -537,7 +539,6 @@ export default function Dashboard() {
 // Health just get their name capitalized.
 const PILLAR_LABEL = { metiersVentures: 'Métiers & projets', careerDevelopment: 'Carrière', growthOutput: 'Progression', learning: 'Apprentissage', finance: 'Finances', health: 'Santé' };
 const LEVEL_NAMES_FR = { 1: 'Débutant', 2: 'Intermédiaire', 3: 'Avancé', 4: 'Expert', 5: 'Maître' };
-const CAREER_FR = { Hybrid: 'Hybride', Trading: 'Trading', PE: 'Private equity', GE: 'Growth equity', VC: 'Capital-risque', RBF: 'Financement sur revenus' };
 const OBS_DOMAIN_FR = { Skills: 'Compétences', Finance: 'Finances', Trading: 'Trading', Habitudes: 'Habitudes', Apprentissage: 'Apprentissage', Lecture: 'Lecture', Objectifs: 'Objectifs', Budget: 'Budget' };
 function domainLabel(domain) {
   return PILLAR_LABEL[domain] || (domain ? domain[0].toUpperCase() + domain.slice(1) : domain);

@@ -181,10 +181,10 @@ function RankingView() {
     const rows = [
       ...LEADERBOARD.map((p) => ({ ...p, isYou: false })),
       ...realUsers,
-      { name: youName, domain: 'You', country: user?.careerGoal || '—', xp: lifetimeXP, note: 'That\'s you — climb the ranks.', isYou: true },
+      { name: youName, domain: 'You', country: user?.occupation || '—', xp: lifetimeXP, note: 'That\'s you — climb the ranks.', isYou: true },
     ].sort((a, b) => b.xp - a.xp || (a.isYou ? 1 : 0));
     return rows.map((r, i) => ({ ...r, rank: i + 1, grade: gradeForXpOnly(r.xp) }));
-  }, [lifetimeXP, youName, user?.careerGoal, realUsers]);
+  }, [lifetimeXP, youName, user?.occupation, realUsers]);
 
   const me = ranked.find((r) => r.isYou);
   const total = ranked.length;

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { CAREER_GOALS } from '../../utils/constants';
 import { register, login, requestPasswordReset } from '../../services/auth-supabase';
 import { Button, Field, Input, Select } from '../common/ui';
 
@@ -11,30 +10,30 @@ export default function CloudAuthPanel() {
   const localRegister = useAuthStore((s) => s.register);
   const user = useAuthStore((s) => s.user);
   const [mode, setMode] = useState('login'); // login | register | forgot
-  const [form, setForm] = useState({ email: '', password: '', fullName: '', careerGoal: 'Hybrid', gender: '' });
+  const [form, setForm] = useState({ email: '', password: '', fullName: '', gender: '' });
   const [msg, setMsg] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const hydrateLocal = (meta = {}) => {
-    if (!user) localRegister({ name: meta.fullName || form.fullName || form.email.split('@')[0], email: form.email, careerGoal: meta.careerGoal || form.careerGoal, gender: meta.gender || form.gender || null });
+    if (!user) localRegister({ name: meta.fullName || form.fullName || form.email.split('@')[0], email: form.email, gender: meta.gender || form.gender || null });
   };
 
   const submit = async (e) => {
     e.preventDefault();
     setErr(null); setMsg(null);
-    if (mode === 'register' && !form.gender) return setErr('Select a gender to continue.');
+    if (mode === 'register' && !form.gender) return setErr('Choisis une option pour « Sexe » pour continuer.');
     setBusy(true);
     try {
       if (mode === 'register') {
-        const r = await register({ email: form.email, password: form.password, fullName: form.fullName, careerGoal: form.careerGoal, gender: form.gender || null });
+        const r = await register({ email: form.email, password: form.password, fullName: form.fullName, gender: form.gender || null });
         if (r.error) setErr(r.error);
         else if (r.needsVerification) setMsg(r.message);
-        else { hydrateLocal({ fullName: form.fullName, careerGoal: form.careerGoal, gender: form.gender }); }
+        else { hydrateLocal({ fullName: form.fullName, gender: form.gender }); }
       } else if (mode === 'login') {
         const r = await login({ email: form.email, password: form.password });
         if (r.error) setErr(r.error);
-        else hydrateLocal({ fullName: r.user?.user_metadata?.full_name, careerGoal: r.user?.user_metadata?.career_goal, gender: r.user?.user_metadata?.gender });
+        else hydrateLocal({ fullName: r.user?.user_metadata?.full_name, gender: r.user?.user_metadata?.gender });
       } else {
         const r = await requestPasswordReset(form.email);
         setMsg(r.message || r.error);
@@ -53,33 +52,30 @@ export default function CloudAuthPanel() {
   return (
     <form onSubmit={submit} className="bg-card border border-line rounded-xl p-6 space-y-4 glow">
       <div className="flex gap-5">
-        <Tab id="login" label="Log in" />
-        <Tab id="register" label="Register" />
-        <Tab id="forgot" label="Forgot?" />
+        <Tab id="login" label="Connexion" />
+        <Tab id="register" label="Créer un compte" />
+        <Tab id="forgot" label="Mot de passe oublié" />
       </div>
 
       {mode === 'register' && (
         <>
-          <Field label="Full name">
+          <Field label="Prénom et nom">
             <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </Field>
-          <Field label="Career goal">
-            <Select value={form.careerGoal} onChange={(e) => setForm({ ...form, careerGoal: e.target.value })} options={CAREER_GOALS} />
-          </Field>
-          <Field label="Gender" hint="Used across the app (e.g. the Cycle/Performance tabs in Health).">
+          <Field label="Sexe" hint="Sert aux calculs de la partie Santé (besoins caloriques, cycle).">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Select…' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+              options={[{ value: '', label: 'Choisir…' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
             />
           </Field>
         </>
       )}
-      <Field label="Email">
-        <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
+      <Field label="E-mail">
+        <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="toi@exemple.com" />
       </Field>
       {mode !== 'forgot' && (
-        <Field label="Password" hint={mode === 'register' ? 'Min 12 chars · upper, lower, number, special.' : ''}>
+        <Field label="Mot de passe" hint={mode === 'register' ? '12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.' : ''}>
           <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         </Field>
       )}
@@ -88,7 +84,7 @@ export default function CloudAuthPanel() {
       {msg && <p className="text-good text-sm">{msg}</p>}
 
       <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? '…' : mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Log in'}
+        {busy ? '…' : mode === 'register' ? 'Créer mon compte' : mode === 'forgot' ? 'Envoyer le lien' : 'Se connecter'}
       </Button>
     </form>
   );

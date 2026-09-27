@@ -30,7 +30,7 @@ import { useCreativeStore } from '../store/creativeStore';
 import { useRealEstateStore } from '../store/realEstateStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
-import { CAREER_GOALS } from '../utils/constants';
+import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-flashcards', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
@@ -55,7 +55,7 @@ function getDiscreteUnit(foodName) {
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
-    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'metiersVentures', careerGoal: user?.careerGoal || 'Hybrid',
+    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'metiersVentures', occupation: user?.occupation || '',
     gender: user?.gender || '', dobYear: user?.dobYear || '', heightCm: user?.heightCm || '',
   });
 
@@ -326,12 +326,9 @@ export default function SettingsPage() {
               ]}
             />
           </Field>
-          <Field label="Career goal" hint="Focuses the skill tree & deals.">
-            <Select
-              value={form.careerGoal}
-              onChange={(e) => setForm({ ...form, careerGoal: e.target.value })}
-              options={CAREER_GOALS}
-            />
+          <Field label="Métier ou domaine (facultatif)" hint="Écris librement ou choisis une suggestion. Affiché sur ton tableau de bord et dans le classement.">
+            <Input list="occupation-suggestions" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ex. étudiant·e, infirmier·e, développeur·se…" />
+            <datalist id="occupation-suggestions">{OCCUPATION_SUGGESTIONS.map((o) => <option key={o} value={o} />)}</datalist>
           </Field>
           <Field label="Gender" hint="Shows/hides the Cycle (female) / Performance (male) tabs in Health.">
             <Select

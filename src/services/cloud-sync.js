@@ -101,7 +101,7 @@ async function pushLeaderboardProfile(userId) {
   const { error } = await supabase
     .from('leaderboard_profiles')
     .upsert(
-      { user_id: userId, display_name: user.name || 'Anonymous', career_goal: user.careerGoal || null, lifetime_xp: lifetimeXp, updated_at: new Date().toISOString() },
+      { user_id: userId, display_name: user.name || 'Anonymous', career_goal: user.occupation || null, lifetime_xp: lifetimeXp, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     );
   if (error) console.error('[cloud-sync] push leaderboard profile failed:', error.message);
