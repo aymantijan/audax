@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, Loader2 } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import { EVALUATION_PRESETS, parseTimetableLines, WEEKDAYS } from '../../utils/academic';
 import { Button, Field, Input, Select, Modal, Textarea } from '../common/ui';
 import { useAcademicSettings } from './design';
+import { extractTimetable, EXTRACT_ERRORS } from '../../services/extract';
+import { ASSISTANT_ERRORS } from '../../services/assistant';
 
 export const TIMETABLE_EXAMPLE = [
   'Comptabilité approfondie ; Lundi ; 8h30-10h00 ; M. Alaoui ; Amphi A',
@@ -19,6 +22,9 @@ export function TimetableImportModal({ open, onClose }) {
   const [preset, setPreset] = useState(settings.defaultEvalPreset || 'cc40');
   const [termId, setTermId] = useState('');
   const [newTerm, setNewTerm] = useState({ name: '', startDate: '' });
+  const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState('');
+  const fileRef = useRef(null);
   const { rows, errors } = useMemo(() => parseTimetableLines(text), [text]);
   const subjects = useMemo(() => new Set(rows.map((r) => r.name.toLowerCase())).size, [rows]);
 
@@ -62,6 +68,31 @@ export function TimetableImportModal({ open, onClose }) {
             <Select value={termId} onChange={(e) => setTermId(e.target.value)} options={terms.map((t) => ({ value: t.id, label: t.name + (t.year ? ` · ${t.year}` : '') }))} />
           </Field>
         )}
+        <div className="flex flex-wrap items-center gap-2">
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setReading(true);
+              setReadError('');
+              try {
+                const lines = await extractTimetable(file);
+                if (!lines.trim()) setReadError('Aucun créneau lisible sur ce fichier. Essaie une photo plus nette, bien droite.');
+                else setText((t) => (t.trim() ? `${t.trim()}
+${lines}` : lines));
+              } catch (err) {
+                setReadError(EXTRACT_ERRORS[err.code] || ASSISTANT_ERRORS[err.code] || ASSISTANT_ERRORS.failed);
+              } finally {
+                setReading(false);
+              }
+            }} />
+          <Button type="button" variant="secondary" disabled={reading} onClick={() => fileRef.current?.click()}>
+            <span className="flex items-center gap-2">{reading ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />} {reading ? 'Lecture en cours…' : 'Depuis une photo ou un PDF'}</span>
+          </Button>
+          <span className="text-xs text-mute">Les créneaux lus apparaissent ci-dessous : vérifie-les avant d’importer.</span>
+        </div>
+        {readError && <p className="text-xs text-bad">{readError}</p>}
         <Textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={TIMETABLE_EXAMPLE} />
         <Field label="Évaluations par défaut des nouvelles matières" hint="Modifiable ensuite matière par matière.">
           <Select value={preset} onChange={(e) => setPreset(e.target.value)} options={EVALUATION_PRESETS.map((p) => ({ value: p.key, label: p.label }))} />
