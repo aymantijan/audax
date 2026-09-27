@@ -6,8 +6,8 @@ import { useHabitStore } from '../../store/habitStore';
 import { useHealthStore } from '../../store/healthStore';
 import { SLEEP_BAND_COLOR } from '../../utils/sleep-quality';
 import { Card, Button, EmptyState } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const TIER_COPY = {
   high: { label: 'Grosse journée d\'entraînement', color: 'var(--warning)', note: "Ta charge d'aujourd'hui (Gym + Cardio) est nettement au-dessus de ta moyenne récente — la littérature sur les athlètes situe le besoin réel de récupération plutôt entre 9 et 10h ces jours-là, contre 7-9h en général." },

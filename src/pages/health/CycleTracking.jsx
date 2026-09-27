@@ -6,9 +6,9 @@ import { useHabitStore } from '../../store/habitStore';
 import { CYCLE_PHASE_LABEL, CYCLE_PHASE_COLOR, estimateCycleLength } from '../../utils/health-science';
 import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 // Shared by energyByPhase and rpeByPhase below — which phase `dateStr` falls
 // in, given the cycle-start dates logged so far and an estimated cycle

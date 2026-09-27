@@ -4,8 +4,8 @@ import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tool
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Stat, EmptyState } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 // Performance & Recovery — the men's-track expansion. Deliberately scoped to
 // lifestyle/performance metrics that are directly measurable from what the

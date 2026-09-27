@@ -12,8 +12,8 @@ import { PROJECT_STAGES } from '../utils/constants';
 import { fmtMAD, fmtDate, todayKey, baseCurrencyShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const PHASE_STATUS = [
   { value: 'upcoming', label: 'À venir', color: 'var(--text-secondary)' },

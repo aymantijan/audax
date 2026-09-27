@@ -6,8 +6,8 @@ import { CORRECTION_TYPES, LIQUIDITY_TIERS, ACCOUNT_MAP, assetClassLabel } from 
 import { fmtMAD, fmtPct, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const PERIODS = [
   { id: 'month', label: 'Mois en cours' },

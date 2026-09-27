@@ -13,8 +13,8 @@ import { exportInvoicePDF } from '../utils/invoice-pdf';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import AccountSelect from '../components/common/AccountSelect';
 import BadgeList from '../components/common/BadgeList';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STATUS_COLOR = { Prospect: 'var(--text-secondary)', Actif: 'var(--success)', 'En pause': 'var(--warning)', 'Terminé': 'var(--accent-secondary)' };
 const INV_STATUS = { sent: ['À encaisser', 'var(--warning)'], paid: ['Payée', 'var(--success)'], cancelled: ['Annulée', 'var(--text-secondary)'] };
 

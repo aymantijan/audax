@@ -5,6 +5,7 @@ import { useHealthStore } from '../../store/healthStore';
 import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS, bodyFatNavyMale, bodyFatNavyFemale } from '../../utils/health-science';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, EmptyState } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
 const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
 const CALORIE_GOALS = [
@@ -25,7 +26,6 @@ function readPhotoAsDataUrl(file) {
   });
 }
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 // jsPDF is loaded on demand (dynamic import) so its ~200KB (incl. html2canvas/
 // purify deps it pulls transitively) doesn't bloat the Health page's initial chunk.

@@ -53,6 +53,7 @@ const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'Cours
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
 const SettingsPage = lazy(lazyWithRetry(() => import('./pages/Settings'), 'Settings'));
+const DesignReference = lazy(lazyWithRetry(() => import('./pages/DesignReference'), 'DesignReference'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
@@ -205,6 +206,7 @@ export default function App() {
         <Route path="/goals" element={<GoalsHub />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/design" element={<DesignReference />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

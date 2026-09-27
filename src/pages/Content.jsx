@@ -10,8 +10,8 @@ import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const PLATFORM_COLOR = { LinkedIn: '#0a66c2', Blog: '#66ccff', Portfolio: 'var(--accent-secondary)', 'X/Twitter': '#e2e8f0', YouTube: '#ff4444', Newsletter: 'var(--success)', Autre: 'var(--text-secondary)' };
 const STATUS_COLOR = { 'Idée': 'var(--text-secondary)', Brouillon: 'var(--warning)', Planifié: 'var(--accent-secondary)', Publié: 'var(--success)' };
 

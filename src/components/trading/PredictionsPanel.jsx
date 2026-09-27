@@ -6,8 +6,8 @@ import { computePropFirmTimeline } from '../../utils/account-type-analytics';
 import { useTradingStore } from '../../store/tradingStore';
 import { fmtMoney, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../common/ui';
+import { tooltipStyle } from '../common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function PredictionsPanel({ account, trades, currency = 'USD' }) {
   // Works for a real Prop Firm account's own rules, OR a Demo account's

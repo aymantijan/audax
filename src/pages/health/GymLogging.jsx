@@ -10,8 +10,8 @@ import { INJURY_EXCLUSION_MAP } from '../../utils/injury-exclusions';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 import CyclePhaseHint from '../../components/health/CyclePhaseHint';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function GymLogging({ pendingPrompt }) {

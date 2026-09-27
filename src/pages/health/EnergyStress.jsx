@@ -3,8 +3,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Select, Input } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const SLOTS = [
   { value: 'morning', label: 'Morning', color: 'var(--accent-primary)' },
   { value: 'postWorkout', label: 'Post-workout', color: 'var(--success)' },

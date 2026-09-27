@@ -28,7 +28,7 @@ import { isHabitDueOn, habitStreak, isHabitShownOn, streakUnit } from '../utils/
 import { ENGINEERING_PROJECT_STAGES } from '../utils/constants';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
-import { Card, Button, Badge, EmptyState } from '../components/common/ui';
+import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/ui';
 import { NextClassBanner } from '../components/learning/Attendance';
 
 export default function Today() {
@@ -158,7 +158,7 @@ export default function Today() {
               const streak = habitStreak(h.id, logs, today, h);
               return (
                 <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-                  <button onClick={() => toggleHabit(h.id, today)} className="shrink-0 cursor-pointer text-accent">
+                  <button type="button" aria-label={done ? `Décocher ${h.name}` : `Cocher ${h.name}`} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
                     {done ? <CheckCircle2 size={19} /> : <Circle size={19} className="text-mute" />}
                   </button>
                   <div className="flex-1 min-w-0">

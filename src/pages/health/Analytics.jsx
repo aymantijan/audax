@@ -4,8 +4,8 @@ import { ResponsiveContainer, ComposedChart, Bar, Line, ScatterChart, Scatter, X
 import { useHealthStore } from '../../store/healthStore';
 import { correlationStrength } from '../../utils/health-science';
 import { Card, Badge, EmptyState, Field, Select } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const CORRELATIONS = [
   { key: 'sleepVsStrength', label: 'Qualité du sommeil ↔ volume de force', desc: 'Un meilleur sommeil va-t-il de pair avec des séances plus lourdes ?' },

@@ -24,12 +24,12 @@ import {
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { habitSchema, validate } from '../utils/validators';
 import { todayKey, dateKey, fmtDate } from '../utils/formatters';
-import { Card, Button, Field, Input, Select, Modal, EmptyState, ProgressBar, WeekdayPicker } from '../components/common/ui';
+import { Card, Button, Field, Input, Select, Modal, EmptyState, ProgressBar, WeekdayPicker, playSeal } from '../components/common/ui';
 import BadgeList from '../components/common/BadgeList';
 import SkillPicker from '../components/common/SkillPicker';
 import ScheduleEventModal from '../components/common/ScheduleEventModal';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const tint = (c, p = 14) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
 const MOMENT_ICON = { morning: Sunrise, day: Sun, evening: Moon, any: Clock };
 const catLabel = (c) => HABIT_CATEGORY_LABELS[c] || c;
@@ -798,7 +798,7 @@ export default function Habits() {
                       return (
                         <div key={h.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${done ? 'border-good/40' : 'border-line bg-surface'}`} style={{ ...(done ? { background: tint('var(--success)', 8) } : {}), marginLeft: depth ? depth * 18 : undefined }}>
                           {depth > 0 && <CornerDownRight size={14} className="text-mute -ml-1 shrink-0" />}
-                          <button onClick={() => toggleHabit(h.id, date)} title={h.source ? 'Suivi automatique' : done ? 'Décocher' : 'Fait'}
+                          <button type="button" onClick={(e) => { if (!done && !h.source) playSeal(e.currentTarget); toggleHabit(h.id, date); }} title={h.source ? 'Suivi automatique' : done ? 'Décocher' : 'Fait'} aria-label={`${done ? 'Décocher' : 'Cocher'} ${h.name}`}
                             className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${h.source ? 'cursor-default' : 'cursor-pointer'} ${done ? 'bg-good border-good text-on-accent' : isJoker ? 'border-accent2 text-accent2' : 'border-line hover:border-accent'}`}>
                             {done ? <Check size={16} strokeWidth={3} /> : isJoker ? <Snowflake size={14} /> : h.source ? <Zap size={13} className="text-mute" /> : null}
                           </button>

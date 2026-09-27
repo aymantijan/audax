@@ -7,8 +7,8 @@ import { fmtMAD, fmtPct, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
 import { useFinanceMode } from '../../components/finance/financeMode';
 import AccountSelect from '../../components/common/AccountSelect';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const CALENDAR_PRESETS = [
   { value: 1, label: 'Mensuel' },

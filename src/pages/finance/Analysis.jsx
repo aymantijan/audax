@@ -5,8 +5,8 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { financialAnalysis, correctedNetWorth } from '../../utils/accounting-engine';
 import { fmtMAD, fmtPct, fmtDate } from '../../utils/formatters';
 import { Card, Stat, Select, EmptyState } from '../../components/common/ui';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 // Trois méthodes pour la base mensuelle des comptes non couverts par une
 // échéance — voir accounting-engine.js (smaByAccount/emaByAccount/budgetByAccount).

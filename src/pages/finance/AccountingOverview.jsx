@@ -7,8 +7,8 @@ import { fmtMAD, fmtPct } from '../../utils/formatters';
 import { Card, Stat, EmptyState } from '../../components/common/ui';
 import BadgeList from '../../components/common/BadgeList';
 import { useFinanceMode } from '../../components/finance/financeMode';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const PIE_COLORS = ['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#7aa2ff', '#f7c948', '#9ae6b4'];
 
 export default function AccountingOverview() {

@@ -50,6 +50,7 @@
   --color-bad: var(--error);
   --color-line: var(--border);
   --color-on-accent: var(--on-accent);
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   /* Aliases used across Programme & other pages that previously resolved to
      NOTHING (invisible borders, transparent dropdowns, missing warning colors). */
   --color-warning: var(--warning);
@@ -149,6 +150,57 @@ table {
 }
 .glow {
   animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* Figures (amounts, times, percentages) in the data face. */
+.font-data {
+  font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Touch targets: 44 px minimum on touch screens. */
+@media (pointer: coarse) {
+  .ui-btn {
+    min-height: 44px;
+  }
+  .ui-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* The one validation animation (class attended, habit done, week closed). */
+@keyframes seal {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-primary) 45%, transparent);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent-primary) 0%, transparent);
+  }
+}
+.seal {
+  animation: seal 0.45s ease-out;
+}
+
+/* Modal: a centred window on desktop, a sheet from the bottom on phones. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.sheet-enter {
+  animation: sheet-up 0.2s ease-out;
 }
 
 input[type="range"] {

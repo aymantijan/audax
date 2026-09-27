@@ -11,8 +11,8 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, Empty
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 import { askAIEngineeringQuestion } from '../services/engineering-coach-ai';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
 

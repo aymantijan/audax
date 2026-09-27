@@ -17,8 +17,8 @@ import ApplicationDetail from '../components/career/ApplicationDetail';
 import InterviewsSpace from '../components/career/InterviewsSpace';
 import Networking from './Networking';
 import Content from './Content';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STAGE_COLOR = {
   Applied: 'var(--text-secondary)', Screening: 'var(--accent-primary)', Interview: 'var(--warning)',
   Offer: 'var(--accent-secondary)', Accepted: 'var(--success)', Rejected: 'var(--error)', Withdrawn: 'var(--text-secondary)',

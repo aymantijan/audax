@@ -9,8 +9,8 @@ import { fmtDateShort, fmtMoney, todayKey } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STAGE_COLOR = {
   Contacted: 'var(--text-secondary)', Meeting: 'var(--accent-primary)', Diligence: 'var(--warning)',
   'Term Sheet': 'var(--accent-secondary)', Closed: 'var(--success)', Passed: 'var(--text-secondary)',

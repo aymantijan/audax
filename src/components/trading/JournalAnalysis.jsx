@@ -4,8 +4,8 @@ import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tool
 import { processQualityCorrelation, exitReasonBreakdown, lessonsFeed, journalingConsistencyTrend } from '../../utils/journal-analysis';
 import { fmtSignedMoney, fmtPct, fmtDateShort } from '../../utils/formatters';
 import { Card, Select, EmptyState } from '../common/ui';
+import { tooltipStyle } from '../common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 export default function JournalAnalysis({ trades, currency = 'USD' }) {
   const [lessonFilter, setLessonFilter] = useState('all');

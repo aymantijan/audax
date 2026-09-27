@@ -9,8 +9,8 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, Empty
 import BadgeList from '../components/common/BadgeList';
 import { StudyTimerCard, domainLabel } from '../components/learning/StudyTimer';
 import { useLearningStore } from '../store/learningStore';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const DOMAIN_COLOR = {
   Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: 'var(--accent-secondary)',
   Learning: '#66ccff', Health: 'var(--error)', Networking: '#0a66c2', Career: 'var(--accent-primary)', Content: '#ff9f43', Projects: 'var(--accent-primary)', General: 'var(--text-secondary)',

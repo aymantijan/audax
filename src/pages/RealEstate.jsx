@@ -7,8 +7,8 @@ import { fmtDateShort, fmtMAD, todayKey, baseCurrencyShort } from '../utils/form
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
+import { tooltipStyle } from '../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const STATUS_COLOR = { Recherche: 'var(--text-secondary)', 'Sous offre': 'var(--warning)', Acquis: 'var(--accent-primary)', Loué: 'var(--success)', Vendu: 'var(--accent-secondary)' };
 
 const blank = () => ({ name: '', type: 'Appartement', status: 'Recherche', address: '', purchasePrice: '', currentValue: '', monthlyRent: '', monthlyExpenses: '', notes: '' });

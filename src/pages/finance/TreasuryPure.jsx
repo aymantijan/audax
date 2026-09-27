@@ -8,8 +8,8 @@ import { accountsOfClass } from '../../utils/chart-of-accounts';
 import { fmtMAD, fmtDate } from '../../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import { toast } from '../../store/uiStore';
+import { tooltipStyle } from '../../components/common/chart-theme';
 
-const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 
 const blankSubForm = (parentCode) => ({ parentCode, name: '', bank: '', currency: '' });
 
