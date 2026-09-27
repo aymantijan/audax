@@ -118,7 +118,7 @@ export default function Readings({ embedded = false }) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <BigStat label="Série de lecture" value={<span className="flex items-center gap-1"><Flame size={18} />{streak} j</span>} sub={streak ? 'jours d’affilée' : 'lisez une page aujourd’hui'} color={streak ? 'var(--warning)' : undefined} />
+        <BigStat label="Série de lecture" value={<span className="flex items-center gap-1"><Flame size={18} />{streak} j</span>} sub={streak ? 'jours d’affilée' : 'lis une page aujourd’hui'} color={streak ? 'var(--warning)' : undefined} />
         <BigStat label="En cours" value={reading.length} sub={`${completed.length} terminé(s)`} />
         <BigStat label="Pages lues" value={fr(totalPagesRead)} />
         <BigStat label="Mots lus (est.)" value={totalWordsRead >= 1000 ? `${(totalWordsRead / 1000).toFixed(1).replace('.', ',')} k` : totalWordsRead} />
@@ -128,7 +128,7 @@ export default function Readings({ embedded = false }) {
         <Card>
           <EmptyState>
             <BookOpen className="mx-auto mb-2 text-mute" size={28} />
-            Aucun livre en cours. Parcourez la <Link to="/learning/readings/library" className="text-accent hover:underline">bibliothèque</Link>, ou ajoutez un livre comme ressource d'un cours ou d'un parcours.
+            Aucun livre en cours. Parcours la <Link to="/learning/readings/library" className="text-accent hover:underline">bibliothèque</Link>, ou ajoute un livre comme ressource d'un cours ou d'un parcours.
           </EmptyState>
         </Card>
       ) : (

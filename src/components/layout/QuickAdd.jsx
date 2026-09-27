@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, TrendingUp, Wallet, Dumbbell } from 'lucide-react';
 import QuickEntryModal from '../finance/QuickEntryModal';
+import { useAuthStore } from '../../store/authStore';
+import { isModuleEnabled } from '../../utils/navigation';
 
 // Floating quick-add button, visible on every authenticated page. Each action
 // deep-links to the owning page with a `?quickadd=` flag that page reads once
@@ -11,7 +13,7 @@ import QuickEntryModal from '../finance/QuickEntryModal';
 // aren't included here: the fastest habit action is already the inline
 // checklist on "Aujourd'hui", a FAB entry would just be a slower detour.
 const ACTIONS = [
-  { to: '/trading?quickadd=trade', label: 'Trade', icon: TrendingUp },
+  { to: '/trading?quickadd=trade', label: 'Trade', icon: TrendingUp, module: 'trading' },
   { quick: true, label: 'Dépense / revenu', icon: Wallet },
   { to: '/health?quickadd=workout', label: 'Séance de sport', icon: Dumbbell },
 ];
@@ -20,6 +22,7 @@ export default function QuickAdd() {
   const [open, setOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   const go = (a) => {
     setOpen(false);
@@ -33,7 +36,7 @@ export default function QuickAdd() {
       <div className="fixed z-40 bottom-20 md:bottom-6 right-4 md:right-6">
         {open && (
           <div className="absolute bottom-14 right-0 mb-1 flex flex-col items-end gap-2">
-            {ACTIONS.map((a) => (
+            {ACTIONS.filter((a) => !a.module || isModuleEnabled(user, a.module)).map((a) => (
               <button
                 key={a.label}
                 onClick={() => go(a)}

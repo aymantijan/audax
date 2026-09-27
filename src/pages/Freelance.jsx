@@ -115,9 +115,9 @@ function InvoiceModal({ engagement, onClose }) {
                 </li>
               ))}
             </ul>
-            {!rate && <p className="text-[11px] text-warn mt-1">Aucun taux horaire sur ce client : renseignez-le (onglet Client) ou ajoutez des lignes au forfait.</p>}
+            {!rate && <p className="text-[11px] text-warn mt-1">Aucun taux horaire sur ce client : renseigne-le (onglet Client) ou ajoute des lignes au forfait.</p>}
           </div>
-        ) : <p className="text-sm text-mute">Aucune heure à facturer : ajoutez des lignes au forfait ci-dessous.</p>}
+        ) : <p className="text-sm text-mute">Aucune heure à facturer : ajoute des lignes au forfait ci-dessous.</p>}
 
         <div>
           <div className="text-xs text-mute mb-1.5">Lignes au forfait</div>

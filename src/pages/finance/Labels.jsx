@@ -68,7 +68,7 @@ export default function Labels() {
       <Card title="Nouvelle limite de dépense par libellé">
         <p className="text-xs text-mute mb-3">
           Fixe un plafond pour un libellé précis (ex : "Omar's Café" sur Restaurants & cafés). Si le ratio est franchi,
-          l'écriture sera bloquée au moment de la saisie — ajustez ou supprimez la limite ici pour la débloquer.
+          l'écriture sera bloquée au moment de la saisie — ajuste ou supprime la limite ici pour la débloquer.
         </p>
         <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
           <Field label="Compte">

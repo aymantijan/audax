@@ -41,7 +41,7 @@ function StoryModal({ story, onClose }) {
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="S — Situation"><Textarea rows={3} value={f.situation} onChange={set('situation')} placeholder="Le contexte, en 2 phrases." /></Field>
           <Field label="T — Tâche"><Textarea rows={3} value={f.task} onChange={set('task')} placeholder="Ce qu’on attendait de toi." /></Field>
-          <Field label="A — Action"><Textarea rows={3} value={f.action} onChange={set('action')} placeholder="Ce que VOUS avez fait (« je », pas « nous »)." /></Field>
+          <Field label="A — Action"><Textarea rows={3} value={f.action} onChange={set('action')} placeholder="Ce que TOI tu as fait (« je », pas « nous »)." /></Field>
           <Field label="R — Résultat"><Textarea rows={3} value={f.result} onChange={set('result')} placeholder="Chiffré si possible, et ce que tu en as appris." /></Field>
         </div>
         <Field label="Qualités illustrées (séparées par des virgules)"><Input value={f.tags} onChange={set('tags')} placeholder="leadership, gestion du stress, rigueur" /></Field>

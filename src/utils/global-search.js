@@ -14,6 +14,7 @@ import { useFreelanceStore } from '../store/freelanceStore';
 import { useCreativeStore } from '../store/creativeStore';
 import { useRealEstateStore } from '../store/realEstateStore';
 import { SKILL_MAP } from '../utils/constants';
+import { MODULES, POLES, isModuleEnabled } from './navigation';
 
 // Reads every store via `.getState()` — a one-shot imperative snapshot, NOT a
 // hook subscription — so this is safe to call on every keystroke without
@@ -121,10 +122,56 @@ export function buildSearchIndex() {
   return items;
 }
 
+// Pages and quick actions, filtered by the modules this person uses.
+// Actions deep-link to the page that owns the form (see QuickAdd.jsx).
+const ACTIONS = [
+  { id: 'act-today', label: 'Pointer mes cours et cocher mes habitudes', to: '/today' },
+  { id: 'act-expense', label: 'Noter une dépense ou un revenu', to: '/finance?quickadd=journal' },
+  { id: 'act-workout', label: 'Enregistrer une séance de sport', to: '/health?quickadd=workout' },
+  { id: 'act-habit', label: 'Créer une habitude', to: '/habits?new=1' },
+  { id: 'act-checkin', label: 'Faire mon check-in du jour', to: '/habits?checkin=1' },
+  { id: 'act-timetable', label: 'Voir mon emploi du temps', to: '/learning?tab=timetable' },
+  { id: 'act-review', label: 'Réviser mes fiches', to: '/learning?tab=review' },
+  { id: 'act-exams', label: 'Voir mes évaluations et mes notes', to: '/learning?tab=exams' },
+  { id: 'act-goal', label: 'Fixer un objectif', to: '/goals' },
+  { id: 'act-trade', label: 'Ajouter un trade', to: '/trading?quickadd=trade', module: 'trading' },
+  { id: 'act-invoice', label: 'Facturer un client', to: '/freelance', module: 'freelance' },
+  { id: 'act-focus', label: 'Lancer une session de concentration', to: '/focus', module: 'focus' },
+  { id: 'act-cv', label: 'Mettre à jour mon CV', to: '/career', module: 'career' },
+];
+
+export function buildNavItems(user) {
+  const items = [];
+  for (const pole of POLES) {
+    items.push({ id: `pole-${pole.key}`, domain: 'Page', label: pole.label, sub: pole.blurb, to: pole.home, kind: 'page' });
+    for (const k of pole.modules) {
+      if (!isModuleEnabled(user, k) || MODULES[k].to === pole.home) continue;
+      items.push({ id: `page-${k}`, domain: 'Page', label: MODULES[k].label, sub: pole.label, to: MODULES[k].to, kind: 'page' });
+    }
+  }
+  items.push({ id: 'page-settings', domain: 'Page', label: 'Paramètres', sub: 'Profil, synchronisation, données', to: '/settings', kind: 'page' });
+  items.push({ id: 'page-leaderboard', domain: 'Page', label: 'Classement', sub: 'Grades et XP', to: '/leaderboard', kind: 'page' });
+  for (const a of ACTIONS) {
+    if (a.module && !isModuleEnabled(user, a.module)) continue;
+    items.push({ ...a, domain: 'Action', kind: 'action' });
+  }
+  return items;
+}
+
+// Accent- and case-insensitive: "depense" finds "Dépense".
+const norm = (v) => String(v || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 export function searchIndex(index, query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return index
-    .filter((item) => item.label?.toLowerCase().includes(q) || item.sub?.toLowerCase().includes(q))
-    .slice(0, 60);
+  const q = norm(query.trim());
+  if (!q) return index.filter((i) => i.kind === 'action').slice(0, 8);
+  const scored = [];
+  for (const item of index) {
+    const label = norm(item.label);
+    const sub = norm(item.sub);
+    if (!label.includes(q) && !sub.includes(q)) continue;
+    // Pages and actions first, then labels that start with the query.
+    const score = (item.kind ? 0 : 2) + (label.startsWith(q) || label.includes(` ${q}`) ? 0 : 1);
+    scored.push([score, item]);
+  }
+  return scored.sort((a, b) => a[0] - b[0]).map(([, item]) => item).slice(0, 60);
 }

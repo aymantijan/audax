@@ -167,7 +167,7 @@ export const useHabitStore = create(
         const done = (id) => get().logs.some((l) => l.habitId === id && l.date === date && l.completed);
         if (!done(habitId)) return;
         const next = get().habits.filter((h) => !h.archived && h.after === habitId && !done(h.id));
-        if (next.length) toast(`Enchaînez maintenant : ${next.map((h) => h.name).join(', ')}`, 'info');
+        if (next.length) toast(`Enchaîne maintenant : ${next.map((h) => h.name).join(', ')}`, 'info');
       },
 
       // The REVERSE of the flow above — called FROM healthStore when a

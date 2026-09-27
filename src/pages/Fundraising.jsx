@@ -166,7 +166,7 @@ export default function Fundraising() {
           })}
         </div>
       ) : (
-        <Card><EmptyState><Rocket className="mx-auto mb-2 text-mute" size={26} />Aucun investisseur. Loggez le premier pour démarrer le pipeline.</EmptyState></Card>
+        <Card><EmptyState><Rocket className="mx-auto mb-2 text-mute" size={26} />Aucun investisseur. Ajoute le premier pour démarrer le suivi.</EmptyState></Card>
       )}
 
       <BadgeList badges={getBadges()} />

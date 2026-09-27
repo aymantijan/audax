@@ -227,7 +227,7 @@ export default function CareerPlan() {
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-mute mt-3 flex items-center gap-1.5"><Repeat size={11} /> Pour ne pas y penser : créez les habitudes automatiques « Envoyer des candidatures », « Relancer / échanger avec un contact » et « Publier sur LinkedIn » (Habitudes › Nouvelle habitude › modèles). Elles se cochent seules.</p>
+        <p className="text-[11px] text-mute mt-3 flex items-center gap-1.5"><Repeat size={11} /> Pour ne pas y penser : crée les habitudes automatiques « Envoyer des candidatures », « Relancer / échanger avec un contact » et « Publier sur LinkedIn » (Habitudes › Nouvelle habitude › modèles). Elles se cochent seules.</p>
       </Card>
 
       {active.length ? active.map((p) => <PlanCard key={p.id} plan={p} onEdit={setForm} />) : (

@@ -1,118 +1,47 @@
 import { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, LogOut, Settings, Menu, X, Zap, ChevronDown } from 'lucide-react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Moon, Sun, LogOut, Settings, Trophy, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
+import { DESKTOP_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
 import GlobalSearch from './GlobalSearch';
 
-// Only these two stay as direct top-level links — everything else lives
-// under a "Page mère ▾" dropdown group below, no matter how many (or few)
-// of its children are enabled for this account.
-const DIRECT_ITEMS = [
-  { to: '/today', label: 'Aujourd’hui', end: true },
-  { to: '/dashboard', label: 'Tableau de bord' },
-  { to: '/goals', label: 'Objectifs' },
-];
-
-// Grouped ("Page mère → pages child") links. `enabledKey` (checked against
-// user.enabledModules[key]) gates optional domains; items without it are
-// always shown. `defaultEnabled` covers accounts that predate the flag. A
-// group disappears entirely when none of its children are enabled, but
-// otherwise ALWAYS renders as a dropdown — even with a single child — per
-// the "everything but Today/Dashboard is a dropdown" rule.
-const NAV_GROUPS = [
-  {
-    label: 'Investissement',
-    items: [
-      { to: '/deals', label: 'Private equity', enabledKey: 'pe', defaultEnabled: true },
-      { to: '/fundraising', label: 'Levée de fonds', enabledKey: 'fundraising', defaultEnabled: false },
-    ],
-  },
-  {
-    label: 'Progression',
-    items: [
-      { to: '/learning', label: 'Apprentissage' },
-      { to: '/focus', label: 'Deep Work', enabledKey: 'focus', defaultEnabled: false },
-      { to: '/creative', label: 'Création', enabledKey: 'creative', defaultEnabled: false },
-    ],
-  },
-  {
-    label: 'Carrière',
-    items: [
-      { to: '/trading', label: 'Trading', enabledKey: 'trading', defaultEnabled: true },
-      { to: '/engineering', label: 'Ingénierie', enabledKey: 'engineering', defaultEnabled: false },
-      { to: '/businesses', label: 'Projets business', enabledKey: 'business', defaultEnabled: true },
-      // Hub: candidatures, profil/CV, réseau, visibilité, historique — on if any of its former modules is.
-      { to: '/career', label: 'Carrière', enabledKeys: ['career', 'networking', 'content'], defaultEnabled: false },
-      { to: '/freelance', label: 'Freelance', enabledKey: 'freelance', defaultEnabled: false },
-    ],
-  },
-  {
-    label: 'Vie',
-    items: [
-      { to: '/habits', label: 'Habitudes' },
-      { to: '/health', label: 'Santé' },
-      { to: '/finance', label: 'Finances' },
-      { to: '/real-estate', label: 'Immobilier', enabledKey: 'realEstate', defaultEnabled: false },
-    ],
-  },
-  {
-    label: 'Autres',
-    items: [
-      { to: '/skills', label: 'Arbre de compétences' },
-      { to: '/leaderboard', label: 'Classement' },
-    ],
-  },
-];
-
-const isItemEnabled = (user, item) => {
-  if (item.enabledKeys) return item.enabledKeys.some((k) => user?.enabledModules?.[k] ?? item.defaultEnabled ?? true);
-  return item.enabledKey ? user?.enabledModules?.[item.enabledKey] ?? item.defaultEnabled ?? true : true;
-};
-
-const linkClass = ({ isActive }) =>
-  `text-sm font-medium transition-colors pb-0.5 border-b-2 ${
-    isActive ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'
-  }`;
-
-// One "Page mère" — renders nothing when none of its children are enabled,
-// otherwise always a "Label ▾" dropdown (even for a single child), reusing
-// the open/outside-click-to-close pattern from AccountSwitcher.jsx.
-function NavGroup({ group, enabledChildren }) {
+// Top bar: logo, the five sections (from md up; phones use the bottom tabs),
+// search, and a profile menu holding Paramètres, Classement, theme, sign-out.
+function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-
-  if (enabledChildren.length === 0) return null;
-
-  const isGroupActive = enabledChildren.some((c) => location.pathname.startsWith(c.to));
-
+  const item = 'flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left cursor-pointer';
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-1 text-sm font-medium transition-colors pb-0.5 border-b-2 cursor-pointer ${
-          isGroupActive ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'
-        }`}
+        aria-label="Menu du profil"
+        aria-expanded={open}
+        className="ui-icon-btn flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-card cursor-pointer"
       >
-        {group.label}
-        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className="w-8 h-8 rounded-full bg-accent2/20 text-accent2 flex items-center justify-center text-xs font-bold">
+          {(user?.name || '?')[0].toUpperCase()}
+        </span>
+        <span className="hidden lg:inline text-sm text-ink truncate max-w-28">{user?.name}</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 mt-2 w-48 bg-card border border-line rounded-xl shadow-2xl z-50 py-1.5">
-            {enabledChildren.map((child) => (
-              <NavLink
-                key={child.to}
-                to={child.to}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  `block px-3.5 py-2 text-sm font-medium ${isActive ? 'text-accent bg-accent/10' : 'text-mute hover:text-ink hover:bg-line/40'}`
-                }
-              >
-                {child.label}
-              </NavLink>
-            ))}
+          <div className="absolute right-0 mt-2 w-56 bg-card border border-line rounded-xl shadow-2xl z-50 py-1.5" role="menu">
+            <div className="px-3.5 py-2 text-xs text-mute border-b border-line mb-1 truncate">{user?.name}</div>
+            <NavLink to="/settings" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
+              <Settings size={16} /> Paramètres
+            </NavLink>
+            <NavLink to="/leaderboard" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
+              <Trophy size={16} /> Classement
+            </NavLink>
+            <button type="button" role="menuitem" onClick={() => { onToggleTheme(); setOpen(false); }} className={`${item} text-ink hover:bg-line/40`}>
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} Thème {theme === 'dark' ? 'clair' : 'sombre'}
+            </button>
+            <button type="button" role="menuitem" onClick={onLogout} className={`${item} text-bad hover:bg-bad/10`}>
+              <LogOut size={16} /> Se déconnecter
+            </button>
           </div>
         </>
       )}
@@ -122,16 +51,10 @@ function NavGroup({ group, enabledChildren }) {
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, updateProfile, logout } = useAuthStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const theme = user?.theme || 'dark';
-
-  const directItems = DIRECT_ITEMS.filter((item) => isItemEnabled(user, item));
-  const groups = NAV_GROUPS.map((group) => ({ group, enabledChildren: group.items.filter((item) => isItemEnabled(user, item)) }));
-
-  // Mobile keeps a flat list (its dropdown is already a full-screen panel,
-  // not a crowded horizontal bar) — just every enabled item, grouped or not.
-  const mobileItems = [...directItems, ...groups.flatMap((g) => g.enabledChildren)];
+  const activePole = poleOfPath(location.pathname);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -148,74 +71,37 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 inset-x-0 h-16 bg-surface border-b border-line z-50">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between gap-4">
-        {/* Left: logo */}
-        <button className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>
+        <button type="button" className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/today')} aria-label="VAUDAX, aller à Aujourd’hui">
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center">
             <Zap size={16} className="text-on-accent" />
           </span>
-          <span className="text-lg font-bold tracking-widest hidden sm:inline">VAUDAX</span>
+          <span className="font-display text-xl tracking-widest">VAUDAX</span>
         </button>
 
-        {/* Center: nav links */}
-        <div className="hidden xl:flex items-center gap-5 2xl:gap-7">
-          {directItems.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
-              {item.label}
-            </NavLink>
-          ))}
-          {groups.map(({ group, enabledChildren }) => (
-            <NavGroup key={group.label} group={group} enabledChildren={enabledChildren} />
-          ))}
+        <div className="hidden md:flex items-center gap-1 lg:gap-2">
+          {DESKTOP_POLES.map((key) => {
+            const pole = poleByKey(key);
+            const active = activePole?.key === key;
+            return (
+              <Link
+                key={key}
+                to={pole.home}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active ? 'text-accent bg-accent/10' : 'text-mute hover:text-ink hover:bg-card'}`}
+              >
+                <pole.icon size={16} />
+                <span className="hidden lg:inline">{pole.label}</span>
+                <span className="lg:hidden">{pole.short}</span>
+              </Link>
+            );
+          })}
         </div>
 
-        {/* Right: theme + settings + profile + logout */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <GlobalSearch />
-          <button onClick={toggleTheme} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Changer de thème">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `p-2 rounded-lg transition-colors cursor-pointer ${isActive ? 'text-accent' : 'text-mute hover:text-ink hover:bg-card'}`}
-            title="Paramètres"
-          >
-            <Settings size={18} />
-          </NavLink>
-          <div className="hidden sm:flex items-center gap-2 pl-1">
-            <span className="w-7 h-7 rounded-full bg-accent2/20 text-accent2 flex items-center justify-center text-xs font-bold">
-              {(user?.name || '?')[0].toUpperCase()}
-            </span>
-            <span className="text-sm text-ink truncate max-w-24">{user?.name}</span>
-          </div>
-          <button onClick={handleLogout} className="p-2 rounded-lg text-mute hover:text-bad hover:bg-card transition-colors cursor-pointer" title="Se déconnecter">
-            <LogOut size={18} />
-          </button>
-          <button onClick={() => setMobileOpen((v) => !v)} className="xl:hidden p-2 rounded-lg text-mute hover:text-ink cursor-pointer">
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <ProfileMenu user={user} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
         </div>
       </div>
-
-      {/* Mobile dropdown — flat list, grouping is a desktop-crowding fix only */}
-      {mobileOpen && (
-        <div className="xl:hidden bg-surface border-b border-line">
-          <div className="flex flex-col p-3 gap-1">
-            {[...mobileItems, { to: '/settings', label: 'Paramètres' }].map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `text-sm font-medium px-3 py-2 rounded-lg ${isActive ? 'bg-card text-accent' : 'text-mute hover:text-ink hover:bg-card'}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

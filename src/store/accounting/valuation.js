@@ -1,6 +1,6 @@
 // Slice of accountingStore.js (split mechanically, F3 — see scripts in the plan):
 // section text moved verbatim, composed back in ../accountingStore.js.
-import { uid } from '../../utils/formatters';
+import { uid, fmtMAD } from '../../utils/formatters';
 import { accountBalances, treasuryBalance, netWorthHistory, paceFromEdges } from '../../utils/accounting-engine';
 import { calculateGoalXP, badgeForGoal } from '../../utils/goals';
 import { useSkillStore } from '../skillStore';
@@ -44,10 +44,10 @@ export const valuationSlice = (set, get) => ({
         if (kind === 'account') {
           if (!data.account) return { ok: false, error: 'Choisis le compte dédié.' };
           startAmount = accountBalances(get().journal)[data.account]?.balance || 0;
-          if (startAmount >= targetAmount) return { ok: false, error: `Ce compte contient déjà ${Math.round(startAmount)} DH : fixez une cible plus haute.` };
+          if (startAmount >= targetAmount) return { ok: false, error: `Ce compte contient déjà ${fmtMAD(startAmount)} : fixe une cible plus haute.` };
         } else if (kind === 'networth') {
           startAmount = get().getNetWorth().ancc;
-          if (startAmount >= targetAmount) return { ok: false, error: `Ton patrimoine net est déjà de ${Math.round(startAmount)} DH : fixe une cible plus haute.` };
+          if (startAmount >= targetAmount) return { ok: false, error: `Ton patrimoine net est déjà de ${fmtMAD(startAmount)} : fixe une cible plus haute.` };
         } else {
           const initial = Number(data.initialAmount) || 0;
           if (initial > 0) {

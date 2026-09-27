@@ -41,7 +41,7 @@ const blankAsset = () => ({
 });
 
 const VALUATION_HINT = {
-  market_live: 'Valorisé au marché par Wealth OS — renseignez quantité + coût unitaire + identifiant marché (VAUDAX ne calcule aucun cours).',
+  market_live: 'Valorisé au marché par Wealth OS — renseigne quantité + coût unitaire + identifiant marché (VAUDAX ne calcule aucun cours).',
   audax_manual: 'Réévaluable manuellement : tu peux saisir une estimation actuelle (sinon gère-la via une plus/moins-value ci-dessus).',
   cost: 'Valeur = coût historique (au journal). Aucune valorisation de marché.',
 };

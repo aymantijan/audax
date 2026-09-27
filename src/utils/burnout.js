@@ -18,7 +18,7 @@ export function checkBurnoutTriggers({ energyLogs = [], compliance = null, trade
       trigger: 'HIGH_STRESS_5DAYS',
       severity: 'high',
       message: 'Stress élevé (> 7) sur au moins 5 des 7 derniers jours',
-      recommendation: 'Méditation, réduisez le volume de trading',
+      recommendation: 'Méditation, réduis le volume de trading',
     });
   }
   if (last7.filter((l) => (l.sleepData?.sleepQualityScore ?? 10) < 5).length >= 5) {

@@ -81,7 +81,7 @@ export default function BankImportModal({ open, onClose }) {
         {!parsed ? (
           <>
             <p className="text-sm text-mute">
-              Exporte tes opérations depuis le site ou l'appli de ta banque au format <b className="text-ink">CSV</b> (ou copiez-collez le tableau).
+              Exporte tes opérations depuis le site ou l'appli de ta banque au format <b className="text-ink">CSV</b> (ou copie-colle le tableau).
               Les colonnes sont détectées automatiquement et chaque opération reçoit une catégorie.
             </p>
             <button type="button" onClick={() => fileRef.current?.click()}
@@ -90,7 +90,7 @@ export default function BankImportModal({ open, onClose }) {
               <span className="text-[11px]">séparateur ; , ou tabulation · dates JJ/MM/AAAA ou AAAA-MM-JJ</span>
             </button>
             <input ref={fileRef} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={onFile} />
-            <textarea rows={4} value={draft} placeholder="…ou collez ici les lignes du relevé (avec la ligne d'en-tête si possible)"
+            <textarea rows={4} value={draft} placeholder="…ou colle ici les lignes du relevé (avec la ligne d'en-tête si possible)"
               onChange={(e) => setDraft(e.target.value)}
               onPaste={(e) => { const t = e.clipboardData.getData('text'); if (t.trim()) { e.preventDefault(); setDraft(t); setText(t); } }}
               className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs font-mono text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
@@ -166,7 +166,7 @@ export default function BankImportModal({ open, onClose }) {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-warning">Aucune opération reconnue : vérifiez les colonnes Date et Montant ci-dessus.</p>
+              <p className="text-sm text-warning">Aucune opération reconnue : vérifie les colonnes Date et Montant ci-dessus.</p>
             )}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={onClose}>Annuler</Button>

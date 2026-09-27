@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
+import PoleSubNav from './PoleSubNav';
 import { StudyTimerDock } from '../learning/StudyTimer';
 import { useAutoHabitSync } from '../../hooks/useAutoHabitSync';
 import QuickAdd from './QuickAdd';
@@ -18,6 +19,7 @@ export default function MainLayout() {
           QuickAdd FAB) never sits underneath it — desktop has no bottom bar,
           hence md:pb-0. */}
       <main className="pt-16 pb-20 md:pb-0">
+        <PoleSubNav />
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* resetKey: navigating away from a crashed page auto-clears the error */}
           <ErrorBoundary resetKey={location.pathname}>

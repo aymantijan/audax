@@ -62,7 +62,7 @@ export default function CardioTrend() {
     return (
       <Card title="🫀 Tendance cardio">
         <EmptyState>
-          Aucune séance cardio loggée. Loguez une séance cardio depuis la vue quotidienne du Programme
+          Aucune séance cardio loggée. Enregistre une séance cardio depuis la vue quotidienne du Programme
           pour suivre l'évolution (durée, distance, FC).
         </EmptyState>
       </Card>

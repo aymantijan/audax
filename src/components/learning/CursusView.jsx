@@ -280,7 +280,7 @@ export default function CursusView() {
             color={termForecast?.avg == null ? undefined : gradeColor(termForecast.avg, settings)}
             sub={result.complete ? 'semestre terminé' : termForecast?.avg == null ? 'après les premiers cours et notes' : <StatusPill status={termForecast.status === 'in-progress' ? 'in-progress' : termForecast.status} />} />
           <BigStat label="Statut" value={<StatusPill status={result.status} />} sub={`${graded}/${result.courses.length} matière(s) notée(s)`} />
-          <BigStat label="Crédits validés" value={result.creditsTotal ? `${result.creditsEarned}/${result.creditsTotal}` : '—'} sub={result.creditsTotal ? 'modules validés' : 'ajoutez les crédits'} />
+          <BigStat label="Crédits validés" value={result.creditsTotal ? `${result.creditsEarned}/${result.creditsTotal}` : '—'} sub={result.creditsTotal ? 'modules validés' : 'ajoute les crédits'} />
           <BigStat label="Prochaine évaluation"
             value={nextExam ? countdownLabel(daysUntil(nextExam.ev.date, today)) : '—'}
             sub={nextExam ? `${evalTypeLabel(nextExam.ev.type, true)} · ${nextExam.course.name}` : 'date tes évaluations'}

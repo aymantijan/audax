@@ -100,7 +100,7 @@ export default function CoursesView() {
         <BigStat label="Cours en cours" value={active.length} sub={`${active.filter(isAcademic).length} du cursus · ${active.filter((c) => !isAcademic(c)).length} libres`} />
         <BigStat label="Avancement moyen" value={`${avgProgress}%`} sub="programmes cochés" />
         <BigStat label="Régularité" value={`×${momentum.momentum.toFixed(2)}`} color={momentumColor}
-          sub={momentum.streak > 0 ? `série de ${momentum.streak} j` : momentum.missedDays > 0 ? `${momentum.missedDays} j sans étudier` : 'cochez une tâche aujourd’hui'} />
+          sub={momentum.streak > 0 ? `série de ${momentum.streak} j` : momentum.missedDays > 0 ? `${momentum.missedDays} j sans étudier` : 'coche une tâche aujourd’hui'} />
         <BigStat label="Terminés" value={completed.length} sub={`${readingProgress.length} livre(s) suivis${gpa != null ? ` · GPA ${gpa.toFixed(2)}` : ''}`} />
       </div>
 

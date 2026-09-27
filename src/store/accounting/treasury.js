@@ -51,7 +51,7 @@ export const treasurySlice = (set, get) => ({
         const acct = get().treasuryAccounts.find((a) => a.id === id);
         if (!acct) return { ok: false, error: 'Compte introuvable.' };
         const used = get().journal.some((e) => e.lines.some((l) => l.account === acct.code));
-        if (used) return { ok: false, error: 'Ce compte a des écritures au journal — archivez-le plutôt que de le supprimer.' };
+        if (used) return { ok: false, error: 'Ce compte a des écritures au journal — archive-le plutôt que de le supprimer.' };
         set({ treasuryAccounts: get().treasuryAccounts.filter((a) => a.id !== id) });
         toast('Compte auxiliaire supprimé', 'info');
         return { ok: true };

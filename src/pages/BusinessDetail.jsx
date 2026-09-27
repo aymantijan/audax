@@ -227,7 +227,7 @@ export default function BusinessDetail() {
                 ))}
               </ul>
             ) : (
-              <EmptyState>Aucun événement. Loggez une idée ou un fait pour construire la timeline.</EmptyState>
+              <EmptyState>Aucun événement. Note une idée ou un fait pour construire la timeline.</EmptyState>
             )}
           </Card>
         </div>

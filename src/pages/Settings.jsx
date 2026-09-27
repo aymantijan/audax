@@ -32,6 +32,7 @@ import { markDataSeeded } from '../services/storage';
 import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 import FoodsCard from '../components/settings/FoodsCard';
+import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-flashcards', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
 
@@ -306,30 +307,30 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="Sections visibles">
-        <p className="text-sm text-mute mb-3">Chaque section peut être masquée de la navigation si tu ne t'en sers pas — rien n'est supprimé, juste caché.</p>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { key: 'trading', label: 'Trading', default: true },
-            { key: 'pe', label: 'Private equity (deals)', default: true },
-            { key: 'business', label: 'Projets business (et projets perso)', default: true },
-            { key: 'engineering', label: 'Ingénierie', default: false },
-            { key: 'career', label: 'Carrière (candidatures, profil & CV, réseau, contenu)', default: false, keys: ['career', 'networking', 'content'] },
-            { key: 'focus', label: 'Deep Work', default: false },
-            { key: 'fundraising', label: 'Levée de fonds', default: false },
-            { key: 'freelance', label: 'Freelance', default: false },
-            { key: 'creative', label: 'Création', default: false },
-            { key: 'realEstate', label: 'Immobilier', default: false },
-          ].map((m) => (
-            <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={m.keys ? m.keys.some((k) => user?.enabledModules?.[k]) : user?.enabledModules?.[m.key] ?? m.default}
-                onChange={(e) => updateProfile({ enabledModules: { ...(user?.enabledModules ?? { trading: true, pe: true, business: true, engineering: false, networking: false, career: false, content: false, focus: false, fundraising: false, freelance: false, creative: false, realEstate: false }), ...Object.fromEntries((m.keys || [m.key]).map((k) => [k, e.target.checked])) } })}
-                className="cursor-pointer"
-              />
-              {m.label}
-            </label>
-          ))}
+        <p className="text-sm text-mute mb-3">Masque ce dont tu ne te sers pas : rien n'est supprimé, c'est juste caché.</p>
+        <div className="space-y-4">
+          {POLES.map((pole) => {
+            const optional = pole.modules.filter((k) => MODULES[k].flag);
+            if (!optional.length) return null;
+            return (
+              <div key={pole.key}>
+                <div className="text-xs text-mute uppercase tracking-wide mb-1.5">{pole.label}</div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {optional.map((k) => (
+                    <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isModuleEnabled(user, k)}
+                        onChange={(e) => updateProfile({ enabledModules: withModule(user, k, e.target.checked) })}
+                        className="cursor-pointer"
+                      />
+                      {MODULES[k].label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Card>
 

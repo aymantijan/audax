@@ -237,7 +237,7 @@ export function CourseEndControl({ course }) {
       </select>
       {course.endRule === 'date' && <input type="date" className={cls} value={course.endDate || ''} onChange={(e) => editCourse(course.id, { endDate: e.target.value })} />}
       {end.rule === 'midterms' && (end.pending
-        ? <span className="text-[11px] text-warning flex items-center gap-1"><AlertTriangle size={11} /> date inconnue : saisissez la date du CC ci-dessous (Évaluations) ; les créneaux continuent en attendant</span>
+        ? <span className="text-[11px] text-warning flex items-center gap-1"><AlertTriangle size={11} /> date inconnue : saisis la date du CC ci-dessous (Évaluations) ; les créneaux continuent en attendant</span>
         : <span className="text-[11px] text-mute">dernier cours avant le {new Date(`${end.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ({end.source === 'eval' ? 'date du CC' : 'début des partiels du semestre'})</span>)}
     </div>
   );
@@ -334,7 +334,7 @@ export function AttendanceOverview() {
           <CalendarX2 size={17} className="text-warning shrink-0" />
           <div className="flex-1 min-w-[12rem] text-sm">
             <b className="text-ink">Date des partiels inconnue.</b>{' '}
-            <span className="text-mute">{waitingMidterms.map((c) => c.name).join(', ')} s’arrête{waitingMidterms.length > 1 ? 'nt' : ''} aux partiels. Dès qu’elle est annoncée, saisissez la date du CC sur la page de la matière, ou ici le début des partiels du semestre.</span>
+            <span className="text-mute">{waitingMidterms.map((c) => c.name).join(', ')} s’arrête{waitingMidterms.length > 1 ? 'nt' : ''} aux partiels. Dès qu’elle est annoncée, saisis la date du CC sur la page de la matière, ou ici le début des partiels du semestre.</span>
           </div>
           <input type="date" className="bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent"
             value={term.midtermsDate || ''} onChange={(e) => editTerm(term.id, { midtermsDate: e.target.value })} aria-label="Début des partiels" />

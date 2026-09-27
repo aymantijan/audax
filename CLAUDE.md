@@ -11,7 +11,7 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
 - Dire honnêtement ce qui est testé, ce qui ne l'est pas, et ce qui reste à faire de son côté.
 
 ## Décisions prises (27 sept 2026) — ne pas rediscuter
-1. Nom : **VAUDAX** partout (l'onglet / le manifeste PWA disent encore « AUDAX » → à migrer en étape 2).
+1. Nom : **VAUDAX** partout (fait). Les clés techniques `audax-*` (localStorage, sauvegardes) ne changent JAMAIS.
 2. Interface en **tutoiement** partout, en français. **Exception : le Trading reste en anglais.**
 3. IA du site : **Gemini, offre gratuite uniquement**. **Budget du projet = 0** : aucune dépense, jamais (pas d'IA payante,
    pas de store payant, pas d'offre Vercel/Supabase payante). Ne JAMAIS redemander un budget ou un plafond.
@@ -33,6 +33,14 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 - Rappels push : `api/class-reminders.js` (cours + Santé), appelé toutes les 5 min par pg_cron Supabase
   (`supabase/migrations/005_class_reminders_cron.sql`, authentification par nonce, aucun secret dans le SQL).
 - Coachs IA actuels (`api/*-coach.js`) : modèles OpenRouter gratuits, réponses courtes → à remplacer par un assistant unique sur **Gemini** (étape 4).
+
+## Design (étape 2, fait)
+- Composants communs dans `src/components/common/ui.jsx` : Card, Stat, Button, IconButton, Field/Input/Select,
+  Modal (panneau par le bas sur téléphone, Échap), DataTable (cartes sur téléphone), EmptyState (icône + bouton),
+  Badge, ProgressBar, playSeal (l'unique animation de validation). Graphiques : `components/common/chart-theme.js`.
+  Planning : `components/common/gantt/GanttChart.jsx`. Page de référence : `/design`.
+- Couleurs = variables CSS de `src/styles/globals.css` (jamais de couleur en dur). Chiffres : classe `font-data`.
+- Aucun écran au-dessus de 600 lignes : découper en composants (`scratchpad split_file.py` recalcule les imports).
 
 ## Commandes
 - `npm run dev` — serveur de dev (le démarrer via preview_start, jamais en Bash).

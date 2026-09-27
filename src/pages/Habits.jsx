@@ -25,10 +25,11 @@ export default function Habits() {
   const today = todayKey();
   const [date, setDate] = useState(today);
   const isPast = date !== today;
-  const [formOpen, setFormOpen] = useState(false);
+  // Deep links from the global search: /habits?new=1 and /habits?checkin=1.
+  const [formOpen, setFormOpen] = useState(() => new URLSearchParams(window.location.search).get('new') === '1');
   const [editing, setEditing] = useState(null);
   const [scheduling, setScheduling] = useState(null);
-  const [checkinOpen, setCheckinOpen] = useState(false);
+  const [checkinOpen, setCheckinOpen] = useState(() => new URLSearchParams(window.location.search).get('checkin') === '1');
   const [deleting, setDeleting] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -126,7 +127,7 @@ export default function Habits() {
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
             <div className="text-[11px] uppercase tracking-wide text-mute">Meilleure série en cours</div>
             <div className="text-xl font-bold tabular-nums flex items-center gap-1" style={{ color: bestStreak?.s ? 'var(--warning)' : undefined }}><Flame size={17} />{bestStreak?.s || 0} {bestStreak ? streakUnit(bestStreak.h) : 'j'}</div>
-            <div className="text-[11px] text-mute truncate">{bestStreak?.s ? bestStreak.h.name : 'cochez une habitude'}</div>
+            <div className="text-[11px] text-mute truncate">{bestStreak?.s ? bestStreak.h.name : 'coche une habitude'}</div>
           </div>
           <button onClick={() => setCheckinOpen(true)} className="text-left rounded-xl bg-card/70 border border-line px-4 py-3 hover:border-accent cursor-pointer transition-colors">
             <div className="text-[11px] uppercase tracking-wide text-mute">Check-in {isPast ? 'du jour choisi' : 'du jour'}</div>
@@ -336,7 +337,7 @@ export default function Habits() {
         </div>
       </Modal>
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Supprimer définitivement ?">
-        <p className="text-sm text-mute">« {deleting?.name} » et tout son historique seront supprimés. Pour garder l’historique, laissez-la archivée.</p>
+        <p className="text-sm text-mute">« {deleting?.name} » et tout son historique seront supprimés. Pour garder l’historique, laisse-la archivée.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
           <Button variant="danger" onClick={() => { deleteHabit(deleting.id); setDeleting(null); }}>Supprimer</Button>

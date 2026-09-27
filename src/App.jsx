@@ -54,6 +54,7 @@ const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
 const SettingsPage = lazy(lazyWithRetry(() => import('./pages/Settings'), 'Settings'));
 const DesignReference = lazy(lazyWithRetry(() => import('./pages/DesignReference'), 'DesignReference'));
+const PoleHome = lazy(lazyWithRetry(() => import('./pages/PoleHome'), 'PoleHome'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
@@ -207,6 +208,12 @@ export default function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/design" element={<DesignReference />} />
+        {/* Section home pages (étape 3) + French aliases for the other two sections */}
+        <Route path="/etudes" element={<PoleHome key="etudes" poleKey="etudes" />} />
+        <Route path="/patrimoine" element={<PoleHome key="patrimoine" poleKey="patrimoine" />} />
+        <Route path="/carriere" element={<PoleHome key="carriere" poleKey="carriere" />} />
+        <Route path="/sante" element={<Navigate to="/health" replace />} />
+        <Route path="/aujourdhui" element={<Navigate to="/today" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -94,7 +94,7 @@ export function buildObservations({ accounting, trading, habits, learning, skill
   // ── Lectures : streak, activité ──
   if (readings) {
     const { streak, inProgressCount } = readings;
-    if (streak === 0 && inProgressCount === 0) push(obs, 'info', 'Lecture', 'Aucune lecture en cours — reprenez un livre pour relancer la série.');
+    if (streak === 0 && inProgressCount === 0) push(obs, 'info', 'Lecture', 'Aucune lecture en cours — reprends un livre pour relancer la série.');
     else if (streak >= 7) push(obs, 'success', 'Lecture', `Série de lecture de ${streak} jours — excellente régularité.`);
   }
 

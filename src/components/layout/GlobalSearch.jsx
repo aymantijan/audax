@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
-import { buildSearchIndex, searchIndex } from '../../utils/global-search';
+import { Search, X, Compass, Zap, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
+import { buildSearchIndex, buildNavItems, searchIndex } from '../../utils/global-search';
+import { useAuthStore } from '../../store/authStore';
 
 const DOMAIN_ICON = {
   Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Business: Rocket,
-  Skills: GitBranch, Engineering: FlaskConical, Networking: Users, Career: Briefcase, Content: Megaphone, Projects: FolderKanban,
+  Page: Compass, Action: Zap, Skills: GitBranch, Engineering: FlaskConical, Networking: Users, Career: Briefcase, Content: Megaphone, Projects: FolderKanban,
 };
 
 // Global command-palette search — Ctrl/Cmd+K anywhere, or the search icon in
@@ -14,7 +15,7 @@ const DOMAIN_ICON = {
 // open rather than kept live — see global-search.js for why that's safe).
 // Display names (the English keys stay as-is: they also index DOMAIN_ICON).
 const DOMAIN_FR = {
-  Trading: 'Trading', Finance: 'Finances', Habits: 'Habitudes', Learning: 'Apprentissage', Reading: 'Lecture', Deals: 'Private equity',
+  Page: 'Page', Action: 'Action', Trading: 'Trading', Finance: 'Finances', Habits: 'Habitudes', Learning: 'Apprentissage', Reading: 'Lecture', Deals: 'Private equity',
   Projects: 'Projets', Business: 'Business', Engineering: 'Ingénierie', Networking: 'Réseau', Career: 'Carrière', Content: 'Contenu',
   Fundraising: 'Levée de fonds', Freelance: 'Freelance', Creative: 'Création', 'Real Estate': 'Immobilier', Skills: 'Compétences',
 };
@@ -25,6 +26,7 @@ export default function GlobalSearch() {
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -47,7 +49,7 @@ export default function GlobalSearch() {
     }
   }, [open]);
 
-  const index = useMemo(() => (open ? buildSearchIndex() : []), [open]);
+  const index = useMemo(() => (open ? [...buildNavItems(user), ...buildSearchIndex()] : []), [open, user]);
   const results = useMemo(() => searchIndex(index, query), [index, query]);
 
   const go = (item) => {
@@ -63,14 +65,14 @@ export default function GlobalSearch() {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Rechercher (Ctrl/Cmd+K)">
+      <button type="button" onClick={() => setOpen(true)} aria-label="Rechercher (Ctrl K)" className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Rechercher (Ctrl K)">
         <Search size={18} />
       </button>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-24 px-4" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-4 sm:pt-24 px-3 sm:px-4" onClick={() => setOpen(false)}>
       <div className="absolute inset-0 bg-black/60" />
       <div className="relative w-full max-w-lg bg-card border border-line rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
@@ -80,19 +82,20 @@ export default function GlobalSearch() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
             onKeyDown={onKeyDownInput}
-            placeholder="Rechercher un trade, une opération, une habitude, un cours, un livre, un projet…"
+            placeholder="Une page, une action, un cours, une habitude, un livre…"
+            aria-label="Rechercher"
             className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-mute"
           />
-          <button onClick={() => setOpen(false)} className="text-mute hover:text-ink cursor-pointer shrink-0">
+          <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="ui-icon-btn flex items-center justify-center text-mute hover:text-ink cursor-pointer shrink-0">
             <X size={16} />
           </button>
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[70dvh] sm:max-h-96 overflow-y-auto">
           {query.trim() && results.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-mute">Aucun résultat pour « {query} ».</div>
           )}
           {!query.trim() && (
-            <div className="px-4 py-8 text-center text-sm text-mute">Tape pour chercher dans toute l’application.</div>
+            <div className="px-4 pt-3 pb-1 text-[11px] text-mute uppercase tracking-wide">Actions rapides · tape pour chercher partout</div>
           )}
           {results.map((item, i) => {
             const Icon = DOMAIN_ICON[item.domain] || Search;
