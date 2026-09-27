@@ -13,7 +13,9 @@ import { useHealthStore } from '../store/healthStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFlashcardStore } from '../store/flashcardStore';
-import { fillDefaults, mergeFirstSync } from '../utils/fill-defaults.js';
+import { fillDefaults } from '../utils/fill-defaults.js';
+import { createStoreSync } from '../utils/sync-engine.js';
+import { baseStoreFor } from './sync-base-store';
 import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useContentStore } from '../store/contentStore';
@@ -66,7 +68,6 @@ const OWNER_KEY = 'audax-data-owner';
 const seenKey = (userId) => `audax-sync-seen:${userId}`;
 const readLS = (k, fallback) => { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } };
 const writeLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
-const hasOwnData = (store) => JSON.stringify(serializableState(store.getState())) !== JSON.stringify(serializableState(store.getInitialState?.() || {}));
 
 // Strip actions (functions) off a store's state — same filter zustand/persist
 // applies implicitly when serializing to localStorage.
@@ -78,15 +79,6 @@ function serializableState(state) {
   return out;
 }
 
-function applyRemote(store, data) {
-  applyingRemote = true;
-  try {
-    store.setState(fillDefaults(data, store.getInitialState?.() || {}));
-  } finally {
-    applyingRemote = false;
-  }
-}
-
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -95,12 +87,31 @@ function debounce(fn, ms) {
   };
 }
 
-async function pushStore(userId, name, data) {
-  if (!isSupabaseConfigured) return;
-  const { error } = await supabase
-    .from(TABLE)
-    .upsert({ user_id: userId, store_name: name, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id,store_name' });
-  if (error) console.error(`[cloud-sync] push ${name} failed:`, error.message);
+// Supabase transport for one store (see utils/sync-engine.js). `updated_at` is
+// the row version: an update only lands if the row is still at the version
+// this device last saw, otherwise the engine fetches, merges and retries.
+function transportFor(userId, name) {
+  const row = () => supabase.from(TABLE);
+  const fail = (what, error) => { console.error(`[cloud-sync] ${what} ${name} failed:`, error.message); return { error }; };
+  return {
+    async fetch() {
+      const { data, error } = await row().select('data, updated_at').eq('user_id', userId).eq('store_name', name).maybeSingle();
+      if (error) return fail('fetch', error);
+      return { row: data ? { data: data.data, version: data.updated_at } : null };
+    },
+    async insert(data) {
+      const { data: res, error } = await row().insert({ user_id: userId, store_name: name, data, updated_at: new Date().toISOString() }).select('updated_at').single();
+      if (error) return error.code === '23505' ? { conflict: true } : fail('insert', error);
+      return { version: res.updated_at };
+    },
+    async update(data, version) {
+      const { data: res, error } = await row().update({ data, updated_at: new Date().toISOString() })
+        .eq('user_id', userId).eq('store_name', name).eq('updated_at', version).select('updated_at');
+      if (error) return fail('update', error);
+      if (!res?.length) return { conflict: true };
+      return { version: res[0].updated_at };
+    },
+  };
 }
 
 // Keeps the public `leaderboard_profiles` row (see supabase/schema.sql) in
@@ -145,20 +156,25 @@ export async function fetchLeaderboardProfiles() {
 // default/empty) state gets pushed up over real cloud data. See startCloudSync.
 export async function fetchCloudState(userId) {
   if (!isSupabaseConfigured) return { ok: true, data: {} };
-  const { data, error } = await supabase.from(TABLE).select('store_name, data').eq('user_id', userId);
+  const { data, error } = await supabase.from(TABLE).select('store_name, data, updated_at').eq('user_id', userId);
   if (error) {
     console.error('[cloud-sync] fetch failed:', error.message);
     return { ok: false, data: {} };
   }
-  return { ok: true, data: Object.fromEntries((data || []).map((row) => [row.store_name, row.data])) };
+  return { ok: true, data: Object.fromEntries((data || []).map((row) => [row.store_name, { data: row.data, version: row.updated_at }])) };
 }
 
 let activeSubscription = null;
 let unsubscribeFns = [];
-let applyingRemote = false; // guards against echoing a remote update straight back up
+let engines = []; // one sync engine per store (utils/sync-engine.js)
+const applyingRemote = () => engines.some((e) => e.isApplying());
+const onOnline = () => engines.forEach((e) => e.push());
 let generation = 0; // bumped by every start/stop — lets a superseded in-flight start abort itself
 
 function teardown() {
+  engines.forEach((e) => e.stop());
+  engines = [];
+  if (typeof window !== 'undefined') window.removeEventListener('online', onOnline);
   unsubscribeFns.forEach((fn) => fn());
   unsubscribeFns = [];
   if (activeSubscription) {
@@ -167,11 +183,11 @@ function teardown() {
   }
 }
 
-// Call once after a Supabase auth session is confirmed. Hydrates local stores
-// from the cloud (cloud wins for stores that already have a row — e.g. logging
-// in on a second device); stores with no cloud row yet get seeded from local
-// state instead (first-ever login populates the cloud from whatever's on this
-// device already). Then attaches push-on-change + realtime pull.
+// Call once after a Supabase auth session is confirmed. For each store: merge
+// the cloud row with local data (three-way, against the last version this
+// device synced — see utils/sync-engine.js); a store with no cloud row yet is
+// seeded from this device. Then pushes on change and merges realtime updates
+// from other devices.
 //
 // App.jsx can legitimately call this twice in quick succession on load (the
 // initial getSession() check, plus onAuthChange firing immediately with the
@@ -218,36 +234,27 @@ export async function startCloudSync(userId) {
   writeLS(OWNER_KEY, userId);
   const seen = new Set(readLS(seenKey(userId), []));
 
-  for (const { name, store, mergeOnFirstSync } of REGISTRY) {
-    if (cloud.data[name]) {
-      if (mergeOnFirstSync && !seen.has(name) && hasOwnData(store)) {
-        // First sync of this store on this device, which has its own data too.
-        applyRemote(store, mergeFirstSync(cloud.data[name], serializableState(store.getState())));
-        await pushStore(userId, name, serializableState(store.getState()));
-        if (myGeneration !== generation) return;
-      } else {
-        applyRemote(store, cloud.data[name]);
-      }
-    } else {
-      // Confirmed absent (the fetch succeeded and simply returned no row for
-      // this store) — safe to seed the cloud from local.
-      await pushStore(userId, name, serializableState(store.getState()));
-      if (myGeneration !== generation) return;
-    }
+  // One engine per store: three-way merge with the last server version this
+  // device saw (persisted in IndexedDB), conditional writes, single-flight
+  // pushes. Edits made offline or on two devices at once are merged, not lost.
+  const baseStore = baseStoreFor(userId);
+  const created = REGISTRY.map(({ name, store, mergeOnFirstSync }) => ({
+    name,
+    engine: createStoreSync({
+      name, store, baseStore, mergeOnFirstSync,
+      transport: transportFor(userId, name),
+      serialize: serializableState,
+      prepare: (data) => fillDefaults(data, store.getInitialState?.() || {}),
+      onError: () => {},
+    }),
+  }));
+  engines = created.map((c) => c.engine);
+  for (const { name, engine } of created) {
+    await engine.initial(cloud.data[name] || null, { firstTimeOnDevice: !seen.has(name) });
+    if (myGeneration !== generation) return;
   }
-  if (myGeneration !== generation) return;
   writeLS(seenKey(userId), REGISTRY.map((r) => r.name));
-
-  // Push-on-change, debounced per store so rapid edits (e.g. typing) coalesce
-  // into one write instead of one per keystroke.
-  for (const { name, store } of REGISTRY) {
-    const pushDebounced = debounce((state) => pushStore(userId, name, state), 800);
-    const unsub = store.subscribe((state) => {
-      if (applyingRemote) return; // don't echo a just-applied remote update
-      pushDebounced(serializableState(state));
-    });
-    unsubscribeFns.push(unsub);
-  }
+  if (typeof window !== 'undefined') window.addEventListener('online', onOnline);
 
   // Leaderboard profile: pushed once now (so a fresh account/name/career
   // change shows up immediately) and re-pushed, debounced, whenever XP or
@@ -256,8 +263,8 @@ export async function startCloudSync(userId) {
   await pushLeaderboardProfile(userId);
   if (myGeneration !== generation) return;
   const pushProfileDebounced = debounce(() => pushLeaderboardProfile(userId), 2000);
-  unsubscribeFns.push(useSkillStore.subscribe(() => { if (!applyingRemote) pushProfileDebounced(); }));
-  unsubscribeFns.push(useAuthStore.subscribe(() => { if (!applyingRemote) pushProfileDebounced(); }));
+  unsubscribeFns.push(useSkillStore.subscribe(() => { if (!applyingRemote()) pushProfileDebounced(); }));
+  unsubscribeFns.push(useAuthStore.subscribe(() => { if (!applyingRemote()) pushProfileDebounced(); }));
 
   // Realtime: pick up changes made from another device/tab.
   activeSubscription = supabase
@@ -268,9 +275,9 @@ export async function startCloudSync(userId) {
       (payload) => {
         const row = payload.new;
         if (!row) return;
-        const entry = REGISTRY.find((r) => r.name === row.store_name);
-        if (!entry) return;
-        applyRemote(entry.store, row.data);
+        const i = REGISTRY.findIndex((r) => r.name === row.store_name);
+        if (i < 0 || !engines[i]) return;
+        engines[i].onRemote({ data: row.data, version: row.updated_at });
       }
     )
     .subscribe();
