@@ -40,9 +40,9 @@ function StoryModal({ story, onClose }) {
         <Field label="Titre (pour la retrouver)"><Input value={f.title} onChange={set('title')} placeholder="ex. Relancer un projet d’association en retard" autoFocus /></Field>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="S — Situation"><Textarea rows={3} value={f.situation} onChange={set('situation')} placeholder="Le contexte, en 2 phrases." /></Field>
-          <Field label="T — Tâche"><Textarea rows={3} value={f.task} onChange={set('task')} placeholder="Ce qu’on attendait de vous." /></Field>
+          <Field label="T — Tâche"><Textarea rows={3} value={f.task} onChange={set('task')} placeholder="Ce qu’on attendait de toi." /></Field>
           <Field label="A — Action"><Textarea rows={3} value={f.action} onChange={set('action')} placeholder="Ce que VOUS avez fait (« je », pas « nous »)." /></Field>
-          <Field label="R — Résultat"><Textarea rows={3} value={f.result} onChange={set('result')} placeholder="Chiffré si possible, et ce que vous en avez appris." /></Field>
+          <Field label="R — Résultat"><Textarea rows={3} value={f.result} onChange={set('result')} placeholder="Chiffré si possible, et ce que tu en as appris." /></Field>
         </div>
         <Field label="Qualités illustrées (séparées par des virgules)"><Input value={f.tags} onChange={set('tags')} placeholder="leadership, gestion du stress, rigueur" /></Field>
         <div className="flex justify-end gap-2">
@@ -81,7 +81,7 @@ export default function InterviewsSpace({ onOpenApp }) {
     const existing = new Set(fc.cards.filter((c) => c.deckId === deckId).map((c) => c.front));
     const toAdd = (questions || []).filter((x) => x.answer?.trim() && !existing.has(x.question));
     for (const x of toAdd) fc.addCard({ deckId, front: x.question, back: x.answer.trim() });
-    toast(toAdd.length ? `${toAdd.length} question(s) ajoutée(s) aux Révisions (paquet « ${DECK} »)` : 'Rien de nouveau : écrivez d’abord vos réponses clés', toAdd.length ? 'success' : 'info');
+    toast(toAdd.length ? `${toAdd.length} question(s) ajoutée(s) aux Révisions (paquet « ${DECK} »)` : 'Rien de nouveau : écris d’abord tes réponses clés', toAdd.length ? 'success' : 'info');
   };
   const offers = useMemo(() => offerScores(applications, offerWeights), [applications, offerWeights]);
   const currencies = [...new Set(offers.map((o) => o.app.offer.currency || 'MAD'))];
@@ -102,7 +102,7 @@ export default function InterviewsSpace({ onOpenApp }) {
               </li>
             ))}
           </ul>
-        ) : <EmptyState>Aucun entretien prévu. Ajoutez-les depuis la fiche d’une candidature (onglet Entretiens).</EmptyState>}
+        ) : <EmptyState>Aucun entretien prévu. Ajoute-les depuis la fiche d’une candidature (onglet Entretiens).</EmptyState>}
       </Card>
 
       <Card title="S’entraîner" action={<button onClick={toFlashcards} className="text-xs text-accent hover:underline cursor-pointer flex items-center gap-1"><Layers size={12} /> Envoyer vers Révisions</button>}>
@@ -114,9 +114,9 @@ export default function InterviewsSpace({ onOpenApp }) {
           <div className="rounded-xl border border-line p-4 space-y-3">
             <div className="text-[11px] uppercase tracking-wide text-mute">{q.category} · pratiquée {q.practiced || 0} fois</div>
             <div className="text-lg font-semibold">{q.question}</div>
-            <p className="text-xs text-mute">Répondez à voix haute (idéalement chronométré : 1–2 min), puis comparez avec vos notes.</p>
+            <p className="text-xs text-mute">Réponds à voix haute (idéalement chronométré : 1–2 min), puis compare avec tes notes.</p>
             {reveal
-              ? <div className="text-sm whitespace-pre-line rounded-lg bg-surface border border-line p-3">{q.answer || <span className="text-mute">Pas encore de notes — ajoutez vos points clés dans la banque ci-dessous.</span>}</div>
+              ? <div className="text-sm whitespace-pre-line rounded-lg bg-surface border border-line p-3">{q.answer || <span className="text-mute">Pas encore de notes : ajoute tes points clés dans la banque ci-dessous.</span>}</div>
               : <Button variant="secondary" onClick={() => setReveal(true)}><span className="flex items-center gap-1.5"><Eye size={14} /> Voir mes notes</span></Button>}
             <Button onClick={() => { practiceQuestion(q.id); toast('Pratiquée ✓', 'success'); draw(); }}><span className="flex items-center gap-1.5"><CheckCircle2 size={14} /> Pratiquée</span></Button>
           </div>
@@ -145,7 +145,7 @@ export default function InterviewsSpace({ onOpenApp }) {
                       </div>
                       {openQ === x.id && (
                         <div className="px-3 pb-3">
-                          <Textarea rows={4} value={x.answer || ''} onChange={(e) => editQuestion(x.id, { answer: e.target.value })} placeholder="Vos points clés (pas un texte à réciter) : structure, exemples, chiffres." />
+                          <Textarea rows={4} value={x.answer || ''} onChange={(e) => editQuestion(x.id, { answer: e.target.value })} placeholder="Tes points clés (pas un texte à réciter) : structure, exemples, chiffres." />
                         </div>
                       )}
                     </li>
@@ -218,9 +218,9 @@ export default function InterviewsSpace({ onOpenApp }) {
               </table>
             </div>
             {currencies.length > 1 && <p className="text-[11px] text-warn mt-2">Devises différentes ({currencies.join(', ')}) : la rémunération est comparée sans conversion.</p>}
-            <p className="text-[11px] text-mute mt-2">La rémunération est notée par rapport à la meilleure offre ; le reste vient de vos notes (étoiles) dans chaque offre. C’est une aide à la décision, pas la décision.</p>
+            <p className="text-[11px] text-mute mt-2">La rémunération est notée par rapport à la meilleure offre ; le reste vient de tes notes (étoiles) dans chaque offre. C’est une aide à la décision, pas la décision.</p>
           </>
-        ) : <EmptyState>Quand vous recevez une offre, remplissez l’onglet « Offre » de la candidature : elles se comparent ici.</EmptyState>}
+        ) : <EmptyState>Quand tu reçois une offre, remplis l’onglet « Offre » de la candidature : elles se comparent ici.</EmptyState>}
       </Card>
 
       {storyForm && <StoryModal story={storyForm === 'new' ? null : storyForm} onClose={() => setStoryForm(null)} />}

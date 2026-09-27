@@ -95,7 +95,7 @@ export function RevisionPlanCard() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-mute">Datez vos évaluations (CC, CF…) sur la page de chaque matière : le plan de révision se construit tout seul.</p>
+        <p className="text-sm text-mute">Date tes évaluations (CC, CF…) sur la page de chaque matière : le plan de révision se construit tout seul.</p>
       )}
     </Card>
   );

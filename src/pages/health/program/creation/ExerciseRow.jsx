@@ -104,7 +104,7 @@ function ExerciseSearch({ mode, value, exerciseKey, onChange }) {
             })}
           </div>
 
-          {!results.length && !trimmed && <div className="p-4 text-center text-sm text-mute">Tapez pour chercher…</div>}
+          {!results.length && !trimmed && <div className="p-4 text-center text-sm text-mute">Tape pour chercher…</div>}
 
           {results.map((ex, i) => (
             <button

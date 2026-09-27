@@ -168,7 +168,7 @@ export default function TracksView() {
         <Card>
           <div className="text-center py-8 max-w-lg mx-auto">
             <Compass size={28} className="mx-auto text-mute mb-2" />
-            <p className="text-sm font-medium text-ink">Apprenez tout ce qui vous tient à cœur, avec méthode</p>
+            <p className="text-sm font-medium text-ink">Apprends tout ce qui te tient à cœur, avec méthode</p>
             <p className="text-xs text-mute mt-1">Une langue du niveau A1 au C2, le trading, Excel, la prise de parole… Chaque parcours a une feuille de route, des ressources, des fiches et un temps hebdomadaire visé.</p>
             <Button className="mt-4" onClick={() => setOpen(true)}>Créer mon premier parcours</Button>
           </div>

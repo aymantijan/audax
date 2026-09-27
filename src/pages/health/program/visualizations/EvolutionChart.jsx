@@ -67,7 +67,7 @@ export default function EvolutionChart() {
     return (
       <Card>
         <div className="text-sm text-mute text-center py-6">
-          Ajoutez des KPIs pour voir leur évolution dans le temps.
+          Ajoute des KPIs pour voir leur évolution dans le temps.
         </div>
       </Card>
     );
@@ -143,7 +143,7 @@ export default function EvolutionChart() {
         </ResponsiveContainer>
       ) : (
         <div className="text-sm text-mute text-center py-8">
-          Sélectionnez des KPIs avec des données pour afficher le graphique.
+          Sélectionne des KPIs avec des données pour afficher le graphique.
         </div>
       )}
     </Card>

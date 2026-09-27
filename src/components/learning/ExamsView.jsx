@@ -32,7 +32,7 @@ export default function ExamsView() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <SectionHeader icon={CalendarClock} title="Évaluations" subtitle="Contrôles, partiels, examens et rendus, avec la note qu'il vous faut." />
+        <SectionHeader icon={CalendarClock} title="Évaluations" subtitle="Contrôles, partiels, examens et rendus, avec la note qu'il te faut." />
         <SegmentedTabs value={view} onChange={setView} tabs={[
           { key: 'upcoming', label: 'À venir', icon: CalendarClock, count: upcoming.length },
           { key: 'graded', label: 'Notées', icon: History, count: graded.length },
@@ -94,7 +94,7 @@ export default function ExamsView() {
       ) : (
         <Card>
           <div className="text-center py-6 text-sm text-mute">
-            {view === 'upcoming' ? 'Aucune évaluation datée à venir. Ajoutez les dates dans chaque matière.' : 'Aucune note saisie pour le moment.'}
+            {view === 'upcoming' ? 'Aucune évaluation datée à venir. Ajoute les dates dans chaque matière.' : 'Aucune note saisie pour le moment.'}
           </div>
         </Card>
       )}

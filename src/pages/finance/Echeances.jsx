@@ -128,7 +128,7 @@ export default function Echeances() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 -mt-2">
         <p className="text-xs text-mute">
-          Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif. Un virement entre vos propres comptes (ex : épargne automatique) est neutre à la fois sur le patrimoine et sur le total trésorerie. Seul un produit/charge fait vraiment bouger l'un ou l'autre.
+          Une échéance est un mouvement concret et daté (ponctuel ou récurrent) — à la différence d'un budget (enveloppe mensuelle lissée pour le contrôle), c'est elle qui alimente les prévisions jour par jour (Trésorerie, et Patrimoine dans Analyse). Un emprunt/investissement (achat, remboursement) est neutre sur le patrimoine — il ne fait que convertir de la trésorerie en dette ou en actif. Un virement entre tes propres comptes (ex : épargne automatique) est neutre à la fois sur le patrimoine et sur le total trésorerie. Seul un produit/charge fait vraiment bouger l'un ou l'autre.
         </p>
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs shrink-0" onClick={toggleAlerts}>
           <span className="flex items-center gap-2">

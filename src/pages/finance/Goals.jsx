@@ -11,9 +11,9 @@ import { toast } from '../../store/uiStore';
 const fmtDate = (d) => (d ? new Date(typeof d === 'string' && d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
 const KINDS = [
-  { value: 'envelope', label: 'Enveloppe', Icon: PiggyBank, desc: 'De l’argent mis de côté sur vos comptes actuels (voyage, fonds d’urgence, frais de scolarité…).' },
+  { value: 'envelope', label: 'Enveloppe', Icon: PiggyBank, desc: 'De l’argent mis de côté sur tes comptes actuels (voyage, fonds d’urgence, frais de scolarité…).' },
   { value: 'account', label: 'Compte dédié', Icon: Landmark, desc: 'Un compte réservé à cet objectif (livret, sous-compte) : sa progression = son solde.' },
-  { value: 'networth', label: 'Patrimoine net', Icon: TrendingUp, desc: 'Un jalon de richesse nette (ce que vous possédez − vos dettes).' },
+  { value: 'networth', label: 'Patrimoine net', Icon: TrendingUp, desc: 'Un jalon de richesse nette (ce que tu possèdes − tes dettes).' },
 ];
 const kindMeta = (k) => KINDS.find((x) => x.value === k) || KINDS[0];
 const blank = () => ({ kind: 'envelope', name: '', targetAmount: '', targetDate: '', account: '512', initialAmount: '' });
@@ -115,7 +115,7 @@ export default function Goals() {
       <div className="rounded-2xl border border-line p-5" style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 10%, transparent), var(--bg-tertiary) 60%)' }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-xs text-mute flex items-center gap-1.5"><Wallet size={13} /> Sur vos comptes</div>
+            <div className="text-xs text-mute flex items-center gap-1.5"><Wallet size={13} /> Sur tes comptes</div>
             <div className="text-2xl font-bold text-ink tabular-nums">{fmtMAD(alloc.treasury)}</div>
           </div>
           <Button onClick={openAdd}><span className="flex items-center gap-1.5"><Target size={15} /> Nouvel objectif</span></Button>
@@ -134,12 +134,12 @@ export default function Goals() {
           </div>
         )}
         {alloc.unallocated < -0.5 && (
-          <div className="mt-3 text-xs text-bad flex items-start gap-1.5"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> Vous avez dépensé une partie de l'argent mis de côté : reprenez-le d'une enveloppe pour que vos objectifs reflètent la réalité.</div>
+          <div className="mt-3 text-xs text-bad flex items-start gap-1.5"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> Tu as dépensé une partie de l'argent mis de côté : reprends-le d'une enveloppe pour que tes objectifs reflètent la réalité.</div>
         )}
         {emptyEnvelopes.length > 0 && alloc.unallocated > 0 && (
           <div className="mt-3 text-xs text-mute flex items-start gap-1.5">
             <PiggyBank size={13} className="mt-0.5 shrink-0 text-accent" />
-            {emptyEnvelopes.length} objectif(s) à alimenter : chaque objectif compte désormais son propre argent. Répartissez vos {fmtMAD(alloc.unallocated)} libres avec « Mettre de côté ».
+            {emptyEnvelopes.length} objectif(s) à alimenter : chaque objectif compte désormais son propre argent. Répartis tes {fmtMAD(alloc.unallocated)} libres avec « Mettre de côté ».
           </div>
         )}
       </div>
@@ -150,7 +150,7 @@ export default function Goals() {
             {active.map((g) => <GoalCard key={g.id} g={g} simple={simple} onEdit={openEdit} onDelete={setDeleting} onContribute={(goal, sign) => { setContrib({ goal, sign }); setAmount(''); }} />)}
           </div>
         ) : (
-          <EmptyState>Aucun objectif. Créez une enveloppe (voyage, fonds d'urgence…) et mettez de l'argent de côté au fil des mois.</EmptyState>
+          <EmptyState>Aucun objectif. Crée une enveloppe (voyage, fonds d'urgence…) et mets de l'argent de côté au fil des mois.</EmptyState>
         )}
       </Card>
 
@@ -189,7 +189,7 @@ export default function Goals() {
             </Field>
           )}
           {!editing && form.kind === 'envelope' && (
-            <Field label="Déjà mis de côté (optionnel)" hint={`Libre sur vos comptes : ${fmtMAD(alloc.unallocated)}`}>
+            <Field label="Déjà mis de côté (optionnel)" hint={`Libre sur tes comptes : ${fmtMAD(alloc.unallocated)}`}>
               <Input type="number" step="any" min="0" value={form.initialAmount} onChange={(e) => setForm({ ...form, initialAmount: e.target.value })} />
             </Field>
           )}
@@ -203,10 +203,10 @@ export default function Goals() {
 
       <Modal open={!!contrib} onClose={() => setContrib(null)} title={contrib?.sign > 0 ? `Mettre de côté · ${contrib?.goal.name}` : `Reprendre de l'argent · ${contrib?.goal.name}`}>
         <form onSubmit={submitContrib} className="space-y-3">
-          <Field label={`Montant (${baseCurrencyShort()})`} hint={contrib?.sign > 0 ? `Libre sur vos comptes : ${fmtMAD(alloc.unallocated)}${contrib?.goal.neededPerMonth ? ` · effort conseillé : ${fmtMAD(contrib.goal.neededPerMonth)}/mois` : ''}` : `Dans l'enveloppe : ${fmtMAD(contrib?.goal.current || 0)}`}>
+          <Field label={`Montant (${baseCurrencyShort()})`} hint={contrib?.sign > 0 ? `Libre sur tes comptes : ${fmtMAD(alloc.unallocated)}${contrib?.goal.neededPerMonth ? ` · effort conseillé : ${fmtMAD(contrib.goal.neededPerMonth)}/mois` : ''}` : `Dans l'enveloppe : ${fmtMAD(contrib?.goal.current || 0)}`}>
             <Input type="number" step="any" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
           </Field>
-          <p className="text-[11px] text-mute">L'argent reste sur vos comptes : il est simplement réservé à cet objectif et n'est plus compté comme libre.</p>
+          <p className="text-[11px] text-mute">L'argent reste sur tes comptes : il est simplement réservé à cet objectif et n'est plus compté comme libre.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setContrib(null)}>Annuler</Button>
             <Button type="submit" disabled={!Number(amount)}>{contrib?.sign > 0 ? 'Mettre de côté' : 'Reprendre'}</Button>

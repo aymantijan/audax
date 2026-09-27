@@ -69,7 +69,7 @@ function CheckinModal({ open, onClose, date }) {
   return (
     <Modal open={open} onClose={onClose} title={`Check-in · ${fmtDate(date)}`} wide>
       <div className="space-y-5">
-        <p className="text-[11px] text-mute flex items-center gap-1.5"><HeartPulse size={12} className="text-accent" /> Le même check-in que dans Santé : ce que vous remplissez ici complète la version rapide, sans rien effacer.</p>
+        <p className="text-[11px] text-mute flex items-center gap-1.5"><HeartPulse size={12} className="text-accent" /> Le même check-in que dans Santé : ce que tu remplis ici complète la version rapide, sans rien effacer.</p>
         <div>
           <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Matin</div>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -167,8 +167,8 @@ function HabitFormModal({ open, onClose, habit }) {
     e.preventDefault();
     const res = validate(habitSchema, { ...f, linkedSkill: f.linkedSkill || undefined, healthLink: f.healthLink || undefined });
     if (!res.ok) return setError(res.error);
-    if (f.kind !== 'quit' && f.frequency === 'custom' && !f.weekdays?.length) return setError('Choisissez au moins un jour.');
-    if (f.kind === 'quantity' && !(Number(f.target) > 0) && f.direction === 'atLeast') return setError('Indiquez une cible supérieure à 0.');
+    if (f.kind !== 'quit' && f.frequency === 'custom' && !f.weekdays?.length) return setError('Choisis au moins un jour.');
+    if (f.kind === 'quantity' && !(Number(f.target) > 0) && f.direction === 'atLeast') return setError('Indique une cible supérieure à 0.');
     const data = {
       ...res.data, kind: f.kind, moment: f.kind === 'quit' ? 'any' : f.moment, frequency: f.kind === 'quit' ? 'daily' : f.frequency,
       target: f.kind === 'quantity' ? Number(f.target) : null, unit: f.kind === 'quantity' ? f.unit : null,
@@ -213,10 +213,10 @@ function HabitFormModal({ open, onClose, habit }) {
 
         {f.kind === 'quantity' && (
           <div className="rounded-xl border border-line p-3 space-y-3">
-            <Field label="Suivi" hint={f.source ? 'La valeur du jour est lue automatiquement : rien à cocher.' : 'Vous saisissez la valeur du jour (+ / −).'}>
+            <Field label="Suivi" hint={f.source ? 'La valeur du jour est lue automatiquement : rien à cocher.' : 'Tu saisis la valeur du jour (+ / −).'}>
               <Select value={f.source} onChange={(e) => { const src = sourceMeta(e.target.value); setF({ ...f, source: e.target.value, unit: src ? unitOf(src) : f.unit }); }}>
                 <option value="">Saisie manuelle</option>
-                <optgroup label="Automatique, depuis vos autres sections">
+                <optgroup label="Automatique, depuis tes autres sections">
                   {HABIT_SOURCES.map((src) => <option key={src.value} value={src.value}>{src.label}</option>)}
                 </optgroup>
               </Select>
@@ -226,7 +226,7 @@ function HabitFormModal({ open, onClose, habit }) {
               <Field label="Valeur"><Input type="number" min="0" step="any" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></Field>
               <Field label="Unité"><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="verres, pages, min…" /></Field>
             </div>
-            {f.direction === 'atMost' && <p className="text-[11px] text-mute">« Au plus » : la journée est réussie si vous restez sous la limite ; elle est validée une fois la journée terminée.</p>}
+            {f.direction === 'atMost' && <p className="text-[11px] text-mute">« Au plus » : la journée est réussie si tu restes sous la limite ; elle est validée une fois la journée terminée.</p>}
           </div>
         )}
 
@@ -380,7 +380,7 @@ function PauseModal({ open, onClose }) {
   return (
     <Modal open={open} onClose={onClose} title="Mode pause (vacances, maladie…)">
       <div className="space-y-3">
-        <p className="text-sm text-mute">Pendant la pause, vos habitudes ne cassent pas leurs séries : chaque jour couvert compte comme un joker, sans entamer vos jokers du mois.</p>
+        <p className="text-sm text-mute">Pendant la pause, tes habitudes ne cassent pas leurs séries : chaque jour couvert compte comme un joker, sans entamer tes jokers du mois.</p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Du"><Input type="date" value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></Field>
           <Field label="Au"><Input type="date" value={f.to} min={f.from} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
@@ -560,7 +560,7 @@ function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
     <Card>
       <div className="text-sm font-semibold text-ink flex items-center gap-2 mb-3"><Sparkles size={15} className="text-accent" /> Coach</div>
       {advice.length === 0 && links.length === 0 && (
-        <p className="text-sm text-mute">Rien à signaler : vos habitudes tiennent.{energyLogs.length < 14 ? ' Les liens avec votre énergie, votre sommeil et votre stress apparaîtront après environ deux semaines de check-ins.' : ''}</p>
+        <p className="text-sm text-mute">Rien à signaler : tes habitudes tiennent.{energyLogs.length < 14 ? ' Les liens avec ton énergie, ton sommeil et ton stress apparaîtront après environ deux semaines de check-ins.' : ''}</p>
       )}
       {advice.length > 0 && (
         <div className="space-y-2">
@@ -579,9 +579,9 @@ function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
                       <div className="text-[12px] text-mute">
                         {a.weeks ? (Math.round(a.recent * 3) ? `Quota atteint 1 semaine sur les 3 dernières.` : `Quota non atteint ces 3 dernières semaines.`)
                           : `${a.done}/${a.due} jours réussis ces 14 derniers jours${a.prior != null ? ` (contre ${pctOf(a.prior)} avant)` : ''}.`}
-                        {a.mini ? ` Réduisez l’effort plutôt que d’abandonner : ${a.mini.text}.`
+                        {a.mini ? ` Réduis l’effort plutôt que d’abandonner : ${a.mini.text}.`
                           : a.fallback?.kind === 'reminder' ? ' Un rappel à heure fixe aide souvent à reprendre.'
-                            : a.fallback?.kind === 'anchor' ? ` Accrochez-la à « ${a.fallback.anchor.name} », qui tient bien.`
+                            : a.fallback?.kind === 'anchor' ? ` Accroche-la à « ${a.fallback.anchor.name} », qui tient bien.`
                               : ' Un joker ou une pause protège la série si la période est chargée.'}
                       </div>
                     </>
@@ -606,7 +606,7 @@ function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
       )}
       {links.length > 0 && (
         <div className={advice.length ? 'mt-4 pt-3 border-t border-line' : ''}>
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2">Ce que disent vos check-ins</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2">Ce que disent tes check-ins</div>
           <div className="space-y-1.5">
             {links.map((l) => {
               const fem = METRIC_GENDER_F[l.metric.key];
@@ -616,7 +616,7 @@ function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
                 <div key={`${l.habit.id}-${l.metric.key}`} className="flex items-start gap-2 text-sm">
                   <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ background: c }} />
                   <span className="text-mute">
-                    Le lendemain de « <span className="text-ink">{l.habit.name}</span> », votre {l.metric.label} est <b style={{ color: c }}>{word} de {nf1(Math.abs(l.diff))} pt</b>
+                    Le lendemain de « <span className="text-ink">{l.habit.name}</span> », ton {l.metric.label} est <b style={{ color: c }}>{word} de {nf1(Math.abs(l.diff))} pt</b>
                     <span className="text-[11px]"> ({nf1(l.withMean)} contre {nf1(l.withoutMean)} sur 10 · {l.nWith} j avec, {l.nWithout} j sans)</span>
                   </span>
                 </div>
@@ -697,7 +697,7 @@ export default function Habits() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-ink">Habitudes</h1>
-          <p className="text-mute text-sm mt-1">Vos routines quotidiennes, vos séries et votre énergie — avec une alerte précoce d’épuisement.</p>
+          <p className="text-mute text-sm mt-1">Tes routines quotidiennes, tes séries et ton énergie, avec une alerte précoce d’épuisement.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => (habitReminders?.enabled ? setHabitRemindersEnabled(false) : enableReminders(setHabitRemindersEnabled))}
@@ -755,7 +755,7 @@ export default function Habits() {
       {activePause && (
         <div className="rounded-xl border px-4 py-3 text-sm flex items-center gap-2" style={{ borderColor: tint('var(--accent-secondary)', 45), background: tint('var(--accent-secondary)', 8) }}>
           <Palmtree size={16} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
-          <span className="flex-1 text-mute">En pause jusqu’au <b className="text-ink">{fmtDate(activePause.to)}</b>{activePause.reason ? ` (${activePause.reason})` : ''} : vos séries sont protégées.</span>
+          <span className="flex-1 text-mute">En pause jusqu’au <b className="text-ink">{fmtDate(activePause.to)}</b>{activePause.reason ? ` (${activePause.reason})` : ''} : tes séries sont protégées.</span>
           <Button variant="secondary" className="!py-1 !px-2.5 text-xs" onClick={() => endPause(activePause.id)}>Reprendre maintenant</Button>
         </div>
       )}
@@ -839,7 +839,7 @@ export default function Habits() {
             })}
           </div>
         ) : (
-          <EmptyState>{isPast ? 'Aucune habitude prévue ce jour-là.' : active.length ? 'Rien de prévu aujourd’hui.' : 'Aucune habitude. Commencez par une seule habitude clé, puis ajoutez-en progressivement.'}</EmptyState>
+          <EmptyState>{isPast ? 'Aucune habitude prévue ce jour-là.' : active.length ? 'Rien de prévu aujourd’hui.' : 'Aucune habitude. Commence par une seule habitude clé, puis ajoutes-en progressivement.'}</EmptyState>
         )}
       </Card>
 
@@ -942,7 +942,7 @@ export default function Habits() {
       <CheckinModal open={checkinOpen} onClose={() => setCheckinOpen(false)} date={date} />
       <PauseModal open={pauseOpen} onClose={() => setPauseOpen(false)} />
       <Modal open={!!relapsing} onClose={() => setRelapsing(null)} title="Noter une rechute ?">
-        <p className="text-sm text-mute">Le compteur de « {relapsing?.name} » repartira de zéro demain. Votre record ({relapsing ? quitBest(relapsing, today) : 0} j) reste enregistré.</p>
+        <p className="text-sm text-mute">Le compteur de « {relapsing?.name} » repartira de zéro demain. Ton record ({relapsing ? quitBest(relapsing, today) : 0} j) reste enregistré.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setRelapsing(null)}>Annuler</Button>
           <Button onClick={() => { logRelapse(relapsing.id, today); setRelapsing(null); }}>Noter</Button>

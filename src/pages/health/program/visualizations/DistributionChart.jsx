@@ -138,7 +138,7 @@ export default function DistributionChart() {
         </>
       ) : (
         <div className="text-sm text-mute text-center py-6 mt-3">
-          {selectedKpi ? 'Pas assez de données (min. 3 points).' : 'Sélectionnez une métrique.'}
+          {selectedKpi ? 'Pas assez de données (min. 3 points).' : 'Sélectionne une métrique.'}
         </div>
       )}
     </Card>

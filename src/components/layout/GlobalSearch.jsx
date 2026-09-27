@@ -92,7 +92,7 @@ export default function GlobalSearch() {
             <div className="px-4 py-8 text-center text-sm text-mute">Aucun résultat pour « {query} ».</div>
           )}
           {!query.trim() && (
-            <div className="px-4 py-8 text-center text-sm text-mute">Tapez pour chercher dans toute l’application.</div>
+            <div className="px-4 py-8 text-center text-sm text-mute">Tape pour chercher dans toute l’application.</div>
           )}
           {results.map((item, i) => {
             const Icon = DOMAIN_ICON[item.domain] || Search;

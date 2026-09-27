@@ -74,7 +74,7 @@ function SettingsModal({ onClose }) {
           <Field label="Délai de paiement (jours)"><Input type="number" min="0" value={f.paymentTermsDays} onChange={set('paymentTermsDays')} /></Field>
           <Field label="TVA par défaut (%)"><Input type="number" min="0" step="0.1" value={f.vatRate} onChange={set('vatRate')} /></Field>
         </div>
-        <Field label="Mention en bas de facture" hint="Votre statut fiscal détermine la mention exacte (TVA ou exonération) : vérifiez-la auprès d’un comptable."><Input value={f.footer} onChange={set('footer')} /></Field>
+        <Field label="Mention en bas de facture" hint="Ton statut fiscal détermine la mention exacte (TVA ou exonération) : vérifie-la auprès d’un comptable."><Input value={f.footer} onChange={set('footer')} /></Field>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
           <Button type="submit">Enregistrer</Button>

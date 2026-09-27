@@ -111,7 +111,7 @@ export default function CareerHistory() {
           ))}
         </div>
       ) : (
-        <EmptyState>Votre historique se construit tout seul : ajoutez votre parcours dans « Profil », vos candidatures, vos contacts et vos publications.</EmptyState>
+        <EmptyState>Ton historique se construit tout seul : ajoute ton parcours dans « Profil », tes candidatures, tes contacts et tes publications.</EmptyState>
       )}
       <p className="text-[11px] text-mute mt-4">Les jalons (rentrée, diplôme, offre, certification…) sont en gras. Le parcours est daté au mois.</p>
     </Card>

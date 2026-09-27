@@ -151,7 +151,7 @@ export default function PhaseEditor({ programId }) {
                       ))}
                     </div>
                   ) : (
-                    <EmptyState>Aucune séance. Créez-en une pour cette phase.</EmptyState>
+                    <EmptyState>Aucune séance. Crées-en une pour cette phase.</EmptyState>
                   )}
 
                   {/* Session builder modal (inline) */}

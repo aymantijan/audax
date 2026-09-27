@@ -243,7 +243,7 @@ export const useHabitStore = create(
           }
         }
         set({ pauses: [...(get().pauses || []), pause], logs });
-        toast(`Pause du ${from} au ${pause.to} : vos séries sont protégées`, 'success');
+        toast(`Pause du ${from} au ${pause.to} : tes séries sont protégées`, 'success');
         return { ok: true };
       },
       // Ends a pause now: keeps past pause days, frees today and the future.
@@ -262,7 +262,7 @@ export const useHabitStore = create(
       // ── Habits to quit ──
       logRelapse: (habitId, date = todayKey()) => {
         set({ habits: get().habits.map((h) => (h.id === habitId ? { ...h, relapses: [...new Set([...(h.relapses || []), date])].sort(), updatedAt: Date.now() } : h)) });
-        toast('Noté. Une rechute n’efface pas vos progrès : on repart.', 'info');
+        toast('Noté. Une rechute n’efface pas tes progrès : on repart.', 'info');
       },
       undoRelapse: (habitId, date) =>
         set({ habits: get().habits.map((h) => (h.id === habitId ? { ...h, relapses: (h.relapses || []).filter((d) => d !== date), updatedAt: Date.now() } : h)) }),

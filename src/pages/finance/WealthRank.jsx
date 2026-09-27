@@ -74,8 +74,8 @@ export default function WealthRank() {
       </div>
 
       <p className="text-xs text-mute">
-        Contrairement au grade du Leaderboard (basé sur l'XP cumulé, jamais perdu), ce rang est une lecture <strong>en direct</strong> de votre patrimoine net —
-        il peut redescendre si votre ANCC baisse, exactement comme une vraie fortune.
+        Contrairement au grade du Leaderboard (basé sur l'XP cumulé, jamais perdu), ce rang est une lecture <strong>en direct</strong> de ton patrimoine net —
+        il peut redescendre si ton ANCC baisse, exactement comme une vraie fortune.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -123,7 +123,7 @@ export default function WealthRank() {
                       <td className="py-2.5 px-4 font-mono text-xs text-mute">{r.level}</td>
                       <td className="py-2.5 px-4">
                         <span className={isCurrent ? 'font-bold text-accent' : achieved ? 'font-medium' : 'text-mute'}>{r.name}</span>
-                        {isCurrent && <Badge color="var(--warning)"> vous êtes ici</Badge>}
+                        {isCurrent && <Badge color="var(--warning)"> tu es ici</Badge>}
                       </td>
                       <td className="py-2.5 px-4 hidden sm:table-cell text-mute text-xs">{r.era}</td>
                       <td className="py-2.5 px-4 text-right tabular-nums">{fmtMAD(r.threshold)}</td>

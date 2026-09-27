@@ -101,7 +101,7 @@ export default function SpiralTimeline() {
     return (
       <Card>
         <div className="text-sm text-mute text-center py-6">
-          Activez un programme avec des dates pour voir la spirale 3D.
+          Active un programme avec des dates pour voir la spirale 3D.
         </div>
       </Card>
     );
@@ -112,7 +112,7 @@ export default function SpiralTimeline() {
 
   return (
     <Card title="🌀 Spirale Temporelle 3D">
-      <div className="text-xs text-mute mb-2">Glissez pour tourner · Chaque point = 1 jour · Couleur = discipline</div>
+      <div className="text-xs text-mute mb-2">Glisse pour tourner · Chaque point = 1 jour · Couleur = discipline</div>
       <div
         ref={containerRef}
         className="relative overflow-hidden rounded-lg bg-surface border border-line select-none"

@@ -78,7 +78,7 @@ export default function GanttTimeline() {
     return (
       <Card>
         <div className="text-sm text-mute text-center py-6">
-          Ajoutez des phases avec dates pour voir le planning Gantt.
+          Ajoute des phases avec des dates pour voir le planning Gantt.
         </div>
       </Card>
     );

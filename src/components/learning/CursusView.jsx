@@ -130,9 +130,9 @@ function UnitCard({ unit, settings, onEditModule, onAddSubject, forecasts }) {
 function Onboarding({ onCreateTerm, onSettings, settings }) {
   const steps = [
     { icon: Settings2, title: 'Règles de notation', text: `Barème /${settings.scale}, validation à ${settings.passMark}, compensation, rattrapage.`, action: onSettings, cta: 'Configurer' },
-    { icon: CalendarClock, title: 'Semestre', text: 'Créez S1 avec ses dates pour suivre les semaines.', action: onCreateTerm, cta: 'Créer S1' },
-    { icon: ClipboardList, title: 'Matières', text: 'Collez la liste du syllabus : modules et coefficients en une fois.' },
-    { icon: Target, title: 'Notes & objectifs', text: 'Saisissez vos notes : moyenne en direct et note nécessaire à l’examen.' },
+    { icon: CalendarClock, title: 'Semestre', text: 'Crée S1 avec ses dates pour suivre les semaines.', action: onCreateTerm, cta: 'Créer S1' },
+    { icon: ClipboardList, title: 'Matières', text: 'Colle la liste du syllabus : modules et coefficients en une fois.' },
+    { icon: Target, title: 'Notes & objectifs', text: 'Saisis tes notes : moyenne en direct et note nécessaire à l’examen.' },
   ];
   return (
     <div className="rounded-2xl border border-line p-6 sm:p-8" style={{ background: `linear-gradient(135deg, ${tint('var(--accent-primary)', 10)}, var(--bg-tertiary) 60%)` }}>
@@ -141,8 +141,8 @@ function Onboarding({ onCreateTerm, onSettings, settings }) {
           <GraduationCap size={22} className="text-accent" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-ink">Configurez votre cursus</h2>
-          <p className="text-sm text-mute">Semestres, modules, coefficients et notes : votre moyenne calculée en temps réel.</p>
+          <h2 className="text-xl font-bold text-ink">Configure ton cursus</h2>
+          <p className="text-sm text-mute">Semestres, modules, coefficients et notes : ta moyenne calculée en temps réel.</p>
         </div>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
@@ -283,14 +283,14 @@ export default function CursusView() {
           <BigStat label="Crédits validés" value={result.creditsTotal ? `${result.creditsEarned}/${result.creditsTotal}` : '—'} sub={result.creditsTotal ? 'modules validés' : 'ajoutez les crédits'} />
           <BigStat label="Prochaine évaluation"
             value={nextExam ? countdownLabel(daysUntil(nextExam.ev.date, today)) : '—'}
-            sub={nextExam ? `${evalTypeLabel(nextExam.ev.type, true)} · ${nextExam.course.name}` : 'datez vos évaluations'}
+            sub={nextExam ? `${evalTypeLabel(nextExam.ev.type, true)} · ${nextExam.course.name}` : 'date tes évaluations'}
             color={nextExam && daysUntil(nextExam.ev.date, today) <= 7 ? 'var(--warning)' : undefined} />
         </div>
       </div>
 
       {/* Modules */}
       <SectionHeader icon={Layers} title="Modules & matières"
-        subtitle="Cliquez une matière pour saisir ses notes, dates d'examen, emploi du temps et programme." />
+        subtitle="Clique sur une matière pour saisir ses notes, dates d'examen, emploi du temps et programme." />
       {units.length ? (
         <div className="space-y-3">
           {units.map((u) => (
@@ -303,7 +303,7 @@ export default function CursusView() {
           <div className="text-center py-6">
             <ClipboardList size={26} className="mx-auto text-mute mb-2" />
             <p className="text-sm text-ink font-medium">Aucune matière dans {term.name}</p>
-            <p className="text-xs text-mute mt-1">Le plus rapide : collez la liste des matières de votre syllabus.</p>
+            <p className="text-xs text-mute mt-1">Le plus rapide : colle la liste des matières de ton syllabus.</p>
             <div className="flex justify-center gap-2 mt-4">
               <Button onClick={() => setBulkOpen(true)}>Coller une liste</Button>
               <Button variant="secondary" onClick={() => setSubjectModal({})}>Ajouter une matière</Button>

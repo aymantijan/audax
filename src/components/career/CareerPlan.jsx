@@ -55,7 +55,7 @@ function PlanFormModal({ plan, onClose }) {
           <Field label="Domaine"><Select value={f.domain} onChange={(e) => setF((p) => ({ ...p, domain: e.target.value }))} options={domainOptions} /></Field>
           <Field label="À atteindre avant le"><Input type="date" value={f.targetDate} onChange={(e) => setF((p) => ({ ...p, targetDate: e.target.value }))} /></Field>
         </div>
-        <Field label="Pourquoi cet objectif ? (optionnel)"><Textarea rows={2} value={f.why} onChange={(e) => setF((p) => ({ ...p, why: e.target.value }))} placeholder="Ce qui vous motive, ce que ça débloque ensuite." /></Field>
+        <Field label="Pourquoi cet objectif ? (optionnel)"><Textarea rows={2} value={f.why} onChange={(e) => setF((p) => ({ ...p, why: e.target.value }))} placeholder="Ce qui te motive, ce que ça débloque ensuite." /></Field>
         {error && <p className="text-bad text-sm">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
@@ -159,7 +159,7 @@ function PlanCard({ plan, onEdit }) {
                 );
               })}
             </ul>
-          ) : <p className="text-xs text-mute">Listez ce que les recruteurs attendent pour ce poste : c’est votre écart à combler.</p>}
+          ) : <p className="text-xs text-mute">Liste ce que les recruteurs attendent pour ce poste : c’est ton écart à combler.</p>}
         </div>
 
         <div>
@@ -213,7 +213,7 @@ export default function CareerPlan() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-mute">Où voulez-vous aller, pour quand, et que vous manque-t-il ? Vos objectifs apparaissent aussi dans <Link to="/goals" className="text-accent hover:underline">Objectifs</Link>.</p>
+        <p className="text-sm text-mute">Où veux-tu aller, pour quand, et que te manque-t-il ? Tes objectifs apparaissent aussi dans <Link to="/goals" className="text-accent hover:underline">Objectifs</Link>.</p>
         <Button onClick={() => setForm('new')}><span className="flex items-center gap-1.5"><Plus size={15} /> Nouvel objectif</span></Button>
       </div>
 
@@ -231,7 +231,7 @@ export default function CareerPlan() {
       </Card>
 
       {active.length ? active.map((p) => <PlanCard key={p.id} plan={p} onEdit={setForm} />) : (
-        <Card><EmptyState><CalendarClock className="mx-auto mb-2 text-mute" size={24} />Aucun objectif. Commencez par un seul, précis et daté — par exemple votre prochain stage.</EmptyState></Card>
+        <Card><EmptyState><CalendarClock className="mx-auto mb-2 text-mute" size={24} />Aucun objectif. Commence par un seul, précis et daté, par exemple ton prochain stage.</EmptyState></Card>
       )}
 
       {achieved.length > 0 && (

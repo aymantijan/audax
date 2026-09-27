@@ -178,7 +178,7 @@ export const useCareerStore = create(
       weeklyTargets: { applications: 3, touches: 3, posts: 1 },
       setWeeklyTargets: (t) => set({ weeklyTargets: { ...get().weeklyTargets, ...Object.fromEntries(Object.entries(t).map(([k, v]) => [k, Math.max(0, Number(v) || 0)])) } }),
       addPlan: (data) => {
-        if (!data.title?.trim()) return { ok: false, error: 'Donnez un intitulé à l’objectif.' };
+        if (!data.title?.trim()) return { ok: false, error: 'Donne un intitulé à l’objectif.' };
         const plan = { id: uid(), title: data.title.trim(), domain: data.domain || 'Général', type: data.type || '', targetDate: data.targetDate || '', why: data.why || '', status: 'active', skills: [], milestones: [], createdAt: Date.now() };
         set({ plans: [...(get().plans || []), plan] });
         toast('Objectif de carrière créé', 'success');

@@ -38,7 +38,7 @@ function LabelField({ label, value, onChange, account, placeholder }) {
           onClick={() => onChange(didYouMean.label)}
           className="block text-[11px] text-accent hover:underline mt-1 cursor-pointer"
         >
-          Vous voulez dire : « {didYouMean.label} » ?
+          Tu voulais dire : « {didYouMean.label} » ?
         </button>
       )}
     </Field>
@@ -370,8 +370,8 @@ export default function Journal() {
         ) : (
           <EmptyState>
             {simple
-              ? <>Aucune opération. Commencez par « Nouvelle opération » → Autres… → « Soldes de départ » pour indiquer ce que vous avez sur chaque compte, puis ajoutez vos dépenses et revenus.</>
-              : <>Aucune écriture. Commencez par « Soldes d'ouverture » pour inventorier vos avoirs, puis saisissez vos opérations.</>}
+              ? <>Aucune opération. Commence par « Nouvelle opération » → Autres… → « Soldes de départ » pour indiquer ce que tu as sur chaque compte, puis ajoute tes dépenses et revenus.</>
+              : <>Aucune écriture. Commence par « Soldes d'ouverture » pour inventorier tes avoirs, puis saisis tes opérations.</>}
           </EmptyState>
         )}
       </Card>
@@ -384,7 +384,7 @@ export default function Journal() {
       <QuickEntryModal open={quickOpen} onClose={() => setQuickOpen(false)} />
       <BankImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title={simple ? 'Supprimer cette opération ?' : 'Supprimer cette écriture ?'}>
-        <p className="text-sm text-mute">« {deleting?.label} » sera supprimée, ainsi que son effet sur vos soldes, budgets et états.</p>
+        <p className="text-sm text-mute">« {deleting?.label} » sera supprimée, ainsi que son effet sur tes soldes, budgets et états.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
           <Button variant="danger" onClick={() => { deleteEntry(deleting.id); setDeleting(null); }}>Supprimer</Button>

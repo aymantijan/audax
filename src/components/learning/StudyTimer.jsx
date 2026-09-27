@@ -189,7 +189,7 @@ export function StudyTimerCard({ preselect, allDomains = false }) {
           <div className="text-[10px] text-mute">{target ? (reached ? 'objectif atteint ✓' : `sur ${timer.targetMin} min`) : 'chrono libre'}</div>
         </Ring>
         <div className="flex-1 w-full space-y-2">
-          {reached && <div className="text-xs rounded-lg px-3 py-2" style={{ background: tint('var(--success)', 12), color: 'var(--success)' }}>Bravo ! Faites une pause de 5–10 min, ou continuez sur votre lancée.</div>}
+          {reached && <div className="text-xs rounded-lg px-3 py-2" style={{ background: tint('var(--success)', 12), color: 'var(--success)' }}>Bravo ! Fais une pause de 5–10 min, ou continue sur ta lancée.</div>}
           <div className="grid grid-cols-2 gap-2">
             {timer.pausedAt
               ? <Button variant="secondary" onClick={resumeTimer}><span className="flex items-center justify-center gap-1.5"><Play size={14} /> Reprendre</span></Button>

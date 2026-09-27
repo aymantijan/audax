@@ -254,7 +254,7 @@ export default function EngineeringGanttChart({ project, updateTask, deleteTask 
   };
 
   if (!tasks.length) {
-    return <Card title="Gantt"><EmptyState>Ajoutez des tâches (bouton ci-dessus) pour voir apparaître le planning.</EmptyState></Card>;
+    return <Card title="Gantt"><EmptyState>Ajoute des tâches (bouton ci-dessus) pour voir apparaître le planning.</EmptyState></Card>;
   }
 
   const timelineW = range ? range.totalDays * dayWidth : 0;

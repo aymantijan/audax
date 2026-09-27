@@ -192,7 +192,7 @@ export const useFreelanceStore = create(
         const e = get().engagements.find((x) => x.id === engagementId);
         if (!e) return { ok: false, error: 'Client introuvable.' };
         const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({ id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unitPrice: Number(l.unitPrice) || 0 }));
-        if (!lines.length) return { ok: false, error: 'Ajoutez au moins une ligne.' };
+        if (!lines.length) return { ok: false, error: 'Ajoute au moins une ligne.' };
         const st = get().invoiceSettings;
         const date = data.date || todayKey();
         const number = `${st.prefix || 'FAC'}-${date.slice(0, 4)}-${String(st.nextNumber || 1).padStart(3, '0')}`;

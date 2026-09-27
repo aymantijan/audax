@@ -129,7 +129,7 @@ export default function Finance() {
           <h1 className="text-2xl font-bold text-ink">Finances</h1>
           <p className="text-mute text-sm mt-1">
             {mode === 'simple'
-              ? `Vos dépenses, revenus, budget, épargne et patrimoine — sans jargon comptable. Montants en ${cur.label.toLowerCase()} (${cur.short}).`
+              ? `Tes dépenses, revenus, budget, épargne et patrimoine, sans jargon comptable. Montants en ${cur.label.toLowerCase()} (${cur.short}).`
               : `Comptabilité personnelle en partie double : journal, états de synthèse, analyse, budget, trésorerie et objectifs. Montants en ${cur.label.toLowerCase()} (${cur.short}).`}
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function Finance() {
       {todayEnergyLog && todayEnergyLog.stressLevel > 7 && (
         <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-xl px-4 py-3">
           <HeartCrack size={16} className="shrink-0" />
-          Stress élevé aujourd’hui ({todayEnergyLog.stressLevel}/10) : évitez les achats non essentiels pendant 24 h. Les dépenses sous stress sont souvent émotionnelles, pas planifiées.
+          Stress élevé aujourd’hui ({todayEnergyLog.stressLevel}/10) : évite les achats non essentiels pendant 24 h. Les dépenses sous stress sont souvent émotionnelles, pas planifiées.
         </div>
       )}
 

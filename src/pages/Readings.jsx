@@ -182,8 +182,8 @@ export default function Readings({ embedded = false }) {
           onSave={(values) => adjustBookCounts(editingCounts.id, values)}
         />
       )}
-      <Modal open={!!removing} onClose={() => setRemoving(null)} title="Retirer ce livre de vos lectures ?">
-        <p className="text-sm text-mute">« {removing?.book?.title} » reste dans la bibliothèque ; seule votre progression de lecture est supprimée.</p>
+      <Modal open={!!removing} onClose={() => setRemoving(null)} title="Retirer ce livre de tes lectures ?">
+        <p className="text-sm text-mute">« {removing?.book?.title} » reste dans la bibliothèque ; seule ta progression de lecture est supprimée.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setRemoving(null)}>Annuler</Button>
           <Button variant="danger" onClick={() => { removeFromReading(removing.id); setRemoving(null); }}>Retirer</Button>

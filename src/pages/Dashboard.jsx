@@ -214,8 +214,8 @@ export default function Dashboard() {
     const unjournaled = monthTrades.filter((t) => !t.journal?.reasoning);
     if (unjournaled.length) items.push({ to: '/trading', text: `Justifier ${unjournaled.length} trade(s) sans raisonnement dans le journal` });
     const lowest = Object.entries(synergy.scores).sort((a, b) => a[1] - b[1])[0];
-    if (lowest) items.push({ to: domainRoute(lowest[0]), text: `Renforcer votre pilier le plus faible : ${domainLabel(lowest[0])} (${lowest[1]}/100)` });
-    if (!items.length) items.push({ to: '/', text: 'Tout est fait — protégez votre série.' });
+    if (lowest) items.push({ to: domainRoute(lowest[0]), text: `Renforcer ton pilier le plus faible : ${domainLabel(lowest[0])} (${lowest[1]}/100)` });
+    if (!items.length) items.push({ to: '/', text: 'Tout est fait : protège ta série.' });
     return items;
   }, [activeHabits, doneToday, todayEnergy, monthTrades, synergy.scores]);
 
@@ -329,7 +329,7 @@ export default function Dashboard() {
       <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 ${tradingEnabled ? 'lg:grid-cols-5' : 'lg:grid-cols-3'}`}>
         {tradingEnabled && <Stat label="Valeur du compte" value={fmtMoney(account)} />}
         {tradingEnabled && <Stat label="P&L du mois" value={fmtSignedMoney(monthStats.totalPnl)} color={monthStats.totalPnl >= 0 ? 'var(--success)' : 'var(--error)'} sub={`${monthStats.count} trades · ${monthStats.count ? fmtPct(monthStats.winRate) : '—'} gagnants`} />}
-        <Stat label="Patrimoine net" value={netWorth !== null ? fmtMAD(netWorth) : '—'} sub="calculé depuis vos comptes" />
+        <Stat label="Patrimoine net" value={netWorth !== null ? fmtMAD(netWorth) : '—'} sub="calculé depuis tes comptes" />
         <Stat label="GPA" value={gpa !== null ? gpa.toFixed(2) : '—'} sub={`${courses.filter((c) => c.status === 'active').length} cours en cours`} />
         <Stat label="Énergie du jour" value={todayEnergy ? `${todayEnergy.energyStartLevel}/10` : '—'} sub={todayEnergy ? `Stress ${todayEnergy.stressLevel}/10` : 'Pas encore renseignée'} />
       </div>
@@ -373,7 +373,7 @@ export default function Dashboard() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState>Enregistrez des trades pour voir la courbe de votre compte.</EmptyState>
+              <EmptyState>Enregistre des trades pour voir la courbe de ton compte.</EmptyState>
             )}
           </Card>
         )}
@@ -499,7 +499,7 @@ export default function Dashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState>Aucune série en cours. Cochez une habitude aujourd’hui.</EmptyState>
+            <EmptyState>Aucune série en cours. Coche une habitude aujourd’hui.</EmptyState>
           )}
         </Card>
 
@@ -524,7 +524,7 @@ export default function Dashboard() {
               ))}
             </ul>
           ) : (
-            <EmptyState>Vos passages de niveau et échéances d’objectifs apparaîtront ici.</EmptyState>
+            <EmptyState>Tes passages de niveau et échéances d’objectifs apparaîtront ici.</EmptyState>
           )}
         </Card>
       </div>

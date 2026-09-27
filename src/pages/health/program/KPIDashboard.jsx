@@ -50,7 +50,7 @@ export default function KPIDashboard() {
       {kpis.length === 0 ? (
         <EmptyState>
           <BarChart3 size={20} className="mx-auto mb-2" />
-          Aucun KPI suivi. Ajoutez des indicateurs pour mesurer votre progression.
+          Aucun KPI suivi. Ajoute des indicateurs pour mesurer ta progression.
         </EmptyState>
       ) : (
         <div className="space-y-4">

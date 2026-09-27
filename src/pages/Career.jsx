@@ -33,7 +33,7 @@ const SPACES = [
   { key: 'profil', label: 'Profil', desc: 'CV, parcours, compétences', icon: IdCard },
   { key: 'reseau', label: 'Réseau', desc: 'Contacts & relances', icon: Users },
   { key: 'visibilite', label: 'Visibilité', desc: 'Publications & marque perso', icon: Megaphone },
-  { key: 'historique', label: 'Historique', desc: 'Tout votre parcours', icon: History },
+  { key: 'historique', label: 'Historique', desc: 'Tout ton parcours', icon: History },
 ];
 
 const blank = () => ({ company: '', role: '', type: APPLICATION_TYPES[0], domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
@@ -242,7 +242,7 @@ function Pilotage() {
             })}
           </div>
         ) : (
-          <Card><EmptyState><Briefcase className="mx-auto mb-2 text-mute" size={26} />Aucune candidature. Ajoutez la première — stage, PFE, alternance ou emploi.</EmptyState></Card>
+          <Card><EmptyState><Briefcase className="mx-auto mb-2 text-mute" size={26} />Aucune candidature. Ajoute la première : stage, PFE, alternance ou emploi.</EmptyState></Card>
         )
       ) : (
         <Card title={`Candidatures (${applications.length})`}>
@@ -353,7 +353,7 @@ export default function Career({ initialTab }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Carrière</h1>
-          <p className="text-mute text-sm mt-1">Candidatures, profil, réseau et visibilité — votre progression professionnelle au même endroit.</p>
+          <p className="text-mute text-sm mt-1">Candidatures, profil, réseau et visibilité : ta progression professionnelle au même endroit.</p>
         </div>
         <Button variant="secondary" onClick={() => setDomainsOpen(true)}><span className="flex items-center gap-1.5"><Tags size={15} /> Domaines</span></Button>
       </div>

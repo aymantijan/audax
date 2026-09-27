@@ -73,7 +73,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-base font-semibold text-ink"><CalendarDays size={16} className="text-accent" /> Structure hebdomadaire</h3>
-          <p className="mt-0.5 text-xs text-mute">Cochez les séances de chaque jour — chacune a sa propre heure, durée et lieu.</p>
+          <p className="mt-0.5 text-xs text-mute">Coche les séances de chaque jour : chacune a sa propre heure, sa durée et son lieu.</p>
         </div>
         <span className="text-xs text-mute">{sessions.length} séance(s)</span>
       </div>
@@ -86,7 +86,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
       )}
 
       {!sessions.length && (
-        <div className="rounded-lg border border-line bg-surface px-3 py-3 text-sm text-mute">Créez d’abord des séances dans cette phase.</div>
+        <div className="rounded-lg border border-line bg-surface px-3 py-3 text-sm text-mute">Crée d’abord des séances dans cette phase.</div>
       )}
 
       {/* Week at a glance */}

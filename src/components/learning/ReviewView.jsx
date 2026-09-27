@@ -215,7 +215,7 @@ function DeckDetail({ deck, onBack, onReview }) {
           ))}
         </div>
       ) : (
-        <Card><p className="text-sm text-mute text-center py-4">{q ? 'Aucune fiche ne correspond.' : 'Paquet vide : ajoutez vos premières fiches ou importez une liste.'}</p></Card>
+        <Card><p className="text-sm text-mute text-center py-4">{q ? 'Aucune fiche ne correspond.' : 'Paquet vide : ajoute tes premières fiches ou importe une liste.'}</p></Card>
       )}
 
       <CardModal open={!!cardModal} onClose={() => setCardModal(null)} deckId={deck.id} card={cardModal?.card} />
@@ -317,8 +317,8 @@ export default function ReviewView() {
         <Card>
           <div className="text-center py-6 max-w-lg mx-auto">
             <Brain size={28} className="mx-auto text-mute mb-2" />
-            <p className="text-sm font-medium text-ink">Mémorisez pour de bon avec la répétition espacée</p>
-            <p className="text-xs text-mute mt-1">Chaque fiche revient juste avant que vous ne l'oubliiez : quelques minutes par jour suffisent pour retenir définitions, formules, vocabulaire ou règles de trading.</p>
+            <p className="text-sm font-medium text-ink">Mémorise pour de bon avec la répétition espacée</p>
+            <p className="text-xs text-mute mt-1">Chaque fiche revient juste avant que tu ne l'oublies : quelques minutes par jour suffisent pour retenir définitions, formules, vocabulaire ou règles de trading.</p>
             <Button className="mt-4" onClick={() => setDeckModal(true)}>Créer mon premier paquet</Button>
           </div>
         </Card>
@@ -334,7 +334,7 @@ export default function ReviewView() {
             <Select value={settings.retention} onChange={(e) => updateSettings({ retention: Number(e.target.value) })}
               options={[0.8, 0.85, 0.9, 0.93, 0.95].map((v) => ({ value: v, label: `${Math.round(v * 100)} %` }))} />
           </Field>
-          <div className="flex items-start gap-2 text-[11px] text-mute"><Target size={12} className="mt-0.5 shrink-0" /> Algorithme FSRS (celui d'Anki) : l'intervalle s'adapte à chaque fiche selon vos réponses.</div>
+          <div className="flex items-start gap-2 text-[11px] text-mute"><Target size={12} className="mt-0.5 shrink-0" /> Algorithme FSRS (celui d'Anki) : l'intervalle s'adapte à chaque fiche selon tes réponses.</div>
           <div className="flex justify-end"><Button onClick={() => setSettingsOpen(false)}>Fermer</Button></div>
         </div>
       </Modal>

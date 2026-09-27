@@ -52,7 +52,7 @@ export const transactionSchema = z.object({
 });
 
 export const habitSchema = z.object({
-  name: z.string().min(1, 'Donnez un nom à l’habitude'),
+  name: z.string().min(1, 'Donne un nom à l’habitude'),
   category: z.enum(HABIT_CATEGORIES),
   xpReward: z.coerce.number().min(0).max(50),
   linkedSkill: z.string().optional(),

@@ -65,7 +65,7 @@ export default function LocationManager() {
       )}
 
       {!locations.length && !adding ? (
-        <EmptyState>Aucun lieu enregistré. Ajoutez votre salle, maison, parc…</EmptyState>
+        <EmptyState>Aucun lieu enregistré. Ajoute ta salle, ta maison, un parc…</EmptyState>
       ) : (
         <div className="space-y-2">
           {locations.map((loc) => (

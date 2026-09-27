@@ -21,7 +21,7 @@ export default function TrophyBoard() {
       <Card>
         <EmptyState>
           <Trophy size={20} className="mx-auto mb-2" />
-          Pas encore de trophées. Atteignez vos objectifs pour débloquer des récompenses !
+          Pas encore de trophées. Atteins tes objectifs pour débloquer des récompenses !
         </EmptyState>
       </Card>
     );

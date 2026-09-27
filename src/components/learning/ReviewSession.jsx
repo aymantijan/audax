@@ -105,10 +105,10 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-mute mt-4">Les fiches reviendront automatiquement au bon moment : juste avant que vous ne les oubliiez.</p>
+                <p className="text-[11px] text-mute mt-4">Les fiches reviendront automatiquement au bon moment : juste avant que tu ne les oublies.</p>
               </>
             ) : (
-              <p className="text-sm text-mute mt-1">Toutes vos fiches sont à jour. Ajoutez-en de nouvelles ou revenez plus tard.</p>
+              <p className="text-sm text-mute mt-1">Toutes tes fiches sont à jour. Ajoutes-en de nouvelles ou reviens plus tard.</p>
             )}
             <Button className="mt-6 w-full" onClick={finish}>Fermer</Button>
           </div>
@@ -145,7 +145,7 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
                   ))}
                 </div>
               )}
-              {shown && <p className="text-[11px] text-mute text-center mt-3 flex items-center justify-center gap-1"><RotateCcw size={10} /> Soyez honnête : « À revoir » fait revenir la fiche dans quelques minutes.</p>}
+              {shown && <p className="text-[11px] text-mute text-center mt-3 flex items-center justify-center gap-1"><RotateCcw size={10} /> Sois honnête : « À revoir » fait revenir la fiche dans quelques minutes.</p>}
             </div>
           </div>
         )}

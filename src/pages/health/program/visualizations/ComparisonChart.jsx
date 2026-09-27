@@ -72,7 +72,7 @@ export default function ComparisonChart() {
     return (
       <Card>
         <div className="text-sm text-mute text-center py-6">
-          Ajoutez des KPIs pour comparer des périodes.
+          Ajoute des KPIs pour comparer des périodes.
         </div>
       </Card>
     );

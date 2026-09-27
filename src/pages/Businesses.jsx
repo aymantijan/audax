@@ -45,7 +45,7 @@ export default function Businesses() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-mute text-sm">Suivez un business de A à Z (formel, avec comptabilité) ou un side-project léger (juste étapes et tâches) — un seul endroit pour tout ce que vous construisez.</p>
+        <p className="text-mute text-sm">Suis un business de A à Z (formel, avec comptabilité) ou un side-project léger (juste étapes et tâches) : un seul endroit pour tout ce que tu construis.</p>
         <Button onClick={() => setModal(true)}>
           <span className="flex items-center gap-2"><Plus size={16} /> Nouveau</span>
         </Button>
@@ -106,7 +106,7 @@ export default function Businesses() {
         </div>
       ) : (
         <Card>
-          <EmptyState><Rocket className="mx-auto mb-2 text-mute" size={26} />Rien de suivi encore. Créez le premier pour commencer.</EmptyState>
+          <EmptyState><Rocket className="mx-auto mb-2 text-mute" size={26} />Rien de suivi encore. Crée le premier pour commencer.</EmptyState>
         </Card>
       )}
 

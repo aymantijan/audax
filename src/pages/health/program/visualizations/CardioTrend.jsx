@@ -126,7 +126,7 @@ export default function CardioTrend() {
         </ResponsiveContainer>
       ) : (
         <div className="text-sm text-mute text-center py-8">
-          Aucune donnée « {activeMetric?.label} » pour cette sélection. Renseignez cette métrique en loggant vos séances.
+          Aucune donnée « {activeMetric?.label} » pour cette sélection. Renseigne cette métrique en enregistrant tes séances.
         </div>
       )}
 

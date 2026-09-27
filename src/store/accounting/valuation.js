@@ -42,17 +42,17 @@ export const valuationSlice = (set, get) => ({
         let startAmount = null;
         let contributions = [];
         if (kind === 'account') {
-          if (!data.account) return { ok: false, error: 'Choisissez le compte dédié.' };
+          if (!data.account) return { ok: false, error: 'Choisis le compte dédié.' };
           startAmount = accountBalances(get().journal)[data.account]?.balance || 0;
           if (startAmount >= targetAmount) return { ok: false, error: `Ce compte contient déjà ${Math.round(startAmount)} DH : fixez une cible plus haute.` };
         } else if (kind === 'networth') {
           startAmount = get().getNetWorth().ancc;
-          if (startAmount >= targetAmount) return { ok: false, error: `Votre patrimoine net est déjà de ${Math.round(startAmount)} DH : fixez une cible plus haute.` };
+          if (startAmount >= targetAmount) return { ok: false, error: `Ton patrimoine net est déjà de ${Math.round(startAmount)} DH : fixe une cible plus haute.` };
         } else {
           const initial = Number(data.initialAmount) || 0;
           if (initial > 0) {
             const { unallocated } = get().getGoalAllocation();
-            if (initial > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur vos comptes.` };
+            if (initial > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur tes comptes.` };
             if (initial >= targetAmount) return { ok: false, error: 'Le montant de départ atteint déjà la cible.' };
             contributions = [{ id: uid(), date: localDateKey(new Date()), amount: initial, note: 'Épargne déjà constituée' }];
           }
@@ -80,7 +80,7 @@ export const valuationSlice = (set, get) => ({
         const current = (g.contributions || []).reduce((s, c) => s + Number(c.amount), 0);
         if (amt > 0) {
           const { unallocated } = get().getGoalAllocation();
-          if (amt > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur vos comptes.` };
+          if (amt > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur tes comptes.` };
         } else if (-amt > current + 0.005) return { ok: false, error: `L'enveloppe ne contient que ${Math.round(current)} DH.` };
         set({ goals: get().goals.map((x) => (x.id === id ? stamp({ ...x, kind, contributions: [...(x.contributions || []), { id: uid(), date: localDateKey(new Date()), amount: amt, note }] }) : x)) });
         return { ok: true };

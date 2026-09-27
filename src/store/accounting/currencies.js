@@ -194,10 +194,10 @@ export const currenciesSlice = (set, get) => ({
           if (!limit) continue;
           const ratios = computeLabelRatiosAfter(journal, { account: line.account, label: entry.label, amount: Number(line.debit), date: entry.date });
           if (limit.maxRatioToIncomePct != null && ratios.ratioToIncome != null && ratios.ratioToIncome > limit.maxRatioToIncomePct) {
-            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToIncome}% de vos revenus du mois (limite : ${limit.maxRatioToIncomePct}%). Ajustez ou supprimez la limite dans l'onglet Libellés si vous voulez tout de même saisir cette dépense.` };
+            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToIncome}% de tes revenus du mois (limite : ${limit.maxRatioToIncomePct}%). Ajuste ou supprime la limite dans l'onglet Libellés si tu voulez tout de même saisir cette dépense.` };
           }
           if (limit.maxRatioToAccountSpendPct != null && ratios.ratioToAccountSpend != null && ratios.ratioToAccountSpend > limit.maxRatioToAccountSpendPct) {
-            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToAccountSpend}% de vos dépenses "${ACCOUNT_MAP[line.account]?.label || line.account}" du mois (limite : ${limit.maxRatioToAccountSpendPct}%). Ajustez ou supprimez la limite dans l'onglet Libellés si vous voulez tout de même saisir cette dépense.` };
+            return { ok: false, error: `Bloqué : "${entry.label}" atteindrait ${ratios.ratioToAccountSpend}% de tes dépenses "${ACCOUNT_MAP[line.account]?.label || line.account}" du mois (limite : ${limit.maxRatioToAccountSpendPct}%). Ajuste ou supprime la limite dans l'onglet Libellés si tu veux tout de même saisir cette dépense.` };
           }
         }
         return { ok: true };

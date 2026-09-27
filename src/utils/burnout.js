@@ -10,7 +10,7 @@ export function checkBurnoutTriggers({ energyLogs = [], compliance = null, trade
       trigger: 'LOW_ENERGY_3DAYS',
       severity: 'high',
       message: 'Énergie dangereusement basse depuis 3 jours ou plus',
-      recommendation: 'Prenez un jour de repos, priorité au sommeil',
+      recommendation: 'Prends un jour de repos, priorité au sommeil',
     });
   }
   if (last7.filter((l) => l.stressLevel > 7).length >= 5) {
@@ -26,7 +26,7 @@ export function checkBurnoutTriggers({ energyLogs = [], compliance = null, trade
       trigger: 'POOR_SLEEP_5DAYS',
       severity: 'high',
       message: 'Qualité de sommeil très basse sur au moins 5 des 7 derniers jours',
-      recommendation: 'Rétablissez vos horaires de sommeil au plus vite, pas de trading',
+      recommendation: 'Rétablis tes horaires de sommeil au plus vite, pas de trading',
     });
   }
   if (compliance && compliance.total >= 7 && compliance.rate < 0.3) {
@@ -34,7 +34,7 @@ export function checkBurnoutTriggers({ energyLogs = [], compliance = null, trade
       trigger: 'LOW_HABIT_COMPLIANCE',
       severity: 'medium',
       message: 'Moins de 30 % des habitudes tenues cette semaine',
-      recommendation: 'Simplifiez vos habitudes, gardez l’essentiel',
+      recommendation: 'Simplifie tes habitudes, garde l’essentiel',
     });
   }
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -46,7 +46,7 @@ export function checkBurnoutTriggers({ energyLogs = [], compliance = null, trade
         trigger: 'TRADING_ACCURACY_DROP',
         severity: 'medium',
         message: `Taux de réussite tombé à ${Math.round(winRate * 100)} % (habituel : ${Math.round(baselineWinRate * 100)} %)`,
-        recommendation: 'Revoyez vos derniers trades, vérifiez s’il y a du trading émotionnel',
+        recommendation: 'Revois tes derniers trades, vérifie s’il y a du trading émotionnel',
       });
     }
   }

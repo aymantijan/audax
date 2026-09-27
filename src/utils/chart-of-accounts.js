@@ -219,14 +219,14 @@ export const ENTRY_TEMPLATES = [
   {
     id: 'lend',
     label: 'Prêt accordé / caution versée',
-    hint: 'La créance est débitée (on vous doit), la trésorerie est créditée.',
+    hint: 'La créance est débitée (on te doit), la trésorerie est créditée.',
     debit: { classes: [3], default: '341', role: 'Créance créée' },
     credit: { classes: [5], default: '511', role: 'Compte source' },
   },
   {
     id: 'opening',
     label: "Soldes d'ouverture (à-nouveaux)",
-    hint: 'Premier inventaire : vos avoirs sont débités, le capital personnel est crédité.',
+    hint: 'Premier inventaire : tes avoirs sont débités, le capital personnel est crédité.',
     debit: { classes: [2, 3, 5], default: '511', role: 'Avoir inventorié' },
     credit: { classes: [1], default: '111', role: 'Contrepartie (capital)' },
   },

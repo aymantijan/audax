@@ -18,13 +18,13 @@ export function CurrencySettingsModal({ open, onClose }) {
   return (
     <Modal open={open} onClose={onClose} title="Devises" wide>
       <div className="space-y-5">
-        <Field label="Devise principale" hint={locked ? undefined : 'Toute votre comptabilité (soldes, budgets, objectifs, bilans) sera tenue dans cette devise.'}>
+        <Field label="Devise principale" hint={locked ? undefined : 'Toute ta comptabilité (soldes, budgets, objectifs, bilans) sera tenue dans cette devise.'}>
           <Select value={baseCurrency} disabled={locked} onChange={(e) => { const r = setBaseCurrency(e.target.value); if (!r.ok) setMsg(r.error); }}
             options={CURRENCIES.filter((c) => c.code !== 'BTC').map((c) => ({ value: c.code, label: `${c.label} (${c.short})` }))} />
         </Field>
         {locked && (
           <p className="text-[11px] text-mute flex items-start gap-1.5 -mt-3">
-            <Lock size={11} className="mt-0.5 shrink-0" /> Verrouillée : vos {journal.length} opérations sont exprimées en {base.label.toLowerCase()}. Les opérations dans d'autres devises sont converties au taux ci-dessous, avec le montant d'origine conservé.
+            <Lock size={11} className="mt-0.5 shrink-0" /> Verrouillée : tes {journal.length} opérations sont exprimées en {base.label.toLowerCase()}. Les opérations dans d'autres devises sont converties au taux ci-dessous, avec le montant d'origine conservé.
           </p>
         )}
         {msg && <p className="text-sm text-bad">{msg}</p>}

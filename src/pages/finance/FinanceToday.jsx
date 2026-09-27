@@ -84,7 +84,7 @@ export default function FinanceToday() {
             <div className="mt-4 rounded-xl border px-3 py-2.5 text-xs flex items-start gap-2" style={{ borderColor: tint('var(--warning)', 40), background: tint('var(--warning)', 8) }}>
               <Info size={13} className="text-warning shrink-0 mt-0.5" />
               <span className="text-mute">
-                Ce mois-ci, vos dépenses prévues dépassent vos revenus de <b className="text-ink">{fmtMAD(deficit)}</b> : l'écart est pris sur votre épargne libre ({fmtMAD(alloc.unallocated)}).
+                Ce mois-ci, tes dépenses prévues dépassent tes revenus de <b className="text-ink">{fmtMAD(deficit)}</b> : l'écart est pris sur ton épargne libre ({fmtMAD(alloc.unallocated)}).
                 {' '}À ce rythme, elle couvre environ <b className="text-ink">{runway >= 24 ? 'plus de 2 ans' : `${runway.toFixed(1).replace('.', ',')} mois`}</b>.
               </span>
             </div>
@@ -97,7 +97,7 @@ export default function FinanceToday() {
             <span>Revenus encore attendus (échéances)</span><span className="text-good sm:text-right">+{fmtMAD(t.upcomingIncome)}</span>
             <span>Dépenses déjà faites</span><span className="text-bad sm:text-right">−{fmtMAD(t.expense)}</span>
             <span>Dépenses encore prévues (échéances)</span><span className="text-bad sm:text-right">−{fmtMAD(t.upcomingExpense)}</span>
-            <span>Épargne prévue pour vos objectifs</span><span className="sm:text-right">−{fmtMAD(t.savingsLeft)}</span>
+            <span>Épargne prévue pour tes objectifs</span><span className="sm:text-right">−{fmtMAD(t.savingsLeft)}</span>
             <span className="font-semibold text-ink">Reste à dépenser</span><span className="font-semibold sm:text-right" style={{ color }}>{fmtMAD(t.remaining)}</span>
           </div>
         )}
@@ -122,7 +122,7 @@ export default function FinanceToday() {
             ) : <div className="text-[11px] text-mute">aucun revenu ce mois</div>}
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Libre sur vos comptes</div>
+            <div className="text-[11px] uppercase tracking-wide text-mute">Libre sur tes comptes</div>
             <div className="text-xl font-bold tabular-nums" style={{ color: alloc.unallocated < 0 ? 'var(--error)' : 'var(--text-primary)' }}>{fmtMAD(alloc.unallocated)}</div>
             <div className="text-[11px] text-mute">hors argent mis de côté</div>
           </div>
@@ -160,7 +160,7 @@ export default function FinanceToday() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-mute">Rien de prévu cette semaine. Ajoutez loyer, abonnements, bourse… dans <Link to="/finance?tab=echeances" className="text-accent underline">Échéances</Link>.</p>
+            <p className="text-sm text-mute">Rien de prévu cette semaine. Ajoute loyer, abonnements, bourse… dans <Link to="/finance?tab=echeances" className="text-accent underline">Échéances</Link>.</p>
           )}
         </Section>
 
@@ -191,7 +191,7 @@ export default function FinanceToday() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-mute">Aucun budget. Fixez des plafonds (restaurants, shopping…) dans <Link to="/finance?tab=budget" className="text-accent underline">Budget</Link> pour les voir ici.</p>
+            <p className="text-sm text-mute">Aucun budget. Fixe des plafonds (restaurants, shopping…) dans <Link to="/finance?tab=budget" className="text-accent underline">Budget</Link> pour les voir ici.</p>
           )}
         </Section>
 
@@ -236,7 +236,7 @@ export default function FinanceToday() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-mute">Aucun objectif d'épargne avec échéance. Créez une enveloppe (voyage, fonds d'urgence…) dans <Link to="/finance?tab=goals" className="text-accent underline">Objectifs</Link> : l'effort mensuel sera réservé ici.</p>
+            <p className="text-sm text-mute">Aucun objectif d'épargne avec échéance. Crée une enveloppe (voyage, fonds d'urgence…) dans <Link to="/finance?tab=goals" className="text-accent underline">Objectifs</Link> : l'effort mensuel sera réservé ici.</p>
           )}
         </Section>
       </div>

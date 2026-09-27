@@ -50,7 +50,7 @@ export default function FocusSessions() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Deep Work</h1>
-          <p className="text-mute text-sm mt-1">Tout votre temps de concentration, par domaine. Le même chrono que dans Apprentissage : il continue quand vous changez de page.</p>
+          <p className="text-mute text-sm mt-1">Tout ton temps de concentration, par domaine. Le même chrono que dans Apprentissage : il continue quand tu changes de page.</p>
         </div>
         <Button variant="secondary" onClick={() => setModal(true)}><span className="flex items-center gap-2"><Plus size={16} /> Ajouter une session</span></Button>
       </div>
@@ -94,7 +94,7 @@ export default function FocusSessions() {
             ))}
           </ul>
         ) : (
-          <EmptyState><Timer className="mx-auto mb-2 text-mute" size={26} />Aucune session pour l'instant. Lancez le chrono ou ajoutez une session passée.</EmptyState>
+          <EmptyState><Timer className="mx-auto mb-2 text-mute" size={26} />Aucune session pour l'instant. Lance le chrono ou ajoute une session passée.</EmptyState>
         )}
       </Card>
 

@@ -64,7 +64,7 @@ export default function QuickEntryModal({ open, onClose }) {
   const name = (code) => accountMap[code]?.label || code;
   const save = (again) => {
     const { base: amt, fx } = moneyToEntry(money, baseCurrency, fxRates);
-    if (!amt || amt <= 0) { toast('Indiquez un montant', 'error'); amountRef.current?.focus(); return; }
+    if (!amt || amt <= 0) { toast('Indique un montant', 'error'); amountRef.current?.focus(); return; }
     const lbl = label.trim() || name(chosenCategory);
     const lines = kind === 'expense'
       ? [{ account: chosenCategory, debit: amt, credit: 0 }, { account: chosenCash, debit: 0, credit: amt }]

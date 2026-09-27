@@ -50,7 +50,7 @@ export function TermModal({ open, onClose, term }) {
           <Field label="Année universitaire"><Input value={f.year || ''} onChange={(e) => setF({ ...f, year: e.target.value })} placeholder="2026-2027" /></Field>
           <Field label="Début"><Input type="date" value={f.startDate || ''} onChange={(e) => setF({ ...f, startDate: e.target.value })} /></Field>
           <Field label="Fin (après les examens)"><Input type="date" value={f.endDate || ''} onChange={(e) => setF({ ...f, endDate: e.target.value })} /></Field>
-          <Field label="Début des partiels" hint="Laissez vide si inconnue. Les matières réglées « jusqu’aux partiels » s’arrêtent à cette date.">
+          <Field label="Début des partiels" hint="Laisse vide si elle est inconnue. Les matières réglées « jusqu’aux partiels » s’arrêtent à cette date.">
             <Input type="date" value={f.midtermsDate || ''} onChange={(e) => setF({ ...f, midtermsDate: e.target.value })} />
           </Field>
         </div>
@@ -175,7 +175,7 @@ export function BulkImportModal({ open, onClose, termId }) {
     <Modal open={open} onClose={onClose} title="Ajouter plusieurs matières" wide>
       <div className="space-y-4">
         <p className="text-sm text-mute">
-          Collez la liste de votre semestre, <b className="text-ink">une matière par ligne</b> :
+          Colle la liste de ton semestre, <b className="text-ink">une matière par ligne</b> :
           <code className="ml-1 text-xs bg-surface border border-line rounded px-1.5 py-0.5">Matière ; coefficient ; module ; crédits</code>.
           Seul le nom est obligatoire. Les modules sont créés automatiquement.
         </p>
@@ -258,7 +258,7 @@ export function TimetableImportModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Importer un emploi du temps" wide>
       <div className="space-y-4">
         <p className="text-sm text-mute">
-          Collez votre planning, <b className="text-ink">un créneau par ligne</b> :
+          Colle ton planning, <b className="text-ink">un créneau par ligne</b> :
           <code className="ml-1 text-xs bg-surface border border-line rounded px-1.5 py-0.5">Matière ; Jour ; Début-Fin ; Enseignant ; Salle ; Type</code>.
           Enseignant, salle et type (Cours, TD, TP, Séminaire) sont facultatifs. Plusieurs lignes pour une même matière = plusieurs créneaux.
           Une matière déjà présente dans le semestre reçoit simplement les nouveaux créneaux.
@@ -452,7 +452,7 @@ export function GradingSettingsModal({ open, onClose }) {
 
         <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: tint('var(--accent-primary)', 8), color: 'var(--text-secondary)' }}>
           <Info size={14} className="shrink-0 mt-0.5 text-accent" />
-          Vérifiez ces règles dans le règlement pédagogique de votre établissement : toutes les moyennes, statuts et « notes nécessaires » en dépendent.
+          Vérifie ces règles dans le règlement pédagogique de ton établissement : toutes les moyennes, statuts et « notes nécessaires » en dépendent.
         </div>
 
         <div className="flex justify-end gap-2">
@@ -583,7 +583,7 @@ export function CourseFormModal({ open, onClose, kind: initialKind = 'academic',
               <Field label="Professeur"><Input value={f.professor} onChange={(e) => setF({ ...f, professor: e.target.value })} /></Field>
             </div>
             {!course && (
-              <Field label="Évaluations" hint="Vous pourrez ajuster les poids, dates et notes dans la matière.">
+              <Field label="Évaluations" hint="Tu pourras ajuster les poids, dates et notes dans la matière.">
                 <Select value={f.preset} onChange={(e) => setF({ ...f, preset: e.target.value })} options={EVALUATION_PRESETS.map((p) => ({ value: p.key, label: p.label }))} />
               </Field>
             )}

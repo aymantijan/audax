@@ -168,12 +168,12 @@ export function ClassesTodayCard() {
   return (
     <Card>
       <SectionHeader icon={Clock} title="Cours d'aujourd'hui"
-        subtitle={classes.length ? `${score.onTime}/${score.required} à l’heure · pointez « En salle » dès que vous arrivez` : undefined}
+        subtitle={classes.length ? `${score.onTime}/${score.required} à l’heure · pointe « En salle » dès que tu arrives` : undefined}
         action={<Link to="/learning?tab=timetable" className="text-xs text-accent hover:underline">Emploi du temps</Link>} />
       {classes.length ? (
         <div className="space-y-2">{classes.map((o) => <ClassRow key={o.key} occ={o} now={now} />)}</div>
       ) : (
-        <p className="text-sm text-mute py-2">Pas de cours aujourd'hui{courses.some((c) => c.slots?.length) ? '.' : ' — ajoutez vos créneaux dans chaque matière.'}</p>
+        <p className="text-sm text-mute py-2">Pas de cours aujourd'hui{courses.some((c) => c.slots?.length) ? '.' : ' : ajoute tes créneaux dans chaque matière.'}</p>
       )}
     </Card>
   );
@@ -277,7 +277,7 @@ function PushCta() {
       <BellRing size={17} className="text-accent shrink-0" />
       <div className="flex-1 min-w-[12rem] text-sm">
         <b className="text-ink">Rappels de cours, même app fermée.</b>{' '}
-        <span className="text-mute">{state === 'unsupported' ? 'Ce navigateur ne gère pas les notifications push : installez VAUDAX sur l’écran d’accueil (PWA).' : 'Activez-les sur chaque appareil (téléphone surtout).'}</span>
+        <span className="text-mute">{state === 'unsupported' ? 'Ce navigateur ne gère pas les notifications push : installe VAUDAX sur l’écran d’accueil (PWA).' : 'Active-les sur chaque appareil (téléphone surtout).'}</span>
       </div>
       {state === 'off' && <Button className="!py-1.5" onClick={enable}>Activer</Button>}
     </div>

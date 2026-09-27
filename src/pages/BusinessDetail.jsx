@@ -53,7 +53,7 @@ function Timeline({ business }) {
   ].filter(Boolean).sort();
 
   if (!allDates.length) {
-    return <EmptyState>Ajoutez des phases ou des événements (idées/faits) pour voir apparaître la timeline.</EmptyState>;
+    return <EmptyState>Ajoute des phases ou des événements (idées/faits) pour voir apparaître la timeline.</EmptyState>;
   }
 
   const minT = new Date(allDates[0] + 'T00:00:00').getTime();
@@ -460,7 +460,7 @@ export default function BusinessDetail() {
               ))}
             </ul>
           ) : (
-            <EmptyState>Aucune phase. Définissez les grandes étapes de ce business (ex : Idéation, Validation, Lancement, Croissance).</EmptyState>
+            <EmptyState>Aucune phase. Définis les grandes étapes de ce business (ex : Idéation, Validation, Lancement, Croissance).</EmptyState>
           )}
         </Card>
       )}
@@ -536,7 +536,7 @@ export default function BusinessDetail() {
                 })}
               </div>
             ) : (
-              <EmptyState>Aucun KPI. Ajoutez ce que vous voulez suivre (CA mensuel, clients actifs, taux de conversion…).</EmptyState>
+              <EmptyState>Aucun KPI. Ajoute ce que tu veux suivre (CA mensuel, clients actifs, taux de conversion…).</EmptyState>
             )}
           </Card>
         </div>
@@ -586,7 +586,7 @@ export default function BusinessDetail() {
                 </table>
               </div>
             ) : (
-              <EmptyState>Aucune écriture. Enregistrez le premier encaissement ou la première charge.</EmptyState>
+              <EmptyState>Aucune écriture. Enregistre le premier encaissement ou la première charge.</EmptyState>
             )}
           </Card>
         </div>

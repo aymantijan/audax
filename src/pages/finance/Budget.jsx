@@ -79,7 +79,7 @@ function PeriodFields({ value, onChange }) {
         </Field>
       )}
 
-      {value.type === 'weekly' && <p className="text-xs text-mute">La période court toujours du lundi au dimanche, quel que soit le jour où vous consultez.</p>}
+      {value.type === 'weekly' && <p className="text-xs text-mute">La période court toujours du lundi au dimanche, quel que soit le jour où tu consultes.</p>}
 
       {value.type === 'custom' && (
         <>

@@ -47,7 +47,7 @@ export default function HabitLinker() {
       {habitLinks.length === 0 ? (
         <EmptyState>
           <Link2 size={20} className="mx-auto mb-2" />
-          Aucune liaison. Liez une habitude pour automatiser le suivi.
+          Aucune liaison. Lie une habitude pour automatiser le suivi.
         </EmptyState>
       ) : (
         <div className="space-y-2">

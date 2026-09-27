@@ -139,7 +139,7 @@ export default function CareerProfile() {
       <Card>
         <div className="flex flex-col sm:flex-row items-start gap-4">
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-bold">{userName || 'Votre nom'}</div>
+            <div className="text-lg font-bold">{userName || 'Ton nom'}</div>
             <div className="text-sm text-accent">{profile.headline || 'Titre professionnel — ex. « Étudiant ISCAE · Finance de marché »'}</div>
             <div className="text-xs text-mute mt-1">{[profile.location, profile.email, profile.phone].filter(Boolean).join(' · ') || 'Lieu, email, téléphone'}</div>
             {profile.summary && <p className="text-sm text-mute mt-2 whitespace-pre-line">{profile.summary}</p>}
@@ -214,13 +214,13 @@ export default function CareerProfile() {
             setIdForm(null);
           }}>
             <Field label="Titre professionnel"><Input value={idForm.headline} onChange={(e) => setIdForm({ ...idForm, headline: e.target.value })} placeholder="Étudiant ISCAE · Finance de marché & trading" autoFocus /></Field>
-            <Field label="Résumé (3–4 lignes)"><Textarea rows={4} value={idForm.summary} onChange={(e) => setIdForm({ ...idForm, summary: e.target.value })} placeholder="Qui vous êtes, ce que vous apportez, ce que vous cherchez." /></Field>
+            <Field label="Résumé (3–4 lignes)"><Textarea rows={4} value={idForm.summary} onChange={(e) => setIdForm({ ...idForm, summary: e.target.value })} placeholder="Qui tu es, ce que tu apportes, ce que tu cherches." /></Field>
             <div className="grid sm:grid-cols-3 gap-3">
               <Field label="Ville"><Input value={idForm.location} onChange={(e) => setIdForm({ ...idForm, location: e.target.value })} /></Field>
               <Field label="Email"><Input value={idForm.email} onChange={(e) => setIdForm({ ...idForm, email: e.target.value })} /></Field>
               <Field label="Téléphone"><Input value={idForm.phone} onChange={(e) => setIdForm({ ...idForm, phone: e.target.value })} /></Field>
             </div>
-            <Field label="Liens (un par ligne : Nom | adresse)" hint="ex. LinkedIn | linkedin.com/in/votre-profil"><Textarea rows={3} value={idForm.links} onChange={(e) => setIdForm({ ...idForm, links: e.target.value })} /></Field>
+            <Field label="Liens (un par ligne : Nom | adresse)" hint="ex. LinkedIn | linkedin.com/in/ton-profil"><Textarea rows={3} value={idForm.links} onChange={(e) => setIdForm({ ...idForm, links: e.target.value })} /></Field>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setIdForm(null)}>Annuler</Button>
               <Button type="submit">Enregistrer</Button>

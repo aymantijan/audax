@@ -91,7 +91,7 @@ export default function CorrelationNetwork() {
       <Card>
         <div className="text-sm text-mute text-center py-6">
           Pas assez de données pour calculer les corrélations.<br />
-          <span className="text-[10px]">Ajoutez des KPIs et enregistrez des données sur plusieurs jours.</span>
+          <span className="text-[10px]">Ajoute des KPIs et enregistre des données sur plusieurs jours.</span>
         </div>
       </Card>
     );

@@ -112,7 +112,7 @@ function RealWorldNetworkCard({ contacts }) {
 
   return (
     <Card title="Real-World Network">
-      <p className="text-xs text-mute mb-3">Vos contacts Networking liés à des figures du Leaderboard, par domaine.</p>
+      <p className="text-xs text-mute mb-3">Tes contacts Networking liés à des figures du Leaderboard, par domaine.</p>
       <div className="flex flex-wrap gap-2">
         {byDomain.map(([domain, count]) => (
           <span key={domain} className="text-xs bg-surface border border-line rounded-full px-3 py-1.5 flex items-center gap-1.5">

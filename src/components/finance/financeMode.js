@@ -49,5 +49,5 @@ export const SIMPLE_TEMPLATES = {
   borrow: { label: 'Emprunt reçu', debit: 'Reçu sur', credit: 'Emprunt' },
   repay: { label: 'Remboursement de dette', debit: 'Dette remboursée', credit: 'Payé avec' },
   lend: { label: 'Prêt accordé / caution', debit: 'Prêt / caution', credit: 'Depuis' },
-  opening: { label: 'Soldes de départ', debit: 'Ce que vous possédez', credit: 'Contrepartie' },
+  opening: { label: 'Soldes de départ', debit: 'Ce que tu possèdes', credit: 'Contrepartie' },
 };

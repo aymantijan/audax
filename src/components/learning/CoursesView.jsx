@@ -57,7 +57,7 @@ function CourseCard({ c, settings, selected, onSelect, onDelete, weekMin = 0 }) 
         </div>
         <ProgressBar value={p} color={color} height={6} />
         <div className="text-[11px] text-mute mt-1.5 truncate">
-          {next ? <>Prochaine étape : <span className="text-ink">{next}</span></> : c.chapters?.length ? 'Programme terminé 🎉' : 'Ajoutez les chapitres pour suivre l’avancement.'}
+          {next ? <>Prochaine étape : <span className="text-ink">{next}</span></> : c.chapters?.length ? 'Programme terminé 🎉' : 'Ajoute les chapitres pour suivre l’avancement.'}
         </div>
       </div>
       <div className="flex items-center gap-2 mt-auto">
@@ -126,12 +126,12 @@ export default function CoursesView() {
           ))}
         </div>
       ) : (
-        <Card><div className="text-center py-6 text-sm text-mute">Aucun cours ici. Ajoutez une formation (trading, langues, n'importe quel sujet) ou une matière du cursus.</div></Card>
+        <Card><div className="text-center py-6 text-sm text-mute">Aucun cours ici. Ajoute une formation (trading, langues, n'importe quel sujet) ou une matière du cursus.</div></Card>
       )}
 
       <div className="rounded-xl border border-line px-4 py-3 text-[11px] text-mute flex items-start gap-2" style={{ background: tint('var(--accent-primary)', 5) }}>
         <Flame size={13} className="text-accent shrink-0 mt-0.5" />
-        La régularité est séparée de l'avancement : chaque jour où vous cochez une tâche fait monter la série, chaque jour manqué la fait baisser. Le score de chaque cours = avancement × régularité.
+        La régularité est séparée de l'avancement : chaque jour où tu coches une tâche fait monter la série, chaque jour manqué la fait baisser. Le score de chaque cours = avancement × régularité.
       </div>
 
       {completed.length > 0 && (

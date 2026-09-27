@@ -90,7 +90,7 @@ function Interviews({ app }) {
         <Field label="Avec"><Input value={f.with} onChange={(e) => setF((p) => ({ ...p, with: e.target.value }))} placeholder="Nom / rôle" /></Field>
         <Button type="submit"><span className="flex items-center gap-1"><Plus size={14} /> Ajouter</span></Button>
       </form>
-      <p className="text-[11px] text-mute">Après chaque entretien, un rappel de remerciement apparaît dans « Prochaines actions » jusqu’à ce que vous le marquiez envoyé.</p>
+      <p className="text-[11px] text-mute">Après chaque entretien, un rappel de remerciement apparaît dans « Prochaines actions » jusqu’à ce que tu le marques comme envoyé.</p>
     </div>
   );
 }
@@ -102,7 +102,7 @@ function Prep({ app }) {
   return (
     <div className="space-y-4">
       <Field label={`Pourquoi ${app.company} ? Actualité, chiffres, culture, personnes rencontrées`}>
-        <Textarea rows={4} value={prep.companyNotes} onChange={(e) => setPrep(app.id, { companyNotes: e.target.value })} placeholder="3 raisons précises de vouloir cette entreprise, une opération récente, le nom de votre interlocuteur…" />
+        <Textarea rows={4} value={prep.companyNotes} onChange={(e) => setPrep(app.id, { companyNotes: e.target.value })} placeholder="3 raisons précises de vouloir cette entreprise, une opération récente, le nom de ton interlocuteur…" />
       </Field>
       <div>
         <div className="text-xs text-mute mb-1.5">Questions à préparer ({prep.questionIds.length})</div>
@@ -122,7 +122,7 @@ function Prep({ app }) {
               return <button key={s.id} type="button" onClick={() => toggle('storyIds', s.id)} className={`px-2 py-1 rounded-lg border text-[11px] cursor-pointer ${on ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'}`}>{s.title}</button>;
             })}
           </div>
-        ) : <p className="text-[11px] text-mute">Écrivez vos histoires dans Carrière › Entretiens : vous les réutiliserez d’un entretien à l’autre.</p>}
+        ) : <p className="text-[11px] text-mute">Écris tes histoires dans Carrière › Entretiens : tu les réutiliseras d’un entretien à l’autre.</p>}
       </div>
       <Field label="Questions à leur poser">
         <Textarea rows={4} value={prep.askThem || ''} onChange={(e) => setPrep(app.id, { askThem: e.target.value })} placeholder={DEFAULT_ASK_THEM} />

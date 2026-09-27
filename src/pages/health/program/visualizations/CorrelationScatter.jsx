@@ -136,7 +136,7 @@ export default function CorrelationScatter() {
         </>
       ) : (
         <div className="text-sm text-mute text-center py-6 mt-3">
-          {pair ? 'Pas assez de données (min. 3 points avec les 2 KPIs suivis).' : 'Sélectionnez une paire.'}
+          {pair ? 'Pas assez de données (min. 3 points avec les 2 KPIs suivis).' : 'Sélectionne une paire.'}
         </div>
       )}
     </Card>

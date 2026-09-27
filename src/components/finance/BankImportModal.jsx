@@ -81,7 +81,7 @@ export default function BankImportModal({ open, onClose }) {
         {!parsed ? (
           <>
             <p className="text-sm text-mute">
-              Exportez vos opérations depuis le site ou l'appli de votre banque au format <b className="text-ink">CSV</b> (ou copiez-collez le tableau).
+              Exporte tes opérations depuis le site ou l'appli de ta banque au format <b className="text-ink">CSV</b> (ou copiez-collez le tableau).
               Les colonnes sont détectées automatiquement et chaque opération reçoit une catégorie.
             </p>
             <button type="button" onClick={() => fileRef.current?.click()}
@@ -144,7 +144,7 @@ export default function BankImportModal({ open, onClose }) {
                           {l.dup ? <span className="text-[10px] text-warning flex items-center gap-1"><AlertTriangle size={10} /> déjà saisie ?</span>
                             : !rowsState[i]?.category && l.guess.source !== 'default' && (
                               <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--accent-primary)' }}>
-                                {l.guess.source === 'history' ? <History size={10} /> : <Sparkles size={10} />}{l.guess.source === 'history' ? 'votre historique' : 'devinée'}
+                                {l.guess.source === 'history' ? <History size={10} /> : <Sparkles size={10} />}{l.guess.source === 'history' ? 'ton historique' : 'devinée'}
                               </span>
                             )}
                         </span>

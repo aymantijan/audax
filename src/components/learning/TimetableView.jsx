@@ -47,7 +47,7 @@ export default function TimetableView() {
           <CalendarDays size={26} className="mx-auto text-mute mb-2" />
           <p className="text-sm font-medium text-ink">Emploi du temps vide</p>
           <p className="text-xs text-mute mt-1 max-w-md mx-auto">
-            Collez votre planning en une fois, ou ouvrez une matière pour ajouter ses créneaux (jour, heure, salle, cours/TD/TP). Ils apparaîtront ici, semaine type du semestre actif.
+            Colle ton planning en une fois, ou ouvre une matière pour ajouter ses créneaux (jour, heure, salle, cours/TD/TP). Ils apparaîtront ici, semaine type du semestre actif.
           </p>
           <Button className="mt-4" onClick={() => setImportOpen(true)}>
             <span className="flex items-center gap-1.5"><ClipboardList size={14} /> Importer un emploi du temps</span>

@@ -151,7 +151,7 @@ export default function GanttTab({ business, store }) {
   };
 
   if (!business.phases.length) {
-    return <Card title="Gantt"><EmptyState>Créez d'abord une ou plusieurs phases (onglet Phases) — chaque tâche du Gantt appartient à une phase.</EmptyState></Card>;
+    return <Card title="Gantt"><EmptyState>Crée d'abord une ou plusieurs phases (onglet Phases) : chaque tâche du Gantt appartient à une phase.</EmptyState></Card>;
   }
 
   const timelineW = range ? range.totalDays * dayWidth : 0;
@@ -237,7 +237,7 @@ export default function GanttTab({ business, store }) {
         </div>
 
         {!allTasks.length ? (
-          <EmptyState>Aucune tâche. Ajoutez la première tâche d'une phase pour voir apparaître le Gantt.</EmptyState>
+          <EmptyState>Aucune tâche. Ajoute la première tâche d'une phase pour voir apparaître le Gantt.</EmptyState>
         ) : (
           <div className="overflow-x-auto border border-line rounded-lg shadow-sm">
             <div className="relative" style={{ width: chartX + timelineW }}>

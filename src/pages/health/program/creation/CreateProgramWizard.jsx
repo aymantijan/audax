@@ -32,8 +32,8 @@ export default function CreateProgramWizard({ onCreated }) {
           </div>
           <h2 className="text-lg font-bold">Commencer un programme</h2>
           <p className="text-sm text-mute mt-1">
-            Un programme structure vos objectifs, séances et nutrition<br />
-            sur plusieurs phases. Vous pourrez l'activer une fois prêt.
+            Un programme structure tes objectifs, séances et nutrition<br />
+            sur plusieurs phases. Tu pourras l'activer une fois prêt.
           </p>
         </div>
 

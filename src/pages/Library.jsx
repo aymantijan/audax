@@ -68,7 +68,7 @@ export default function Library() {
             <ArrowLeft size={14} /> Lectures
           </Link>
           <h1 className="text-2xl font-bold">Bibliothèque</h1>
-          <p className="text-mute text-sm mt-1">Tous vos livres. Ajoutez-en un à vos lectures pour suivre les pages lues.</p>
+          <p className="text-mute text-sm mt-1">Tous tes livres. Ajoutes-en un à tes lectures pour suivre les pages lues.</p>
         </div>
         <Button onClick={() => setModal(true)}>
           <span className="flex items-center gap-2"><Plus size={16} /> Ajouter un livre</span>
@@ -112,7 +112,7 @@ export default function Library() {
         <Card>
           <EmptyState>
             <BookMarked className="mx-auto mb-2 text-mute" size={28} />
-            {library.length === 0 ? 'Aucun livre pour le moment. Ajoutez le premier.' : 'Aucun livre ne correspond à ces filtres.'}
+            {library.length === 0 ? 'Aucun livre pour le moment. Ajoute le premier.' : 'Aucun livre ne correspond à ces filtres.'}
           </EmptyState>
         </Card>
       ) : (

@@ -65,7 +65,7 @@ export default function GoalsHub() {
     <div className="space-y-5 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-ink">Objectifs</h1>
-        <p className="text-mute text-sm mt-1">Tous vos objectifs au même endroit — santé, argent, études, carrière, contenu, habitudes. Chacun se modifie dans sa section.</p>
+        <p className="text-mute text-sm mt-1">Tous tes objectifs au même endroit : santé, argent, études, carrière, contenu, habitudes. Chacun se modifie dans sa section.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

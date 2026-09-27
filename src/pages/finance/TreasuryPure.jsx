@@ -82,7 +82,7 @@ export default function TreasuryPure() {
   if (!store.journal.length && !treasuryAccounts.length) {
     return (
       <Card>
-        <EmptyState>{simple ? 'Vos soldes, entrées/sorties et prévisions apparaîtront dès vos premières opérations.' : 'La trésorerie (soldes, flux, prévisions) découle automatiquement des écritures de classe 5 au journal.'}</EmptyState>
+        <EmptyState>{simple ? 'Tes soldes, entrées/sorties et prévisions apparaîtront dès tes premières opérations.' : 'La trésorerie (soldes, flux, prévisions) découle automatiquement des écritures de classe 5 au journal.'}</EmptyState>
       </Card>
     );
   }
@@ -90,7 +90,7 @@ export default function TreasuryPure() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label={simple ? "Total sur vos comptes" : "Trésorerie totale (classe 5)"} value={fmtMAD(totalTreso)} color={totalTreso >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
+        <Stat label={simple ? "Total sur tes comptes" : "Trésorerie totale (classe 5)"} value={fmtMAD(totalTreso)} color={totalTreso >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
         <Stat
           label="Autonomie (runway)"
           value={runway === null ? '—' : `${runway.toFixed(1)} mois`}
@@ -165,7 +165,7 @@ export default function TreasuryPure() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title={simple ? "Solde de vos comptes — passé et prévision" : "Solde de trésorerie — historique et prévision"}>
+          <Card title={simple ? "Solde de tes comptes : passé et prévision" : "Solde de trésorerie — historique et prévision"}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart
                 data={[
@@ -200,7 +200,7 @@ export default function TreasuryPure() {
         }
       >
         <p className="text-[11px] text-mute mb-3">
-          Combine le solde actuel, une base mensuelle sur les comptes non couverts par une échéance active — {method === 'sma' ? 'moyenne mobile simple sur 3 mois' : method === 'ema' ? 'moyenne mobile exponentielle sur 3 mois (pondère les mois récents)' : 'vos objectifs de l\'onglet Budget, pas l\'historique réel'} — et les échéances programmées à leur date exacte.
+          Combine le solde actuel, une base mensuelle sur les comptes non couverts par une échéance active — {method === 'sma' ? 'moyenne mobile simple sur 3 mois' : method === 'ema' ? 'moyenne mobile exponentielle sur 3 mois (pondère les mois récents)' : 'tes objectifs de l\'onglet Budget, pas l\'historique réel'} — et les échéances programmées à leur date exacte.
         </p>
         <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer w-fit">
           <input type="checkbox" checked={includeTradingPayout} onChange={(e) => setIncludeTradingPayout(e.target.checked)} />
@@ -240,7 +240,7 @@ export default function TreasuryPure() {
           <Field label="Banque / plateforme (optionnel)">
             <Input value={subForm.bank} onChange={(e) => setSubForm({ ...subForm, bank: e.target.value })} placeholder="ex : CIH Bank" />
           </Field>
-          <Field label="Devise du compte" hint="Pour un compte en devise (broker en USD, compte en euros…) : le solde reste tenu dans votre devise principale, avec l'équivalent affiché.">
+          <Field label="Devise du compte" hint="Pour un compte en devise (broker en USD, compte en euros…) : le solde reste tenu dans ta devise principale, avec l'équivalent affiché.">
             <Select value={subForm.currency || ''} onChange={(e) => setSubForm({ ...subForm, currency: e.target.value })}
               options={[{ value: '', label: `Devise principale (${store.baseCurrency})` }, ...CURRENCIES.filter((c) => c.code !== store.baseCurrency).map((c) => ({ value: c.code, label: `${c.code} — ${c.label}` }))]} />
           </Field>

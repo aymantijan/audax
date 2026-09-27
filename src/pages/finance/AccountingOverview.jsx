@@ -33,7 +33,7 @@ export default function AccountingOverview() {
 
   const alerts = useMemo(() => {
     const out = [];
-    if (a.tresorerieNette < 0) out.push({ id: 'tn', level: 'red', cat: 'Trésorerie', msg: simple ? `Vos comptes sont dans le rouge : ${fmtMAD(a.tresorerieNette)}` : `Trésorerie nette négative : ${fmtMAD(a.tresorerieNette)}` });
+    if (a.tresorerieNette < 0) out.push({ id: 'tn', level: 'red', cat: 'Trésorerie', msg: simple ? `Tes comptes sont dans le rouge : ${fmtMAD(a.tresorerieNette)}` : `Trésorerie nette négative : ${fmtMAD(a.tresorerieNette)}` });
     if (a.fondsRoulement < 0 && !simple) out.push({ id: 'fr', level: 'red', cat: 'Équilibre', msg: 'Fonds de roulement négatif — les emplois durables ne sont pas couverts.' });
     for (const v of variance.filter((x) => x.cls === 6 && !x.favorable && x.amount > 0)) {
       out.push({ id: `b-${v.id}`, level: v.reel > v.amount * 1.25 ? 'red' : 'orange', cat: 'Budget', msg: `${v.label} : ${fmtMAD(v.reel)} dépensés pour ${fmtMAD(v.amount)} budgétés (${fmtPct(v.realisation ?? 0, 0)})` });
@@ -53,14 +53,14 @@ export default function AccountingOverview() {
           <BookOpen className="mx-auto mb-2 text-mute" size={28} />
           {simple ? (
             <>
-              <p className="mb-1 font-medium text-ink">Commencez par vos soldes de départ.</p>
-              Dépenses & budget → Opérations → « Nouvelle opération » → Autres… → « Soldes de départ » : indiquez ce que vous avez sur chaque compte.
-              Ajoutez ensuite vos dépenses et revenus : budget, trésorerie et patrimoine se mettent à jour tout seuls.
+              <p className="mb-1 font-medium text-ink">Commence par tes soldes de départ.</p>
+              Dépenses & budget → Opérations → « Nouvelle opération » → Autres… → « Soldes de départ » : indique ce que tu as sur chaque compte.
+              Ajoute ensuite tes dépenses et revenus : budget, trésorerie et patrimoine se mettent à jour tout seuls.
             </>
           ) : (
             <>
-              <p className="mb-1 font-medium text-ink">Votre comptabilité personnelle démarre au Journal.</p>
-              Saisissez vos « Soldes d'ouverture » (Journal → Nouvelle écriture), puis chaque opération en partie double.
+              <p className="mb-1 font-medium text-ink">Ta comptabilité personnelle démarre au Journal.</p>
+              Saisis tes « Soldes d'ouverture » (Journal → Nouvelle écriture), puis chaque opération en partie double.
               Bilan, CPC, ESG, analyse, budget et trésorerie se rempliront automatiquement.
             </>
           )}
@@ -86,8 +86,8 @@ export default function AccountingOverview() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Stat label={simple ? "Disponible sur vos comptes" : "Trésorerie nette"} value={fmtMAD(a.tresorerieNette)} color={a.tresorerieNette >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
-        <Stat label={simple ? 'Patrimoine net' : 'Actif Net Comptable Corrigé'} value={fmtMAD(netWorth.ancc)} sub={simple ? 'ce que vous possédez − vos dettes' : `ANC ${fmtMAD(netWorth.anc)}`} />
+        <Stat label={simple ? "Disponible sur tes comptes" : "Trésorerie nette"} value={fmtMAD(a.tresorerieNette)} color={a.tresorerieNette >= 0 ? 'var(--accent-primary)' : 'var(--error)'} />
+        <Stat label={simple ? 'Patrimoine net' : 'Actif Net Comptable Corrigé'} value={fmtMAD(netWorth.ancc)} sub={simple ? 'ce que tu possèdes − tes dettes' : `ANC ${fmtMAD(netWorth.anc)}`} />
         <Stat label={simple ? "Revenus (mois)" : "Produits (mois)"} value={fmtMAD(c.produitsCourants + c.produitsExcep)} color="var(--success)" />
         <Stat label={simple ? "Dépenses (mois)" : "Charges (mois)"} value={fmtMAD(c.chargesCourantes + c.chargesExcep)} />
         <Stat
@@ -113,7 +113,7 @@ export default function AccountingOverview() {
           </ResponsiveContainer>
         </Card>
 
-        <Card title={simple ? "Où va votre argent ce mois-ci" : "Répartition des charges du mois (par compte)"}>
+        <Card title={simple ? "Où va ton argent ce mois-ci" : "Répartition des charges du mois (par compte)"}>
           {chargesPie.length ? (
             <>
               <ResponsiveContainer width="100%" height={200}>

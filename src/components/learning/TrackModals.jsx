@@ -45,7 +45,7 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
   const submit = (e) => {
     e.preventDefault();
     const name = f.name.trim() || (type === 'language' ? `${f.language} — ${f.level} → ${f.targetLevel}` : '');
-    if (!name) return setError('Donnez un nom au parcours.');
+    if (!name) return setError('Donne un nom au parcours.');
     const data = {
       kind: 'free', trackType: type, name,
       language: type === 'language' ? f.language : null,
@@ -102,13 +102,13 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
           </div>
         )}
 
-        <Field label="Nom du parcours" hint={type === 'language' ? 'Laissez vide pour « Anglais — B1 → C1 ».' : undefined}>
+        <Field label="Nom du parcours" hint={type === 'language' ? 'Laisse vide pour « Anglais — B1 → C1 ».' : undefined}>
           <Input value={f.name || ''} onChange={(e) => setF({ ...f, name: e.target.value })}
             placeholder={type === 'trading' ? 'Devenir trader rentable — price action' : type === 'skill' ? 'Maîtriser Excel pour la finance' : type === 'language' ? '' : 'Comprendre la macroéconomie'} />
         </Field>
         <Field label="Objectif concret (optionnel)">
           <Input value={f.goal || ''} onChange={(e) => setF({ ...f, goal: e.target.value })}
-            placeholder={type === 'language' ? 'Obtenir 100+ au TOEFL / tenir un entretien en anglais' : type === 'trading' ? 'Passer un challenge prop firm' : 'Ce que vous saurez faire à la fin'} />
+            placeholder={type === 'language' ? 'Obtenir 100+ au TOEFL / tenir un entretien en anglais' : type === 'trading' ? 'Passer un challenge prop firm' : 'Ce que tu sauras faire à la fin'} />
         </Field>
         <div className="grid sm:grid-cols-3 gap-3">
           <Field label="Échéance (optionnel)"><Input type="date" value={f.targetDate || ''} onChange={(e) => setF({ ...f, targetDate: e.target.value })} /></Field>
@@ -204,7 +204,7 @@ export function ResourceModal({ open, onClose, courseId }) {
               </div>
             )}
             <div className="rounded-lg border border-dashed border-line p-3 space-y-2">
-              <div className="text-xs text-mute">Pas dans la bibliothèque ? Ajoutez-le :</div>
+              <div className="text-xs text-mute">Pas dans la bibliothèque ? Ajoute-le :</div>
               <div className="grid grid-cols-[1fr_1fr_5rem] gap-2">
                 <Input placeholder="Titre" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
                 <Input placeholder="Auteur" value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} />
@@ -246,7 +246,7 @@ export function ResourcesCard({ course }) {
 
   return (
     <Card>
-      <SectionHeader icon={Library} title="Ressources" subtitle={`${done}/${resources.length} terminée(s) · livres suivis avec vos Lectures`}
+      <SectionHeader icon={Library} title="Ressources" subtitle={`${done}/${resources.length} terminée(s) · livres suivis avec tes Lectures`}
         action={<Button variant="secondary" className="!py-1.5" onClick={() => setOpen(true)}><span className="flex items-center gap-1"><Plus size={13} /> Ressource</span></Button>} />
       {resources.length ? (
         <div className="space-y-2">
@@ -290,7 +290,7 @@ export function ResourcesCard({ course }) {
           })}
         </div>
       ) : (
-        <p className="text-sm text-mute">Livres, vidéos, cours en ligne, podcasts, outils… Les livres viennent de votre <Link to="/learning?tab=readings" className="text-accent underline">bibliothèque</Link>.</p>
+        <p className="text-sm text-mute">Livres, vidéos, cours en ligne, podcasts, outils… Les livres viennent de ta <Link to="/learning?tab=readings" className="text-accent underline">bibliothèque</Link>.</p>
       )}
       <ResourceModal open={open} onClose={() => setOpen(false)} courseId={course.id} />
     </Card>

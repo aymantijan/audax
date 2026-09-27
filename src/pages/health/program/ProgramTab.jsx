@@ -141,12 +141,12 @@ export default function ProgramTab() {
                 </div>
               ))}
             </div>
-          ) : <Card><EmptyState>Créez d’abord une phase.</EmptyState></Card>
+          ) : <Card><EmptyState>Crée d’abord une phase.</EmptyState></Card>
         )}
 
         {editTab === 'tracking' && (
           <div className="space-y-6">
-            <div><SectionHeader icon={BarChart3} title="KPIs" subtitle="Indicateurs mesurés automatiquement depuis vos séances" /><KPIDashboard /></div>
+            <div><SectionHeader icon={BarChart3} title="KPIs" subtitle="Indicateurs mesurés automatiquement depuis tes séances" /><KPIDashboard /></div>
             <GoalsBoard programId={currentProgram.id} phases={phases} />
           </div>
         )}
@@ -159,7 +159,7 @@ export default function ProgramTab() {
         )}
 
         <Modal open={confirmArchive} onClose={() => setConfirmArchive(false)} title="Archiver le programme ?">
-          <p className="mb-4 text-sm text-mute">Le programme ne pilotera plus vos séances. Il restera consultable. Action irréversible.</p>
+          <p className="mb-4 text-sm text-mute">Le programme ne pilotera plus tes séances. Il restera consultable. Action irréversible.</p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirmArchive(false)}>Annuler</Button>
             <Button variant="danger" onClick={handleArchive}>Archiver</Button>
@@ -258,7 +258,7 @@ export default function ProgramTab() {
         <div className="rounded-2xl border border-dashed border-line px-6 py-12 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-accent"><BookOpen size={26} /></div>
           <h3 className="mb-1 text-lg font-semibold text-ink">Aucun programme</h3>
-          <p className="mx-auto mb-5 max-w-md text-sm text-mute">Structurez vos séances, votre cardio, votre agilité, votre nutrition et vos objectifs en phases.</p>
+          <p className="mx-auto mb-5 max-w-md text-sm text-mute">Structure tes séances, ton cardio, ton agilité, ta nutrition et tes objectifs en phases.</p>
           <Button onClick={() => setView('create')}>
             <span className="flex items-center gap-2"><BookOpen size={16} /> Créer un programme</span>
           </Button>

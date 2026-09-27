@@ -42,7 +42,7 @@ const blankAsset = () => ({
 
 const VALUATION_HINT = {
   market_live: 'Valorisé au marché par Wealth OS — renseignez quantité + coût unitaire + identifiant marché (VAUDAX ne calcule aucun cours).',
-  audax_manual: 'Réévaluable manuellement — vous pouvez saisir une estimation actuelle (sinon gérez-la via une plus/moins-value ci-dessus).',
+  audax_manual: 'Réévaluable manuellement : tu peux saisir une estimation actuelle (sinon gère-la via une plus/moins-value ci-dessus).',
   cost: 'Valeur = coût historique (au journal). Aucune valorisation de marché.',
 };
 
@@ -179,7 +179,7 @@ export default function Statements() {
             <Row label="− Moins-values sur éléments d'actif" value={-netWorth.moinsValues} indent color="var(--error)" />
             <Row label="= ACTIF NET COMPTABLE CORRIGÉ (ANCC)" value={netWorth.ancc} bold color="var(--accent-primary)" />
             <p className="text-[11px] text-mute mt-2">
-              L'ANC vient automatiquement du journal (Actif − Dettes). Les corrections ci-contre reflètent l'écart entre la valeur comptable (coût historique) et la valeur réelle actuelle de vos biens.
+              L'ANC vient automatiquement du journal (Actif − Dettes). Les corrections ci-contre reflètent l'écart entre la valeur comptable (coût historique) et la valeur réelle actuelle de tes biens.
             </p>
           </div>
           <div>
@@ -202,7 +202,7 @@ export default function Statements() {
                 ))}
               </div>
             ) : (
-              <EmptyState>Aucune correction. Ajoutez une plus/moins-value pour passer de l'ANC à l'ANCC.</EmptyState>
+              <EmptyState>Aucune correction. Ajoute une plus/moins-value pour passer de l'ANC à l'ANCC.</EmptyState>
             )}
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function Statements() {
             ))}
           </div>
         ) : (
-          <EmptyState>Aucun avoir défini. Ajoutez-en un pour exposer or / actions / immobilier… à Wealth OS avec ses métadonnées.</EmptyState>
+          <EmptyState>Aucun avoir défini. Ajoutes-en un pour exposer or / actions / immobilier… à Wealth OS avec ses métadonnées.</EmptyState>
         )}
       </Card>
 

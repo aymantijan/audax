@@ -200,7 +200,7 @@ export default function TodayView() {
         ) : (
           <Card>
             <p className="text-sm text-mute text-center py-3">
-              {hasCourses ? 'Rien d’urgent : vous êtes à jour. Profitez-en pour avancer le programme ou réviser.' : <>Ajoutez vos matières dans <Link className="text-accent underline" to="/learning?tab=cursus">Cursus</Link> pour obtenir vos priorités du jour.</>}
+              {hasCourses ? 'Rien d’urgent : tu es à jour. Profites-en pour avancer le programme ou réviser.' : <>Ajoute tes matières dans <Link className="text-accent underline" to="/learning?tab=cursus">Cursus</Link> pour obtenir tes priorités du jour.</>}
             </p>
           </Card>
         )}
@@ -245,7 +245,7 @@ export default function TodayView() {
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Next steps */}
         <Card>
-          <SectionHeader icon={ListChecks} title="Prochaines étapes du programme" subtitle="Cocher une étape fait monter votre régularité." />
+          <SectionHeader icon={ListChecks} title="Prochaines étapes du programme" subtitle="Cocher une étape fait monter ta régularité." />
           {tasks.length ? (
             <div className="space-y-1">
               {tasks.map((t) => (
@@ -260,7 +260,7 @@ export default function TodayView() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-mute py-2">Ajoutez des chapitres et étapes dans vos matières pour les retrouver ici.</p>
+            <p className="text-sm text-mute py-2">Ajoute des chapitres et étapes dans tes matières pour les retrouver ici.</p>
           )}
         </Card>
 
@@ -283,7 +283,7 @@ export default function TodayView() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-mute py-2">Aucune session aujourd'hui. Lancez le chrono ou ajoutez une session faite sans chrono.</p>
+            <p className="text-sm text-mute py-2">Aucune session aujourd'hui. Lance le chrono ou ajoute une session faite sans chrono.</p>
           )}
         </Card>
       </div>

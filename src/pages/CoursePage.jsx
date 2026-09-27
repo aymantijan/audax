@@ -80,12 +80,12 @@ function EvaluationsCard({ course, settings }) {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-mute py-3">Ajoutez les évaluations de la matière (contrôle continu, partiel, examen…) avec leur poids.</p>
+        <p className="text-sm text-mute py-3">Ajoute les évaluations de la matière (contrôle continu, partiel, examen…) avec leur poids.</p>
       )}
 
       {(r.complete || course.retakeGrade != null || course.finalGrade != null) && (
         <div className="grid sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-line">
-          <Field label="Note de rattrapage" hint={r.final != null && r.final < subjectPass(settings) ? 'Moyenne sous la note de validation : saisissez le rattrapage.' : 'Seulement si vous passez le rattrapage.'}>
+          <Field label="Note de rattrapage" hint={r.final != null && r.final < subjectPass(settings) ? 'Moyenne sous la note de validation : saisis le rattrapage.' : 'Seulement si tu passes le rattrapage.'}>
             <input className={cellCls} type="number" step="0.25" value={course.retakeGrade ?? ''} placeholder="—" onChange={(ev) => editCourse(course.id, { retakeGrade: parseNum(ev.target.value) })} />
           </Field>
           <Field label="Moyenne officielle (optionnel)" hint="Si l'école publie une moyenne différente, elle remplace le calcul.">
@@ -165,7 +165,7 @@ function SlotsCard({ course }) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-mute">Ajoutez les créneaux hebdomadaires (cours, TD, TP) : ils alimentent l'emploi du temps.</p>
+        <p className="text-sm text-mute">Ajoute les créneaux hebdomadaires (cours, TD, TP) : ils alimentent l'emploi du temps.</p>
       )}
       {slots.length > 0 && <CourseEndControl course={course} />}
       {slots.length > 0 && <CourseAttendanceSummary course={course} />}
@@ -251,7 +251,7 @@ function ProgrammeCard({ course }) {
           })}
         </div>
       ) : (
-        <p className="text-sm text-mute">Découpez la matière en chapitres (d'après le plan du cours) pour suivre votre avancement.</p>
+        <p className="text-sm text-mute">Découpe la matière en chapitres (d'après le plan du cours) pour suivre ton avancement.</p>
       )}
 
       {chapterModal && (
@@ -450,7 +450,7 @@ export default function CoursePage() {
           <div className="lg:col-span-2 space-y-5 order-first lg:order-none">
             {course.trackType ? <TrackLevelCard course={course} /> : (
               <Card>
-                <p className="text-sm text-mute">Transformez ce cours en <b className="text-ink">parcours</b> (langue, trading, compétence…) pour suivre un niveau, un objectif et un temps hebdomadaire.</p>
+                <p className="text-sm text-mute">Transforme ce cours en <b className="text-ink">parcours</b> (langue, trading, compétence…) pour suivre un niveau, un objectif et un temps hebdomadaire.</p>
                 <Button variant="secondary" className="mt-3 !py-1.5" onClick={() => setEditOpen(true)}>Définir le parcours</Button>
               </Card>
             )}
@@ -483,7 +483,7 @@ export default function CoursePage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-mute">Lancez « Étudier » ou ajoutez une session : le temps passé par matière alimente vos priorités du jour.</p>
+          <p className="text-sm text-mute">Lance « Étudier » ou ajoute une session : le temps passé par matière alimente tes priorités du jour.</p>
         )}
       </Card>
 

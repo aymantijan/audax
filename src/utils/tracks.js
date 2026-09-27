@@ -9,7 +9,7 @@ export const TRACK_TYPES = [
   { value: 'language', label: 'Langue', icon: Languages, color: '#06b6d4', desc: 'Niveaux CECRL A1 → C2, vocabulaire en fiches' },
   { value: 'trading', label: 'Trading', icon: CandlestickChart, color: '#10b981', desc: 'Marchés, risque, psychologie, stratégie' },
   { value: 'skill', label: 'Compétence', icon: Wrench, color: '#f59e0b', desc: 'Excel, Python, prise de parole…' },
-  { value: 'topic', label: 'Autre sujet', icon: Compass, color: '#8b5cf6', desc: 'Tout ce que vous voulez apprendre' },
+  { value: 'topic', label: 'Autre sujet', icon: Compass, color: '#8b5cf6', desc: 'Tout ce que tu veux apprendre' },
 ];
 export const trackMeta = (t) => TRACK_TYPES.find((x) => x.value === t) || TRACK_TYPES[3];
 
