@@ -1,5 +1,6 @@
 // Shared helpers of accountingStore.js (moved verbatim, F3).
 import { treasuryBalance } from '../../utils/accounting-engine';
+import { baseCurrencyShort } from '../../utils/formatters';
 
 // Comptabilité générale personnelle en partie double.
 // Le journal est la source unique ; chaque sélecteur dérive un état de synthèse
@@ -44,10 +45,12 @@ export function tierByRank(i, n) {
   if (frac <= 0.75) return 'silver';
   return 'gold';
 }
+// In the person's own currency (read when the badge is shown, not at load).
 export function fmtBadgeMoney(n) {
-  if (n >= 1_000_000) return `${n % 1_000_000 === 0 ? n / 1_000_000 : (n / 1_000_000).toFixed(1)}M DH`;
-  if (n >= 1000) return `${Math.round(n / 1000)}K DH`;
-  return `${n} DH`;
+  const cur = baseCurrencyShort();
+  if (n >= 1_000_000) return `${n % 1_000_000 === 0 ? n / 1_000_000 : (n / 1_000_000).toFixed(1)}M ${cur}`;
+  if (n >= 1000) return `${Math.round(n / 1000)}K ${cur}`;
+  return `${n} ${cur}`;
 }
 // thresholds: number[]; ids/names get a fixed id (stable across re-evaluations,
 // unaffected by later inserting/removing OTHER groups) via `idPrefix-<threshold>`
@@ -65,7 +68,7 @@ export function countTierBadges(idPrefix, label, thresholds, getValue, fixedIds 
 export function moneyTierBadges(idPrefix, label, thresholds, getValue, fixedIds = {}) {
   return thresholds.map((t, i) => ({
     id: fixedIds[t] || `${idPrefix}-${t}`,
-    name: `${label} ${fmtBadgeMoney(t)}`,
+    get name() { return `${label} ${fmtBadgeMoney(t)}`; },
     tier: tierByRank(i, thresholds.length),
     check: (s) => getValue(s) >= t,
   }));

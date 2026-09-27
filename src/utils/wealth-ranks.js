@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WEALTH RANKS — a 100-level ladder from poorest to richest, gated PURELY on
-// net worth (ANCC, in DH) — unlike the Leaderboard's grade ladder (grades.js),
+// net worth (ANCC, defined in DH and converted to each person's currency — see ladderIn) — unlike the Leaderboard's grade ladder (grades.js),
 // this one has nothing to do with XP. A rank is reached the moment your ANCC
 // crosses its threshold; it can also be LOST if your ANCC drops back below it
 // (this is a live reading of your current wealth, not a one-way achievement
@@ -46,15 +46,23 @@ function buildWealthLadder() {
 export const WEALTH_LADDER = buildWealthLadder();
 export const WEALTH_ERAS = ERAS.map((e) => e.theme);
 
+// The ladder is defined in dirhams; `factor` = value of 1 dirham in the
+// person's own currency (rateFor('MAD', base, rates)), so a euro account
+// climbs the same real-money ladder instead of one ten times easier.
+export function ladderIn(factor = 1) {
+  if (factor === 1) return WEALTH_LADDER;
+  return WEALTH_LADDER.map((r) => ({ ...r, threshold: Math.round(r.threshold * factor) }));
+}
+
 // Highest rank whose threshold your CURRENT ancc meets. A live reading, not a
 // one-way ratchet — pass the current getNetWorth().ancc value.
-export function wealthRankFor(ancc = 0) {
-  let current = WEALTH_LADDER[0];
-  for (const r of WEALTH_LADDER) {
+export function wealthRankFor(ancc = 0, ladder = WEALTH_LADDER) {
+  let current = ladder[0];
+  for (const r of ladder) {
     if (ancc >= r.threshold) current = r;
     else break;
   }
-  const next = WEALTH_LADDER[current.level] || null; // level is 1-indexed → next is at index=level
+  const next = ladder[current.level] || null; // level is 1-indexed → next is at index=level
   let progress = 100;
   if (next) {
     const span = next.threshold - current.threshold;

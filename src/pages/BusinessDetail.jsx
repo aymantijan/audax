@@ -397,7 +397,7 @@ export default function BusinessDetail() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Unité (optionnel)">
-              <Input value={kpiForm.unit} onChange={(e) => setKpiForm({ ...kpiForm, unit: e.target.value })} placeholder="ex : DH, clients, %" />
+              <Input value={kpiForm.unit} onChange={(e) => setKpiForm({ ...kpiForm, unit: e.target.value })} placeholder="ex : ventes, clients, %" />
             </Field>
             <Field label="Cible (optionnel)">
               <Input type="number" value={kpiForm.target} onChange={(e) => setKpiForm({ ...kpiForm, target: e.target.value })} />

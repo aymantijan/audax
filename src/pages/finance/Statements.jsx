@@ -363,7 +363,7 @@ export default function Statements() {
             </Field>
           )}
           {assetValuation === 'audax_manual' && (
-            <Field label="Estimation actuelle (DH, optionnel)">
+            <Field label={`Estimation actuelle (${baseCurrencyShort()}, optionnel)`}>
               <Input type="number" step="any" min="0" value={assetForm.currentEstimate} onChange={(e2) => setAssetForm({ ...assetForm, currentEstimate: e2.target.value })} />
             </Field>
           )}

@@ -18,3 +18,13 @@ test('auto-entrepreneur: flat share of turnover and ceiling warning', () => {
   assert.equal(moroccoAutoEntrepreneur(250000, 'services').overCeiling, true);
   assert.equal(moroccoAutoEntrepreneur(250000, 'commerce').tax, 1250);
 });
+
+import { ladderIn, wealthRankFor, WEALTH_LADDER } from '../src/utils/wealth-ranks.js';
+
+test('wealth ranks: same real-money ladder in any currency', () => {
+  const eur = ladderIn(0.1); // 1 DH ≈ 0.1 €
+  const top = WEALTH_LADDER[WEALTH_LADDER.length - 1].threshold;
+  assert.equal(eur[eur.length - 1].threshold, Math.round(top * 0.1));
+  // 10 000 € must reach the same rank as 100 000 DH
+  assert.equal(wealthRankFor(10000, eur).current.level, wealthRankFor(100000).current.level);
+});

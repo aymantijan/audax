@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Crown, Search, Crosshair, Lock, Check, Star } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
-import { WEALTH_LADDER, WEALTH_ERAS, wealthRankFor } from '../../utils/wealth-ranks';
+import { WEALTH_ERAS, wealthRankFor, ladderIn } from '../../utils/wealth-ranks';
+import { rateFor } from '../../utils/currency';
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../../components/common/ui';
 
@@ -14,7 +15,10 @@ const PAGE_SIZE = 50;
 // same as your actual wealth can. See utils/wealth-ranks.js.
 export default function WealthRank() {
   const ancc = useAccountingStore((s) => s.getNetWorth().ancc);
-  const rank = useMemo(() => wealthRankFor(ancc), [ancc]);
+  const baseCurrency = useAccountingStore((s) => s.baseCurrency);
+  const fxRates = useAccountingStore((s) => s.fxRates);
+  const ladder = useMemo(() => ladderIn(rateFor('MAD', baseCurrency || 'MAD', fxRates)), [baseCurrency, fxRates]);
+  const rank = useMemo(() => wealthRankFor(ancc, ladder), [ancc, ladder]);
 
   const [search, setSearch] = useState('');
   const [era, setEra] = useState('all');
@@ -22,12 +26,12 @@ export default function WealthRank() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return WEALTH_LADDER.filter((r) => {
+    return ladder.filter((r) => {
       if (era !== 'all' && r.era !== era) return false;
       if (q && !r.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, era]);
+  }, [search, era, ladder]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const clampedPage = Math.min(page, pageCount - 1);
