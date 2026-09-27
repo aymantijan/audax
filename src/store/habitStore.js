@@ -44,6 +44,27 @@ export const useHabitStore = create(
       awardedBadges: [], // badge ids already toasted, so checkBadges never re-fires one
       pauses: [], // vacation / sick periods: [{ id, from, to, reason }] — covered days are jokers for every habit
       habitSettings: { jokersPerMonth: 2 }, // jokers per habit per calendar month (streak protection)
+      // Plan de l'année: year → quarter → week objectives linked to habits (utils/objectives.js).
+      objectives: [],
+      addObjective: (data) => {
+        const title = data.title?.trim();
+        if (!title) return null;
+        const o = { id: uid(), horizon: data.horizon, period: data.period, title, parentId: data.parentId || null, habitIds: data.habitIds || [], done: false, createdAt: Date.now() };
+        set({ objectives: [...(get().objectives || []), o] });
+        return o;
+      },
+      editObjective: (id, updates) => set({ objectives: (get().objectives || []).map((o) => (o.id === id ? { ...o, ...updates } : o)) }),
+      // Deleting an objective also deletes the objectives under it.
+      deleteObjective: (id) => {
+        const all = get().objectives || [];
+        const gone = new Set([id]);
+        let grew = true;
+        while (grew) {
+          grew = false;
+          for (const o of all) if (o.parentId && gone.has(o.parentId) && !gone.has(o.id)) { gone.add(o.id); grew = true; }
+        }
+        set({ objectives: all.filter((o) => !gone.has(o.id)) });
+      },
       // Browser reminders at each habit's reminderTime (local only: the app must be open).
       habitReminders: { enabled: false, lastShown: {} },
       setHabitRemindersEnabled: (enabled) => set({ habitReminders: { ...(get().habitReminders || { lastShown: {} }), enabled } }),
@@ -314,7 +335,7 @@ export const useHabitStore = create(
         toast('Sieste enregistrée', 'success');
       },
 
-      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 }, coachSnooze: {} }),
+      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 }, coachSnooze: {}, objectives: [] }),
     }),
     { name: 'audax-habits' }
   )

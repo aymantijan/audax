@@ -9,7 +9,7 @@ const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
 
 export function buildBriefing({
   today, nowMs = Date.now(), courses = [], academic = null, habitsDue = 0, habitsDone = 0,
-  overdueEcheances = [], todayEcheances = [], flashcardsDue = 0, followUps = 0, checkinDone = true,
+  overdueEcheances = [], todayEcheances = [], flashcardsDue = 0, followUps = 0, checkinDone = true, weekObjectivesLeft = 0,
 }) {
   const items = [];
 
@@ -36,6 +36,7 @@ export function buildBriefing({
   const left = Math.max(0, habitsDue - habitsDone);
   if (habitsDue) items.push({ key: 'habits', level: left ? 'today' : 'done', text: left ? `${plural(left, 'habitude', 'habitudes')} à cocher sur ${habitsDue}.` : 'Toutes tes habitudes du jour sont faites.', to: '/habits' });
 
+  if (weekObjectivesLeft) items.push({ key: 'week-goals', level: 'today', text: `${plural(weekObjectivesLeft, 'objectif de la semaine', 'objectifs de la semaine')} encore ouvert${weekObjectivesLeft > 1 ? 's' : ''}.`, to: '/goals' });
   if (!checkinDone) items.push({ key: 'checkin', level: 'today', text: 'Ton check-in du matin (énergie, sommeil) n’est pas fait.', to: '/habits?checkin=1' });
   if (flashcardsDue) items.push({ key: 'cards', level: 'info', text: `${plural(flashcardsDue, 'fiche', 'fiches')} à réviser.`, to: '/learning?tab=review' });
   if (followUps) items.push({ key: 'followups', level: 'info', text: `${plural(followUps, 'contact', 'contacts')} à relancer.`, to: '/career?tab=reseau' });

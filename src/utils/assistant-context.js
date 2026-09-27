@@ -36,7 +36,7 @@ const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); retur
 
 function todaySummary(goals) {
   const today = todayKey();
-  const { habits, logs } = useHabitStore.getState();
+  const { habits, logs, objectives = [] } = useHabitStore.getState();
   const due = habits.filter((h) => !h.archived && isHabitShownOn(h, logs, today));
   return {
     date: today,
@@ -45,6 +45,7 @@ function todaySummary(goals) {
       doneToday: logs.some((l) => l.habitId === h.id && l.date === today && l.completed),
       streak: habitStreak(h.id, logs, today, h),
     })),
+    plan: objectives.filter((o) => !o.done).slice(0, 15).map((o) => ({ horizon: o.horizon, period: o.period, title: o.title })),
     goals: (goals || []).slice(0, 12).map((g) => ({ domain: g.domain, title: g.title, progress: g.progress, status: g.status, targetDate: g.targetDate || null })),
   };
 }

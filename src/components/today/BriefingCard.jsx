@@ -5,6 +5,8 @@ import { useLearningStore } from '../../store/learningStore';
 import { useFlashcardStore } from '../../store/flashcardStore';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useNetworkingStore } from '../../store/networkingStore';
+import { useHabitStore } from '../../store/habitStore';
+import { periodOf } from '../../utils/objectives';
 import { buildBriefing } from '../../utils/briefing';
 import { isDue } from '../../utils/fsrs';
 import { todayKey } from '../../utils/formatters';
@@ -27,6 +29,7 @@ export default function BriefingCard({ habitsDue, habitsDone, checkinDone }) {
   const journal = useAccountingStore((s) => s.journal);
   const echeances = useAccountingStore((s) => s.echeances);
   const contacts = useNetworkingStore((s) => s.contacts);
+  const objectives = useHabitStore((s) => s.objectives);
 
   const items = useMemo(() => {
     const acc = useAccountingStore.getState();
@@ -43,8 +46,9 @@ export default function BriefingCard({ habitsDue, habitsDone, checkinDone }) {
       overdueEcheances: overdue, todayEcheances: todayDue,
       flashcardsDue: (cards || []).filter((c) => isDue(c)).length,
       followUps,
+      weekObjectivesLeft: (objectives || []).filter((o) => o.horizon === 'week' && o.period === periodOf('week', today) && !o.done).length,
     });
-  }, [today, courses, academic, cards, journal, echeances, contacts, habitsDue, habitsDone, checkinDone]);
+  }, [today, courses, academic, cards, journal, echeances, contacts, habitsDue, habitsDone, checkinDone, objectives]);
 
   return (
     <Card

@@ -5,6 +5,7 @@ import { useAllGoals, GOAL_DOMAINS } from '../hooks/useAllGoals';
 import { todayKey } from '../utils/formatters';
 import { Card, ProgressBar } from '../components/common/ui';
 import { SegmentedTabs, tint, countdownLabel } from '../components/learning/design';
+import YearPlan from '../components/goals/YearPlan';
 
 const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, content: Megaphone, habits: Flame, career: Briefcase };
 const STATUS = {
@@ -81,6 +82,8 @@ export default function GoalsHub() {
           </div>
         ))}
       </div>
+
+      <YearPlan />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <SegmentedTabs value={domain} onChange={setDomain} tabs={[
