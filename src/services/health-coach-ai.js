@@ -1,16 +1,11 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { aiRequestHeaders } from './ai-headers';
 
 // Calls the /api/health-coach Vercel serverless function (see api/health-coach.js) —
 // the real OpenRouter key never reaches this file or the browser. Throws on any
 // failure (missing deployment, no key configured, rate limit, offline dev server
 // without `vercel dev`) so callers can fall back to the local rule-based coach.
 async function callHealthCoach(mode, context, question) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (isSupabaseConfigured) {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
+  const headers = await aiRequestHeaders();
   const res = await fetch('/api/health-coach', {
     method: 'POST',
     headers,

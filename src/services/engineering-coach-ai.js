@@ -1,16 +1,11 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { aiRequestHeaders } from './ai-headers';
 
 // Calls the /api/engineering-coach Vercel serverless function (see
 // api/engineering-coach.js) — mirrors health-coach-ai.js exactly, just a
 // different endpoint. Throws on any failure so the caller can show a
 // graceful "not configured" message instead of crashing.
 async function callEngineeringCoach(mode, context, question) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (isSupabaseConfigured) {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
+  const headers = await aiRequestHeaders();
   const res = await fetch('/api/engineering-coach', {
     method: 'POST',
     headers,

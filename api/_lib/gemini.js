@@ -32,10 +32,10 @@ const textOf = (data) => (data?.candidates?.[0]?.content?.parts || []).map((p) =
 
 // Streams the answer: calls onText(delta) as text arrives. Returns { model }.
 // Throws { status, detail } when every model failed before any text was sent.
-export async function geminiStream(req, onText, { fetchImpl = fetch } = {}) {
-  const key = process.env.GEMINI_API_KEY;
+// `key`/`models`: a person's own Gemini key and chosen model (else the site's).
+export async function geminiStream(req, onText, { fetchImpl = fetch, key = process.env.GEMINI_API_KEY, models = GEMINI_MODELS } = {}) {
   let last = { status: 503, detail: 'not configured' };
-  for (const model of GEMINI_MODELS) {
+  for (const model of models) {
     let upstream;
     try {
       upstream = await fetchImpl(`${API}/${model}:streamGenerateContent?alt=sse`, {

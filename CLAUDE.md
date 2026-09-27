@@ -13,8 +13,11 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
 ## Décisions prises (27 sept 2026) — ne pas rediscuter
 1. Nom : **VAUDAX** partout (fait). Les clés techniques `audax-*` (localStorage, sauvegardes) ne changent JAMAIS.
 2. Interface en **tutoiement** partout, en français. **Exception : le Trading reste en anglais.**
-3. IA du site : **Gemini, offre gratuite uniquement**. **Budget du projet = 0** : aucune dépense, jamais (pas d'IA payante,
-   pas de store payant, pas d'offre Vercel/Supabase payante). Ne JAMAIS redemander un budget ou un plafond.
+3. IA : **chaque utilisateur peut apporter sa propre clé** (Gemini, Claude, ChatGPT, OpenRouter — Paramètres → Assistant,
+   décision du 27 sept 2026). La clé reste sur son appareil (`src/store/aiKeyStore.js`, hors synchro et hors export) et
+   passe au serveur seulement le temps de la requête (en-têtes `X-AI-*`, jamais enregistrée ni journalisée).
+   Sans clé personnelle : clé Gemini du site (offre gratuite) avec 30 questions/jour. **Budget du projet = 0** : aucune
+   dépense du projet, jamais (pas de store payant, pas d'offre Vercel/Supabase payante). Ne JAMAIS redemander un budget.
 4. **Cercle privé** d'abord (pas d'ouverture publique : loi 09-08 / CNDP non traitée).
 5. Mode de notation « classique » : une matière sous la note éliminatoire bloque le semestre.
 6. Modules secondaires (Ingénierie, Immobilier, Levée de fonds, Création) **masqués** pour les nouveaux utilisateurs, activables.
@@ -32,8 +35,8 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 - `financeStore.js` est l'ancienne compta (morte) ; la vraie est `accountingStore.js`.
 - Rappels push : `api/class-reminders.js` (cours + Santé), appelé toutes les 5 min par pg_cron Supabase
   (`supabase/migrations/005_class_reminders_cron.sql`, authentification par nonce, aucun secret dans le SQL).
-- IA (étape 4, fait) : **Gemini offre gratuite** uniquement, via `api/_lib/gemini.js` (clé `GEMINI_API_KEY` côté Vercel,
-  projet Google SANS facturation). Assistant unique `api/assistant.js` (réponse en flux) + coachs Trading/Santé/Ingénierie
+- IA (étape 4, fait) : `api/_lib/llm.js` parle aux 4 fournisseurs (clé personnelle) ; sinon `api/_lib/gemini.js`
+  avec la clé du site `GEMINI_API_KEY` (projet Google SANS facturation). Vercel Hobby : 12 fonctions maximum dans `api/`. Assistant unique `api/assistant.js` (réponse en flux) + coachs Trading/Santé/Ingénierie
   (`api/_lib/coach.js`). Garde commune `api/_lib/ai-guard.js` : utilisateur connecté + 30 questions/jour/personne
   (table `ai_usage`, migration 008 appliquée). Le navigateur construit le résumé des données : `src/utils/assistant-context.js`.
 - Navigation (étape 3, fait) : source unique `src/utils/navigation.js` (modules, pôles, activation). Accueil : `src/utils/onboarding-plan.js`.

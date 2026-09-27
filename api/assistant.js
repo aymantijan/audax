@@ -2,7 +2,8 @@
 // sections the person allows (Études, Santé, Patrimoine, Carrière,
 // Aujourd'hui) as a structured summary built in the browser
 // (src/utils/assistant-context.js). Streams the answer as plain text.
-import { geminiStream, isGeminiConfigured } from './_lib/gemini.js';
+import { isGeminiConfigured } from './_lib/gemini.js';
+import { aiStream, keyError } from './_lib/llm.js';
 import { guardAiRequest } from './_lib/ai-guard.js';
 
 const SYSTEM = [
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
 
   let started = false;
   try {
-    const { model } = await geminiStream({ system: SYSTEM, contents, maxTokens: 700 }, (delta) => {
+    const { model } = await aiStream({ system: SYSTEM, contents, maxTokens: 700 }, (delta) => {
       if (!started) {
         started = true;
         res.statusCode = 200;
@@ -56,12 +57,12 @@ export default async function handler(req, res) {
         res.setHeader('X-Quota-Limit', String(guard.quota.limit));
       }
       res.write(delta);
-    });
+    }, { userKey: guard.userKey });
     if (!started) return res.status(502).json({ error: 'empty' });
     console.log('[assistant] ok', model);
     res.end();
   } catch (e) {
     if (started) return res.end();
-    return res.status(e?.status === 429 ? 429 : 502).json({ error: e?.status === 429 ? 'busy' : 'failed' });
+    return res.status(e?.status === 429 ? 429 : 502).json({ error: keyError(e, guard.userKey) });
   }
 }

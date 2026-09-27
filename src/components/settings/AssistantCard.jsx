@@ -5,6 +5,7 @@ import { ASSISTANT_SCOPES, DEFAULT_SCOPES } from '../../utils/assistant-context'
 import { openAssistant } from '../../services/assistant';
 import { Card, Button, Field, Textarea } from '../common/ui';
 import { toast } from '../../store/uiStore';
+import AiKeysSection from './AiKeysSection';
 
 // What the assistant may read, and the facts it should always keep in mind.
 // Both live in the profile (synced with the account); the conversation itself
@@ -32,7 +33,7 @@ export default function AssistantCard() {
       <Card title="Assistant" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant()}><span className="flex items-center gap-1.5"><Sparkles size={13} /> Ouvrir</span></Button>}>
         <p className="text-sm text-mute mb-3">
           L’assistant lit un résumé de tes données (jamais le détail brut) pour répondre, uniquement dans les sections cochées. Il ne modifie rien.
-          Service gratuit (Gemini) : 30 questions par jour et par personne.
+          Sans clé personnelle, il utilise le service gratuit du site (30 questions par jour et par personne), s’il est activé.
         </p>
         <div className="flex flex-wrap gap-x-5 gap-y-2 mb-4">
           {ASSISTANT_SCOPES.map((s) => (
@@ -48,6 +49,7 @@ export default function AssistantCard() {
         <div className="flex justify-end mt-2">
           <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={saveFacts}>Enregistrer</Button>
         </div>
+        <div className="mt-5"><AiKeysSection /></div>
       </Card>
     </div>
   );

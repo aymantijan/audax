@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { aiRequestHeaders } from './ai-headers';
 
 const MAX_SIDE = 1800;
 const MAX_PDF_BYTES = 3_500_000;
@@ -30,11 +30,7 @@ export async function fileToPayload(file) {
 
 async function callExtract(kind, file) {
   const payload = await fileToPayload(file);
-  const headers = { 'Content-Type': 'application/json' };
-  if (isSupabaseConfigured) {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
-  }
+  const headers = await aiRequestHeaders();
   let res;
   try {
     res = await fetch('/api/extract', { method: 'POST', headers, body: JSON.stringify({ kind, ...payload }) });

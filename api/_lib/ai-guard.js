@@ -1,3 +1,5 @@
+import { userKeyFrom } from './llm.js';
+
 // Shared guard for every AI endpoint: a real signed-in user, and a daily
 // quota per person (F8) so a private circle can never exhaust the free
 // Gemini limits for everyone else.
@@ -45,13 +47,17 @@ export async function takeQuota(userId, { fetchImpl = fetch, limit = DAILY_AI_LI
 }
 
 // Common preamble: method, config, auth, quota. Sends the error response and
-// returns null when the request must stop; otherwise returns { userId, quota }.
+// returns null when the request must stop; otherwise returns { userId, quota, userKey }.
+// With a personal key (api/_lib/llm.js) there is no VAUDAX quota: the person's
+// own provider account sets the limits. Sign-in is still required either way.
 export async function guardAiRequest(req, res, { isConfigured }) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return null; }
-  if (!isConfigured()) { res.status(503).json({ error: 'not_configured' }); return null; }
+  const userKey = userKeyFrom(req);
+  if (!userKey && !isConfigured()) { res.status(503).json({ error: 'not_configured' }); return null; }
   const userId = await verifyUser(req);
   if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return null; }
+  if (userKey) return { userId, userKey, quota: { ok: true, used: null, limit: null } };
   const quota = await takeQuota(userId);
   if (!quota.ok) { res.status(429).json({ error: 'quota', limit: quota.limit }); return null; }
-  return { userId, quota };
+  return { userId, quota, userKey: null };
 }

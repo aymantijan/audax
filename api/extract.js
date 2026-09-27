@@ -3,7 +3,8 @@
 // 12 functions): body { kind, mimeType, data (base64) }.
 //   kind 'timetable' → { text }: lines "Matière ; Jour ; Début-Fin ; Enseignant ; Salle ; Type"
 //   kind 'receipt'   → { amount, currency, date, merchant, category }
-import { geminiText, isGeminiConfigured } from './_lib/gemini.js';
+import { isGeminiConfigured } from './_lib/gemini.js';
+import { aiText, keyError } from './_lib/llm.js';
 import { guardAiRequest } from './_lib/ai-guard.js';
 
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -46,16 +47,16 @@ export default async function handler(req, res) {
   const file = { inlineData: { mimeType, data } };
   try {
     if (kind === 'timetable') {
-      const { text } = await geminiText({ system: TIMETABLE, contents: [{ role: 'user', parts: [file, { text: 'Extrais l’emploi du temps.' }] }], maxTokens: 2000, temperature: 0.1 });
+      const { text } = await aiText({ system: TIMETABLE, contents: [{ role: 'user', parts: [file, { text: 'Extrais l’emploi du temps.' }] }], maxTokens: 2000, temperature: 0.1 }, { userKey: guard.userKey });
       const lines = text.split(/\r?\n/).map((l) => l.replace(/^[-*•\s]+/, '').replace(/`/g, '').trim()).filter((l) => l.includes(';'));
       return res.status(200).json({ text: lines.join('\n') });
     }
-    const { text } = await geminiText({ system: RECEIPT, contents: [{ role: 'user', parts: [file, { text: 'Lis ce reçu.' }] }], maxTokens: 300, temperature: 0.1, json: true });
+    const { text } = await aiText({ system: RECEIPT, contents: [{ role: 'user', parts: [file, { text: 'Lis ce reçu.' }] }], maxTokens: 300, temperature: 0.1, json: true }, { userKey: guard.userKey });
     const receipt = parseReceipt(text);
     if (!receipt) return res.status(502).json({ error: 'failed' });
     return res.status(200).json(receipt);
   } catch (e) {
     console.error('[extract] failed', kind, e?.status, e?.detail);
-    return res.status(e?.status === 429 ? 429 : 502).json({ error: e?.status === 429 ? 'busy' : 'failed' });
+    return res.status(e?.status === 429 ? 429 : 502).json({ error: keyError(e, guard.userKey) });
   }
 }

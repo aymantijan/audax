@@ -2,7 +2,8 @@
 // ({ mode, context, question } → { text, model }), now on Gemini's free tier
 // with the shared auth + daily quota. The browser falls back to its local
 // rule-based coach whenever this answers an error (e.g. no key configured).
-import { geminiText, isGeminiConfigured } from './gemini.js';
+import { isGeminiConfigured } from './gemini.js';
+import { aiText, keyError } from './llm.js';
 import { guardAiRequest } from './ai-guard.js';
 
 export function makeCoachHandler({ name, system, dataLabel, modes }) {
@@ -22,12 +23,12 @@ export function makeCoachHandler({ name, system, dataLabel, modes }) {
       { role: 'user', parts: [{ text: instruction }] },
     ];
     try {
-      const { text, model } = await geminiText({ system, contents, maxTokens: m.maxTokens });
+      const { text, model } = await aiText({ system, contents, maxTokens: m.maxTokens }, { userKey: guard.userKey });
       if (!text) return res.status(502).json({ error: 'Empty AI response' });
       return res.status(200).json({ text, model });
     } catch (e) {
       console.error(`[${name}] failed`, e?.status, e?.detail);
-      return res.status(e?.status === 429 ? 429 : 502).json({ error: 'AI request failed' });
+      return res.status(e?.status === 429 ? 429 : 502).json({ error: keyError(e, guard.userKey) });
     }
   };
 }
