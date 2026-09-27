@@ -13,3 +13,14 @@ export async function resolve(specifier, context, next) {
     throw err;
   }
 }
+
+// Vite injects `import.meta.env` at build time; under plain Node it is
+// undefined. Give app modules an empty env (no Supabase, no keys) in tests.
+export async function load(url, context, next) {
+  const out = await next(url, context);
+  if (out.format === 'module' && url.includes('/src/') && out.source) {
+    const src = String(out.source);
+    if (src.includes('import.meta.env')) return { ...out, source: src.replaceAll('import.meta.env', '(globalThis.__VITE_ENV__ || { MODE: "test", DEV: false, PROD: false })') };
+  }
+  return out;
+}
