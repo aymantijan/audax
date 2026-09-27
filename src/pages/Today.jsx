@@ -30,6 +30,8 @@ import { calculateCourseProgress } from '../utils/course-progress';
 import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
 import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/ui';
 import { NextClassBanner } from '../components/learning/Attendance';
+import BriefingCard from '../components/today/BriefingCard';
+import LifeReviewCard from '../components/today/LifeReviewCard';
 
 export default function Today() {
   const user = useAuthStore((s) => s.user);
@@ -139,9 +141,14 @@ export default function Today() {
           <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — ce qu'il te reste à faire aujourd'hui.</p>
         </div>
         <Link to="/dashboard" className="text-sm text-accent hover:underline flex items-center gap-1 shrink-0">
-          Tableau de bord complet <ArrowRight size={14} />
+          Bilan complet <ArrowRight size={14} />
         </Link>
       </div>
+
+      <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
+
+      {/* Sunday and Monday: time to look back at the week */}
+      {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}
 
       {/* ---- Class check-in (attendance habit) ---- */}
       <NextClassBanner />

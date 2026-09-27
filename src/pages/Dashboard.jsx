@@ -35,6 +35,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import AccountSwitcher from '../components/common/AccountSwitcher';
 import { startOfMonth } from 'date-fns';
 import { occupationOf } from '../utils/occupations';
+import LifeReviewCard from '../components/today/LifeReviewCard';
 
 
 export default function Dashboard() {
@@ -265,13 +266,15 @@ export default function Dashboard() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Bon retour, {user?.name}</h1>
+          <h1 className="text-2xl font-bold">Bilan</h1>
           <p className="text-mute text-sm mt-1">
-            {occupationOf(user) && <><span className="text-accent font-medium">{occupationOf(user)}</span> · </>}voici où tu en es aujourd’hui.
+            {occupationOf(user) && <><span className="text-accent font-medium">{occupationOf(user)}</span> · </>}où tu en es, section par section.
           </p>
         </div>
         {tradingEnabled && <AccountSwitcher />}
       </div>
+
+      <LifeReviewCard />
 
       {burnout.burnoutRisk && (
         <div className="border border-bad/50 bg-bad/10 rounded-xl p-4 space-y-2">
