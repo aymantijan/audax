@@ -32,6 +32,19 @@ export const CAPTURE_KINDS = {
   habit: { label: 'Habitude', where: 'Habitudes' },
 };
 
+// Editable fields of each kind of draft (the card's "Modifier").
+export const CAPTURE_FIELDS = {
+  expense: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
+  income: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
+  freelance: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
+  workout: [['exercise', 'Activité', 'text'], ['durationMin', 'Durée (min)', 'number'], ['distanceKm', 'Distance (km)', 'number']],
+  weight: [['weightKg', 'Poids (kg)', 'number']],
+  sleep: [['hours', 'Heures de sommeil', 'number']],
+  water: [['ml', 'Quantité (ml)', 'number']],
+  study: [['minutes', 'Durée (min)', 'number'], ['label', 'Sur quoi', 'text']],
+  habit: [['value', 'Valeur (si mesurée)', 'number']],
+};
+
 export const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
 
 const r2 = (n) => Math.round(n * 100) / 100;

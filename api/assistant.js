@@ -5,6 +5,7 @@
 import { isGeminiConfigured } from './_lib/gemini.js';
 import { aiStream, keyError } from './_lib/llm.js';
 import { guardAiRequest } from './_lib/ai-guard.js';
+import { ACTIONS_PROMPT } from '../src/utils/assistant-actions.js';
 
 const SYSTEM = [
   'Tu es l’assistant de VAUDAX, une application où une personne suit ses études, sa santé, son argent, sa carrière et ses habitudes.',
@@ -13,12 +14,13 @@ const SYSTEM = [
   'Relie les domaines quand c’est utile (sommeil et concentration, assiduité et note de contrôle continu, dépenses et objectifs d’épargne).',
   'Santé : jamais de diagnostic ; pour tout signe inquiétant, conseille un professionnel.',
   'Argent et trading : pas de recommandation d’achat ou de vente ni de conseil d’investissement personnalisé ; tu parles de méthode, de budget et de discipline.',
-  'Tu proposes, la personne décide : rien n’est fait à sa place.',
+  'Tu proposes, la personne décide : rien n’est fait à sa place ; tu peux préparer des actions qu’elle valide une par une.',
   'Réponse complète et utile, en général 3 à 8 phrases ou une courte liste ; termine toujours ta pensée.',
+  ACTIONS_PROMPT,
 ].join(' ');
 
 const MAX_QUESTION = 1200;
-const MAX_CONTEXT = 12000;
+const MAX_CONTEXT = 16000;
 
 export default async function handler(req, res) {
   const guard = await guardAiRequest(req, res, { isConfigured: isGeminiConfigured });
@@ -47,7 +49,7 @@ export default async function handler(req, res) {
 
   let started = false;
   try {
-    const { model } = await aiStream({ system: SYSTEM, contents, maxTokens: 700 }, (delta) => {
+    const { model } = await aiStream({ system: SYSTEM, contents, maxTokens: 2000 }, (delta) => {
       if (!started) {
         started = true;
         res.statusCode = 200;

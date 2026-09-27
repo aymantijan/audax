@@ -6,10 +6,16 @@ import { useAllGoals } from '../../hooks/useAllGoals';
 import { askAssistant, ASSISTANT_ERRORS } from '../../services/assistant';
 import { buildAssistantContext, DEFAULT_SCOPES } from '../../utils/assistant-context';
 import { Modal, Button } from '../common/ui';
+import { splitAnswer, normalizeActions } from '../../utils/assistant-actions';
+import { actionContext } from '../../services/assistant-actions';
+import ActionCard from './ActionCard';
 
 // Suggested questions, shown only when their section is shared.
 const SUGGESTIONS = [
   { scope: 'today', text: 'Fais-moi le briefing du jour.' },
+  { scope: 'etudes', text: 'Prépare mes révisions de la semaine.' },
+  { scope: 'etudes', text: 'Fais-moi des fiches sur mon dernier cours.' },
+  { scope: 'today', text: 'Propose-moi 3 ajustements pour la semaine prochaine.' },
   { scope: 'etudes', text: 'Que dois-je réviser ce soir ?' },
   { scope: 'today', text: 'Fais le bilan de ma semaine.' },
   { scope: 'patrimoine', text: 'Où part mon argent ce mois-ci ?' },
@@ -48,7 +54,7 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
     const q = (question ?? draft).trim();
     if (!q || busy) return;
     setDraft('');
-    const history = messages.filter((m) => !m.error).map(({ role, text }) => ({ role, text }));
+    const history = messages.filter((m) => !m.error).map(({ role, text }) => ({ role, text: role === 'assistant' ? splitAnswer(text).text : text }));
     setMessages((m) => [...m, { role: 'user', text: q }, { role: 'assistant', text: '' }]);
     setBusy(true);
     const controller = new AbortController();
@@ -62,6 +68,15 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
       const context = buildAssistantContext(scopes, { goals });
       const res = await askAssistant({ question: q, context, history, facts: user?.assistant?.facts || [] }, append, { signal: controller.signal });
       if (res.limit) setQuota({ used: res.used, limit: res.limit });
+      // Actions the assistant prepared: checked against the person's data, shown as cards.
+      const actions = normalizeActions(splitAnswer(res.text).actions, actionContext());
+      if (actions.length) {
+        setMessages((m) => {
+          const next = [...m];
+          next[next.length - 1] = { ...next[next.length - 1], actions, states: {} };
+          return next;
+        });
+      }
     } catch (e) {
       if (e?.name !== 'AbortError') {
         setMessages((m) => {
@@ -76,10 +91,21 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
     }
   };
 
+  // Guard: in development React runs effects twice; a question must be sent once.
+  const sentRef = useRef(null);
   useEffect(() => {
-    if (pending) { clearPending(); send(pending); }
+    if (!pending) { sentRef.current = null; return; }
+    if (sentRef.current === pending) return;
+    sentRef.current = pending;
+    clearPending();
+    send(pending);
   }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => abortRef.current?.abort(), []);
+  // Stop the answer when the window closes (not on React's development re-mount).
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; setTimeout(() => { if (!mountedRef.current) abortRef.current?.abort(); }, 0); };
+  }, []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages]);
 
@@ -91,7 +117,7 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
         <div className="min-h-[200px] max-h-[55dvh] overflow-y-auto space-y-3 pr-1" aria-live="polite">
           {messages.length === 0 && (
             <div className="text-sm text-mute space-y-3">
-              <p>Pose une question sur tes études, ta santé, ton argent ou ta carrière. Je m’appuie sur tes données, sans rien modifier.</p>
+              <p>Pose une question sur tes études, ta santé, ton argent ou ta carrière. Je m’appuie sur tes données. Je peux aussi te préparer des actions (révisions, fiches, relance, budget…) : rien n’est fait sans ton accord.</p>
               <div className="flex flex-wrap gap-2">
                 {suggestions.map((s) => (
                   <button key={s.text} type="button" onClick={() => send(s.text)} className="ui-btn rounded-full border border-line px-3 py-1.5 text-xs text-ink hover:border-accent cursor-pointer">{s.text}</button>
@@ -99,13 +125,26 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
               </div>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={m.role === 'user' ? 'flex justify-end' : ''}>
-              <div className={`rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap max-w-[90%] ${m.role === 'user' ? 'bg-accent/15 text-ink' : m.error ? 'bg-bad/10 text-bad' : 'bg-surface border border-line'}`}>
-                {m.text || (busy && i === messages.length - 1 ? '…' : '')}
+          {messages.map((m, i) => {
+            const shown = m.role === 'assistant' ? splitAnswer(m.text) : { text: m.text };
+            return (
+              <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'space-y-2'}>
+                <div className={`rounded-xl px-3.5 py-2.5 text-sm whitespace-pre-wrap max-w-[90%] ${m.role === 'user' ? 'bg-accent/15 text-ink' : m.error ? 'bg-bad/10 text-bad' : 'bg-surface border border-line'}`}>
+                  {shown.text || (busy && i === messages.length - 1 ? '…' : '')}
+                  {shown.pending && busy && i === messages.length - 1 && <span className="block text-xs text-mute mt-1">Je prépare les actions…</span>}
+                </div>
+                {m.actions?.length > 0 && (
+                  <div className="space-y-2 max-w-[95%]">
+                    <div className="text-[11px] text-mute">Préparé pour toi — rien n’est fait sans ton accord :</div>
+                    {m.actions.map((a, k) => (
+                      <ActionCard key={k} action={a} state={m.states?.[k]} onClose={onClose}
+                        onChange={(st) => setMessages((ms) => ms.map((x, xi) => (xi === i ? { ...x, states: { ...x.states, [k]: st } } : x)))} />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={endRef} />
         </div>
 

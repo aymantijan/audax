@@ -70,6 +70,12 @@ function studiesSummary() {
   const cards = useFlashcardStore.getState().cards || [];
   const minutes7 = (useFocusStore.getState().sessions || []).filter((s) => s.date >= daysAgo(7)).reduce((a, s) => a + (Number(s.durationMinutes) || 0), 0);
   const reading = (useReadingsStore.getState().progress || []).filter((p) => p.status === 'reading').length;
+  // Latest class notes (what was seen in class), so the assistant can make flashcards from them.
+  const byId = new Map(courses.map((c) => [c.id, c.name]));
+  const notes = Object.values(useLearningStore.getState().classNotes || {})
+    .filter((n) => n?.points?.length && byId.has(n.courseId))
+    .sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6)
+    .map((n) => ({ subject: byId.get(n.courseId), date: n.date, points: (Array.isArray(n.points) ? n.points.join(' · ') : String(n.points)).slice(0, 700) }));
   return {
     gradingScale: settings?.scale || null,
     subjects: results,
@@ -80,6 +86,7 @@ function studiesSummary() {
     studyMinutesLast7Days: minutes7,
     booksInProgress: reading,
     otherCourses: courses.filter((c) => !isAcademic(c) && c.status === 'active').slice(0, 8).map((c) => c.name),
+    recentClassNotes: notes,
   };
 }
 
@@ -102,6 +109,7 @@ function wealthSummary(user) {
     const rows = Array.isArray(variance) ? variance : variance?.rows || [];
     out.budgetsOver = rows.filter((r) => r.reel > r.amount).slice(0, 6).map((r) => ({ label: r.label, spent: Math.round(r.reel), budget: Math.round(r.amount) }));
   } catch { /* ignore */ }
+  try { out.expenseCategories = Object.values(acc.getAccountMap()).filter((a) => a.cls === 6).map((a) => a.label).slice(0, 40); } catch { /* ignore */ }
   out.savingsGoals = (acc.goals || []).filter((g) => !g.achieved).slice(0, 6).map((g) => ({ name: g.name, target: g.targetAmount, targetDate: g.targetDate || null }));
   out.upcomingDueDates = (acc.echeances || []).slice(0, 8).map((e) => ({ label: e.label, amount: e.amount, next: e.nextDate || e.date || null }));
   if (isModuleEnabled(user, 'trading')) {

@@ -82,7 +82,10 @@ export default function LifeReviewCard() {
           })}
         </div>
       )}
-      <div className="flex justify-end mt-4">
+      <div className="flex flex-wrap justify-end gap-2 mt-4">
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant('Propose-moi 3 ajustements concrets pour la semaine prochaine, à valider : une habitude à alléger ou renforcer, un budget, et la matière ou le sujet prioritaire.')}>
+          <span className="flex items-center gap-1.5"><Sparkles size={13} /> 3 ajustements à valider</span>
+        </Button>
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant('Fais le bilan de ma semaine, section par section, et propose-moi 3 priorités pour la semaine prochaine.')}>
           <span className="flex items-center gap-1.5"><Sparkles size={13} /> Bilan commenté</span>
         </Button>

@@ -6,7 +6,7 @@ import AccountSelect from '../common/AccountSelect';
 import { useAuthStore } from '../../store/authStore';
 import { useAccountingStore } from '../../store/accountingStore';
 import { isModuleEnabled } from '../../utils/navigation';
-import { parseCapture, normalizeDraft, describeDraft, CAPTURE_KINDS } from '../../utils/quick-capture';
+import { parseCapture, normalizeDraft, describeDraft, CAPTURE_KINDS, CAPTURE_FIELDS } from '../../utils/quick-capture';
 import { captureContext, moneyAccounts, saveDraft } from '../../services/capture';
 import { extractCapture, extractReceipt, EXTRACT_ERRORS } from '../../services/extract';
 import { ASSISTANT_ERRORS } from '../../services/assistant';
@@ -14,19 +14,6 @@ import { formatMoney } from '../../utils/currency';
 import { todayKey, fmtDateShort } from '../../utils/formatters';
 
 const EXAMPLES = ['payé 120 courses', 'couru 5 km en 28 min', 'poids 72,4', 'dormi 7h30', 'révisé 45 min', 'bu 1,5 l d’eau', 'reçu 3000 salaire'];
-
-// Editable fields of each kind of draft (the card's "Modifier").
-const FIELDS = {
-  expense: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
-  income: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
-  freelance: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
-  workout: [['exercise', 'Activité', 'text'], ['durationMin', 'Durée (min)', 'number'], ['distanceKm', 'Distance (km)', 'number']],
-  weight: [['weightKg', 'Poids (kg)', 'number']],
-  sleep: [['hours', 'Heures de sommeil', 'number']],
-  water: [['ml', 'Quantité (ml)', 'number']],
-  study: [['minutes', 'Durée (min)', 'number'], ['label', 'Sur quoi', 'text']],
-  habit: [['value', 'Valeur (si mesurée)', 'number']],
-};
 
 const errorText = (err) => EXTRACT_ERRORS[err?.code] || ASSISTANT_ERRORS[err?.code] || ASSISTANT_ERRORS.failed;
 
@@ -143,7 +130,7 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
 
             {editing && (
               <div className="grid grid-cols-2 gap-2">
-                {FIELDS[draft.kind].map(([k, label, type]) => (
+                {CAPTURE_FIELDS[draft.kind].map(([k, label, type]) => (
                   <Field key={k} label={label}><Input inputMode={type === 'number' ? 'decimal' : undefined} value={draft[k] ?? ''} onChange={(e) => setField(k, e.target.value)} /></Field>
                 ))}
                 <Field label="Date"><Input type="date" max={todayKey()} value={draft.date} onChange={(e) => setField('date', e.target.value)} /></Field>
