@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, DoorOpen, UserCheck, CalendarX2, Repeat, AlertTriangle, Flame } from 'lucide-react';
+import { Clock, MapPin, DoorOpen, UserCheck, CalendarX2, Repeat, AlertTriangle, Flame, BellRing } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import { useHabitStore } from '../../store/habitStore';
 import {
@@ -10,6 +10,8 @@ import {
 import { isAcademic } from '../../utils/academic';
 import { Button, Card } from '../common/ui';
 import { SectionHeader, tint, useAcademicSettings } from './design';
+import { isPushSupported, getPushSubscription, subscribeToPush } from '../../services/push';
+import { toast } from '../../store/uiStore';
 import { courseColor } from './TimetableView';
 
 export const ATTENDANCE_SOURCE = 'class_attendance';
@@ -190,6 +192,29 @@ export function CourseAttendanceSummary({ course }) {
   );
 }
 
+// Reminders with the app closed need a Web Push subscription on this device.
+function PushCta() {
+  const [state, setState] = useState('checking'); // checking | on | off | unsupported
+  useEffect(() => {
+    if (!isPushSupported()) { setState('unsupported'); return; }
+    getPushSubscription().then((s) => setState(s ? 'on' : 'off')).catch(() => setState('off'));
+  }, []);
+  if (state === 'checking' || state === 'on') return null;
+  const enable = async () => {
+    try { await subscribeToPush(); setState('on'); toast('Rappels de cours activés sur cet appareil, même app fermée', 'success'); } catch (e) { toast(e.message, 'error'); }
+  };
+  return (
+    <div className="rounded-xl border px-4 py-3 flex items-center gap-3 flex-wrap" style={{ borderColor: tint('var(--accent-primary)', 40), background: tint('var(--accent-primary)', 8) }}>
+      <BellRing size={17} className="text-accent shrink-0" />
+      <div className="flex-1 min-w-[12rem] text-sm">
+        <b className="text-ink">Rappels de cours, même app fermée.</b>{' '}
+        <span className="text-mute">{state === 'unsupported' ? 'Ce navigateur ne gère pas les notifications push : installez AUDAX sur l’écran d’accueil (PWA).' : 'Activez-les sur chaque appareil (téléphone surtout).'}</span>
+      </div>
+      {state === 'off' && <Button className="!py-1.5" onClick={enable}>Activer</Button>}
+    </div>
+  );
+}
+
 // ── Emploi du temps: partiels date, habit, per-subject record ─────────────
 export function AttendanceOverview() {
   const courses = useLearningStore((s) => s.courses);
@@ -234,6 +259,7 @@ export function AttendanceOverview() {
   if (!subjects.length) return null;
   return (
     <div className="space-y-3">
+      <PushCta />
       {waitingMidterms.length > 0 && term && (
         <div className="rounded-xl border px-4 py-3 flex items-center gap-3 flex-wrap" style={{ borderColor: tint('var(--warning)', 45), background: tint('var(--warning)', 8) }}>
           <CalendarX2 size={17} className="text-warning shrink-0" />

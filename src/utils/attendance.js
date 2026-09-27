@@ -10,7 +10,7 @@
  *                `midtermsDate` (runs on while unknown, flagged for the UI)
  *   'date'     → last class on `course.endDate` (inclusive)
  */
-import { isAcademic, DEFAULT_ACADEMIC_SETTINGS } from './academic';
+import { isAcademic, DEFAULT_ACADEMIC_SETTINGS } from './academic.js'; // explicit .js: also imported by api/class-reminders.js (plain Node ESM)
 
 const OPEN_BEFORE_MIN = 60; // the check-in button appears 1 h before the class
 

@@ -38,6 +38,8 @@ export default defineConfig({
         // one is precached — avoids the exact stale-bundle problem lazyRetry
         // works around for lazy routes, but at the service-worker cache layer.
         cleanupOutdatedCaches: true,
+        // Web Push display + click handling (public/sw-push.js).
+        importScripts: ['/sw-push.js'],
       },
       manifest: {
         name: 'AUDAX — Life & Trading Companion',

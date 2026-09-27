@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLearningStore } from '../store/learningStore';
 import { classesOn, arriveBy, fmtClock, dateKeyOf, withDefaults } from '../utils/attendance';
 import { toast } from '../store/uiStore';
+import { getPushSubscription } from '../services/push';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const SHOWN_KEY = 'audax-class-reminders';
@@ -18,7 +19,12 @@ function markShown(state, key) {
   try { localStorage.setItem(SHOWN_KEY, JSON.stringify(state)); } catch { /* private mode */ }
 }
 
+// With a push subscription the server (api/class-reminders.js) already sends the
+// system notification — in-app we only toast when AUDAX is on screen.
+let pushActive = false;
+
 function notify(body, tag) {
+  if (pushActive) { if (document.visibilityState === 'visible') toast(`🎓 ${body}`, 'info'); return; }
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     const n = new Notification('AUDAX · Cours', { body, tag });
     n.onclick = () => { window.focus(); n.close(); };
@@ -33,6 +39,11 @@ function notify(body, tag) {
  */
 export function useClassReminders() {
   useEffect(() => {
+    getPushSubscription().then((s) => { pushActive = !!s; }).catch(() => {});
+    // The server evaluates class times in the user's timezone.
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const st = useLearningStore.getState();
+    if (tz && st.academic.settings.timezone !== tz) st.updateAcademicSettings({ timezone: tz });
     const check = () => {
       const { courses, academic, attendance } = useLearningStore.getState();
       const lead = Number(withDefaults(academic.settings).classReminderMin);
