@@ -55,3 +55,17 @@ test('briefing: exams within a week are announced', () => {
   assert.equal(items[0].text, 'CC de Finance demain.');
   assert.equal(items[0].level, 'urgent');
 });
+
+import { overallResult, DEFAULT_ACADEMIC_SETTINGS } from '../src/utils/academic.js';
+
+test('overall average across semesters, weighted by credits when known', () => {
+  const settings = { ...DEFAULT_ACADEMIC_SETTINGS, scale: 20, passMark: 10 };
+  const terms = [{ id: 's1', name: 'S1' }, { id: 's2', name: 'S2' }];
+  const subject = (id, termId, grade, credits) => ({ id, name: id, kind: 'academic', status: 'active', termId, coefficient: 1, credits, evaluations: [{ id: `${id}e`, weight: 100, grade }] });
+  const equal = overallResult(terms, [], [subject('a', 's1', 12), subject('b', 's2', 16)], settings);
+  assert.equal(equal.avg, 14);
+  assert.equal(equal.weighting, 'equal');
+  const byCredits = overallResult(terms, [], [subject('a', 's1', 12, 30), subject('b', 's2', 16, 10)], settings);
+  assert.equal(byCredits.weighting, 'credits');
+  assert.equal(byCredits.avg, 13);
+});

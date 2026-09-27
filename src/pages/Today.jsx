@@ -31,6 +31,7 @@ import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/fo
 import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/ui';
 import { NextClassBanner } from '../components/learning/Attendance';
 import BriefingCard from '../components/today/BriefingCard';
+import ExamDayCard from '../components/learning/ExamDayCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 
 export default function Today() {
@@ -146,6 +147,8 @@ export default function Today() {
       </div>
 
       <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
+
+      <ExamDayCard />
 
       {/* Sunday and Monday: time to look back at the week */}
       {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}

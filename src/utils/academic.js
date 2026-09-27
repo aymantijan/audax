@@ -290,6 +290,26 @@ export function termResult(termId, modules, courses, settings) {
   };
 }
 
+/**
+ * The whole curriculum: every semester's result and the overall average.
+ * Weighted by each semester's credits when all scored semesters have some,
+ * otherwise a plain mean of the semester averages.
+ */
+export function overallResult(terms, modules, courses, settings) {
+  const rows = (terms || []).map((t) => ({ term: t, ...termResult(t.id, modules, courses, settings) }));
+  const scored = rows.filter((r) => r.avg != null);
+  const byCredits = scored.length > 0 && scored.every((r) => r.creditsTotal > 0);
+  const avg = weighted(scored.map((r) => ({ v: r.avg, w: byCredits ? r.creditsTotal : 1 })));
+  return {
+    terms: rows,
+    avg: round2(avg),
+    weighting: byCredits ? 'credits' : 'equal',
+    creditsEarned: rows.reduce((a, r) => a + (r.creditsEarned || 0), 0),
+    creditsTotal: rows.reduce((a, r) => a + (r.creditsTotal || 0), 0),
+    validated: rows.filter((r) => r.status === 'validated').length,
+  };
+}
+
 export const STATUS_META = {
   validated: { label: 'Validé', color: 'var(--success)' },
   failed: { label: 'Non validé', color: 'var(--error)' },

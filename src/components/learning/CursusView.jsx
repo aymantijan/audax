@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import {
-  termResult, requiredGrade, upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, fmtGrade,
+  termResult, overallResult, requiredGrade, upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, fmtGrade,
 } from '../../utils/academic';
 import { calculateCourseProgress } from '../../utils/course-progress';
 import { todayKey } from '../../utils/formatters';
@@ -179,6 +179,10 @@ export default function CursusView() {
     () => (term ? termResult(term.id, academic.modules, courses, settings) : null),
     [term, academic.modules, courses, settings.scale, settings.passMark, settings.eliminatoryMark, settings.subjectCompensation, settings.moduleCompensation, settings.retakeRule] // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const overall = useMemo(
+    () => (terms.length > 1 ? overallResult(terms, academic.modules, courses, settings) : null),
+    [terms, academic.modules, courses, settings],
+  );
   const fctx = useForecastContext();
   const forecasts = useMemo(() => Object.fromEntries(fctx.termCourses.map((c) => [c.id, forecastSubject(c, fctx)])), [fctx]);
   const termForecast = useMemo(() => (term ? forecastTerm(term.id, academic.modules, fctx) : null), [term, academic.modules, fctx]);
@@ -287,6 +291,36 @@ export default function CursusView() {
             color={nextExam && daysUntil(nextExam.ev.date, today) <= 7 ? 'var(--warning)' : undefined} />
         </div>
       </div>
+
+      {/* Whole curriculum, once there is more than one semester */}
+      {overall && overall.avg != null && (
+        <div className="rounded-xl border border-line bg-card p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+            <div className="text-sm font-semibold">Parcours complet</div>
+            <div className="text-xs text-mute">
+              {overall.weighting === 'credits' ? 'moyenne pondérée par les crédits' : 'moyenne des semestres'}
+              {overall.creditsTotal ? ` · ${overall.creditsEarned}/${overall.creditsTotal} crédits` : ''}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div>
+              <div className="text-[11px] text-mute">Moyenne générale</div>
+              <div className="font-data text-2xl font-bold" style={{ color: gradeColor(overall.avg, settings) }}>{fmtGrade(overall.avg)}/{settings.scale}</div>
+              <MentionTag avg={overall.avg} settings={settings} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {overall.terms.map((r) => (
+                <button key={r.term.id} type="button" onClick={() => setActiveTerm(r.term.id)}
+                  className="rounded-lg border border-line px-3 py-2 text-left hover:border-accent cursor-pointer">
+                  <div className="text-xs font-semibold">{r.term.name}</div>
+                  <div className="font-data text-sm">{r.avg == null ? '—' : `${fmtGrade(r.avg)}/${settings.scale}`}</div>
+                  <StatusPill status={r.status} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modules */}
       <SectionHeader icon={Layers} title="Modules & matières"

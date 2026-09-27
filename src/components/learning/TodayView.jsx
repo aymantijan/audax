@@ -20,6 +20,7 @@ import { ClassesTodayCard } from './Attendance';
 import { TodayRevisionCard } from './RevisionPlan';
 import { WeeklyReviewCard } from './WeeklyReview';
 import { classesOn } from '../../utils/attendance';
+import ExamDayCard from './ExamDayCard';
 
 const DAY_LETTER = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
@@ -206,6 +207,7 @@ export default function TodayView() {
         )}
       </div>
 
+      <ExamDayCard />
       <WeeklyReviewCard />
       <TodayRevisionCard />
 
