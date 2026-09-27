@@ -32,7 +32,11 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 - `financeStore.js` est l'ancienne compta (morte) ; la vraie est `accountingStore.js`.
 - Rappels push : `api/class-reminders.js` (cours + Santé), appelé toutes les 5 min par pg_cron Supabase
   (`supabase/migrations/005_class_reminders_cron.sql`, authentification par nonce, aucun secret dans le SQL).
-- Coachs IA actuels (`api/*-coach.js`) : modèles OpenRouter gratuits, réponses courtes → à remplacer par un assistant unique sur **Gemini** (étape 4).
+- IA (étape 4, fait) : **Gemini offre gratuite** uniquement, via `api/_lib/gemini.js` (clé `GEMINI_API_KEY` côté Vercel,
+  projet Google SANS facturation). Assistant unique `api/assistant.js` (réponse en flux) + coachs Trading/Santé/Ingénierie
+  (`api/_lib/coach.js`). Garde commune `api/_lib/ai-guard.js` : utilisateur connecté + 30 questions/jour/personne
+  (table `ai_usage`, migration 008 appliquée). Le navigateur construit le résumé des données : `src/utils/assistant-context.js`.
+- Navigation (étape 3, fait) : source unique `src/utils/navigation.js` (modules, pôles, activation). Accueil : `src/utils/onboarding-plan.js`.
 
 ## Design (étape 2, fait)
 - Composants communs dans `src/components/common/ui.jsx` : Card, Stat, Button, IconButton, Field/Input/Select,
