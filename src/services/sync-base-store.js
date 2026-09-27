@@ -46,3 +46,15 @@ export function baseStoreFor(userId) {
     },
   };
 }
+
+/**
+ * Safety net for the switch to the three-way sync (F2): the first time a store
+ * syncs with the new engine on this device (no base yet), keep a copy of the
+ * local data as it was. Written once, never overwritten, never uploaded.
+ */
+export async function backupOnce(userId, name, data) {
+  const key = `backup:${userId}:${name}`;
+  const existing = await tx('readonly', (s) => s.get(key));
+  if (existing) return;
+  await tx('readwrite', (s) => s.put({ at: new Date().toISOString(), data }, key));
+}

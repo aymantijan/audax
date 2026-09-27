@@ -15,7 +15,8 @@ import { useFocusStore } from '../store/focusStore';
 import { useFlashcardStore } from '../store/flashcardStore';
 import { fillDefaults } from '../utils/fill-defaults.js';
 import { createStoreSync } from '../utils/sync-engine.js';
-import { baseStoreFor } from './sync-base-store';
+import { baseStoreFor, backupOnce } from './sync-base-store';
+import { makeTransport, SYNC_TABLE } from './sync-transport.js';
 import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
 import { useContentStore } from '../store/contentStore';
@@ -25,7 +26,7 @@ import { useCreativeStore } from '../store/creativeStore';
 import { useRealEstateStore } from '../store/realEstateStore';
 import { useEngineeringStore } from '../store/engineeringStore';
 
-const TABLE = 'app_state';
+const TABLE = SYNC_TABLE;
 
 // Registry of every Zustand store that should sync to the cloud. `auth` maps
 // to the local profile store (name/careerGoal/accounts/activeAccount) — that's
@@ -84,33 +85,6 @@ function debounce(fn, ms) {
   return (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-// Supabase transport for one store (see utils/sync-engine.js). `updated_at` is
-// the row version: an update only lands if the row is still at the version
-// this device last saw, otherwise the engine fetches, merges and retries.
-function transportFor(userId, name) {
-  const row = () => supabase.from(TABLE);
-  const fail = (what, error) => { console.error(`[cloud-sync] ${what} ${name} failed:`, error.message); return { error }; };
-  return {
-    async fetch() {
-      const { data, error } = await row().select('data, updated_at').eq('user_id', userId).eq('store_name', name).maybeSingle();
-      if (error) return fail('fetch', error);
-      return { row: data ? { data: data.data, version: data.updated_at } : null };
-    },
-    async insert(data) {
-      const { data: res, error } = await row().insert({ user_id: userId, store_name: name, data, updated_at: new Date().toISOString() }).select('updated_at').single();
-      if (error) return error.code === '23505' ? { conflict: true } : fail('insert', error);
-      return { version: res.updated_at };
-    },
-    async update(data, version) {
-      const { data: res, error } = await row().update({ data, updated_at: new Date().toISOString() })
-        .eq('user_id', userId).eq('store_name', name).eq('updated_at', version).select('updated_at');
-      if (error) return fail('update', error);
-      if (!res?.length) return { conflict: true };
-      return { version: res[0].updated_at };
-    },
   };
 }
 
@@ -242,7 +216,7 @@ export async function startCloudSync(userId) {
     name,
     engine: createStoreSync({
       name, store, baseStore, mergeOnFirstSync,
-      transport: transportFor(userId, name),
+      transport: makeTransport(supabase, userId, name),
       serialize: serializableState,
       prepare: (data) => fillDefaults(data, store.getInitialState?.() || {}),
       onError: () => {},
@@ -250,6 +224,8 @@ export async function startCloudSync(userId) {
   }));
   engines = created.map((c) => c.engine);
   for (const { name, engine } of created) {
+    const store = REGISTRY.find((r) => r.name === name).store;
+    if (!(await baseStore.get(name))) await backupOnce(userId, name, serializableState(store.getState()));
     await engine.initial(cloud.data[name] || null, { firstTimeOnDevice: !seen.has(name) });
     if (myGeneration !== generation) return;
   }
