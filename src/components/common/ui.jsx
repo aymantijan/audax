@@ -183,12 +183,19 @@ export function Badge({ children, color = 'var(--accent-primary)' }) {
 }
 
 // The one validation animation: call on the element the user just ticked
-// (habit done, class attended, week closed). Honours "reduce motion" via CSS.
+// (habit done, class attended, week closed). Skipped when "reduce motion" is on.
 export function playSeal(el) {
-  if (!el) return;
-  el.classList.remove('seal');
-  void el.offsetWidth; // restart the animation
-  el.classList.add('seal');
+  if (!el?.animate) return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  // Web Animations API: survives React re-rendering the element's classes.
+  el.animate(
+    [
+      { transform: 'scale(1)', boxShadow: '0 0 0 0 color-mix(in srgb, var(--accent-primary) 45%, transparent)' },
+      { transform: 'scale(1.12)', offset: 0.4 },
+      { transform: 'scale(1)', boxShadow: '0 0 0 12px color-mix(in srgb, var(--accent-primary) 0%, transparent)' },
+    ],
+    { duration: 450, easing: 'ease-out' },
+  );
 }
 
 // Open modals, innermost last: Escape closes only the top one.

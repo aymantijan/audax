@@ -170,24 +170,6 @@ table {
   }
 }
 
-/* The one validation animation (class attended, habit done, week closed). */
-@keyframes seal {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-primary) 45%, transparent);
-  }
-  40% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent-primary) 0%, transparent);
-  }
-}
-.seal {
-  animation: seal 0.45s ease-out;
-}
-
 /* Modal: a centred window on desktop, a sheet from the bottom on phones. */
 @keyframes sheet-up {
   from {
