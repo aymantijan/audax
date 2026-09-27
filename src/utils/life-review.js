@@ -18,7 +18,11 @@ const inRange = (date, from, to) => date >= from && date <= to;
 export function sleepHoursOf(log) {
   const s = log?.sleepData?.sleepStartTime;
   const w = log?.sleepData?.wakeTime;
-  if (!s || !w) return null;
+  if (!s || !w) {
+    // Hours noted directly ("dormi 7h30", quick check-in) when no bed/wake times.
+    const h = Number(log?.sleepData?.sleepHours ?? log?.sleepData?.hoursSlept);
+    return h > 0 && h <= 16 ? h : null;
+  }
   const [sh, sm] = s.split(':').map(Number);
   const [wh, wm] = w.split(':').map(Number);
   const mins = ((wh * 60 + wm) - (sh * 60 + sm) + 1440) % 1440;

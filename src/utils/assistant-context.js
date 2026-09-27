@@ -21,6 +21,8 @@ import { isDue } from './fsrs';
 import { habitStreak, isHabitShownOn } from './calculations';
 import { getBaseCurrency, todayKey } from './formatters';
 import { isModuleEnabled } from './navigation';
+import { lifeLinks } from './life-timeline';
+import { timelineData } from '../services/life-timeline';
 
 export const ASSISTANT_SCOPES = [
   { key: 'today', label: 'Aujourd’hui (habitudes, objectifs)' },
@@ -46,6 +48,8 @@ function todaySummary(goals) {
       streak: habitStreak(h.id, logs, today, h),
     })),
     plan: objectives.filter((o) => !o.done).slice(0, 15).map((o) => ({ horizon: o.horizon, period: o.period, title: o.title })),
+    // Links measured between sections (Chronologie), strongest first.
+    linksBetweenSections: (() => { try { return lifeLinks(timelineData(), { today: todayKey() }).findings.slice(0, 6).map((f) => `${f.text} (${f.detail})`); } catch { return []; } })(),
     goals: (goals || []).slice(0, 12).map((g) => ({ domain: g.domain, title: g.title, progress: g.progress, status: g.status, targetDate: g.targetDate || null })),
   };
 }

@@ -56,6 +56,7 @@ const SettingsPage = lazy(lazyWithRetry(() => import('./pages/Settings'), 'Setti
 const DesignReference = lazy(lazyWithRetry(() => import('./pages/DesignReference'), 'DesignReference'));
 const PoleHome = lazy(lazyWithRetry(() => import('./pages/PoleHome'), 'PoleHome'));
 const Challenges = lazy(lazyWithRetry(() => import('./pages/Challenges'), 'Challenges'));
+const Timeline = lazy(lazyWithRetry(() => import('./pages/Timeline'), 'Timeline'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
@@ -212,6 +213,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/design" element={<DesignReference />} />
         <Route path="/defis" element={<Challenges />} />
+        <Route path="/chronologie" element={<Timeline />} />
         {/* Section home pages (étape 3) + French aliases for the other two sections */}
         <Route path="/etudes" element={<PoleHome key="etudes" poleKey="etudes" />} />
         <Route path="/patrimoine" element={<PoleHome key="patrimoine" poleKey="patrimoine" />} />
