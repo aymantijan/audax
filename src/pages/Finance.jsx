@@ -24,6 +24,7 @@ import Goals from './finance/Goals';
 import Labels from './finance/Labels';
 import PnLCalendar from './finance/PnLCalendar';
 import WealthRank from './finance/WealthRank';
+import TaxEstimate from '../components/finance/TaxEstimate';
 
 // Système financier personnel en partie double (plan comptable marocain adapté
 // à une personne physique). Le Journal reste la source unique ; l'interface est
@@ -59,6 +60,7 @@ const SPACES = [
     pages: [
       { key: 'goals', label: 'Objectifs', icon: Target, Component: Goals },
       { key: 'wealthRank', label: 'Rang de richesse', icon: Crown, Component: WealthRank },
+      { key: 'tax', label: 'Impôts (estimation)', icon: Landmark, Component: TaxEstimate },
     ],
   },
   {
