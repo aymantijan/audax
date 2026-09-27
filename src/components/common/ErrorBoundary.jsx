@@ -47,7 +47,7 @@ export default class ErrorBoundary extends Component {
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-line border-t-accent animate-spin" style={{ borderTopColor: 'var(--accent-primary)' }} />
-            <span className="text-sm text-mute">Updating to the latest version…</span>
+            <span className="text-sm text-mute">Mise à jour vers la dernière version…</span>
           </div>
         </div>
       );
@@ -56,21 +56,21 @@ export default class ErrorBoundary extends Component {
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="bg-card border border-line rounded-xl p-8 max-w-lg w-full text-center">
           <AlertTriangle size={40} className="mx-auto mb-4" style={{ color: 'var(--warning)' }} />
-          <h2 className="text-lg font-semibold mb-2">Something went wrong on this page</h2>
-          <p className="text-sm text-mute mb-1">Your data is safe — it lives in local storage and the cloud.</p>
+          <h2 className="text-lg font-semibold mb-2">Cette page a rencontré un problème</h2>
+          <p className="text-sm text-mute mb-1">Tes données ne sont pas touchées : elles sont sur ton appareil et dans le cloud.</p>
           <p className="text-xs text-mute mb-6 font-mono break-all">{String(this.state.error?.message || this.state.error)}</p>
           <div className="flex justify-center gap-3">
             <button
               className="px-4 py-2 rounded-lg text-sm bg-accent text-on-accent hover:opacity-90 font-semibold cursor-pointer"
               onClick={() => this.setState({ error: null })}
             >
-              <span className="flex items-center gap-2"><RefreshCw size={14} /> Try again</span>
+              <span className="flex items-center gap-2"><RefreshCw size={14} /> Réessayer</span>
             </button>
             <button
               className="px-4 py-2 rounded-lg text-sm bg-surface border border-line text-ink hover:border-accent cursor-pointer"
               onClick={() => { window.location.href = '/'; }}
             >
-              <span className="flex items-center gap-2"><Home size={14} /> Dashboard</span>
+              <span className="flex items-center gap-2"><Home size={14} /> Accueil</span>
             </button>
           </div>
         </div>

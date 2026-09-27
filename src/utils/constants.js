@@ -13,6 +13,9 @@ export const MACRO_SKILL = { fedPolicy: 'central-bank-policy-lv1', inflation: 'i
 export const DEAL_TYPES = ['LBO', 'Growth', 'VC'];
 export const DEAL_ROLES = ['Sourcing', 'Due Diligence', 'Modeling', 'Execution', 'Portfolio Ops'];
 export const DEAL_STATUS = ['ongoing', 'completed', 'passed'];
+// Stored values stay English (saved data); these are the French labels.
+export const DEAL_STATUS_LABEL = { ongoing: 'En cours', completed: 'Conclu', passed: 'Abandonné' };
+export const DEAL_STATUS_OPTIONS = DEAL_STATUS.map((s) => ({ value: s, label: DEAL_STATUS_LABEL[s] }));
 export const TASK_STATUS = ['todo', 'in-progress', 'done'];
 // The deal's process pipeline — a deal sits at one DEAL_STAGES index with a
 // DEAL_STAGE_STATUS state. Generic across LBO/VC/Growth (real-world PE deal
@@ -350,7 +353,7 @@ export const TRADE_XP = 5; // XP per linked skill when a trade is logged
 
 // XP needed to advance FROM a given level to the next one
 export const XP_TO_NEXT = { 1: 50, 2: 100, 3: 200, 4: 300, 5: Infinity };
-export const LEVEL_NAMES = { 1: 'Novice', 2: 'Intermediate', 3: 'Advanced', 4: 'Expert', 5: 'Master' };
+export const LEVEL_NAMES = { 1: 'Débutant', 2: 'Intermédiaire', 3: 'Avancé', 4: 'Expert', 5: 'Maître' };
 
 export const SYNERGY_DOMAINS = ['trading', 'learning', 'finance', 'health', 'growth'];
 

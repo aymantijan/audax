@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Trash2, Briefcase, Pencil } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useDealsStore } from '../store/dealsStore';
-import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_SKILL, DEAL_STAGES, SKILL_MAP } from '../utils/constants';
+import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_STATUS_LABEL, DEAL_STATUS_OPTIONS, DEAL_SKILL, DEAL_STAGES, SKILL_MAP } from '../utils/constants';
 import { fmtMoney, fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -18,12 +18,12 @@ export default function PrivateEquity() {
   const { deals, addDeal, editDeal, deleteDeal, getBadges } = useDealsStore();
   const [editing, setEditing] = useState(null);
   const editFields = [
-    { name: 'name', label: 'Deal name', type: 'text' },
+    { name: 'name', label: 'Nom du deal', type: 'text' },
     { name: 'type', label: 'Type', type: 'select', options: DEAL_TYPES },
-    { name: 'role', label: 'Your role', type: 'select', options: DEAL_ROLES },
-    { name: 'status', label: 'Status', type: 'select', options: DEAL_STATUS },
-    { name: 'size', label: 'Deal size', type: 'number', step: 'any', currency: '$' },
-    { name: 'firm', label: 'Firm / sponsor', type: 'text' },
+    { name: 'role', label: 'Ton rôle', type: 'select', options: DEAL_ROLES },
+    { name: 'status', label: 'Statut', type: 'select', options: DEAL_STATUS_OPTIONS },
+    { name: 'size', label: 'Taille du deal', type: 'number', step: 'any', currency: '$' },
+    { name: 'firm', label: 'Fonds / sponsor', type: 'text' },
     { name: 'date', label: 'Date', type: 'date' },
     { name: 'notes', label: 'Notes', type: 'text' },
   ];
@@ -60,21 +60,21 @@ export default function PrivateEquity() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-mute text-sm">Log a deal, then open it to break down the tasks you work on — each completed task awards XP to its target skill.</p>
+        <p className="text-mute text-sm">Ajoute un deal, puis ouvre-le pour découper le travail en tâches : chaque tâche terminée fait progresser la compétence visée.</p>
         <Button onClick={() => setModal(true)}>
-          <span className="flex items-center gap-2"><Plus size={16} /> Log Deal</span>
+          <span className="flex items-center gap-2"><Plus size={16} /> Ajouter un deal</span>
         </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Deals logged" value={deals.length} sub={`${completed} completed`} />
-        <Stat label="Total deal size" value={fmtMoney(totalSize)} sub="cumulative" />
-        <Stat label="Ongoing" value={deals.filter((d) => d.status === 'ongoing').length} />
-        <Stat label="Deal types" value={byType.length} sub={`of ${DEAL_TYPES.length}`} />
+        <Stat label="Deals suivis" value={deals.length} sub={`${completed} conclu${completed > 1 ? 's' : ''}`} />
+        <Stat label="Taille totale" value={fmtMoney(totalSize)} sub="cumulée" />
+        <Stat label="En cours" value={deals.filter((d) => d.status === 'ongoing').length} />
+        <Stat label="Types de deals" value={byType.length} sub={`sur ${DEAL_TYPES.length}`} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card title="Deals by Type">
+        <Card title="Deals par type">
           {byType.length ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={byType}>
@@ -88,12 +88,12 @@ export default function PrivateEquity() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState><Briefcase className="mx-auto mb-2 text-mute" size={26} />No deals yet. Log your first to start earning PE XP.</EmptyState>
+            <EmptyState><Briefcase className="mx-auto mb-2 text-mute" size={26} />Aucun deal pour l’instant. Ajoute le premier pour commencer à progresser.</EmptyState>
           )}
         </Card>
 
-        <Card title="Skills a Deal Builds">
-          <p className="text-xs text-mute mb-3">Tasks logged under each deal type suggest XP toward these skills (editable per task):</p>
+        <Card title="Compétences développées">
+          <p className="text-xs text-mute mb-3">Les tâches de chaque type de deal font progresser ces compétences (modifiable tâche par tâche) :</p>
           <div className="space-y-2.5">
             {DEAL_TYPES.map((t) => (
               <div key={t} className="text-sm">
@@ -106,7 +106,7 @@ export default function PrivateEquity() {
       </div>
 
       {deals.length > 0 && (
-        <Card title="Pipeline by Stage">
+        <Card title="Pipeline par étape">
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={byStage}>
               <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -120,9 +120,9 @@ export default function PrivateEquity() {
       )}
 
       <Card
-        title={`Deal Log (${filtered.length})`}
+        title={`Tous les deals (${filtered.length})`}
         action={
-          <Select value={filter} onChange={(e) => setFilter(e.target.value)} options={[{ value: 'all', label: 'All statuses' }, ...DEAL_STATUS.map((s) => ({ value: s, label: s }))]} />
+          <Select value={filter} onChange={(e) => setFilter(e.target.value)} options={[{ value: 'all', label: 'Tous les statuts' }, ...DEAL_STATUS_OPTIONS]} />
         }
       >
         {filtered.length ? (
@@ -133,11 +133,11 @@ export default function PrivateEquity() {
                   <th className="py-2 pr-4">Date</th>
                   <th className="py-2 pr-4">Deal</th>
                   <th className="py-2 pr-4">Type</th>
-                  <th className="py-2 pr-4">Role</th>
-                  <th className="py-2 pr-4 text-right">Size</th>
-                  <th className="py-2 pr-4">Stage</th>
-                  <th className="py-2 pr-4">Tasks</th>
-                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Rôle</th>
+                  <th className="py-2 pr-4 text-right">Taille</th>
+                  <th className="py-2 pr-4">Étape</th>
+                  <th className="py-2 pr-4">Tâches</th>
+                  <th className="py-2 pr-4">Statut</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -157,12 +157,12 @@ export default function PrivateEquity() {
                       <td className="py-2.5 pr-4 text-right">{d.size ? fmtMoney(d.size) : '—'}</td>
                       <td className="py-2.5 pr-4"><Badge color={STAGE_STATUS_COLOR[d.stageStatus] || 'var(--text-secondary)'}>{DEAL_STAGES[d.stageIndex ?? 0]}</Badge></td>
                       <td className="py-2.5 pr-4 text-mute">{tasks.length ? `${done}/${tasks.length}` : '—'}</td>
-                      <td className="py-2.5 pr-4"><Badge color={STATUS_COLOR[d.status]}>{d.status}</Badge></td>
+                      <td className="py-2.5 pr-4"><Badge color={STATUS_COLOR[d.status]}>{DEAL_STATUS_LABEL[d.status] || d.status}</Badge></td>
                       <td className="py-2.5 text-right whitespace-nowrap">
-                        <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => setEditing(d)} title="Edit">
+                        <button className="text-mute hover:text-accent mr-3 cursor-pointer" onClick={() => setEditing(d)} title="Modifier">
                           <Pencil size={14} />
                         </button>
-                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Delete this deal? Its tasks and their XP will be reversed.')) deleteDeal(d.id); }}>
+                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm('Supprimer ce deal ? Ses tâches et l’XP gagnée seront annulées.')) deleteDeal(d.id); }}>
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -173,31 +173,31 @@ export default function PrivateEquity() {
             </table>
           </div>
         ) : (
-          <EmptyState>No deals match.</EmptyState>
+          <EmptyState>Aucun deal ne correspond.</EmptyState>
         )}
       </Card>
 
       <BadgeList badges={getBadges()} />
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Log Deal">
+      <Modal open={modal} onClose={() => setModal(false)} title="Ajouter un deal">
         <form onSubmit={submit} className="space-y-3">
-          <Field label="Deal name">
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Project Atlas — SaaS LBO" autoFocus />
+          <Field label="Nom du deal">
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="ex. Projet Atlas — LBO SaaS" autoFocus />
           </Field>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <Field label="Type">
               <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={DEAL_TYPES} />
             </Field>
-            <Field label="Your role">
+            <Field label="Ton rôle">
               <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} options={DEAL_ROLES} />
             </Field>
-            <Field label="Status">
-              <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={DEAL_STATUS} />
+            <Field label="Statut">
+              <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={DEAL_STATUS_OPTIONS} />
             </Field>
-            <Field label="Deal size ($)">
+            <Field label="Taille du deal ($)">
               <Input type="number" step="any" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} />
             </Field>
-            <Field label="Firm / sponsor">
+            <Field label="Fonds / sponsor">
               <Input value={form.firm} onChange={(e) => setForm({ ...form, firm: e.target.value })} />
             </Field>
             <Field label="Date">
@@ -205,11 +205,11 @@ export default function PrivateEquity() {
             </Field>
           </div>
           <Field label="Notes">
-            <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Thesis, your contribution, outcome…" />
+            <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Thèse, ta contribution, résultat…" />
           </Field>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setModal(false)}>Cancel</Button>
-            <Button type="submit">Log deal</Button>
+            <Button type="button" variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
+            <Button type="submit">Ajouter</Button>
           </div>
         </form>
       </Modal>
@@ -218,7 +218,7 @@ export default function PrivateEquity() {
         <EntityFormModal
           open={!!editing}
           onClose={() => setEditing(null)}
-          title="Edit deal"
+          title="Modifier le deal"
           fields={editFields}
           initial={editing}
           wide

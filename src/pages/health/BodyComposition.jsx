@@ -399,7 +399,7 @@ export default function BodyComposition() {
         </form>
       </Card>
 
-      <Card title="Prévision de poids" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: null, plan: getActiveNutritionPlan(), adherence: null })}><span className="flex items-center gap-2"><FileDown size={13} /> Export monthly PDF</span></Button>}>
+      <Card title="Prévision de poids" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => exportMonthlyReportPDF(bodyComp, prediction, { program: null, plan: getActiveNutritionPlan(), adherence: null })}><span className="flex items-center gap-2"><FileDown size={13} /> Bilan du mois (PDF)</span></Button>}>
         <div className="text-xs text-mute mb-3">Confidence: {prediction.confidence}% (based on days logged) · Efficiency multiplier: {prediction.efficiency}%</div>
         <div className="grid grid-cols-3 gap-3 text-center mb-3">
           {['conservative', 'realistic', 'optimistic'].map((k) => (

@@ -184,23 +184,23 @@ export default function SettingsPage() {
       const key = await createOrRotateApiKey(cloudUserId);
       setNewApiKey(key);
       setApiKeyStatus(await getApiKeyStatus(cloudUserId));
-      toast('API key generated — copy it now, it won\'t be shown again', 'success');
+      toast('Clé créée : copie-la maintenant, elle ne sera plus affichée', 'success');
     } catch (e) {
-      toast(`Could not generate an API key: ${e.message}`, 'error');
+      toast(`Impossible de créer la clé : ${e.message}`, 'error');
     } finally {
       setApiKeyBusy(false);
     }
   };
   const revokeApiKeyNow = async () => {
-    if (!confirm('Revoke this API key? Anything using it (e.g. a Claude conversation) will stop working until you generate a new one.')) return;
+    if (!confirm('Révoquer cette clé ? Tout ce qui l’utilise (par exemple une conversation avec une IA) cessera de fonctionner jusqu’à ce que tu en crées une nouvelle.')) return;
     setApiKeyBusy(true);
     try {
       await revokeApiKey(cloudUserId);
       setApiKeyStatus(null);
       setNewApiKey('');
-      toast('API key revoked', 'info');
+      toast('Clé révoquée', 'info');
     } catch (e) {
-      toast(`Could not revoke the API key: ${e.message}`, 'error');
+      toast(`Impossible de révoquer la clé : ${e.message}`, 'error');
     } finally {
       setApiKeyBusy(false);
     }
@@ -213,9 +213,9 @@ export default function SettingsPage() {
     setGcalBusy(true);
     try {
       await connectGoogleCalendar();
-      toast('Google Calendar connected', 'success');
+      toast('Google Agenda connecté', 'success');
     } catch (err) {
-      toast(`Google Calendar connect failed: ${err.message}`, 'error');
+      toast(`Connexion à Google Agenda impossible : ${err.message}`, 'error');
     } finally {
       setGcalBusy(false);
     }
@@ -237,14 +237,14 @@ export default function SettingsPage() {
       if (pushSubscribed) {
         await unsubscribeFromPush();
         setPushSubscribed(false);
-        toast('Push notifications disabled', 'info');
+        toast('Notifications désactivées sur cet appareil', 'info');
       } else {
         await subscribeToPush();
         setPushSubscribed(true);
-        toast('Push notifications enabled', 'success');
+        toast('Notifications activées sur cet appareil', 'success');
       }
     } catch (err) {
-      toast(`Push notifications: ${err.message}`, 'error');
+      toast(`Notifications : ${err.message}`, 'error');
     } finally {
       setPushBusy(false);
     }
@@ -253,9 +253,9 @@ export default function SettingsPage() {
     setPushBusy(true);
     try {
       const r = await sendTestPush();
-      toast(`Test push sent to ${r.sent} device(s)${r.failed ? `, ${r.failed} failed` : ''}`, r.sent ? 'success' : 'warning');
+      toast(`Notification de test envoyée à ${r.sent} appareil(s)${r.failed ? `, ${r.failed} en échec` : ''}`, r.sent ? 'success' : 'warning');
     } catch (err) {
-      toast(`Test push failed: ${err.message}`, 'error');
+      toast(`Échec du test : ${err.message}`, 'error');
     } finally {
       setPushBusy(false);
     }
@@ -310,7 +310,7 @@ export default function SettingsPage() {
   };
 
   const resetAll = () => {
-    if (!confirm('This permanently deletes ALL local data (trades, courses, habits, skills, finances). Export a backup first. Continue?')) return;
+    if (!confirm('Cela supprime définitivement TOUTES les données de cet appareil (trades, cours, habitudes, compétences, finances). Télécharge une sauvegarde avant. Continuer ?')) return;
     useTradingStore.getState().resetAll();
     useLearningStore.getState().resetAll();
     useFinanceStore.getState().resetAll();
@@ -331,35 +331,35 @@ export default function SettingsPage() {
     useCreativeStore.getState().resetAll();
     useRealEstateStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
-    toast('All data reset', 'warning');
+    toast('Toutes les données ont été effacées', 'warning');
   };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-mute text-sm mt-1">Profile, data, and preferences.</p>
+        <h1 className="text-2xl font-bold">Paramètres</h1>
+        <p className="text-mute text-sm mt-1">Profil, données et préférences.</p>
       </div>
 
-      <Card title="Profile">
+      <Card title="Profil">
         <div className="grid md:grid-cols-2 gap-3">
-          <Field label="Name">
+          <Field label="Prénom et nom">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <Field label="Email">
+          <Field label="E-mail">
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
-          <Field label="Primary domain" hint="75% weight in composite synergy. Matches the 6 synergy pillars (2026-08-28) — Trading/Engineering/Business/Real Estate/Freelance/Fundraising now live under Métiers & Ventures, Career/Networking under Career Development, and skill-XP growth/Content/Focus/Creative under Growth & Output.">
+          <Field label="Ce qui compte le plus pour toi" hint="Pèse davantage dans ton score global (75 %).">
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
               options={[
-                { value: 'learning', label: 'Learning' },
-                { value: 'finance', label: 'Finance' },
-                { value: 'health', label: 'Health' },
-                { value: 'metiersVentures', label: 'Métiers & Ventures' },
-                { value: 'careerDevelopment', label: 'Career Development' },
-                { value: 'growthOutput', label: 'Growth & Output' },
+                { value: 'learning', label: 'Études et apprentissage' },
+                { value: 'finance', label: 'Argent et finances' },
+                { value: 'health', label: 'Santé et forme' },
+                { value: 'metiersVentures', label: 'Métier, entreprise et trading' },
+                { value: 'careerDevelopment', label: 'Carrière et réseau' },
+                { value: 'growthOutput', label: 'Progression et création' },
               ]}
             />
           </Field>
@@ -367,33 +367,33 @@ export default function SettingsPage() {
             <Input list="occupation-suggestions" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ex. étudiant·e, infirmier·e, développeur·se…" />
             <datalist id="occupation-suggestions">{OCCUPATION_SUGGESTIONS.map((o) => <option key={o} value={o} />)}</datalist>
           </Field>
-          <Field label="Gender" hint="Shows/hides the Cycle (female) / Performance (male) tabs in Health.">
+          <Field label="Sexe" hint="Adapte la partie Santé (onglet Cycle ou Performance, besoins caloriques).">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Select…' }, { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]}
+              options={[{ value: '', label: 'Choisir…' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
             />
           </Field>
-          <Field label="Birth year" hint="Used for BMR/TDEE and age-based estimates in Health.">
-            <Input type="number" min="1920" max={new Date().getFullYear()} value={form.dobYear} onChange={(e) => setForm({ ...form, dobYear: e.target.value })} placeholder="e.g. 1998" />
+          <Field label="Année de naissance" hint="Sert aux calculs de la partie Santé (métabolisme, besoins caloriques).">
+            <Input type="number" min="1920" max={new Date().getFullYear()} value={form.dobYear} onChange={(e) => setForm({ ...form, dobYear: e.target.value })} placeholder="ex. 1998" />
           </Field>
-          <Field label="Height (cm)" hint="Used for BMR/TDEE and body-composition estimates in Health.">
+          <Field label="Taille (cm)" hint="Sert aux calculs de la partie Santé (métabolisme, composition corporelle).">
             <Input type="number" min="100" max="250" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
         </div>
         <Button
           className="mt-4"
           onClick={() => {
-            if (!form.gender) return toast('Select a gender before saving.', 'warning');
+            if (!form.gender) return toast('Choisis une option pour « Sexe » avant d’enregistrer.', 'warning');
             updateProfile({
               ...form,
               dobYear: form.dobYear ? Number(form.dobYear) : null,
               heightCm: form.heightCm ? Number(form.heightCm) : null,
             });
-            toast('Profile saved', 'success');
+            toast('Profil enregistré', 'success');
           }}
         >
-          Save profile
+          Enregistrer le profil
         </Button>
       </Card>
 
@@ -402,15 +402,15 @@ export default function SettingsPage() {
         <div className="flex flex-wrap gap-3">
           {[
             { key: 'trading', label: 'Trading', default: true },
-            { key: 'pe', label: 'Deals (Private Equity)', default: true },
-            { key: 'business', label: 'Business Projects (+ side-projects)', default: true },
+            { key: 'pe', label: 'Private equity (deals)', default: true },
+            { key: 'business', label: 'Projets business (et projets perso)', default: true },
             { key: 'engineering', label: 'Ingénierie', default: false },
             { key: 'career', label: 'Carrière (candidatures, profil & CV, réseau, contenu)', default: false, keys: ['career', 'networking', 'content'] },
             { key: 'focus', label: 'Deep Work', default: false },
-            { key: 'fundraising', label: 'Fundraising', default: false },
+            { key: 'fundraising', label: 'Levée de fonds', default: false },
             { key: 'freelance', label: 'Freelance', default: false },
-            { key: 'creative', label: 'Creative', default: false },
-            { key: 'realEstate', label: 'Real Estate', default: false },
+            { key: 'creative', label: 'Création', default: false },
+            { key: 'realEstate', label: 'Immobilier', default: false },
           ].map((m) => (
             <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -499,7 +499,7 @@ export default function SettingsPage() {
           </p>
           <form onSubmit={submitPrice} className="flex flex-wrap gap-2 items-end">
             <Field label="Aliment">
-              <Input list="all-foods" value={priceEntry.name} onChange={(e) => setPriceEntry({ ...priceEntry, name: e.target.value })} placeholder="ex. Chicken thigh" />
+              <Input list="all-foods" value={priceEntry.name} onChange={(e) => setPriceEntry({ ...priceEntry, name: e.target.value })} placeholder="ex. Cuisse de poulet" />
               <datalist id="all-foods">
                 {allFoodNames.map((n) => <option key={n} value={n} />)}
               </datalist>
@@ -550,7 +550,7 @@ export default function SettingsPage() {
           </p>
           <form onSubmit={submitFoodInfo} className="grid sm:grid-cols-3 gap-2 items-end">
             <Field label="Aliment">
-              <Input list="all-foods" value={infoEntry.name} onChange={(e) => setInfoEntry({ ...infoEntry, name: e.target.value })} placeholder="ex. Sardines (canned)" />
+              <Input list="all-foods" value={infoEntry.name} onChange={(e) => setInfoEntry({ ...infoEntry, name: e.target.value })} placeholder="ex. Sardines en boîte" />
             </Field>
             <Field label="Nom de l'unité" hint={infoEntryUnit ? `générique : ${infoEntryUnit.label}` : "aucune pour l'instant"}>
               <Input value={infoEntry.unitLabel} onChange={(e) => setInfoEntry({ ...infoEntry, unitLabel: e.target.value })} placeholder={infoEntryUnit?.label || 'ex. barquette'} />
@@ -596,7 +596,7 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card title="Cloud Sync">
+      <Card title="Synchronisation">
         <div className="flex items-start gap-3">
           {cloudStatus === 'active' ? (
             <Cloud size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
@@ -606,49 +606,49 @@ export default function SettingsPage() {
           <div className="text-sm">
             {cloudStatus === 'active' && (
               <>
-                <span className="font-medium" style={{ color: 'var(--success)' }}>Sync active</span>
-                <p className="text-mute mt-1">Every change is saved to the cloud in real time and follows you across devices. Local storage remains the instant source of truth.</p>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Synchronisation active</span>
+                <p className="text-mute mt-1">Chaque modification est enregistrée sur ton compte en temps réel et te suit sur tous tes appareils. Cet appareil garde aussi sa propre copie, utilisable hors connexion.</p>
               </>
             )}
             {cloudStatus === 'offline' && (
               <>
-                <span className="font-medium" style={{ color: 'var(--warning)' }}>Not signed in to the cloud</span>
-                <p className="text-mute mt-1">Data is stored locally only. Log in with your cloud account on the Welcome screen to enable cross-device sync.</p>
+                <span className="font-medium" style={{ color: 'var(--warning)' }}>Non connecté à ton compte</span>
+                <p className="text-mute mt-1">Tes données restent sur cet appareil uniquement. Connecte-toi depuis l’écran d’accueil pour les retrouver sur tous tes appareils.</p>
               </>
             )}
             {cloudStatus === 'unconfigured' && (
               <>
-                <span className="font-medium text-mute">Cloud not configured</span>
-                <p className="text-mute mt-1">This build runs fully local. Add Supabase credentials to enable sync.</p>
+                <span className="font-medium text-mute">Synchronisation indisponible</span>
+                <p className="text-mute mt-1">Cette version fonctionne uniquement sur l’appareil.</p>
               </>
             )}
-            {cloudStatus === 'checking' && <span className="text-mute">Checking cloud session…</span>}
+            {cloudStatus === 'checking' && <span className="text-mute">Vérification de la connexion…</span>}
           </div>
         </div>
       </Card>
 
       {cloudStatus === 'active' && (
-        <Card title="API Access">
+        <Card title="Accès à tes données (clé API)">
           <div className="flex items-start gap-3 mb-3">
             <Key size={20} className="shrink-0 mt-0.5 text-mute" />
             <div className="text-sm flex-1 min-w-0">
               <p className="text-mute">
-                Generate a personal key to share your data with an external tool — e.g. paste it into a Claude conversation along with one of these URLs and ask Claude to fetch it. The key always resolves to your account only, never anyone else's. Read-only, revocable any time.
+                Crée une clé personnelle pour donner accès à tes données à un outil externe (par exemple une IA, avec l’une de ces adresses). La clé ne donne accès qu’à ton compte, en lecture seule, et se révoque à tout moment.
               </p>
               <ul className="text-xs text-mute mt-2 space-y-1">
-                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/account-data?key=YOUR_KEY</code> — everything: trading, finance, health, habits, deals, learning, skills…</li>
-                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/finance-data?key=YOUR_KEY</code> — Finance only</li>
+                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/account-data?key=TA_CLE</code> : tout (trading, finances, santé, habitudes, deals, études, compétences…)</li>
+                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/finance-data?key=TA_CLE</code> : finances uniquement</li>
               </ul>
 
               {newApiKey && (
                 <div className="mt-3 bg-surface border border-accent/40 rounded-lg p-3">
-                  <p className="text-xs text-warning mb-2">Copy this now — it won't be shown again.</p>
+                  <p className="text-xs text-warning mb-2">Copie-la maintenant : elle ne sera plus affichée.</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 min-w-0 truncate text-xs bg-card border border-line rounded px-2 py-1.5">{newApiKey}</code>
                     <button
                       className="shrink-0 text-mute hover:text-accent cursor-pointer"
-                      title="Copy"
-                      onClick={() => { navigator.clipboard.writeText(newApiKey); toast('Copied', 'success'); }}
+                      title="Copier"
+                      onClick={() => { navigator.clipboard.writeText(newApiKey); toast('Copiée', 'success'); }}
                     >
                       <Copy size={15} />
                     </button>
@@ -658,17 +658,17 @@ export default function SettingsPage() {
 
               {apiKeyStatus && !newApiKey && (
                 <p className="text-xs text-mute mt-3">
-                  Key created {new Date(apiKeyStatus.createdAt).toLocaleDateString()}
-                  {apiKeyStatus.lastUsedAt ? ` · last used ${new Date(apiKeyStatus.lastUsedAt).toLocaleString()}` : ' · never used yet'}. The key itself isn't shown again — generate a new one if you lost it.
+                  Clé créée le {new Date(apiKeyStatus.createdAt).toLocaleDateString('fr-FR')}
+                  {apiKeyStatus.lastUsedAt ? ` · dernière utilisation ${new Date(apiKeyStatus.lastUsedAt).toLocaleString('fr-FR')}` : ' · jamais utilisée'}. Elle n’est plus affichée : crée-en une nouvelle si tu l’as perdue.
                 </p>
               )}
 
               <div className="flex gap-2 mt-3">
                 <Button className="!px-3 !py-1.5 text-xs" disabled={apiKeyBusy} onClick={generateApiKey}>
-                  {apiKeyStatus ? 'Regenerate key' : 'Generate key'}
+                  {apiKeyStatus ? 'Recréer la clé' : 'Créer une clé'}
                 </Button>
                 {apiKeyStatus && (
-                  <Button variant="danger" className="!px-3 !py-1.5 text-xs" disabled={apiKeyBusy} onClick={revokeApiKeyNow}>Revoke</Button>
+                  <Button variant="danger" className="!px-3 !py-1.5 text-xs" disabled={apiKeyBusy} onClick={revokeApiKeyNow}>Révoquer</Button>
                 )}
               </div>
             </div>
@@ -676,7 +676,7 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      <Card title="Google Calendar">
+      <Card title="Google Agenda">
         <div className="flex items-start gap-3">
           {gcalConnected ? (
             <Calendar size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
@@ -686,24 +686,24 @@ export default function SettingsPage() {
           <div className="text-sm flex-1">
             {!gcalConfigured && (
               <>
-                <span className="font-medium text-mute">Not configured</span>
-                <p className="text-mute mt-1">Set VITE_GOOGLE_CLIENT_ID (see .env.example) to enable "Schedule" buttons on deal tasks, courses, habits, and workouts.</p>
+                <span className="font-medium text-mute">Indisponible</span>
+                <p className="text-mute mt-1">La connexion à Google Agenda n’est pas activée sur cette version.</p>
               </>
             )}
             {gcalConfigured && gcalConnected && (
               <>
-                <span className="font-medium" style={{ color: 'var(--success)' }}>Connected</span>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Connecté</span>
                 <p className="text-mute mt-1">
-                  Session active until {new Date(gcalExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — you'll be asked to reconnect after that.
+                  Connexion valable jusqu’à {new Date(gcalExpiresAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} : il faudra te reconnecter ensuite.
                 </p>
-                <Button variant="secondary" className="mt-3" onClick={disconnectGoogleCalendar}>Disconnect</Button>
+                <Button variant="secondary" className="mt-3" onClick={disconnectGoogleCalendar}>Déconnecter</Button>
               </>
             )}
             {gcalConfigured && !gcalConnected && (
               <>
-                <span className="font-medium text-mute">Not connected</span>
-                <p className="text-mute mt-1">Connect to schedule tasks, courses, habits, or workouts straight into your calendar.</p>
-                <Button className="mt-3" onClick={connectGcal} disabled={gcalBusy}>{gcalBusy ? '…' : 'Connect Google Calendar'}</Button>
+                <span className="font-medium text-mute">Non connecté</span>
+                <p className="text-mute mt-1">Connecte ton agenda pour y placer directement tâches, cours, habitudes ou séances.</p>
+                <Button className="mt-3" onClick={connectGcal} disabled={gcalBusy}>{gcalBusy ? '…' : 'Connecter Google Agenda'}</Button>
               </>
             )}
           </div>
@@ -720,28 +720,28 @@ export default function SettingsPage() {
           <div className="text-sm flex-1">
             {!isPushSupported() && (
               <>
-                <span className="font-medium text-mute">Not supported</span>
-                <p className="text-mute mt-1">This browser doesn't support push notifications.</p>
+                <span className="font-medium text-mute">Non disponible</span>
+                <p className="text-mute mt-1">Ce navigateur ne gère pas les notifications. Installe VAUDAX sur l’écran d’accueil de ton téléphone.</p>
               </>
             )}
-            {isPushSupported() && pushSubscribed === null && <span className="text-mute">Checking…</span>}
+            {isPushSupported() && pushSubscribed === null && <span className="text-mute">Vérification…</span>}
             {isPushSupported() && pushSubscribed === true && (
               <>
-                <span className="font-medium" style={{ color: 'var(--success)' }}>Enabled on this device</span>
+                <span className="font-medium" style={{ color: 'var(--success)' }}>Activées sur cet appareil</span>
                 <p className="text-mute mt-1">
-                  This is per-device — reminders (habit check-ins, trading alerts, overdue échéances) still need the app to have decided to send one; there's no server-side scheduler yet, so use "Send a test" to confirm the pipeline works.
+                  Les rappels de cours et de santé arrivent même quand l’application est fermée. À activer sur chaque appareil. « Envoyer un test » vérifie que tout fonctionne.
                 </p>
                 <div className="flex gap-2 mt-3">
-                  <Button variant="secondary" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Disable'}</Button>
-                  <Button onClick={testPush} disabled={pushBusy}>{pushBusy ? '…' : 'Send a test'}</Button>
+                  <Button variant="secondary" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Désactiver'}</Button>
+                  <Button onClick={testPush} disabled={pushBusy}>{pushBusy ? '…' : 'Envoyer un test'}</Button>
                 </div>
               </>
             )}
             {isPushSupported() && pushSubscribed === false && (
               <>
-                <span className="font-medium text-mute">Not enabled</span>
-                <p className="text-mute mt-1">Get a real OS notification on this device instead of relying on a browser tab staying open.</p>
-                <Button className="mt-3" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Enable push notifications'}</Button>
+                <span className="font-medium text-mute">Désactivées</span>
+                <p className="text-mute mt-1">Reçois de vraies notifications sur cet appareil, même quand l’application est fermée.</p>
+                <Button className="mt-3" onClick={togglePush} disabled={pushBusy}>{pushBusy ? '…' : 'Activer les notifications'}</Button>
               </>
             )}
           </div>
@@ -773,9 +773,9 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card title="Danger Zone">
+      <Card title="Zone sensible">
         <Button variant="danger" onClick={resetAll}>
-          <span className="flex items-center gap-2"><Trash2 size={15} /> Reset all data</span>
+          <span className="flex items-center gap-2"><Trash2 size={15} /> Effacer toutes les données de cet appareil</span>
         </Button>
       </Card>
     </div>

@@ -31,7 +31,7 @@ function YourGradeCard({ grade, consistency }) {
           <div className="text-xl font-bold truncate">{grade.current.name}</div>
           <div className="mt-2">
             <div className="flex justify-between text-[11px] text-mute mb-1">
-              <span>{grade.next ? `Next: ${grade.next.name}` : 'Max grade reached'}</span>
+              <span>{grade.next ? `Suivant : ${grade.next.name}` : 'Grade maximal atteint'}</span>
               <span>{Math.round(grade.progress)}%</span>
             </div>
             <div className="w-full bg-surface rounded-full overflow-hidden h-2">
@@ -39,16 +39,16 @@ function YourGradeCard({ grade, consistency }) {
             </div>
             {grade.next && (
               <div className="text-[10px] text-mute mt-1">
-                Gate to next: {grade.next.xpRequired.toLocaleString()} XP · synergy {grade.next.scoreGate}
-                {grade.scoreProgress < grade.xpProgress ? ' · raise your synergy score to advance' : ''}
+                Pour le suivant : {grade.next.xpRequired.toLocaleString()} XP · synergie {grade.next.scoreGate}
+                {grade.scoreProgress < grade.xpProgress ? ' · augmente ton score de synergie pour avancer' : ''}
               </div>
             )}
           </div>
         </div>
-        <div className="hidden sm:flex flex-col items-end gap-1 pl-4 border-l border-line shrink-0" title="Applies to every XP award app-wide — sustained daily activity compounds it toward 1.25×, a burst after a long gap dampens it toward 0.7×.">
-          <div className="flex items-center gap-1.5 text-xs text-mute"><Flame size={13} style={{ color: cColor }} /> Consistency</div>
+        <div className="hidden sm:flex flex-col items-end gap-1 pl-4 border-l border-line shrink-0" title="S’applique à toute l’XP gagnée : une activité régulière le fait monter jusqu’à 1,25×, un rattrapage après une longue pause le fait descendre jusqu’à 0,7×.">
+          <div className="flex items-center gap-1.5 text-xs text-mute"><Flame size={13} style={{ color: cColor }} /> Régularité</div>
           <div className="text-lg font-bold" style={{ color: cColor }}>×{consistency.momentum.toFixed(2)}</div>
-          <div className="text-[10px] text-mute">{consistency.streak > 0 ? `${consistency.streak}d streak` : consistency.missedDays > 0 ? `${consistency.missedDays}d missed` : 'start today'}</div>
+          <div className="text-[10px] text-mute">{consistency.streak > 0 ? `${consistency.streak} j d’affilée` : consistency.missedDays > 0 ? `${consistency.missedDays} j manqué${consistency.missedDays > 1 ? 's' : ''}` : 'commence aujourd’hui'}</div>
         </div>
       </div>
     </Card>
@@ -63,9 +63,9 @@ function DomainBalanceCard({ domainXP }) {
   const total = XP_DOMAINS.reduce((a, d) => a + domainXP[d], 0);
   const max = Math.max(1, ...XP_DOMAINS.map((d) => domainXP[d]));
   return (
-    <Card title="Domain Balance">
+    <Card title="Répartition par domaine">
       {total === 0 ? (
-        <EmptyState>Earn some XP anywhere to see your domain balance.</EmptyState>
+        <EmptyState>Gagne un peu d’XP pour voir ta répartition par domaine.</EmptyState>
       ) : (
         <div className="space-y-2.5">
           {XP_DOMAINS.map((d) => {
@@ -111,8 +111,8 @@ function RealWorldNetworkCard({ contacts }) {
   const byDomain = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <Card title="Real-World Network">
-      <p className="text-xs text-mute mb-3">Tes contacts Networking liés à des figures du Leaderboard, par domaine.</p>
+    <Card title="Ton réseau réel">
+      <p className="text-xs text-mute mb-3">Tes contacts du module Réseau liés à des figures du classement, par domaine.</p>
       <div className="flex flex-wrap gap-2">
         {byDomain.map(([domain, count]) => (
           <span key={domain} className="text-xs bg-surface border border-line rounded-full px-3 py-1.5 flex items-center gap-1.5">
@@ -175,13 +175,13 @@ function RankingView() {
     return () => { cancelled = true; };
   }, []);
 
-  const youName = `${user?.name || 'You'}`;
+  const youName = `${user?.name || 'Toi'}`;
 
   const ranked = useMemo(() => {
     const rows = [
       ...LEADERBOARD.map((p) => ({ ...p, isYou: false })),
       ...realUsers,
-      { name: youName, domain: 'You', country: user?.occupation || '—', xp: lifetimeXP, note: 'That\'s you — climb the ranks.', isYou: true },
+      { name: youName, domain: 'Toi', country: user?.occupation || '—', xp: lifetimeXP, note: 'C’est toi : grimpe dans le classement.', isYou: true },
     ].sort((a, b) => b.xp - a.xp || (a.isYou ? 1 : 0));
     return rows.map((r, i) => ({ ...r, rank: i + 1, grade: gradeForXpOnly(r.xp) }));
   }, [lifetimeXP, youName, user?.occupation, realUsers]);
@@ -213,15 +213,15 @@ function RankingView() {
 
   return (
     <div className="space-y-6">
-      <Stat label="Your rank" value={me ? `#${me.rank}` : '—'} sub={`of ${total}`} color="var(--accent-primary)" />
+      <Stat label="Ton rang" value={me ? `#${me.rank}` : '—'} sub={`sur ${total}`} color="var(--accent-primary)" />
 
       {cloudStatus !== 'ready' && (
         <div className="text-xs text-mute bg-surface border border-line rounded-lg px-3 py-2 flex items-center gap-2">
           <Globe size={13} className="shrink-0" />
-          {cloudStatus === 'unconfigured' && 'Cloud sync isn\'t set up on this deployment — the shared leaderboard (other real VAUDAX users) needs it to work.'}
-          {cloudStatus === 'signed-out' && 'Sign in with cloud sync (Settings) to appear on, and see, the shared leaderboard of real VAUDAX users.'}
-          {cloudStatus === 'loading' && 'Loading other VAUDAX users…'}
-          {cloudStatus === 'error' && 'Could not load other VAUDAX users right now — showing personalities and your own rank only.'}
+          {cloudStatus === 'unconfigured' && 'La synchronisation n’est pas configurée sur ce site : le classement partagé avec les autres utilisateurs de VAUDAX en a besoin.'}
+          {cloudStatus === 'signed-out' && 'Connecte-toi (Paramètres → Synchronisation) pour voir le classement des autres utilisateurs de VAUDAX et y apparaître.'}
+          {cloudStatus === 'loading' && 'Chargement des autres utilisateurs…'}
+          {cloudStatus === 'error' && 'Impossible de charger les autres utilisateurs pour l’instant : seuls les personnalités et ton rang sont affichés.'}
         </div>
       )}
       {cloudStatus === 'ready' && realUsers.length > 0 && (
@@ -235,17 +235,17 @@ function RankingView() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
           <input
             className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent"
-            placeholder="Search a name…"
+            placeholder="Chercher un nom…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
           />
         </div>
         <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={domain} onChange={(e) => { setDomain(e.target.value); setPage(0); }}>
-          <option value="all">All domains</option>
+          <option value="all">Tous les domaines</option>
           {PERSONALITY_DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={country} onChange={(e) => { setCountry(e.target.value); setPage(0); }}>
-          <option value="all">All countries</option>
+          <option value="all">Tous les pays</option>
           {PERSONALITY_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
@@ -259,10 +259,10 @@ function RankingView() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-mute border-b border-line bg-surface/50">
-                  <th className="py-2.5 px-4 w-16">Rank</th>
-                  <th className="py-2.5 px-4">Name</th>
-                  <th className="py-2.5 px-4 hidden sm:table-cell">Domain</th>
-                  <th className="py-2.5 px-4 hidden md:table-cell">Country</th>
+                  <th className="py-2.5 px-4 w-16">Rang</th>
+                  <th className="py-2.5 px-4">Nom</th>
+                  <th className="py-2.5 px-4 hidden sm:table-cell">Domaine</th>
+                  <th className="py-2.5 px-4 hidden md:table-cell">Pays</th>
                   <th className="py-2.5 px-4 hidden lg:table-cell">Grade</th>
                   <th className="py-2.5 px-4 text-right">XP</th>
                 </tr>
@@ -280,7 +280,7 @@ function RankingView() {
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         {r.isYou && <Star size={13} className="text-accent shrink-0" fill="currentColor" />}
-                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Real VAUDAX user" />}
+                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Utilisateur de VAUDAX" />}
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
                         {!r.isYou && !r.isRealUser && linkedCounts[r.name] > 0 && (
                           <button
@@ -306,7 +306,7 @@ function RankingView() {
             </table>
           </div>
         ) : (
-          <div className="p-8"><EmptyState>No one matches these filters.</EmptyState></div>
+          <div className="p-8"><EmptyState>Personne ne correspond à ces filtres.</EmptyState></div>
         )}
       </Card>
 
@@ -355,7 +355,7 @@ function MilestonesView({ currentLevel }) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-mute">
-        All 500 grades — the XP and synergy score needed to reach each one. Grade N unlocks only once you meet <em>both</em> its XP threshold and its score gate.
+        Les 500 grades, avec l’XP et le score de synergie nécessaires pour chacun. Un grade ne se débloque que si tu atteins <em>à la fois</em> son seuil d’XP et son seuil de score.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -363,13 +363,13 @@ function MilestonesView({ currentLevel }) {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
           <input
             className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent"
-            placeholder="Search a grade name…"
+            placeholder="Chercher un grade…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
           />
         </div>
         <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={era} onChange={(e) => { setEra(e.target.value); setPage(0); }}>
-          <option value="all">All eras</option>
+          <option value="all">Toutes les époques</option>
           {GRADE_ERAS.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
         <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
@@ -385,10 +385,10 @@ function MilestonesView({ currentLevel }) {
                 <tr className="text-left text-xs text-mute border-b border-line bg-surface/50">
                   <th className="py-2.5 px-4 w-16">Lv</th>
                   <th className="py-2.5 px-4">Grade</th>
-                  <th className="py-2.5 px-4 hidden sm:table-cell">Era</th>
-                  <th className="py-2.5 px-4 text-right">XP required</th>
-                  <th className="py-2.5 px-4 text-right hidden md:table-cell">Synergy gate</th>
-                  <th className="py-2.5 px-4 text-center w-24">Status</th>
+                  <th className="py-2.5 px-4 hidden sm:table-cell">Époque</th>
+                  <th className="py-2.5 px-4 text-right">XP requise</th>
+                  <th className="py-2.5 px-4 text-right hidden md:table-cell">Seuil de synergie</th>
+                  <th className="py-2.5 px-4 text-center w-24">Statut</th>
                 </tr>
               </thead>
               <tbody>
@@ -404,7 +404,7 @@ function MilestonesView({ currentLevel }) {
                       <td className="py-2.5 px-4 font-mono text-xs text-mute">{g.level}</td>
                       <td className="py-2.5 px-4">
                         <span className={isCurrent ? 'font-bold text-accent' : achieved ? 'font-medium' : 'text-mute'}>{g.name}</span>
-                        {isCurrent && <Badge color="var(--accent-primary)"> you are here</Badge>}
+                        {isCurrent && <Badge color="var(--accent-primary)"> tu es ici</Badge>}
                       </td>
                       <td className="py-2.5 px-4 hidden sm:table-cell text-mute text-xs">{g.era}</td>
                       <td className="py-2.5 px-4 text-right tabular-nums">{g.xpRequired.toLocaleString()}</td>
@@ -425,7 +425,7 @@ function MilestonesView({ currentLevel }) {
             </table>
           </div>
         ) : (
-          <div className="p-8"><EmptyState>No grade matches these filters.</EmptyState></div>
+          <div className="p-8"><EmptyState>Aucun grade ne correspond à ces filtres.</EmptyState></div>
         )}
       </Card>
 
@@ -468,15 +468,15 @@ export default function Leaderboard() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Leaderboard</h1>
+        <h1 className="text-2xl font-bold">Classement</h1>
         <p className="text-mute text-sm mt-1">
-          Your lifetime XP ranked against {LEADERBOARD.length} of history's greatest figures in finance, markets, business, mathematics and computing. Climb the ladder.
+          Ton XP totale comparée à {LEADERBOARD.length} grandes figures de la finance, des marchés, des affaires, des mathématiques et de l’informatique.
         </p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <YourGradeCard grade={grade} consistency={consistency} />
-        <Stat label="Lifetime XP" value={lifetimeXP.toLocaleString()} sub={`synergy ${synergy.weighted}`} />
+        <Stat label="XP totale" value={lifetimeXP.toLocaleString()} sub={`synergie ${synergy.weighted}`} />
       </div>
 
       <DomainBalanceCard domainXP={domainXP} />
@@ -487,13 +487,13 @@ export default function Leaderboard() {
           onClick={() => setTab('ranking')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${tab === 'ranking' ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'}`}
         >
-          <Users size={15} /> Ranking
+          <Users size={15} /> Classement
         </button>
         <button
           onClick={() => setTab('milestones')}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${tab === 'milestones' ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'}`}
         >
-          <Map size={15} /> Milestones
+          <Map size={15} /> Paliers
         </button>
       </div>
 

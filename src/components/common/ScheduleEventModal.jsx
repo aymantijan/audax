@@ -50,7 +50,7 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
     e.preventDefault();
     if (!summary.trim()) return;
     if (recurring && !weekdays.length) {
-      setErr('Pick at least one day.');
+      setErr('Choisis au moins un jour.');
       return;
     }
     setErr(null);
@@ -74,7 +74,7 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
         result = recurring ? await createRecurringCalendarEvent(eventData) : await createCalendarEvent(eventData);
       }
 
-      toast(isEdit ? 'Schedule updated' : 'Added to Google Calendar', 'success');
+      toast(isEdit ? 'Planification mise à jour' : 'Ajouté à Google Agenda', 'success');
       onScheduled(result);
       onClose();
     } catch (e2) {
@@ -85,7 +85,7 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
   };
 
   const unschedule = async () => {
-    if (!confirm('Remove this from Google Calendar?')) return;
+    if (!confirm('Retirer ceci de Google Agenda ?')) return;
     setBusy(true);
     try {
       await deleteCalendarEvent(existingEventId);
@@ -97,50 +97,50 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? `Edit: ${title}` : title}>
+    <Modal open={open} onClose={onClose} title={isEdit ? `Modifier : ${title}` : /^[a-zà-ÿ]/.test(title) ? `Planifier ${title}` : title}>
       <form onSubmit={submit} className="space-y-3">
         {!configured ? (
           <p className="text-sm text-mute">
-            Google Calendar isn't configured yet — set <code className="text-ink">VITE_GOOGLE_CLIENT_ID</code> (see .env.example) to enable scheduling.
+            Google Agenda n’est pas encore configuré sur ce site (variable <code className="text-ink">VITE_GOOGLE_CLIENT_ID</code>, voir .env.example).
           </p>
         ) : (
           <>
             {isEdit && existingEventLink && (
-              <a href={existingEventLink} target="_blank" rel="noreferrer" className="text-xs text-accent hover:underline">Open current event in Google Calendar ↗</a>
+              <a href={existingEventLink} target="_blank" rel="noreferrer" className="text-xs text-accent hover:underline">Ouvrir l’événement dans Google Agenda ↗</a>
             )}
-            <Field label="Event title">
+            <Field label="Titre de l’événement">
               <Input value={summary} onChange={(e) => setSummary(e.target.value)} autoFocus />
             </Field>
             {recurring && (
-              <Field label="Repeats on" hint="Weekly, until this is marked complete/archived in VAUDAX — then future occurrences stop automatically.">
+              <Field label="Se répète le" hint="Chaque semaine, jusqu’à ce que ce soit terminé ou archivé dans VAUDAX : les prochaines occurrences s’arrêtent alors toutes seules.">
                 <WeekdayPicker value={weekdays} onChange={setWeekdays} options={WEEKDAYS} />
               </Field>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <Field label={recurring ? 'Starting' : 'Date'}>
+              <Field label={recurring ? 'À partir du' : 'Date'}>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </Field>
-              <Field label="Time">
+              <Field label="Heure">
                 <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </Field>
             </div>
-            <Field label="Duration (minutes)">
+            <Field label="Durée (minutes)">
               <Input type="number" min="5" step="5" value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} />
             </Field>
-            {!connected && <p className="text-xs text-mute">You'll be asked to connect Google Calendar.</p>}
+            {!connected && <p className="text-xs text-mute">On te demandera de connecter Google Agenda.</p>}
             {err && <p className="text-bad text-sm">{err}</p>}
           </>
         )}
         <div className="flex justify-between gap-3">
           <div>
             {isEdit && configured && (
-              <Button type="button" variant="danger" onClick={unschedule} disabled={busy}>Remove</Button>
+              <Button type="button" variant="danger" onClick={unschedule} disabled={busy}>Retirer</Button>
             )}
           </div>
           <div className="flex gap-3">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
             <Button type="submit" disabled={busy || !configured}>
-              {busy ? '…' : isEdit ? 'Save changes' : connected ? 'Schedule' : 'Connect & Schedule'}
+              {busy ? '…' : isEdit ? 'Enregistrer' : connected ? 'Planifier' : 'Connecter et planifier'}
             </Button>
           </div>
         </div>

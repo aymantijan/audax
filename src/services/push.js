@@ -38,12 +38,12 @@ export async function getPushSubscription() {
 // subscribes this browser to Push and registers the subscription server-side.
 // Throws with a readable message on any failure step so the caller can toast it.
 export async function subscribeToPush() {
-  if (!isPushSupported()) throw new Error('Push notifications are not supported in this browser.');
+  if (!isPushSupported()) throw new Error('Ce navigateur ne gère pas les notifications.');
   const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-  if (!vapidKey) throw new Error('Push notifications are not configured on this deployment.');
+  if (!vapidKey) throw new Error('Les notifications ne sont pas disponibles sur cette version.');
 
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw new Error('Notification permission was not granted.');
+  if (permission !== 'granted') throw new Error('Autorisation refusée : active les notifications pour VAUDAX dans les réglages du téléphone ou du navigateur.');
 
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
@@ -58,7 +58,7 @@ export async function subscribeToPush() {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Failed to register subscription (${res.status}).`);
+    throw new Error(body.error || `Impossible d’enregistrer cet appareil (${res.status}).`);
   }
   return sub;
 }
@@ -74,6 +74,6 @@ export async function unsubscribeFromPush() {
 export async function sendTestPush() {
   const res = await fetch('/api/push-send-test', { method: 'POST', headers: await authHeaders() });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || `Test push failed (${res.status}).`);
+  if (!res.ok) throw new Error(body.error || `Échec du test (${res.status}).`);
   return body;
 }

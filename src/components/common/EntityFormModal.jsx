@@ -40,7 +40,7 @@ export default function EntityFormModal({
 
   const handleDelete = () => {
     const label = initial?.name || initial?.description || initial?.title || initial?.category || 'this item';
-    if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    if (!confirm(`Supprimer « ${label} » ? C’est définitif.`)) return;
     onDelete();
     onClose();
   };
@@ -100,8 +100,8 @@ export default function EntityFormModal({
             )}
           </div>
           <div className="flex gap-3">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit">{submitLabel || (isEdit ? 'Save changes' : 'Add')}</Button>
+            <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
+            <Button type="submit">{submitLabel || (isEdit ? 'Enregistrer' : 'Ajouter')}</Button>
           </div>
         </div>
       </form>

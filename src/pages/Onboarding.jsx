@@ -13,22 +13,25 @@ import { Button, Card } from '../components/common/ui';
 // domain (not the full 55+ template catalog, which would be overwhelming on
 // a first screen). Looked up by exact name from HABIT_TEMPLATES so the real
 // XP/skill-link/frequency metadata comes along instead of being re-typed here.
+// For every profile: body, reading, money and wellbeing first; the first four
+// are preselected. (These are the catalogue's French names — they had drifted
+// from the English ones, which left this step empty.)
 const STARTER_HABIT_NAMES = [
-  'Daily trade journal', 'Review daily P&L',
-  'Daily reading (30 min)', 'Daily concept review',
-  'Daily spending log', 'Weekly budget check',
-  'Morning exercise', '8+ hours sleep',
-  'Daily Journal', 'Gratitude journaling',
-  'Log today\'s lab session', 'Advance a project task',
+  'Sport le matin', '8 h de sommeil ou plus',
+  'Lecture quotidienne (30 min)', 'Noter ses dépenses du jour',
+  'Boire 8 verres d’eau', 'Méditation (10 min)',
+  'Journal quotidien', 'Journal de gratitude',
+  'Vérifier son budget chaque semaine', 'Réviser un concept par jour',
+  'Journal de trading quotidien', 'Revoir le P&L du jour',
 ];
 const ALL_TEMPLATE_ITEMS = HABIT_TEMPLATES.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group })));
 const STARTER_HABITS = STARTER_HABIT_NAMES.map((name) => ALL_TEMPLATE_ITEMS.find((it) => it.name === name)).filter(Boolean);
 
 const DOMAIN_TOUR = [
-  { icon: TrendingUp, title: 'Trading', text: 'Multi-account journal — demo, broker, prop-firm — with risk management, psychology, and AI coaching.' },
-  { icon: Wallet, title: 'Finance', text: 'Real double-entry accounting: budgets, treasury forecast, échéances, and goals — not just a transaction list.' },
-  { icon: HeartPulse, title: 'Health', text: 'Sleep, workouts, nutrition, recovery, and readiness — all feeding into your cross-domain score.' },
-  { icon: BookOpen, title: 'Learning & Skills', text: 'Courses, reading, and a 450+ node skill tree that levels up as you actually do the work.' },
+  { icon: BookOpen, title: 'Études et apprentissage', text: 'Cursus, emploi du temps, assiduité, fiches de révision, lectures, et un arbre de plus de 450 compétences qui progresse avec ce que tu fais vraiment.' },
+  { icon: Wallet, title: 'Argent', text: 'Dépenses, budgets, épargne, échéances et patrimoine, avec une vraie comptabilité en arrière-plan.' },
+  { icon: HeartPulse, title: 'Santé', text: 'Sommeil, sport, nutrition, récupération et forme du jour.' },
+  { icon: TrendingUp, title: 'Travail, projets et trading', text: 'Carrière, freelance, projets, et un journal de trading multi-comptes pour ceux qui tradent.' },
 ];
 
 export default function Onboarding() {
@@ -88,8 +91,8 @@ export default function Onboarding() {
 
         {step === 0 && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Welcome, {user?.name}.</h1>
-            <p className="text-mute text-sm mb-5">Five domains, one score. Here's what's inside.</p>
+            <h1 className="text-xl font-bold mb-1">Bienvenue, {user?.name}.</h1>
+            <p className="text-mute text-sm mb-5">Toute ta vie au même endroit. Voici ce que tu peux y suivre.</p>
             <div className="space-y-3">
               {DOMAIN_TOUR.map((d) => (
                 <div key={d.title} className="flex items-start gap-3 bg-surface border border-line rounded-lg px-4 py-3">
@@ -102,31 +105,31 @@ export default function Onboarding() {
               ))}
             </div>
             <Button className="w-full mt-5" onClick={() => setStep(1)}>
-              <span className="flex items-center justify-center gap-2">Next <ArrowRight size={15} /></span>
+              <span className="flex items-center justify-center gap-2">Suivant <ArrowRight size={15} /></span>
             </Button>
           </Card>
         )}
 
         {step === 1 && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Which sections do you want?</h1>
-            <p className="text-mute text-sm mb-5">Turn off anything you don't need — you can change this anytime in Settings.</p>
+            <h1 className="text-xl font-bold mb-1">Quelles sections veux-tu ?</h1>
+            <p className="text-mute text-sm mb-5">Désactive ce dont tu n’as pas besoin : tu pourras changer ça à tout moment dans Paramètres.</p>
             <div className="space-y-2">
               {[
-                { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Multi-account journal, risk management, psychology tracking.' },
+                { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Journal multi-comptes, gestion du risque, suivi de la psychologie.' },
                 // One combined question toggles BOTH `pe`/`business` at once — the two
                 // pages (Deals split from Business Projects, 2026-08-26) can be turned
                 // on/off independently later in Settings, but onboarding stays one step.
-                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Deals & Business', text: 'PE/GE/VC deal pipeline, plus business tracking from a light side-project (stages + tasks) to a full formal venture (phases, KPIs, accounting).' },
-                { key: 'engineering', icon: FlaskConical, title: 'Engineering', text: 'Lab journal + design-project pipeline — chemical engineering & related.' },
-                { key: 'networking', icon: Users, title: 'Networking', text: 'Contacts, follow-ups, and relationship history — recruiters, mentors, alumni.' },
-                { key: 'career', icon: Briefcase, title: 'Career', text: 'Application pipeline — applied → interview → offer.' },
-                { key: 'content', icon: Megaphone, title: 'Content', text: 'Publications and engagement — LinkedIn, blog, portfolio.' },
-                { key: 'focus', icon: Timer, title: 'Deep Work', text: 'A focus timer + session log, feeding XP into whichever domain you were concentrating on.' },
-                { key: 'fundraising', icon: Rocket, title: 'Fundraising', text: 'Investor pipeline for founders raising capital — contacted → term sheet → closed.' },
-                { key: 'freelance', icon: Briefcase, title: 'Freelance', text: 'Clients, hours, invoices — for freelancers and consultants.' },
-                { key: 'creative', icon: Palette, title: 'Creative', text: 'Works, practice, and showcases — for artists, musicians, and writers.' },
-                { key: 'realEstate', icon: Building2, title: 'Real Estate', text: 'Rental property portfolio — cash flow and cap rate per property.' },
+                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Investissements et projets business', text: 'Suivi de deals (private equity, capital-risque) et de projets, du petit projet perso (étapes et tâches) à la vraie entreprise (phases, KPIs, comptabilité).' },
+                { key: 'engineering', icon: FlaskConical, title: 'Ingénierie', text: 'Journal de laboratoire et suivi de projets de conception (génie chimique et domaines proches).' },
+                { key: 'networking', icon: Users, title: 'Réseau', text: 'Contacts, relances et historique des échanges : recruteurs, mentors, anciens élèves.' },
+                { key: 'career', icon: Briefcase, title: 'Carrière', text: 'Suivi des candidatures : envoyée, entretien, offre.' },
+                { key: 'content', icon: Megaphone, title: 'Contenu', text: 'Publications et engagement : LinkedIn, blog, portfolio.' },
+                { key: 'focus', icon: Timer, title: 'Deep Work', text: 'Un minuteur de concentration et l’historique de tes sessions, qui font progresser le domaine travaillé.' },
+                { key: 'fundraising', icon: Rocket, title: 'Levée de fonds', text: 'Suivi des investisseurs pour les fondateurs qui lèvent des fonds : contacté, term sheet, closing.' },
+                { key: 'freelance', icon: Briefcase, title: 'Freelance', text: 'Clients, heures et factures, pour les indépendants et consultants.' },
+                { key: 'creative', icon: Palette, title: 'Création', text: 'Œuvres, pratique et expositions, pour les artistes, musiciens et auteurs.' },
+                { key: 'realEstate', icon: Building2, title: 'Immobilier', text: 'Biens locatifs : cash-flow et rentabilité par bien.' },
               ].map((m) => {
                 const keys = m.keys || [m.key];
                 const on = keys.every((k) => modules[k]);
@@ -149,9 +152,9 @@ export default function Onboarding() {
               })}
             </div>
             <div className="flex gap-2 mt-5">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(0)}>Back</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(0)}>Retour</Button>
               <Button className="flex-1" onClick={() => setStep(2)}>
-                <span className="flex items-center justify-center gap-2">Next <ArrowRight size={15} /></span>
+                <span className="flex items-center justify-center gap-2">Suivant <ArrowRight size={15} /></span>
               </Button>
             </div>
           </Card>
@@ -159,8 +162,8 @@ export default function Onboarding() {
 
         {step === 2 && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Pick your starter habits</h1>
-            <p className="text-mute text-sm mb-5">These log in one tap from "Aujourd'hui" every day. You can add more or edit these later in Habits.</p>
+            <h1 className="text-xl font-bold mb-1">Choisis tes premières habitudes</h1>
+            <p className="text-mute text-sm mb-5">Elles se cochent en un geste depuis « Aujourd’hui ». Tu pourras en ajouter ou les modifier plus tard dans Habitudes.</p>
             <div className="flex flex-wrap gap-2">
               {STARTER_HABITS.map((h) => {
                 const on = selected.has(h.name);
@@ -179,9 +182,9 @@ export default function Onboarding() {
               })}
             </div>
             <div className="flex gap-2 mt-5">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Back</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Retour</Button>
               <Button className="flex-1" onClick={() => setStep(3)}>
-                <span className="flex items-center justify-center gap-2">Next ({selected.size} selected) <ArrowRight size={15} /></span>
+                <span className="flex items-center justify-center gap-2">Suivant ({selected.size} choisie{selected.size > 1 ? 's' : ''}) <ArrowRight size={15} /></span>
               </Button>
             </div>
           </Card>
@@ -191,26 +194,26 @@ export default function Onboarding() {
           <Card>
             <div className="text-center py-4">
               <Sparkles size={32} className="text-accent mx-auto mb-3" />
-              <h1 className="text-xl font-bold mb-1">You're set.</h1>
+              <h1 className="text-xl font-bold mb-1">C’est prêt.</h1>
               <p className="text-mute text-sm mb-5">
                 {selected.size > 0
-                  ? `${selected.size} habit${selected.size !== 1 ? 's' : ''} will show up on "Aujourd'hui" — check them off as you go.`
-                  : 'No habits selected — you can add some anytime from the Habits page.'}
+                  ? `${selected.size} habitude${selected.size > 1 ? 's' : ''} t’attend${selected.size > 1 ? 'ent' : ''} dans « Aujourd’hui » : coche-les au fil de la journée.`
+                  : 'Aucune habitude choisie : tu pourras en ajouter à tout moment depuis Habitudes.'}
               </p>
               <div className="flex items-center gap-2 text-xs text-mute justify-center">
-                <Flame size={13} /> First tip: log your morning check-in daily — it feeds your Health score and burnout alerts.
+                <Flame size={13} /> Premier conseil : fais ton check-in du matin chaque jour, il nourrit ton score Santé et les alertes d’épuisement.
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(2)}>Back</Button>
-              <Button className="flex-1" onClick={finish}>Go to Aujourd'hui</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(2)}>Retour</Button>
+              <Button className="flex-1" onClick={finish}>Aller à Aujourd’hui</Button>
             </div>
           </Card>
         )}
 
         {step === 0 && (
           <button onClick={skip} className="w-full text-center text-xs text-mute hover:text-ink mt-4 cursor-pointer">
-            Skip setup
+            Passer cette étape
           </button>
         )}
       </div>
