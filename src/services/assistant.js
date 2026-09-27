@@ -43,10 +43,15 @@ export const ASSISTANT_ERRORS = {
 
 // Checks a key before saving it: one tiny question with that key only.
 // Resolves { ok: true } or { ok: false, code }.
+// Without a provider, tests the key currently in use on the account (server side).
 export async function testAiKey(provider, key, model) {
-  const headers = { ...(await aiRequestHeaders()), 'X-AI-Provider': provider, 'X-AI-Key': key.trim() };
-  if (model?.trim()) headers['X-AI-Model'] = model.trim();
-  else delete headers['X-AI-Model'];
+  const headers = await aiRequestHeaders();
+  if (provider) {
+    headers['X-AI-Provider'] = provider;
+    headers['X-AI-Key'] = String(key || '').trim();
+    if (model?.trim()) headers['X-AI-Model'] = model.trim();
+    else delete headers['X-AI-Model'];
+  }
   try {
     const res = await fetch('/api/assistant', { method: 'POST', headers, body: JSON.stringify({ question: 'Réponds uniquement : OK', context: {} }) });
     if (res.ok) { await res.text(); return { ok: true }; }

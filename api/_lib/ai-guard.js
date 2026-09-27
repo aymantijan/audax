@@ -1,4 +1,5 @@
 import { userKeyFrom } from './llm.js';
+import { activeKeyFor } from './key-vault.js';
 
 // Shared guard for every AI endpoint: a real signed-in user, and a daily
 // quota per person (F8) so a private circle can never exhaust the free
@@ -52,10 +53,12 @@ export async function takeQuota(userId, { fetchImpl = fetch, limit = DAILY_AI_LI
 // own provider account sets the limits. Sign-in is still required either way.
 export async function guardAiRequest(req, res, { isConfigured }) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return null; }
-  const userKey = userKeyFrom(req);
-  if (!userKey && !isConfigured()) { res.status(503).json({ error: 'not_configured' }); return null; }
   const userId = await verifyUser(req);
   if (!userId) { res.status(401).json({ error: 'Unauthorized' }); return null; }
+  // A key sent with the request (being tested, or kept on a device without an
+  // account) wins; otherwise the key saved on the account, on any device.
+  const userKey = userKeyFrom(req) || await activeKeyFor(userId);
+  if (!userKey && !isConfigured()) { res.status(503).json({ error: 'not_configured' }); return null; }
   if (userKey) return { userId, userKey, quota: { ok: true, used: null, limit: null } };
   const quota = await takeQuota(userId);
   if (!quota.ok) { res.status(429).json({ error: 'quota', limit: quota.limit }); return null; }
