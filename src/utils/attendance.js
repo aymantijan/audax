@@ -5,8 +5,9 @@
  * Pure functions, no store access (records live in learningStore.attendance).
  *
  * A subject can stop before the end of the semester: `course.endRule`
- *   'midterms' → last class the day before the term's `midtermsDate` (runs on
- *                while that date is unknown, flagged so the UI can ask for it)
+ *   'midterms' → last class the day before the partiels: the date of the
+ *                subject's own CC / partiel evaluation, else the term's
+ *                `midtermsDate` (runs on while unknown, flagged for the UI)
  *   'date'     → last class on `course.endDate` (inclusive)
  */
 import { isAcademic, DEFAULT_ACADEMIC_SETTINGS } from './academic';
@@ -36,9 +37,23 @@ export const withDefaults = (settings) => ({ ...DEFAULT_ACADEMIC_SETTINGS, ...(s
 
 export const occurrenceKey = (courseId, slotId, date) => `${courseId}|${slotId}|${date}`;
 
-/** When a subject stops: { rule, date, pending } (date = first day WITHOUT class). */
+/**
+ * Partiels date of a subject: its own dated CC / partiel evaluation (the
+ * latest, a CC can be split in several), else the semester's partiels date.
+ */
+export function midtermsOf(course, term) {
+  const own = (course.evaluations || []).filter((e) => (e.type === 'cc' || e.type === 'partiel') && e.date).map((e) => e.date).sort();
+  if (own.length) return { date: own[own.length - 1], source: 'eval' };
+  if (term?.midtermsDate) return { date: term.midtermsDate, source: 'term' };
+  return { date: null, source: null };
+}
+
+/** When a subject stops: { rule, date, pending, source } (date = first day WITHOUT class). */
 export function courseEnd(course, term) {
-  if (course.endRule === 'midterms') return { rule: 'midterms', date: term?.midtermsDate || null, pending: !term?.midtermsDate };
+  if (course.endRule === 'midterms') {
+    const m = midtermsOf(course, term);
+    return { rule: 'midterms', date: m.date, pending: !m.date, source: m.source };
+  }
   if (course.endRule === 'date' && course.endDate) return { rule: 'date', date: addDays(course.endDate, 1), pending: false };
   return { rule: 'none', date: null, pending: false };
 }

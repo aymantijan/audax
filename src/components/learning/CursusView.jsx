@@ -14,6 +14,9 @@ import { Button, Card } from '../common/ui';
 import {
   useAcademicSettings, GradePill, StatusPill, MentionTag, BigStat, SectionHeader, tint, gradeColor, frDate, countdownLabel,
 } from './design';
+import { ForecastBadge, useForecastContext } from './Forecast';
+import { forecastSubject, forecastTerm } from '../../utils/prediction';
+import { subjectPass, hasLevelMarks } from '../../utils/academic';
 import { TermModal, ModuleModal, BulkImportModal, GradingSettingsModal, CourseFormModal, EvaluationSplitModal } from './CursusModals';
 
 // Semester progress through its dates (week X / Y).
@@ -43,7 +46,7 @@ function EvalChips({ course, settings }) {
 }
 
 function NeededHint({ course, settings }) {
-  const target = course.targetGrade ?? settings.passMark;
+  const target = course.targetGrade ?? subjectPass(settings);
   const req = requiredGrade(course, target, settings);
   if (!req) return null;
   const label = course.targetGrade != null ? `pour ${fmtGrade(target)}` : 'pour valider';
@@ -56,7 +59,7 @@ function NeededHint({ course, settings }) {
   );
 }
 
-function SubjectRow({ course, result, settings }) {
+function SubjectRow({ course, result, settings, forecast }) {
   const progress = calculateCourseProgress(course);
   return (
     <Link to={`/learning/course/${course.id}`}
@@ -75,6 +78,7 @@ function SubjectRow({ course, result, settings }) {
         <div className="mt-1"><NeededHint course={course} settings={settings} /></div>
       </div>
       <div className="flex items-center gap-2 justify-end">
+        {!result.complete && <ForecastBadge forecast={forecast} settings={settings} />}
         <GradePill value={result.value} settings={settings} />
         <ChevronRight size={15} className="text-mute group-hover:text-accent" />
       </div>
@@ -83,7 +87,7 @@ function SubjectRow({ course, result, settings }) {
   );
 }
 
-function UnitCard({ unit, settings, onEditModule, onAddSubject }) {
+function UnitCard({ unit, settings, onEditModule, onAddSubject, forecasts }) {
   const m = unit.module;
   return (
     <div className="rounded-xl border border-line bg-card overflow-hidden">
@@ -96,6 +100,7 @@ function UnitCard({ unit, settings, onEditModule, onAddSubject }) {
           </div>
           <div className="text-[11px] text-mute mt-0.5">
             {m && <>coef. {unit.coefficient} · </>}{unit.subjects.length} matière{unit.subjects.length > 1 ? 's' : ''}
+            {m && hasLevelMarks(settings) && <> · validé à {fmtGrade(unit.pass)}</>}
             {unit.credits > 0 && <> · {unit.credits} crédits</>}
           </div>
         </div>
@@ -111,7 +116,7 @@ function UnitCard({ unit, settings, onEditModule, onAddSubject }) {
       </div>
       {unit.subjects.length ? (
         <div className="divide-y divide-line/60">
-          {unit.subjects.map(({ course, r }) => <SubjectRow key={course.id} course={course} result={r} settings={settings} />)}
+          {unit.subjects.map(({ course, r }) => <SubjectRow key={course.id} course={course} result={r} settings={settings} forecast={forecasts?.[course.id]} />)}
         </div>
       ) : (
         <button onClick={() => onAddSubject(m?.id)} className="w-full px-4 py-4 text-sm text-mute hover:text-accent cursor-pointer text-left flex items-center gap-2">
@@ -174,6 +179,9 @@ export default function CursusView() {
     () => (term ? termResult(term.id, academic.modules, courses, settings) : null),
     [term, academic.modules, courses, settings.scale, settings.passMark, settings.eliminatoryMark, settings.subjectCompensation, settings.moduleCompensation, settings.retakeRule] // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const fctx = useForecastContext();
+  const forecasts = useMemo(() => Object.fromEntries(fctx.termCourses.map((c) => [c.id, forecastSubject(c, fctx)])), [fctx]);
+  const termForecast = useMemo(() => (term ? forecastTerm(term.id, academic.modules, fctx) : null), [term, academic.modules, fctx]);
   const nextExam = useMemo(() => {
     if (!term) return null;
     return upcomingEvaluations(result?.courses || [], today).find((x) => !x.past && normGrade(x.ev, settings) == null) || null;
@@ -225,7 +233,7 @@ export default function CursusView() {
               <GraduationCap size={13} className="text-accent" />
               <span>{settings.institution || 'Établissement'}{settings.program ? ` · ${settings.program}` : ''}</span>
               <button onClick={() => setSettingsOpen(true)} className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 hover:text-ink hover:border-accent cursor-pointer">
-                <Settings2 size={11} /> /{settings.scale} · validation {settings.passMark}
+                <Settings2 size={11} /> /{settings.scale} · {hasLevelMarks(settings) ? `matière ${fmtGrade(subjectPass(settings))} · module ${fmtGrade(settings.modulePassMark ?? settings.passMark)} · semestre ${fmtGrade(settings.passMark)}` : `validation ${settings.passMark}`}
               </button>
             </div>
             <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -263,11 +271,14 @@ export default function CursusView() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-5">
           <BigStat label="Moyenne du semestre" value={result.avg == null ? '—' : `${fmtGrade(result.avg)}/${settings.scale}`} color={gradeColor(result.avg, settings)}
             sub={result.avg == null ? 'aucune note saisie' : result.complete
               ? <span className="flex items-center gap-2"><MentionTag avg={result.avg} settings={settings} />{result.compensated ? '· par compensation' : ''}</span>
               : 'provisoire — notes connues uniquement'} />
+          <BigStat label="Moyenne prévue" value={termForecast?.avg == null || result.complete ? '—' : `≈ ${fmtGrade(termForecast.avg, 1)}/${settings.scale}`}
+            color={termForecast?.avg == null ? undefined : gradeColor(termForecast.avg, settings)}
+            sub={result.complete ? 'semestre terminé' : termForecast?.avg == null ? 'après les premiers cours et notes' : <StatusPill status={termForecast.status === 'in-progress' ? 'in-progress' : termForecast.status} />} />
           <BigStat label="Statut" value={<StatusPill status={result.status} />} sub={`${graded}/${result.courses.length} matière(s) notée(s)`} />
           <BigStat label="Crédits validés" value={result.creditsTotal ? `${result.creditsEarned}/${result.creditsTotal}` : '—'} sub={result.creditsTotal ? 'modules validés' : 'ajoutez les crédits'} />
           <BigStat label="Prochaine évaluation"
@@ -283,7 +294,7 @@ export default function CursusView() {
       {units.length ? (
         <div className="space-y-3">
           {units.map((u) => (
-            <UnitCard key={u.module?.id || 'loose'} unit={u} settings={settings}
+            <UnitCard key={u.module?.id || 'loose'} unit={u} settings={settings} forecasts={forecasts}
               onEditModule={(m) => setModuleModal({ module: m })} onAddSubject={(moduleId) => setSubjectModal({ moduleId })} />
           ))}
         </div>

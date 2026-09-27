@@ -76,23 +76,37 @@ export function TermModal({ open, onClose, term }) {
 
 // ── Module (UE) ──────────────────────────────────────────────────────────
 export function ModuleModal({ open, onClose, termId, module }) {
-  const { addModule, editModule, deleteModule } = useLearningStore();
+  const { addModule, editModule, deleteModule, editCourse } = useLearningStore();
+  const courses = useLearningStore((s) => s.courses);
+  const modules = useLearningStore((s) => s.academic.modules);
   const [f, setF] = useState({});
+  const [picked, setPicked] = useState({}); // courseId -> coefficient (string) for subjects in this module
   const [confirmDel, setConfirmDel] = useState(false);
+  const subjects = courses.filter((c) => c.kind === 'academic' && c.termId === termId && c.status !== 'dropped');
   useEffect(() => {
     if (!open) return;
     setF(module ? { ...module, credits: module.credits ?? '' } : { name: '', coefficient: 1, credits: '' });
+    setPicked(Object.fromEntries(subjects.filter((c) => module && c.moduleId === module.id).map((c) => [c.id, String(c.coefficient ?? 1)])));
     setConfirmDel(false);
-  }, [open, module]);
+  }, [open, module]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = (e) => {
     e.preventDefault();
     if (!f.name?.trim()) return;
     const data = { name: f.name.trim(), coefficient: numOrNull(f.coefficient) || 1, credits: numOrNull(f.credits) };
+    let id = module?.id;
     if (module) editModule(module.id, data);
-    else addModule({ ...data, termId });
+    else id = addModule({ ...data, termId });
+    // Subjects ticked join this module (with their coefficient inside it); unticked ones leave it.
+    for (const c of subjects) {
+      if (picked[c.id] != null) {
+        const coefficient = numOrNull(picked[c.id]) || 1;
+        if (c.moduleId !== id || Number(c.coefficient ?? 1) !== coefficient) editCourse(c.id, { moduleId: id, coefficient });
+      } else if (c.moduleId === id) editCourse(c.id, { moduleId: null });
+    }
     onClose();
   };
+  const moduleName = (id) => modules.find((m) => m.id === id)?.name;
   return (
     <Modal open={open} onClose={onClose} title={module ? 'Modifier le module' : 'Nouveau module'}>
       <form onSubmit={save} className="space-y-3">
@@ -103,6 +117,31 @@ export function ModuleModal({ open, onClose, termId, module }) {
           <Field label="Coefficient dans le semestre"><Input type="number" step="0.5" min="0.5" value={f.coefficient ?? 1} onChange={(e) => setF({ ...f, coefficient: e.target.value })} /></Field>
           <Field label="Crédits (optionnel)" hint="Vide = somme des matières"><Input type="number" min="0" value={f.credits ?? ''} onChange={(e) => setF({ ...f, credits: e.target.value })} /></Field>
         </div>
+        {subjects.length > 0 && (
+          <div>
+            <div className="text-xs text-mute mb-1.5">Matières de ce module <span className="opacity-70">· coefficient de chaque matière dans le module</span></div>
+            <div className="rounded-lg border border-line divide-y divide-line/60 max-h-64 overflow-y-auto">
+              {subjects.map((c) => {
+                const on = picked[c.id] != null;
+                const elsewhere = !on && c.moduleId && c.moduleId !== module?.id ? moduleName(c.moduleId) : null;
+                return (
+                  <div key={c.id} className="flex items-center gap-2.5 px-3 py-1.5 text-sm hover:bg-surface/60">
+                    <label className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" className="accent-[var(--accent-primary)]" checked={on}
+                        onChange={(e) => setPicked((cur) => { const n = { ...cur }; if (e.target.checked) n[c.id] = String(c.coefficient ?? 1); else delete n[c.id]; return n; })} />
+                      <span className="flex-1 min-w-0 truncate text-ink">{c.name}{elsewhere && <span className="text-[11px] text-mute"> · dans « {elsewhere} »</span>}</span>
+                    </label>
+                    {on && (
+                      <input type="number" step="0.5" min="0.5" value={picked[c.id]} aria-label={`Coefficient de ${c.name}`}
+                        onChange={(e) => setPicked((cur) => ({ ...cur, [c.id]: e.target.value }))} title="Coefficient dans le module"
+                        className="w-16 bg-surface border border-line rounded-md px-2 py-1 text-sm text-ink text-center focus:outline-none focus:border-accent" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="flex items-center gap-3 pt-2">
           {module && (confirmDel ? (
             <span className="flex items-center gap-2 text-xs">
@@ -339,6 +378,8 @@ export function GradingSettingsModal({ open, onClose }) {
       program: f.program || '',
       scale,
       passMark: numOrNull(f.passMark) ?? scale / 2,
+      subjectPassMark: numOrNull(f.subjectPassMark),
+      modulePassMark: numOrNull(f.modulePassMark),
       eliminatoryMark: numOrNull(f.eliminatoryMark),
       subjectCompensation: !!f.subjectCompensation,
       moduleCompensation: !!f.moduleCompensation,
@@ -371,8 +412,16 @@ export function GradingSettingsModal({ open, onClose }) {
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="Noté sur"><Input type="number" min="1" value={f.scale ?? ''} onChange={(e) => setF({ ...f, scale: e.target.value })} /></Field>
-          <Field label="Note de validation"><Input type="number" step="0.25" value={f.passMark ?? ''} onChange={(e) => setF({ ...f, passMark: e.target.value })} /></Field>
+          <Field label="Validation du semestre"><Input type="number" step="0.25" value={f.passMark ?? ''} onChange={(e) => setF({ ...f, passMark: e.target.value })} /></Field>
           <Field label="Note éliminatoire" hint="Vide = aucune"><Input type="number" step="0.25" value={f.eliminatoryMark ?? ''} onChange={(e) => setF({ ...f, eliminatoryMark: e.target.value })} /></Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Validation d’une matière" hint="Vide = même note que le semestre. ISCAE : 7">
+            <Input type="number" step="0.25" value={f.subjectPassMark ?? ''} onChange={(e) => setF({ ...f, subjectPassMark: e.target.value })} />
+          </Field>
+          <Field label="Validation d’un module" hint="Vide = même note que le semestre. ISCAE : 8">
+            <Input type="number" step="0.25" value={f.modulePassMark ?? ''} onChange={(e) => setF({ ...f, modulePassMark: e.target.value })} />
+          </Field>
         </div>
 
         <div className="rounded-xl border border-line p-3 space-y-1">

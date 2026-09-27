@@ -19,7 +19,7 @@ import { calculateCourseProgress } from '../utils/course-progress';
 import { GRADES, GRADE_XP, SKILL_MAP } from '../utils/constants';
 import { uid } from '../utils/formatters';
 import {
-  isAcademic, subjectResult, requiredGrade, simulateAverage, mentionFor, EVALUATION_TYPES, SLOT_KINDS, WEEKDAYS, fmtGrade, normGrade, letterFor,
+  isAcademic, subjectResult, requiredGrade, simulateAverage, mentionFor, EVALUATION_TYPES, SLOT_KINDS, WEEKDAYS, fmtGrade, normGrade, letterFor, subjectPass,
 } from '../utils/academic';
 import { Card, Button, Badge, ProgressBar, Modal, Select, Field } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -28,6 +28,7 @@ import { CourseFormModal } from '../components/learning/CursusModals';
 import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tint, gradeColor } from '../components/learning/design';
 import { courseColor } from '../components/learning/TimetableView';
 import { CourseEndControl, CourseAttendanceSummary } from '../components/learning/Attendance';
+import { ForecastCard } from '../components/learning/Forecast';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
 const parseNum = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
@@ -84,7 +85,7 @@ function EvaluationsCard({ course, settings }) {
 
       {(r.complete || course.retakeGrade != null || course.finalGrade != null) && (
         <div className="grid sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-line">
-          <Field label="Note de rattrapage" hint={r.final != null && r.final < settings.passMark ? 'Moyenne sous la note de validation : saisissez le rattrapage.' : 'Seulement si vous passez le rattrapage.'}>
+          <Field label="Note de rattrapage" hint={r.final != null && r.final < subjectPass(settings) ? 'Moyenne sous la note de validation : saisissez le rattrapage.' : 'Seulement si vous passez le rattrapage.'}>
             <input className={cellCls} type="number" step="0.25" value={course.retakeGrade ?? ''} placeholder="—" onChange={(ev) => editCourse(course.id, { retakeGrade: parseNum(ev.target.value) })} />
           </Field>
           <Field label="Moyenne officielle (optionnel)" hint="Si l'école publie une moyenne différente, elle remplace le calcul.">
@@ -98,10 +99,12 @@ function EvaluationsCard({ course, settings }) {
 
 // ── "What if" simulator ──────────────────────────────────────────────────
 function SimulatorCard({ course, settings }) {
-  const target = course.targetGrade ?? settings.passMark;
+  const sPass = subjectPass(settings);
+  const target = course.targetGrade ?? sPass;
   const req = requiredGrade(course, target, settings);
-  const pass = requiredGrade(course, settings.passMark, settings);
-  const [x, setX] = useState(() => Math.min(settings.scale, Math.max(0, Math.ceil((req?.needed ?? settings.passMark) * 4) / 4)));
+  const pass = requiredGrade(course, sPass, settings);
+  const semester = sPass !== settings.passMark ? requiredGrade(course, settings.passMark, settings) : null;
+  const [x, setX] = useState(() => Math.min(settings.scale, Math.max(0, Math.ceil((req?.needed ?? sPass) * 4) / 4)));
   if (!req) return null;
   const sim = simulateAverage(course, x, settings);
   const mention = mentionFor(sim, settings);
@@ -120,7 +123,8 @@ function SimulatorCard({ course, settings }) {
     <Card>
       <SectionHeader icon={Calculator} title="Simulateur" subtitle={`Il reste : ${names}`} />
       <div className="space-y-2">
-        {line('Pour valider la matière', pass)}
+        {line(`Pour valider la matière (${fmtGrade(sPass)})`, pass)}
+        {semester && course.targetGrade !== settings.passMark && line(`Pour ${fmtGrade(settings.passMark)} (moyenne visée du semestre)`, semester)}
         {course.targetGrade != null && line(`Pour atteindre ${fmtGrade(target)}`, req)}
       </div>
       <div className="mt-5">
@@ -403,7 +407,7 @@ export default function CoursePage() {
                 sub={r.value == null ? 'aucune note' : r.complete
                   ? <span className="flex gap-1.5"><MentionTag avg={r.value} settings={settings} />{r.retakeApplied && '· après rattrapage'}</span>
                   : `provisoire · ${r.gradedWeight}% de la note connue`} />
-              <BigStat label="Note visée" value={course.targetGrade != null ? `${fmtGrade(course.targetGrade)}/${settings.scale}` : '—'} sub={course.targetGrade != null ? 'modifiable via ✎' : `validation à ${settings.passMark}`} />
+              <BigStat label="Note visée" value={course.targetGrade != null ? `${fmtGrade(course.targetGrade)}/${settings.scale}` : '—'} sub={course.targetGrade != null ? 'modifiable via ✎' : `validation à ${fmtGrade(subjectPass(settings))}`} />
               <BigStat label="Note nécessaire" color={req?.status === 'impossible' ? 'var(--error)' : req?.status === 'secured' ? 'var(--success)' : req ? gradeColor(req.needed, settings) : undefined}
                 value={!req ? '—' : req.status === 'secured' ? 'Assuré' : req.status === 'impossible' ? 'Hors de portée' : fmtGrade(req.needed)}
                 sub={!req ? 'plus rien à passer' : `sur ce qui reste, ${course.targetGrade != null ? 'pour l’objectif' : 'pour valider'}`} />
@@ -428,6 +432,7 @@ export default function CoursePage() {
               <ProgrammeCard course={course} />
             </div>
             <div className="lg:col-span-2 space-y-5 order-first lg:order-none">
+              <ForecastCard course={course} />
               <SimulatorCard key={`${course.id}-${course.targetGrade}`} course={course} settings={settings} />
               <FlashcardsCard course={course} />
               <SlotsCard course={course} />

@@ -12,7 +12,9 @@ export const DEFAULT_ACADEMIC_SETTINGS = {
   institution: '',
   program: '',
   scale: 20, // max grade
-  passMark: 10, // validation threshold
+  passMark: 10, // validation threshold (of the semester, and of every level when the two below are empty)
+  subjectPassMark: null, // a subject is validated from this mark (e.g. ISCAE: 7); null = passMark
+  modulePassMark: null, // a module is validated from this mark (e.g. ISCAE: 8); null = passMark
   eliminatoryMark: 5, // null = none; a subject/module under this can't be compensated
   subjectCompensation: true, // subjects compensate each other inside a module
   moduleCompensation: true, // modules compensate each other inside a semester
@@ -24,11 +26,13 @@ export const DEFAULT_ACADEMIC_SETTINGS = {
   defaultEvalPreset: 'cc40', // evaluation split given to new subjects (EVALUATION_PRESETS key) // attendance: heads-up notification this many minutes before a class
 };
 
+const NO_LEVELS = { subjectPassMark: null, modulePassMark: null };
 export const GRADING_PRESETS = [
-  { key: 'ma', label: 'Maroc — grande école (/20)', settings: { scale: 20, passMark: 10, eliminatoryMark: 5, subjectCompensation: true, moduleCompensation: true, retakeRule: 'capped' } },
-  { key: 'fr', label: 'France — LMD (/20)', settings: { scale: 20, passMark: 10, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'max' } },
-  { key: 'pct', label: 'Pourcentage (/100)', settings: { scale: 100, passMark: 50, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
-  { key: 'ten', label: 'Sur 10', settings: { scale: 10, passMark: 5, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
+  { key: 'iscae', label: 'ISCAE — matière 7 · module 8 · semestre 10', settings: { scale: 20, passMark: 10, subjectPassMark: 7, modulePassMark: 8, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'capped' } },
+  { key: 'ma', label: 'Maroc — grande école (/20)', settings: { scale: 20, passMark: 10, ...NO_LEVELS, eliminatoryMark: 5, subjectCompensation: true, moduleCompensation: true, retakeRule: 'capped' } },
+  { key: 'fr', label: 'France — LMD (/20)', settings: { scale: 20, passMark: 10, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'max' } },
+  { key: 'pct', label: 'Pourcentage (/100)', settings: { scale: 100, passMark: 50, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
+  { key: 'ten', label: 'Sur 10', settings: { scale: 10, passMark: 5, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
 ];
 
 export const EVALUATION_TYPES = [
@@ -73,6 +77,11 @@ export const WEEKDAYS = [
 const num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 const round2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
 
+// Validation mark of each level (falls back to the single pass mark).
+export const subjectPass = (s) => num(s?.subjectPassMark) ?? s.passMark;
+export const modulePass = (s) => num(s?.modulePassMark) ?? s.passMark;
+export const hasLevelMarks = (s) => num(s?.subjectPassMark) != null || num(s?.modulePassMark) != null;
+
 // French display: decimal comma, trailing zeros trimmed (12,5 · 11,33 · 10).
 export const fmtGrade = (v, digits = 2) => (v == null ? '—' : (Number(v).toFixed(digits).replace(/\.?0+$/, '') || '0').replace('.', ','));
 
@@ -108,11 +117,12 @@ export function subjectResult(course, settings) {
   let final = complete ? points / totalW : null;
   let retakeApplied = false;
   const retake = num(course.retakeGrade);
-  if (final != null && retake != null && final < settings.passMark) {
+  const sPass = subjectPass(settings);
+  if (final != null && retake != null && final < sPass) {
     const before = final;
     if (settings.retakeRule === 'replace') final = retake;
     else if (settings.retakeRule === 'max') final = Math.max(final, retake);
-    else final = Math.max(final, Math.min(retake, settings.passMark));
+    else final = Math.max(final, Math.min(retake, sPass));
     retakeApplied = final !== before;
   }
   // Manual override (e.g. the school only publishes the final average).
@@ -168,7 +178,7 @@ export function simulateAverage(course, x, settings) {
 export function mentionFor(avg, settings) {
   if (avg == null) return null;
   const p = (avg / settings.scale) * 100;
-  if (p < (settings.passMark / settings.scale) * 100) return { label: 'Non validé', color: 'var(--error)' };
+  if (p < (subjectPass(settings) / settings.scale) * 100) return { label: 'Non validé', color: 'var(--error)' };
   if (p >= 80) return { label: 'Très bien', color: 'var(--success)' };
   if (p >= 70) return { label: 'Bien', color: 'var(--success)' };
   if (p >= 60) return { label: 'Assez bien', color: 'var(--accent-primary)' };
@@ -199,12 +209,20 @@ const weighted = (rows) => {
  * isn't filed under a module. Status:
  *   validated | failed | at-risk | in-progress | empty
  */
-function unitStatus({ avg, complete, lowest }, settings) {
+// Marks a unit must reach: a module (modulePass) or a lone subject (subjectPass);
+// `floor` = mark no subject of the unit may fall under.
+function unitMarks(isModule, settings) {
+  return {
+    pass: isModule ? modulePass(settings) : subjectPass(settings),
+    floor: hasLevelMarks(settings) ? (num(settings.subjectPassMark) ?? settings.eliminatoryMark) : settings.eliminatoryMark,
+  };
+}
+
+function unitStatus({ avg, complete, lowest }, { pass, floor }) {
   if (avg == null) return 'empty';
-  const elim = settings.eliminatoryMark;
-  const underElim = elim != null && lowest != null && lowest < elim;
-  if (complete) return avg >= settings.passMark && !underElim ? 'validated' : 'failed';
-  return avg < settings.passMark || underElim ? 'at-risk' : 'in-progress';
+  const underFloor = floor != null && lowest != null && lowest < floor;
+  if (complete) return avg >= pass && !underFloor ? 'validated' : 'failed';
+  return avg < pass || underFloor ? 'at-risk' : 'in-progress';
 }
 
 export function moduleResult(module, subjects, settings) {
@@ -213,13 +231,14 @@ export function moduleResult(module, subjects, settings) {
   const avg = weighted(withVal.map((x) => ({ v: x.r.value, w: num(x.course.coefficient) || 1 })));
   const complete = res.length > 0 && res.every((x) => x.r.complete);
   const lowest = withVal.length ? Math.min(...withVal.map((x) => x.r.value)) : null;
-  let status = unitStatus({ avg, complete, lowest }, settings);
+  const marks = unitMarks(!!module, settings);
+  let status = unitStatus({ avg, complete, lowest }, marks);
   // Without compensation, every subject must pass on its own.
-  if (!settings.subjectCompensation && withVal.some((x) => x.r.value < settings.passMark)) {
+  if (!settings.subjectCompensation && withVal.some((x) => x.r.value < subjectPass(settings))) {
     status = complete ? 'failed' : 'at-risk';
   }
   const credits = num(module?.credits) ?? subjects.reduce((s, c) => s + (num(c.credits) || 0), 0);
-  return { module, subjects: res, avg: round2(avg), complete, lowest, status, credits };
+  return { module, subjects: res, avg: round2(avg), complete, lowest, status, credits, pass: marks.pass, floor: marks.floor };
 }
 
 export function termResult(termId, modules, courses, settings) {
@@ -238,8 +257,12 @@ export function termResult(termId, modules, courses, settings) {
   const scored = all.filter((u) => u.avg != null);
   const avg = weighted(scored.map((u) => ({ v: u.avg, w: u.coefficient })));
   const complete = all.length > 0 && all.every((u) => u.complete);
+  // Blocking: with level marks (ISCAE) a module under its mark or a subject
+  // under the subject mark; otherwise the legacy eliminatory mark.
   const elim = settings.eliminatoryMark;
-  const anyUnderElim = elim != null && scored.some((u) => u.avg < elim);
+  const anyUnderElim = hasLevelMarks(settings)
+    ? scored.some((u) => u.avg < u.pass || (u.floor != null && u.lowest != null && u.lowest < u.floor))
+    : elim != null && scored.some((u) => u.avg < elim);
   // Semester-level compensation: failed modules become validated when the
   // semester average passes and nothing is under the eliminatory mark.
   const compensated = settings.moduleCompensation && avg != null && avg >= settings.passMark && !anyUnderElim;
@@ -250,7 +273,8 @@ export function termResult(termId, modules, courses, settings) {
   }, 0);
   let status = 'in-progress';
   if (avg == null) status = 'empty';
-  else if (complete) status = all.every((u) => u.status === 'validated') || compensated ? 'validated' : 'failed';
+  // With level marks, modules at 8–9 are validated yet the semester still needs its own average.
+  else if (complete) status = (hasLevelMarks(settings) ? avg >= settings.passMark && !anyUnderElim : all.every((u) => u.status === 'validated') || compensated) ? 'validated' : 'failed';
   else if (avg < settings.passMark || anyUnderElim) status = 'at-risk';
   return {
     units,

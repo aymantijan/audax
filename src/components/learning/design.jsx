@@ -20,7 +20,8 @@ export function gradeColor(v, settings) {
   if (v == null) return 'var(--text-secondary)';
   const p = v / settings.scale;
   const pass = settings.passMark / settings.scale;
-  if (v < settings.passMark) return 'var(--error)';
+  if (v < (settings.subjectPassMark ?? settings.passMark)) return 'var(--error)';
+  if (v < settings.passMark) return 'var(--warning)';
   if (p < pass + 0.1) return 'var(--warning)';
   if (p >= 0.7) return 'var(--success)';
   return 'var(--accent-primary)';
