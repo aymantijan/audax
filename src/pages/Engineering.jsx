@@ -15,7 +15,7 @@ const TABS = [
 // Same UX as Health's "Ask the Health AI" (Dashboard.jsx) — degrades to a
 // plain error message rather than crashing when the backend isn't
 // configured on this deployment (api/engineering-coach.js returns 503 if
-// OPENROUTER_API_KEY is unset).
+// GEMINI_API_KEY is unset).
 function AskEngineeringAI() {
   const buildCoachContext = useEngineeringStore((s) => s.buildCoachContext);
   const [question, setQuestion] = useState('');

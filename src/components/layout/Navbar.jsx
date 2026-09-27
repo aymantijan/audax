@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, LogOut, Settings, Trophy, Zap } from 'lucide-react';
+import { Moon, Sun, LogOut, Settings, Trophy, Zap, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 import { DESKTOP_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
 import GlobalSearch from './GlobalSearch';
+import { openAssistant } from '../../services/assistant';
 
 // Top bar: logo, the five sections (from md up; phones use the bottom tabs),
 // search, and a profile menu holding Paramètres, Classement, theme, sign-out.
@@ -99,6 +100,9 @@ export default function Navbar() {
 
         <div className="flex items-center gap-1 shrink-0">
           <GlobalSearch />
+          <button type="button" onClick={() => openAssistant()} aria-label="Assistant" title="Assistant" className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-accent hover:bg-card transition-colors cursor-pointer">
+            <Sparkles size={18} />
+          </button>
           <ProfileMenu user={user} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />
         </div>
       </div>

@@ -32,6 +32,7 @@ import { markDataSeeded } from '../services/storage';
 import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 import FoodsCard from '../components/settings/FoodsCard';
+import AssistantCard from '../components/settings/AssistantCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-flashcards', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
@@ -449,6 +450,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+
+      <AssistantCard />
 
       <Card title="Notifications">
         <div className="flex items-start gap-3">

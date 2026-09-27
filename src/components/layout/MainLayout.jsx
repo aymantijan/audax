@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
 import PoleSubNav from './PoleSubNav';
+import AssistantPanel from '../assistant/AssistantPanel';
 import { StudyTimerDock } from '../learning/StudyTimer';
 import { useAutoHabitSync } from '../../hooks/useAutoHabitSync';
 import QuickAdd from './QuickAdd';
@@ -32,6 +33,7 @@ export default function MainLayout() {
       <QuickAdd />
       <StudyTimerDock />
       <MobileTabBar />
+      <AssistantPanel />
       <ToastContainer />
     </div>
   );

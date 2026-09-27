@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Compass, Zap, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
 import { buildSearchIndex, buildNavItems, searchIndex } from '../../utils/global-search';
 import { useAuthStore } from '../../store/authStore';
+import { openAssistant } from '../../services/assistant';
 
 const DOMAIN_ICON = {
   Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Business: Rocket,
@@ -50,11 +51,17 @@ export default function GlobalSearch() {
   }, [open]);
 
   const index = useMemo(() => (open ? [...buildNavItems(user), ...buildSearchIndex()] : []), [open, user]);
-  const results = useMemo(() => searchIndex(index, query), [index, query]);
+  const results = useMemo(() => {
+    const found = searchIndex(index, query);
+    const q = query.trim();
+    // Any question can go to the assistant, whatever the search finds.
+    return q ? [...found, { id: 'ask-assistant', domain: 'Action', label: `Demander à l’assistant : « ${q.slice(0, 80)} »`, assistant: q }] : found;
+  }, [index, query]);
 
   const go = (item) => {
     setOpen(false);
-    navigate(item.to);
+    if (item.assistant) openAssistant(item.assistant);
+    else navigate(item.to);
   };
 
   const onKeyDownInput = (e) => {
