@@ -46,15 +46,15 @@ export default function Onboarding() {
     trading: user?.enabledModules?.trading ?? true,
     pe: user?.enabledModules?.pe ?? user?.enabledModules?.deals ?? true,
     business: user?.enabledModules?.business ?? user?.enabledModules?.deals ?? true,
-    engineering: user?.enabledModules?.engineering ?? true,
+    engineering: user?.enabledModules?.engineering ?? false,
     networking: user?.enabledModules?.networking ?? true,
     career: user?.enabledModules?.career ?? true,
     content: user?.enabledModules?.content ?? true,
     focus: user?.enabledModules?.focus ?? true,
-    fundraising: user?.enabledModules?.fundraising ?? true,
+    fundraising: user?.enabledModules?.fundraising ?? false,
     freelance: user?.enabledModules?.freelance ?? true,
-    creative: user?.enabledModules?.creative ?? true,
-    realEstate: user?.enabledModules?.realEstate ?? true,
+    creative: user?.enabledModules?.creative ?? false,
+    realEstate: user?.enabledModules?.realEstate ?? false,
   }));
 
   const toggle = (name) =>

@@ -88,7 +88,8 @@ export const useAuthStore = create(
             theme: 'dark',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
-            enabledModules: { trading: true, pe: true, business: true, engineering: true, networking: true, career: true, content: true, focus: true, fundraising: true, freelance: true, creative: true, realEstate: true }, // asked/confirmed in Onboarding.jsx step 1
+            // Decision 2026-09-27: secondary modules start hidden for new users (activable in onboarding / Settings).
+            enabledModules: { trading: true, pe: true, business: true, engineering: false, networking: true, career: true, content: true, focus: true, fundraising: false, freelance: true, creative: false, realEstate: false }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

@@ -262,7 +262,8 @@ export function termResult(termId, modules, courses, settings) {
   const elim = settings.eliminatoryMark;
   const anyUnderElim = hasLevelMarks(settings)
     ? scored.some((u) => u.avg < u.pass || (u.floor != null && u.lowest != null && u.lowest < u.floor))
-    : elim != null && scored.some((u) => u.avg < elim);
+    // Decision 2026-09-27: a single subject under the eliminatory mark also blocks the semester.
+    : elim != null && scored.some((u) => u.avg < elim || (u.lowest != null && u.lowest < elim));
   // Semester-level compensation: failed modules become validated when the
   // semester average passes and nothing is under the eliminatory mark.
   const compensated = settings.moduleCompensation && avg != null && avg >= settings.passMark && !anyUnderElim;

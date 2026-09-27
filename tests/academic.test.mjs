@@ -33,13 +33,13 @@ test('ISCAE: a module under 8 blocks the semester', () => {
   assert.equal(r.status, 'failed');
 });
 
-// Snapshot of the behaviour before level marks existed (checked against the
-// previous academic.js): legacy mode only compares UNIT averages with the
-// eliminatory mark, so module compensation can still validate the semester.
-test('legacy single pass mark is unchanged', () => {
+// Legacy single pass mark: module compensation still works, but since the
+// 2026-09-27 decision a subject under the eliminatory mark blocks the semester.
+test('legacy single pass mark: compensation, and an eliminatory subject blocks the semester', () => {
   const run = (g) => termResult('t', modules, [subj('a', 'm1', g[0]), subj('b', 'm1', g[1]), subj('c', 'm2', g[2])], LEGACY);
   assert.deepEqual([run([12, 9, 12]).status, run([12, 9, 12]).units.map((u) => u.status).join()], ['validated', 'validated,validated']);
-  assert.deepEqual([run([12, 4, 16]).status, run([12, 4, 16]).units[0].status], ['validated', 'failed']);
+  assert.deepEqual([run([12, 4, 16]).status, run([12, 4, 16]).units[0].status], ['failed', 'failed']); // 4 < eliminatory 5
+  assert.equal(run([12, 6, 16]).status, 'validated'); // 6 ≥ 5: compensated
 });
 
 test('retake is triggered and capped at the subject pass mark', () => {
