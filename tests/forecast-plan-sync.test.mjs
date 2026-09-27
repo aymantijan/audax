@@ -70,3 +70,12 @@ test('server reminders: heads-up, nudge, silent once checked in, capture after c
   assert.deepEqual(at('2026-09-28T07:15:00Z'), []);
   assert.deepEqual(at('2026-09-28T09:00:00Z'), ['notes']); // 10:00 end of class
 });
+
+test('first sync of a newly synced store merges both devices instead of overwriting', async () => {
+  const { mergeFirstSync } = await import('../src/utils/fill-defaults.js');
+  const cloud = { engagements: [{ id: 'a', clientName: 'A', updatedAt: 2 }, { id: 'b', clientName: 'B-cloud', updatedAt: 5 }], invoiceSettings: { prefix: 'FAC', nextNumber: 4 } };
+  const local = { engagements: [{ id: 'b', clientName: 'B-local', updatedAt: 9 }, { id: 'c', clientName: 'C', updatedAt: 1 }], invoiceSettings: { prefix: 'INV', nextNumber: 2, footer: 'x' } };
+  const m = mergeFirstSync(cloud, local);
+  assert.deepEqual(m.engagements.map((e) => `${e.id}:${e.clientName}`), ['a:A', 'b:B-local', 'c:C']); // union, newer wins
+  assert.deepEqual(m.invoiceSettings, { prefix: 'FAC', nextNumber: 4, footer: 'x' }); // cloud wins on conflicts, local fills gaps
+});

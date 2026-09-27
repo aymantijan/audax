@@ -13,7 +13,15 @@ import { useHealthStore } from '../store/healthStore';
 import { useBusinessStore } from '../store/businessStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFlashcardStore } from '../store/flashcardStore';
-import { fillDefaults } from '../utils/fill-defaults.js';
+import { fillDefaults, mergeFirstSync } from '../utils/fill-defaults.js';
+import { useCareerStore } from '../store/careerStore';
+import { useNetworkingStore } from '../store/networkingStore';
+import { useContentStore } from '../store/contentStore';
+import { useFreelanceStore } from '../store/freelanceStore';
+import { useFundraisingStore } from '../store/fundraisingStore';
+import { useCreativeStore } from '../store/creativeStore';
+import { useRealEstateStore } from '../store/realEstateStore';
+import { useEngineeringStore } from '../store/engineeringStore';
 
 const TABLE = 'app_state';
 
@@ -36,7 +44,29 @@ const REGISTRY = [
   // Apprentissage study timer; synced so study time follows the user.
   { name: 'focus', store: useFocusStore },
   { name: 'flashcards', store: useFlashcardStore },
+  // Added 2026-09-27 — were local-only. Each device may already hold its own
+  // data for them, so their FIRST sync on a device merges instead of letting
+  // the cloud copy win (see mergeFirstSync).
+  { name: 'career', store: useCareerStore, mergeOnFirstSync: true },
+  { name: 'networking', store: useNetworkingStore, mergeOnFirstSync: true },
+  { name: 'content', store: useContentStore, mergeOnFirstSync: true },
+  { name: 'freelance', store: useFreelanceStore, mergeOnFirstSync: true },
+  { name: 'fundraising', store: useFundraisingStore, mergeOnFirstSync: true },
+  { name: 'creative', store: useCreativeStore, mergeOnFirstSync: true },
+  { name: 'realestate', store: useRealEstateStore, mergeOnFirstSync: true },
+  { name: 'engineering', store: useEngineeringStore, mergeOnFirstSync: true },
 ];
+
+// ── Per-device bookkeeping (localStorage; lost storage = safe defaults) ──
+// OWNER: the account the local data belongs to. Local data survives logout,
+// so without this a different account signing in on the same device would get
+// the previous user's local data seeded into (or merged with) its own cloud.
+// SEEN: stores this device already synced once for that account.
+const OWNER_KEY = 'audax-data-owner';
+const seenKey = (userId) => `audax-sync-seen:${userId}`;
+const readLS = (k, fallback) => { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } };
+const writeLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
+const hasOwnData = (store) => JSON.stringify(serializableState(store.getState())) !== JSON.stringify(serializableState(store.getInitialState?.() || {}));
 
 // Strip actions (functions) off a store's state — same filter zustand/persist
 // applies implicitly when serializing to localStorage.
@@ -176,9 +206,28 @@ export async function startCloudSync(userId) {
     return;
   }
 
-  for (const { name, store } of REGISTRY) {
+  // Local data from ANOTHER account: never push or merge it into this one —
+  // start this account from its defaults (its cloud rows are applied below).
+  const owner = readLS(OWNER_KEY, null);
+  const foreignLocal = owner != null && owner !== userId;
+  if (foreignLocal) {
+    // Not 'auth': the sign-up / sign-in flow has just written this account's profile there.
+    for (const { name, store } of REGISTRY) if (name !== 'auth' && store.getInitialState) store.setState(store.getInitialState(), true);
+    console.warn('[cloud-sync] local data belonged to another account — reset before syncing this one.');
+  }
+  writeLS(OWNER_KEY, userId);
+  const seen = new Set(readLS(seenKey(userId), []));
+
+  for (const { name, store, mergeOnFirstSync } of REGISTRY) {
     if (cloud.data[name]) {
-      applyRemote(store, cloud.data[name]);
+      if (mergeOnFirstSync && !seen.has(name) && hasOwnData(store)) {
+        // First sync of this store on this device, which has its own data too.
+        applyRemote(store, mergeFirstSync(cloud.data[name], serializableState(store.getState())));
+        await pushStore(userId, name, serializableState(store.getState()));
+        if (myGeneration !== generation) return;
+      } else {
+        applyRemote(store, cloud.data[name]);
+      }
     } else {
       // Confirmed absent (the fetch succeeded and simply returned no row for
       // this store) — safe to seed the cloud from local.
@@ -187,6 +236,7 @@ export async function startCloudSync(userId) {
     }
   }
   if (myGeneration !== generation) return;
+  writeLS(seenKey(userId), REGISTRY.map((r) => r.name));
 
   // Push-on-change, debounced per store so rapid edits (e.g. typing) coalesce
   // into one write instead of one per keystroke.

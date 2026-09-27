@@ -16,3 +16,36 @@ export function fillDefaults(remote, defaults) {
   }
   return out;
 }
+
+const stamp = (x) => Number(x?.updatedAt || x?.createdAt || 0);
+
+/**
+ * First sync of a store on a device that already holds its own data (a store
+ * newly added to cloud sync, used separately on several devices): union
+ * instead of letting the cloud copy erase this device's work.
+ *   arrays of { id } → union by id (newer updatedAt/createdAt wins, else cloud)
+ *   plain objects    → merged key by key (records keyed by id: union)
+ *   anything else    → cloud value, local only where the cloud has none
+ */
+export function mergeFirstSync(cloud, local) {
+  if (cloud === undefined) return local;
+  if (Array.isArray(cloud) && Array.isArray(local)) {
+    const keyed = (a) => a.every((x) => isPlainObject(x) && x.id != null);
+    if (!keyed(cloud) || !keyed(local)) return cloud.length ? cloud : local;
+    const byId = new Map(cloud.map((x) => [x.id, x]));
+    for (const x of local) {
+      const c = byId.get(x.id);
+      if (!c || stamp(x) > stamp(c)) byId.set(x.id, c && isPlainObject(c) ? { ...c, ...x } : x);
+    }
+    return [...byId.values()];
+  }
+  if (isPlainObject(cloud) && isPlainObject(local)) {
+    const out = { ...cloud };
+    for (const [k, v] of Object.entries(local)) {
+      if (typeof v === 'function') continue;
+      out[k] = k in cloud ? mergeFirstSync(cloud[k], v) : v;
+    }
+    return out;
+  }
+  return cloud;
+}
