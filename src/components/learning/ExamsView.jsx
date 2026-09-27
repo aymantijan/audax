@@ -5,6 +5,7 @@ import { useLearningStore } from '../../store/learningStore';
 import { upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, requiredGrade, fmtGrade } from '../../utils/academic';
 import { todayKey } from '../../utils/formatters';
 import { Card } from '../common/ui';
+import { RevisionPlanCard } from './RevisionPlan';
 import { SectionHeader, SegmentedTabs, useAcademicSettings, GradePill, tint, gradeColor, frDate, countdownLabel } from './design';
 
 function urgency(days) {
@@ -105,6 +106,7 @@ export default function ExamsView() {
           ))}{undated.length > 6 && ' …'}
         </div>
       )}
+      <RevisionPlanCard />
     </div>
   );
 }

@@ -22,6 +22,10 @@ export const useLearningStore = create(
       academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] },
       // Class attendance: { 'courseId|slotId|YYYY-MM-DD': { status, at } } — see utils/attendance.js.
       attendance: {},
+      // Notes taken right after a class: { 'courseId|slotId|date': { courseId, date, points[], cards, at } }.
+      classNotes: {},
+      // Weekly review snapshots: { 'YYYY-MM-DD' (Monday): { forecastAvg, onTimeRate, minutes, win, change, at } }.
+      weeklyReviews: {},
 
       addCourse: (data) => {
         const course = {
@@ -320,6 +324,19 @@ export const useLearningStore = create(
           toast(`Pointé en retard (il fallait être là à ${fmtClock(arriveBy(occ, get().academic.settings))})`, 'info');
         }
       },
+      saveClassNotes: (occ, points, cards = 0) => {
+        const clean = points.map((p) => p.trim()).filter(Boolean);
+        if (!clean.length && !cards) return;
+        const prev = get().classNotes[occ.key];
+        set({ classNotes: { ...get().classNotes, [occ.key]: { courseId: occ.course.id, date: occ.date, points: clean, cards: (prev?.cards || 0) + cards, at: Date.now() } } });
+        get().recordActivity();
+      },
+      saveWeeklyReview: (weekStart, data) => {
+        set({ weeklyReviews: { ...get().weeklyReviews, [weekStart]: { ...data, at: Date.now() } } });
+        toast('Semaine close — bon courage pour la suivante 💪', 'success');
+      },
+      deleteClassNotes: (key) => { const n = { ...get().classNotes }; delete n[key]; set({ classNotes: n }); },
+
       // Manual correction (status null = back to automatic).
       setAttendance: (key, status) => {
         const next = { ...get().attendance };
@@ -356,7 +373,7 @@ export const useLearningStore = create(
         toast(`Nouveau niveau : ${level} 🎉`, 'success');
       },
 
-      resetAll: () => set({ attendance: {}, courses: [], momentum: freshMomentumState(), academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] } }),
+      resetAll: () => set({ attendance: {}, classNotes: {}, weeklyReviews: {}, courses: [], momentum: freshMomentumState(), academic: { settings: { ...DEFAULT_ACADEMIC_SETTINGS }, terms: [], modules: [] } }),
     }),
     {
       name: 'audax-learning',

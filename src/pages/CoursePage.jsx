@@ -27,7 +27,7 @@ import ScheduleEventModal from '../components/common/ScheduleEventModal';
 import { CourseFormModal } from '../components/learning/CursusModals';
 import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tint, gradeColor } from '../components/learning/design';
 import { courseColor } from '../components/learning/TimetableView';
-import { CourseEndControl, CourseAttendanceSummary } from '../components/learning/Attendance';
+import { CourseEndControl, CourseAttendanceSummary, ClassNotesCard } from '../components/learning/Attendance';
 import { ForecastCard } from '../components/learning/Forecast';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
@@ -436,6 +436,7 @@ export default function CoursePage() {
               <SimulatorCard key={`${course.id}-${course.targetGrade}`} course={course} settings={settings} />
               <FlashcardsCard course={course} />
               <SlotsCard course={course} />
+              <ClassNotesCard course={course} />
               <ResourcesCard course={course} />
             </div>
           </div>

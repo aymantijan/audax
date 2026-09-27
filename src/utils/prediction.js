@@ -22,8 +22,8 @@
  * These weights are a starting heuristic, not a law: the UI always shows the
  * drivers, and calibration corrects the bias as real grades arrive.
  */
-import { isAcademic, normGrade, subjectResult, termResult } from './academic';
-import { courseAttendance } from './attendance';
+import { isAcademic, normGrade, subjectResult, termResult } from './academic.js';
+import { courseAttendance } from './attendance.js';
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const DAY = 86400000;

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLearningStore } from '../store/learningStore';
-import { classesOn, arriveBy, fmtClock, dateKeyOf, withDefaults } from '../utils/attendance';
+import { classesOn, arriveBy, fmtClock, dateKeyOf, withDefaults, ATTENDANCE_STATUS } from '../utils/attendance';
 import { toast } from '../store/uiStore';
 import { getPushSubscription } from '../services/push';
 
@@ -45,14 +45,19 @@ export function useClassReminders() {
     const st = useLearningStore.getState();
     if (tz && st.academic.settings.timezone !== tz) st.updateAcademicSettings({ timezone: tz });
     const check = () => {
-      const { courses, academic, attendance } = useLearningStore.getState();
+      const { courses, academic, attendance, classNotes } = useLearningStore.getState();
       const lead = Number(withDefaults(academic.settings).classReminderMin);
       if (!lead) return;
       const now = Date.now();
       const today = dateKeyOf(new Date(now));
       const shown = readShown(today);
       for (const o of classesOn(courses, academic, today)) {
-        if (attendance[o.key] || now >= o.endMs) continue;
+        const rec = attendance[o.key];
+        if (rec && ATTENDANCE_STATUS[rec.status]?.present && !classNotes?.[o.key] && now >= o.endMs && now < o.endMs + 30 * 60000 && !shown.keys.includes(`${o.key}|notes`)) {
+          notify(`Tu sors de ${o.course.name} : 2 min pour noter 3 idées clés.`, `notes-${o.key}`);
+          markShown(shown, `${o.key}|notes`);
+        }
+        if (rec || now >= o.endMs) continue;
         const deadline = arriveBy(o, academic.settings);
         const where = o.slot.room ? ` · ${o.slot.room}` : '';
         if (now >= o.startMs - lead * 60000 && now < deadline - 5 * 60000 && !shown.keys.includes(`${o.key}|heads`)) {

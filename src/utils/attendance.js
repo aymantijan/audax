@@ -145,6 +145,15 @@ export function courseAttendance(course, academic, records, now = new Date()) {
   };
 }
 
+/** Attended classes that ended within the last `hours` and have no notes yet. */
+export function pendingCaptures(courses, academic, records, notes, nowMs = Date.now(), hours = 6) {
+  const date = dateKeyOf(new Date(nowMs));
+  return classesOn(courses, academic, date).filter((o) => {
+    const st = records?.[o.key]?.status;
+    return ATTENDANCE_STATUS[st]?.present && !notes?.[o.key] && nowMs >= o.endMs - 10 * 60000 && nowMs - o.endMs < hours * 3600000;
+  });
+}
+
 /** Weekdays (mon…sun codes used by habits) on which the active timetable has classes. */
 const WEEKDAY_CODES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export function classWeekdays(courses, academic) {

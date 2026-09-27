@@ -17,6 +17,8 @@ import { SectionHeader, useAcademicSettings, tint, gradeColor, countdownLabel } 
 import { courseColor } from './TimetableView';
 import { StudyTimerCard, ManualSessionModal } from './StudyTimer';
 import { ClassesTodayCard } from './Attendance';
+import { TodayRevisionCard } from './RevisionPlan';
+import { WeeklyReviewCard } from './WeeklyReview';
 import { classesOn } from '../../utils/attendance';
 
 const DAY_LETTER = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
@@ -203,6 +205,9 @@ export default function TodayView() {
           </Card>
         )}
       </div>
+
+      <WeeklyReviewCard />
+      <TodayRevisionCard />
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Today's classes + check-in */}

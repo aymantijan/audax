@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, DoorOpen, UserCheck, CalendarX2, Repeat, AlertTriangle, Flame, BellRing } from 'lucide-react';
+import { Clock, MapPin, DoorOpen, UserCheck, CalendarX2, Repeat, AlertTriangle, Flame, BellRing, NotebookPen, Check } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import { useHabitStore } from '../../store/habitStore';
+import { useFlashcardStore } from '../../store/flashcardStore';
 import {
   ATTENDANCE_STATUS, PAST_CORRECTIONS, classesOn, occurrenceState, arriveBy, fmtClock, dayAttendance,
-  courseAttendance, courseEnd, classWeekdays, dateKeyOf, withDefaults,
+  courseAttendance, courseEnd, classWeekdays, dateKeyOf, withDefaults, pendingCaptures,
 } from '../../utils/attendance';
 import { isAcademic } from '../../utils/academic';
-import { Button, Card } from '../common/ui';
+import { Button, Card, Modal, Textarea, Field } from '../common/ui';
 import { SectionHeader, tint, useAcademicSettings } from './design';
 import { isPushSupported, getPushSubscription, subscribeToPush } from '../../services/push';
 import { toast } from '../../store/uiStore';
@@ -58,10 +59,62 @@ function CorrectionMenu({ occ, state }) {
   );
 }
 
+// "Question ; réponse" (or "question ? réponse") per line → flashcards.
+export function parseCardLines(text) {
+  return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
+    const i = l.indexOf(';');
+    if (i > 0) return { front: l.slice(0, i).trim(), back: l.slice(i + 1).trim() };
+    const q = l.indexOf('?');
+    return q > 0 && q < l.length - 1 ? { front: l.slice(0, q + 1).trim(), back: l.slice(q + 1).trim() } : null;
+  }).filter((r) => r && r.front && r.back);
+}
+
+/** Right after class: 3 key ideas + optional flashcards into the subject's deck. */
+export function ClassCaptureModal({ occ, onClose }) {
+  const saveClassNotes = useLearningStore((s) => s.saveClassNotes);
+  const existing = useLearningStore((s) => (occ ? s.classNotes[occ.key] : null));
+  const ensureCourseDeck = useFlashcardStore((s) => s.ensureCourseDeck);
+  const addCards = useFlashcardStore((s) => s.addCards);
+  const [points, setPoints] = useState('');
+  const [cardsText, setCardsText] = useState('');
+  useEffect(() => { if (occ) { setPoints((existing?.points || []).join('\n')); setCardsText(''); } }, [occ?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const cards = parseCardLines(cardsText);
+  const save = () => {
+    let n = 0;
+    if (cards.length) n = addCards(ensureCourseDeck(occ.course.id), cards);
+    saveClassNotes(occ, points.split(/\r?\n/), n);
+    onClose();
+  };
+  return (
+    <Modal open={!!occ} onClose={onClose} title={occ ? `${occ.course.name} · ${occ.start}–${occ.end}` : ''}>
+      {occ && (
+        <div className="space-y-4">
+          <p className="text-sm text-mute">Deux minutes maintenant valent une heure de relecture avant le CC.</p>
+          <Field label="Idées clés du cours" hint="Une par ligne : ce qu’il faut retenir, en tes mots.">
+            <Textarea rows={4} value={points} onChange={(e) => setPoints(e.target.value)} autoFocus
+              placeholder={'La VAN actualise les flux au coût du capital\nUn projet est retenu si VAN > 0\n…'} />
+          </Field>
+          <Field label="Fiches de révision (facultatif)" hint="Une par ligne : « question ; réponse ». Elles rejoignent le paquet de la matière.">
+            <Textarea rows={3} value={cardsText} onChange={(e) => setCardsText(e.target.value)}
+              placeholder={'Formule de la VAN ; Σ flux actualisés − investissement initial'} />
+          </Field>
+          <div className="flex items-center justify-end gap-2">
+            {cards.length > 0 && <span className="mr-auto text-xs text-mute">{cards.length} fiche{cards.length > 1 ? 's' : ''}</span>}
+            <Button variant="secondary" onClick={onClose}>Plus tard</Button>
+            <Button disabled={!points.trim() && !cards.length} onClick={save}>Enregistrer</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 /** One class of the day with its check-in state. */
 export function ClassRow({ occ, now }) {
   const records = useLearningStore((s) => s.attendance);
+  const hasNotes = useLearningStore((s) => !!s.classNotes[occ.key]);
   const checkIn = useLearningStore((s) => s.checkInClass);
+  const [capture, setCapture] = useState(null);
   const settings = useAcademicSettings();
   const state = occurrenceState(occ, records, now);
   const color = courseColor(occ.course.id);
@@ -92,8 +145,12 @@ export function ClassRow({ occ, now }) {
             <span className="flex items-center gap-1"><DoorOpen size={13} /> En salle</span>
           </Button>
         ) : state !== 'upcoming' && <StatusChip status={state} />}
+        {ATTENDANCE_STATUS[state]?.present && now >= occ.endMs - 10 * 60000 && (hasNotes
+          ? <button onClick={() => setCapture(occ)} className="text-good cursor-pointer" title="Notes du cours"><Check size={14} /></button>
+          : <Button variant="secondary" className="!py-1 !px-2 text-xs" onClick={() => setCapture(occ)}><span className="flex items-center gap-1"><NotebookPen size={12} /> Retenir</span></Button>)}
         <CorrectionMenu occ={occ} state={state} />
       </span>
+      <ClassCaptureModal occ={capture} onClose={() => setCapture(null)} />
     </div>
   );
 }
@@ -127,6 +184,8 @@ export function NextClassBanner() {
   const courses = useLearningStore((s) => s.courses);
   const academic = useLearningStore((s) => s.academic);
   const records = useLearningStore((s) => s.attendance);
+  const notes = useLearningStore((s) => s.classNotes);
+  const [capture, setCapture] = useState(null);
   const now = useNow();
   const today = dateKeyOf(new Date(now));
   const classes = useMemo(() => classesOn(courses, academic, today), [courses, academic, today]);
@@ -134,8 +193,18 @@ export function NextClassBanner() {
   if (!classes.length) return null;
   const score = dayAttendance(courses, academic, records, today);
   const next = pending[0];
+  const toCapture = pendingCaptures(courses, academic, records, notes, now);
   return (
     <Card title="Cours" action={<span className="text-xs text-mute">{score.onTime}/{score.required} à l’heure</span>}>
+      {toCapture[0] && (
+        <button onClick={() => setCapture(toCapture[0])}
+          className="w-full mb-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-left cursor-pointer border transition hover:brightness-110"
+          style={{ borderColor: tint('var(--accent-secondary)', 45), background: tint('var(--accent-secondary)', 10) }}>
+          <NotebookPen size={16} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
+          <span className="flex-1 text-sm"><b className="text-ink">Tu sors de {toCapture[0].course.name}</b> <span className="text-mute">· 2 min pour noter 3 idées clés</span></span>
+        </button>
+      )}
+      <ClassCaptureModal occ={capture} onClose={() => setCapture(null)} />
       {next ? (
         <div className="space-y-2">
           <ClassRow occ={next} now={now} />
@@ -315,5 +384,28 @@ export function AttendanceOverview() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** Subject page: the notes taken after each class, newest first. */
+export function ClassNotesCard({ course }) {
+  const notes = useLearningStore((s) => s.classNotes);
+  const entries = useMemo(() => Object.entries(notes).filter(([, n]) => n.courseId === course.id).sort((a, b) => b[1].date.localeCompare(a[1].date) || b[1].at - a[1].at), [notes, course.id]);
+  if (!entries.length) return null;
+  return (
+    <Card>
+      <SectionHeader icon={NotebookPen} title="Journal des cours" subtitle={`${entries.length} cours résumé${entries.length > 1 ? 's' : ''}`} />
+      <div className="space-y-3 max-h-80 overflow-y-auto">
+        {entries.map(([key, n]) => (
+          <div key={key}>
+            <div className="text-[11px] text-mute mb-1">
+              {new Date(`${n.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+              {n.cards ? ` · ${n.cards} fiche${n.cards > 1 ? 's' : ''}` : ''}
+            </div>
+            <ul className="text-sm text-ink space-y-0.5 list-disc pl-4">{n.points.map((pt, i) => <li key={i}>{pt}</li>)}</ul>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

@@ -11,10 +11,11 @@
 // run whose 5-minute window (now − 5 min, now] contains its moment.
 //   heads-up: class start − classReminderMin
 //   nudge:    "on time" deadline − 5 min, only if not checked in yet
+//   capture:  end of an attended class without notes → "note 3 key ideas"
 // Times are evaluated in the user's own timezone (academic.settings.timezone,
 // written by the app), by comparing wall-clock values on both sides.
 import webpush from 'web-push';
-import { classesOn, arriveBy, withDefaults, fmtClock } from '../src/utils/attendance.js';
+import { classesOn, arriveBy, withDefaults, fmtClock, ATTENDANCE_STATUS } from '../src/utils/attendance.js';
 
 const WINDOW_MS = 5 * 60 * 1000;
 
@@ -44,7 +45,13 @@ export function dueClassReminders(learning, timezone, now = new Date()) {
   const inWindow = (t) => t > wall.ms - WINDOW_MS && t <= wall.ms;
   const out = [];
   for (const o of classesOn(learning.courses, { ...academic, settings }, wall.date)) {
-    if (learning.attendance?.[o.key]) continue; // checked in, cancelled or excused
+    const rec = learning.attendance?.[o.key];
+    if (rec) {
+      if (ATTENDANCE_STATUS[rec.status]?.present && !learning.classNotes?.[o.key] && inWindow(o.endMs)) {
+        out.push({ tag: `notes-${o.key}`, body: `Tu sors de ${o.course.name} : 2 min pour noter 3 idées clés (et des fiches).` });
+      }
+      continue; // checked in, cancelled or excused: no class reminder
+    }
     const deadline = arriveBy(o, settings);
     const where = o.slot.room ? ` · ${o.slot.room}` : '';
     if (inWindow(o.startMs - lead * 60000)) out.push({ tag: `class-${o.key}`, body: `${o.course.name} à ${o.start}${where} — en salle avant ${fmtClock(deadline)}.` });
