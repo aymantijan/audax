@@ -97,7 +97,7 @@ export default function Analysis() {
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="var(--border)" />
               <Line type="monotone" dataKey="ANC" name="Actif Net Comptable" stroke="#7aa2ff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="ANCC" name="ANC Corrigé" stroke="#b366ff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="ANCC" name="ANC Corrigé" stroke="var(--accent-secondary)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -111,9 +111,9 @@ export default function Analysis() {
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="var(--border)" />
-              <Line type="monotone" dataKey="FR" stroke="#00d97f" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="FR" stroke="var(--success)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="BFR" stroke="#ffa500" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="TN" stroke="#00d9ff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="TN" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -144,7 +144,7 @@ export default function Analysis() {
             <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} domain={['auto', 'auto']} />
             <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
             <ReferenceLine y={0} stroke="var(--error)" strokeDasharray="4 4" />
-            <Line type="monotone" dataKey="ancc" name="ANCC projeté" stroke="#b366ff" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="ancc" name="ANCC projeté" stroke="var(--accent-secondary)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
         <p className="text-[11px] text-mute mt-2">ANCC actuel : {fmtMAD(nwForecast.anccActuel)}</p>
@@ -160,7 +160,7 @@ export default function Analysis() {
             <ReferenceLine y={0} stroke="var(--border)" />
             <Bar dataKey="resultat" name="Résultat" radius={[4, 4, 0, 0]}>
               {series.map((m, i) => (
-                <Cell key={i} fill={m.resultat >= 0 ? '#00d97f' : '#ff6b6b'} />
+                <Cell key={i} fill={m.resultat >= 0 ? 'var(--success)' : 'var(--error)'} />
               ))}
             </Bar>
           </BarChart>

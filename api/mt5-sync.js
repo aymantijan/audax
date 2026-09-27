@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   const lookup = await fetch(`${supabaseUrl}/rest/v1/app_state?store_name=eq.mt5_sync_key&data->>keyHash=eq.${sha256Hex(key)}&select=user_id`, { headers });
   if (!lookup.ok) { console.error('[mt5-sync] key lookup failed', lookup.status, await lookup.text()); return res.status(502).json({ error: 'Could not verify the key right now.' }); }
   const rows = await lookup.json();
-  if (!rows.length) return res.status(401).json({ error: 'Invalid or revoked MT5 sync key — generate a new one in AUDAX › Trading › Accounts.' });
+  if (!rows.length) return res.status(401).json({ error: 'Invalid or revoked MT5 sync key — generate a new one in VAUDAX › Trading › Accounts.' });
   const userId = rows[0].user_id;
 
   const body = req.body || {};

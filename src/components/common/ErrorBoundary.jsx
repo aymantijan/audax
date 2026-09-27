@@ -61,7 +61,7 @@ export default class ErrorBoundary extends Component {
           <p className="text-xs text-mute mb-6 font-mono break-all">{String(this.state.error?.message || this.state.error)}</p>
           <div className="flex justify-center gap-3">
             <button
-              className="px-4 py-2 rounded-lg text-sm bg-accent text-black hover:opacity-90 font-semibold cursor-pointer"
+              className="px-4 py-2 rounded-lg text-sm bg-accent text-on-accent hover:opacity-90 font-semibold cursor-pointer"
               onClick={() => this.setState({ error: null })}
             >
               <span className="flex items-center gap-2"><RefreshCw size={14} /> Try again</span>

@@ -51,7 +51,7 @@ export const PROP_FIRM_PRESETS = [
       { profitTargetPct: 10, maxDailyLossPct: 3, maxTotalDrawdownPct: 10, maxTotalDrawdownType: 'trailing', consistencyRulePct: 50 },
     ],
     funded: { maxDailyLossPct: 3, maxTotalDrawdownPct: 10, maxTotalDrawdownType: 'trailing' },
-    notes: 'Max loss trails end-of-day (AUDAX trails trade by trade — slightly stricter). Best Day ≤ 50% of positive days’ profit (AUDAX: of total profit).',
+    notes: 'Max loss trails end-of-day (VAUDAX trails trade by trade — slightly stricter). Best Day ≤ 50% of positive days’ profit (VAUDAX: of total profit).',
   },
   {
     id: 'fundednext-stellar-2step', firm: 'FundedNext', program: 'Stellar 2-Step',

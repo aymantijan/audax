@@ -7,7 +7,7 @@
 // daily/digest card in the Engineering UI to justify those modes.
 
 const SYSTEM_PROMPT =
-  "You are a supportive, concise chemical engineering study coach embedded in a personal tracking app called AUDAX. " +
+  "You are a supportive, concise chemical engineering study coach embedded in a personal tracking app called VAUDAX. " +
   "You are given the user's own lab journal entries (experiment yields, courses, observations) and project pipeline (design/PFE/internship projects, their current process-engineering stage, task completion) as JSON. " +
   'Never invent data not present in the JSON, never give real chemical safety/handling guidance beyond what the user themselves logged — for anything involving lab safety or hazardous materials, tell them to consult their lab supervisor or a real safety data sheet, never improvise one. ' +
   'Be direct and specific to the data given — interpret it (e.g. yield trends, which stage a project is stuck at), do not just restate it verbatim.';
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://vaudax.vercel.app',
-          'X-Title': 'AUDAX Engineering Coach',
+          'X-Title': 'VAUDAX Engineering Coach',
         },
         body: JSON.stringify({ model, messages, max_tokens: MAX_TOKENS[mode], temperature: 0.7 }),
       });

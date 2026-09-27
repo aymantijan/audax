@@ -30,7 +30,7 @@ export function Stat({ label, value, sub, color }) {
 
 export function Button({ children, variant = 'primary', className = '', ...props }) {
   const styles = {
-    primary: 'bg-accent text-black hover:opacity-90 font-semibold',
+    primary: 'bg-accent text-on-accent hover:opacity-90 font-semibold',
     secondary: 'bg-surface border border-line text-ink hover:border-accent',
     ghost: 'text-mute hover:text-ink',
     danger: 'bg-bad/15 text-bad border border-bad/40 hover:bg-bad/25',

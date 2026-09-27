@@ -124,8 +124,8 @@ export default async function handler(req, res) {
   const jobs = [];
   for (const row of rows) {
     const due = row.store_name === 'health'
-      ? dueHealthReminders(row.data).map((m) => ({ ...m, title: 'AUDAX · Santé', url: '/health' }))
-      : dueClassReminders(row.data, row.data?.academic?.settings?.timezone || 'Africa/Casablanca').map((m) => ({ ...m, title: 'AUDAX · Cours', url: '/today' }));
+      ? dueHealthReminders(row.data).map((m) => ({ ...m, title: 'VAUDAX · Santé', url: '/health' }))
+      : dueClassReminders(row.data, row.data?.academic?.settings?.timezone || 'Africa/Casablanca').map((m) => ({ ...m, title: 'VAUDAX · Cours', url: '/today' }));
     for (const msg of due) {
       for (const s of subs.filter((x) => x.user_id === row.user_id)) {
         jobs.push(

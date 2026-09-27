@@ -20,7 +20,7 @@ export function useBudgetAlerts() {
       for (const row of getBudgetAlerts()) {
         const key = `${row.account}|${mk}`;
         if (budgetAlerts.lastShown[key] === today) continue;
-        new Notification('AUDAX Finance', { body: `Budget dépassé : ${row.label} — ${row.reel} DH / ${row.amount} DH (+${Math.round(row.severity.over)}%).` });
+        new Notification('VAUDAX Finance', { body: `Budget dépassé : ${row.label} — ${row.reel} DH / ${row.amount} DH (+${Math.round(row.severity.over)}%).` });
         markBudgetAlertShown(key, today);
       }
     };

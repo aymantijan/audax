@@ -12,7 +12,7 @@ import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
-const PLATFORM_COLOR = { LinkedIn: '#0a66c2', Blog: '#66ccff', Portfolio: '#b366ff', 'X/Twitter': '#e2e8f0', YouTube: '#ff4444', Newsletter: 'var(--success)', Autre: 'var(--text-secondary)' };
+const PLATFORM_COLOR = { LinkedIn: '#0a66c2', Blog: '#66ccff', Portfolio: 'var(--accent-secondary)', 'X/Twitter': '#e2e8f0', YouTube: '#ff4444', Newsletter: 'var(--success)', Autre: 'var(--text-secondary)' };
 const STATUS_COLOR = { 'Idée': 'var(--text-secondary)', Brouillon: 'var(--warning)', Planifié: 'var(--accent-secondary)', Publié: 'var(--success)' };
 
 const blank = () => ({ platform: 'LinkedIn', title: '', url: '', status: 'Publié', publishedDate: todayKey(), domain: 'Général', courseId: '', likes: '', comments: '', shares: '', views: '', notes: '' });

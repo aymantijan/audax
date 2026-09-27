@@ -49,8 +49,8 @@ export default defineConfig({
         description: 'Études, argent, santé, travail et habitudes au même endroit.',
         start_url: '/today',
         display: 'standalone',
-        background_color: '#0b0e14',
-        theme_color: '#0b0e14',
+        background_color: '#170a11',
+        theme_color: '#170a11',
         icons: [
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

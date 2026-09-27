@@ -19,7 +19,7 @@ function skillStatus(state) {
 }
 
 function buildData(skills, categoryFilter, trackFilter) {
-  const root = { id: 'root', name: 'AUDAX', kind: 'root', children: [] };
+  const root = { id: 'root', name: 'VAUDAX', kind: 'root', children: [] };
   const catMap = {};
   const subMap = {};
   for (const def of SKILL_TREE) {
@@ -168,7 +168,7 @@ export default function SkillTreeMap({ onSelect }) {
     core.append('circle').attr('class', 'shape').attr('r', 30).attr('fill', 'url(#stCore)');
     core.append('text').attr('dy', '0.35em').attr('text-anchor', 'middle')
       .style('font-size', '11px').style('font-weight', 800).style('letter-spacing', '2px')
-      .style('fill', '#04121f').style('pointer-events', 'none').text('AUDAX');
+      .style('fill', '#04121f').style('pointer-events', 'none').text('VAUDAX');
 
     // Categories — glowing diamonds
     const cats = node.filter((d) => d.data.kind === 'category');

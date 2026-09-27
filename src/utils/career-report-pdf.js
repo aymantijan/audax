@@ -206,7 +206,7 @@ export async function exportCareerReportPDF(applications, conversionStats) {
     doc.line(marginL, pageH - 11, pageW - marginR, pageH - 11);
     doc.setFontSize(7);
     doc.setTextColor(...MUTE);
-    doc.text('AUDAX · Career', marginL, pageH - 7);
+    doc.text('VAUDAX · Career', marginL, pageH - 7);
     doc.text(`Page ${p} / ${total}`, pageW - marginR, pageH - 7, { align: 'right' });
     doc.setTextColor(0);
   }

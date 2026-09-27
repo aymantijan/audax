@@ -29,7 +29,7 @@ export default function Mt5SyncCard() {
   useEffect(() => { if (available) { getSyncKeyStatus().then(setKeyStatus); syncMt5Now().catch(() => {}); } }, [available]);
 
   if (!available) {
-    return <Card title="MT5 live sync"><p className="text-sm text-mute">Live sync needs cloud sync (sign in with your AUDAX cloud account). Meanwhile, use “Import MT5” with the History report.</p></Card>;
+    return <Card title="MT5 live sync"><p className="text-sm text-mute">Live sync needs cloud sync (sign in with your VAUDAX cloud account). Meanwhile, use “Import MT5” with the History report.</p></Card>;
   }
 
   const generate = async () => {
@@ -61,7 +61,7 @@ export default function Mt5SyncCard() {
 
   return (
     <Card title="MT5 live sync" action={<button onClick={syncNow} disabled={busy} className="text-xs text-accent hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"><RefreshCw size={12} className={busy ? 'animate-spin' : ''} /> Sync now</button>}>
-      <p className="text-sm text-mute mb-3">A small read-only Expert Advisor sends every closed position from MetaTrader 5 to AUDAX automatically — no more exports. It never opens, modifies or closes a trade, and its key can only <i>send</i> trades: it cannot read your AUDAX data.</p>
+      <p className="text-sm text-mute mb-3">A small read-only Expert Advisor sends every closed position from MetaTrader 5 to VAUDAX automatically — no more exports. It never opens, modifies or closes a trade, and its key can only <i>send</i> trades: it cannot read your VAUDAX data.</p>
 
       {newKey && (
         <div className="rounded-lg border border-accent/40 bg-accent/5 p-3 mb-3 space-y-2">
@@ -100,7 +100,7 @@ export default function Mt5SyncCard() {
         </li>
         <li className="flex gap-2.5">
           <span className="w-5 h-5 rounded-full bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
-          <div className="flex-1 text-xs text-mute">Drag <b className="text-ink">AUDAX_Sync</b> onto any chart of the account, paste the key in its inputs, keep the chart open. The chart shows “AUDAX Sync OK” once connected. One EA per MT5 account (each terminal / login).</div>
+          <div className="flex-1 text-xs text-mute">Drag <b className="text-ink">AUDAX_Sync</b> onto any chart of the account, paste the key in its inputs, keep the chart open. The chart shows “VAUDAX Sync OK” once connected. One EA per MT5 account (each terminal / login).</div>
         </li>
       </ol>
 

@@ -83,7 +83,7 @@ export default function PrivateEquity() {
                 <YAxis allowDecimals={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {byType.map((d) => <Cell key={d.name} fill="#b366ff" />)}
+                  {byType.map((d) => <Cell key={d.name} fill="var(--accent-secondary)" />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -113,7 +113,7 @@ export default function PrivateEquity() {
               <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={55} />
               <YAxis allowDecimals={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="#00d9ff" />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} fill="var(--accent-primary)" />
             </BarChart>
           </ResponsiveContainer>
         </Card>

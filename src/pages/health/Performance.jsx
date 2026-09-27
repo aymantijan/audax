@@ -68,8 +68,8 @@ export default function Performance() {
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
               <Line type="monotone" dataKey="restingHr" name="FC repos" stroke="#ff6b6b" strokeWidth={2} dot={false} connectNulls />
-              <Line type="monotone" dataKey="vitality" name="Vitalité" stroke="#00d9ff" strokeWidth={2} dot={false} connectNulls />
-              <Line type="monotone" dataKey="mobility" name="Mobilité" stroke="#00d97f" strokeWidth={2} dot={false} connectNulls />
+              <Line type="monotone" dataKey="vitality" name="Vitalité" stroke="var(--accent-primary)" strokeWidth={2} dot={false} connectNulls />
+              <Line type="monotone" dataKey="mobility" name="Mobilité" stroke="var(--success)" strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -98,7 +98,7 @@ export default function Performance() {
               <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
-              <Bar dataKey="volume" fill="#00d9ff" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="volume" fill="var(--accent-primary)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

@@ -41,7 +41,7 @@ const blankAsset = () => ({
 });
 
 const VALUATION_HINT = {
-  market_live: 'Valorisé au marché par Wealth OS — renseignez quantité + coût unitaire + identifiant marché (AUDAX ne calcule aucun cours).',
+  market_live: 'Valorisé au marché par Wealth OS — renseignez quantité + coût unitaire + identifiant marché (VAUDAX ne calcule aucun cours).',
   audax_manual: 'Réévaluable manuellement — vous pouvez saisir une estimation actuelle (sinon gérez-la via une plus/moins-value ci-dessus).',
   cost: 'Valeur = coût historique (au journal). Aucune valorisation de marché.',
 };
@@ -153,9 +153,9 @@ export default function Statements() {
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="Immobilisé" stackId="a" fill="#7aa2ff" />
-              <Bar dataKey="Créances" stackId="a" fill="#b366ff" />
-              <Bar dataKey="Trésorerie" stackId="a" fill="#00d9ff" />
-              <Bar dataKey="Capitaux & emprunts" stackId="a" fill="#00d97f" />
+              <Bar dataKey="Créances" stackId="a" fill="var(--accent-secondary)" />
+              <Bar dataKey="Trésorerie" stackId="a" fill="var(--accent-primary)" />
+              <Bar dataKey="Capitaux & emprunts" stackId="a" fill="var(--success)" />
               <Bar dataKey="Dettes CT" stackId="a" fill="#ff6b6b" />
               <Bar dataKey="Résultat" stackId="a" fill="#ffa500" />
             </BarChart>
@@ -218,7 +218,7 @@ export default function Statements() {
         }
       >
         <p className="text-[11px] text-mute mb-3">
-          Le journal porte le <strong>coût historique</strong> de chaque bien. Ces définitions ajoutent la catégorie, le palier de liquidité et les métadonnées (quantité, coût unitaire, identifiant marché) que Wealth OS utilise pour valoriser. AUDAX ne calcule aucun cours : pour l'or, les métaux et les actions, il n'expose que quantité + coût unitaire + identifiant.
+          Le journal porte le <strong>coût historique</strong> de chaque bien. Ces définitions ajoutent la catégorie, le palier de liquidité et les métadonnées (quantité, coût unitaire, identifiant marché) que Wealth OS utilise pour valoriser. VAUDAX ne calcule aucun cours : pour l'or, les métaux et les actions, il n'expose que quantité + coût unitaire + identifiant.
         </p>
         {assets.length ? (
           <div className="space-y-1.5">

@@ -58,7 +58,7 @@ export default function Analytics() {
                 <XAxis type="number" dataKey="x" name={labelFor(metricA)} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis type="number" dataKey="y" name={labelFor(metricB)} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
-                <Scatter data={custom.points} fill="#00d9ff" />
+                <Scatter data={custom.points} fill="var(--accent-primary)" />
               </ScatterChart>
             </ResponsiveContainer>
           </>
@@ -96,7 +96,7 @@ export default function Analytics() {
               <Tooltip {...tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar yAxisId="spend" dataKey="spend" name={`Spending (${baseCurrencyShort()})`} fill="#ff6b6b" radius={[3, 3, 0, 0]} />
-              <Line yAxisId="stress" type="monotone" dataKey="stress" name="Stress /10" stroke="#00d9ff" strokeWidth={2} dot={false} />
+              <Line yAxisId="stress" type="monotone" dataKey="stress" name="Stress /10" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

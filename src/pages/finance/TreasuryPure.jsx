@@ -159,7 +159,7 @@ export default function TreasuryPure() {
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="encaissements" name="Encaissements" fill="#00d97f" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="encaissements" name="Encaissements" fill="var(--success)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="decaissements" name="Décaissements" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -179,8 +179,8 @@ export default function TreasuryPure() {
                 <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <ReferenceLine y={0} stroke="var(--error)" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="historique" name="Historique" stroke="#00d9ff" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="prevision" name="Prévision (budget)" stroke="#b366ff" strokeWidth={2} strokeDasharray="6 4" dot={false} />
+                <Line type="monotone" dataKey="historique" name="Historique" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="prevision" name="Prévision (budget)" stroke="var(--accent-secondary)" strokeWidth={2} strokeDasharray="6 4" dot={false} />
               </LineChart>
             </ResponsiveContainer>
             <p className="text-[11px] text-mute mt-2">
@@ -221,7 +221,7 @@ export default function TreasuryPure() {
             <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} domain={['auto', 'auto']} />
             <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
             <ReferenceLine y={0} stroke="var(--error)" strokeDasharray="4 4" />
-            <Line type="monotone" dataKey="solde" name="Solde projeté" stroke="#00d9ff" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="solde" name="Solde projeté" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
         <p className="text-[11px] text-mute mt-2">

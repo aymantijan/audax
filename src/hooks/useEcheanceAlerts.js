@@ -22,7 +22,7 @@ export function useEcheanceAlerts() {
       for (const row of overdue) {
         const key = `${row.id}|${row.occurrenceDate}`;
         if (echeanceAlerts.lastShown[key] === today) continue;
-        new Notification('AUDAX Finance', { body: `Échéance en retard : ${row.label} (${row.occurrenceDate}) — ${row.amount} DH.` });
+        new Notification('VAUDAX Finance', { body: `Échéance en retard : ${row.label} (${row.occurrenceDate}) — ${row.amount} DH.` });
         markEcheanceAlertShown(key, today);
       }
     };

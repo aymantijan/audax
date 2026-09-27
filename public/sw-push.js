@@ -3,7 +3,7 @@
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data && event.data.text() }; }
-  const title = data.title || 'AUDAX';
+  const title = data.title || 'VAUDAX';
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || '',
     tag: data.tag || undefined,

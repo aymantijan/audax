@@ -16,7 +16,7 @@
 // Vercel function entry point.
 
 const SYSTEM_PROMPT =
-  "You are a supportive, direct trading coach embedded in a personal trading journal app called AUDAX. " +
+  "You are a supportive, direct trading coach embedded in a personal trading journal app called VAUDAX. " +
   "You are given the user's own aggregated trading metrics (win rate, expectancy, drawdown, discipline score, revenge/tilt counts, prop-firm rule progress) as JSON — never invent numbers not present in it. " +
   'Never give specific buy/sell/entry signals or personalized financial advice — you coach PROCESS and DISCIPLINE, not market calls. ' +
   'Be direct and specific to the numbers given — interpret them, do not just restate them verbatim.';
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://vaudax.vercel.app',
-          'X-Title': 'AUDAX Trading Coach',
+          'X-Title': 'VAUDAX Trading Coach',
         },
         body: JSON.stringify({ model, messages, max_tokens: MAX_TOKENS[mode], temperature: 0.7 }),
       });

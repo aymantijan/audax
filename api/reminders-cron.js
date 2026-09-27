@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     subs.map((s) =>
       webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify({ title: 'AUDAX', body: dueMessages[s.user_id] })
+        JSON.stringify({ title: 'VAUDAX', body: dueMessages[s.user_id] })
       )
     )
   );

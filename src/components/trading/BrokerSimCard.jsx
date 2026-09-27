@@ -83,7 +83,7 @@ export default function BrokerSimCard({ account, trades }) {
     return (
       <Card title="Broker simulation">
         <form onSubmit={save} className="space-y-3">
-          <p className="text-xs text-mute">Trade this demo as if it were your future real broker account: AUDAX converts every result to the capital you plan to put in, and tells you when the demo justifies going live.</p>
+          <p className="text-xs text-mute">Trade this demo as if it were your future real broker account: VAUDAX converts every result to the capital you plan to put in, and tells you when the demo justifies going live.</p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <Field label="Real capital you plan to deposit"><Input type="number" min="1" step="any" value={f.realCapital} onChange={(e) => setF((p) => ({ ...p, realCapital: e.target.value }))} autoFocus required /></Field>
             <Field label="Currency of the real account"><Select value={f.currency} onChange={(e) => setF((p) => ({ ...p, currency: e.target.value }))} options={CURRENCIES} /></Field>

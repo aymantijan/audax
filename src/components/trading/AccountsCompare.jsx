@@ -8,7 +8,7 @@ import { Card, EmptyState } from '../common/ui';
 
 const fmtR = (r) => (r == null ? '—' : `${r > 0 ? '+' : ''}${(Math.round(r * 100) / 100).toFixed(2)}R`);
 const TYPE_LABEL = { demo: 'Demo', broker: 'Broker', propfirm: 'Prop Firm' };
-const COLORS = ['#00d9ff', '#a78bfa', '#f59e0b', '#10b981', '#f472b6', '#60a5fa'];
+const COLORS = ['var(--accent-primary)', '#a78bfa', '#f59e0b', '#10b981', '#f472b6', '#60a5fa'];
 
 function statsOf(trades, initial) {
   const pnl = trades.reduce((a, t) => a + (Number(t.pnl) || 0), 0);

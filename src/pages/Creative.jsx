@@ -10,7 +10,7 @@ import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 
 const STATUS_COLOR = { 'Idée': 'var(--text-secondary)', 'En cours': 'var(--warning)', 'Terminé': 'var(--success)' };
-const MEDIUM_COLOR = { Peinture: '#e05e5e', Musique: '#0a66c2', Écriture: 'var(--success)', Photographie: '#b366ff', Sculpture: 'var(--warning)', Design: '#66ccff', Autre: 'var(--text-secondary)' };
+const MEDIUM_COLOR = { Peinture: '#e05e5e', Musique: '#0a66c2', Écriture: 'var(--success)', Photographie: 'var(--accent-secondary)', Sculpture: 'var(--warning)', Design: '#66ccff', Autre: 'var(--text-secondary)' };
 
 const blankWork = () => ({ title: '', medium: 'Autre', status: 'Idée', startDate: todayKey(), notes: '' });
 const workFields = [

@@ -84,7 +84,7 @@ export default function TradingPsychology({ trades, currency = 'USD' }) {
               <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} (${p.payload.count} trades, ${fmtSignedMoney(p.payload.pnl, currency)})`, 'Win rate']} />
               <Bar dataKey="winRate" radius={[4, 4, 0, 0]}>
                 {emotions.map((e) => (
-                  <Cell key={e.emotion} fill={e.winRate >= 50 ? '#00d97f' : '#ff6b6b'} />
+                  <Cell key={e.emotion} fill={e.winRate >= 50 ? 'var(--success)' : 'var(--error)'} />
                 ))}
               </Bar>
             </BarChart>

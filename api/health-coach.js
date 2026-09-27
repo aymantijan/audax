@@ -11,7 +11,7 @@
 // data, and here it's only used to verify a token belongs to a real session).
 
 const SYSTEM_PROMPT =
-  "You are a supportive, concise health & fitness coach embedded in a personal tracking app called AUDAX. " +
+  "You are a supportive, concise health & fitness coach embedded in a personal tracking app called VAUDAX. " +
   "You are given the user's own aggregated health metrics (sleep, energy, stress, nutrition, workouts, goals) as JSON, plus an optional `tradingSignals` field (drawdown, tilt/revenge-trading detected today) from the same user's trading journal — connect the two when relevant (e.g. low energy or poor sleep coinciding with tilt) but never invent numbers not present in the JSON. " +
   'Never give medical diagnoses or claim to replace a doctor; for anything alarming, suggest they consult a professional. ' +
   'Be direct and specific to the numbers given — interpret them, do not just restate them verbatim.';
@@ -99,7 +99,7 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://vaudax.vercel.app',
-          'X-Title': 'AUDAX Health Coach',
+          'X-Title': 'VAUDAX Health Coach',
         },
         body: JSON.stringify({ model, messages, max_tokens: MAX_TOKENS[mode], temperature: 0.7 }),
       });

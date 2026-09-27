@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({
-    note: "Every cloud-synced store for exactly ONE AUDAX account (this API key resolves to a single user_id — there is no cross-account access). Each store below is the raw persisted Zustand state, same shape the app itself reads.",
+    note: "Every cloud-synced store for exactly ONE VAUDAX account (this API key resolves to a single user_id — there is no cross-account access). Each store below is the raw persisted Zustand state, same shape the app itself reads.",
     exportedAt: new Date().toISOString(),
     stores,
   });

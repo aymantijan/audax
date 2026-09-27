@@ -214,7 +214,7 @@ function PnLBarCard({ title, data, currency, empty }) {
             <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
             <Tooltip {...tooltipStyle} formatter={(v) => fmtSignedMoney(v, currency)} />
             <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
-              {data.map((d) => <Cell key={d.name} fill={d.pnl >= 0 ? '#00d97f' : '#ff6b6b'} />)}
+              {data.map((d) => <Cell key={d.name} fill={d.pnl >= 0 ? 'var(--success)' : 'var(--error)'} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -576,7 +576,7 @@ export default function Trading() {
                   <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                   <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                   <Tooltip {...tooltipStyle} formatter={(v) => fmtMoney(v, 0, currency)} />
-                  <Line type="monotone" dataKey="value" stroke="#00d9ff" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             ) : <EmptyState>Log your first trade to see the curve.</EmptyState>}

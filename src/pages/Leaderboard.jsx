@@ -24,7 +24,7 @@ function YourGradeCard({ grade, consistency }) {
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"
           style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' }}>
-          <Trophy size={28} className="text-black" />
+          <Trophy size={28} className="text-on-accent" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-xs text-mute uppercase tracking-wide">Grade {grade.current.level} · {grade.current.era}</div>
@@ -161,11 +161,11 @@ function RankingView() {
         profiles
           .filter((p) => p.user_id !== session.user.id) // exclude self — the "You" row below already covers that, from live local state
           .map((p) => ({
-            name: p.display_name || 'AUDAX user',
-            domain: p.career_goal || 'AUDAX',
+            name: p.display_name || 'VAUDAX user',
+            domain: p.career_goal || 'VAUDAX',
             country: '—',
             xp: p.lifetime_xp || 0,
-            note: 'AUDAX user',
+            note: 'VAUDAX user',
             isYou: false,
             isRealUser: true,
           }))
@@ -218,15 +218,15 @@ function RankingView() {
       {cloudStatus !== 'ready' && (
         <div className="text-xs text-mute bg-surface border border-line rounded-lg px-3 py-2 flex items-center gap-2">
           <Globe size={13} className="shrink-0" />
-          {cloudStatus === 'unconfigured' && 'Cloud sync isn\'t set up on this deployment — the shared leaderboard (other real AUDAX users) needs it to work.'}
-          {cloudStatus === 'signed-out' && 'Sign in with cloud sync (Settings) to appear on, and see, the shared leaderboard of real AUDAX users.'}
-          {cloudStatus === 'loading' && 'Loading other AUDAX users…'}
-          {cloudStatus === 'error' && 'Could not load other AUDAX users right now — showing personalities and your own rank only.'}
+          {cloudStatus === 'unconfigured' && 'Cloud sync isn\'t set up on this deployment — the shared leaderboard (other real VAUDAX users) needs it to work.'}
+          {cloudStatus === 'signed-out' && 'Sign in with cloud sync (Settings) to appear on, and see, the shared leaderboard of real VAUDAX users.'}
+          {cloudStatus === 'loading' && 'Loading other VAUDAX users…'}
+          {cloudStatus === 'error' && 'Could not load other VAUDAX users right now — showing personalities and your own rank only.'}
         </div>
       )}
       {cloudStatus === 'ready' && realUsers.length > 0 && (
         <p className="text-[11px] text-mute flex items-center gap-1.5">
-          <Globe size={12} className="text-good shrink-0" /> {realUsers.length} other real AUDAX user{realUsers.length > 1 ? 's' : ''} shown alongside the personalities below.
+          <Globe size={12} className="text-good shrink-0" /> {realUsers.length} other real VAUDAX user{realUsers.length > 1 ? 's' : ''} shown alongside the personalities below.
         </p>
       )}
 
@@ -248,7 +248,7 @@ function RankingView() {
           <option value="all">All countries</option>
           {PERSONALITY_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-black bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
+        <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
           <Crosshair size={14} /> My position
         </button>
       </div>
@@ -280,7 +280,7 @@ function RankingView() {
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         {r.isYou && <Star size={13} className="text-accent shrink-0" fill="currentColor" />}
-                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Real AUDAX user" />}
+                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Real VAUDAX user" />}
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
                         {!r.isYou && !r.isRealUser && linkedCounts[r.name] > 0 && (
                           <button
@@ -372,7 +372,7 @@ function MilestonesView({ currentLevel }) {
           <option value="all">All eras</option>
           {GRADE_ERAS.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
-        <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-black bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
+        <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
           <Crosshair size={14} /> My grade
         </button>
       </div>

@@ -1,33 +1,39 @@
 @import "tailwindcss";
 
-/* ---- Theme tokens (spec palette) ---- */
+/* ---- Theme tokens — VAUDAX identity (THE BIG PLAN, étape 2) ----
+   Dark "porphyre" by default, light "vélin" as an option. One accent (gold);
+   status colours (success / warning / error) stay distinct from it. */
 :root,
 [data-theme="dark"] {
-  --bg-primary: #0f1419;
-  --bg-secondary: #1a1f2e;
-  --bg-tertiary: #252b3a;
-  --text-primary: #e8eef7;
-  --text-secondary: #a0aac0;
-  --accent-primary: #00d9ff;
-  --accent-secondary: #b366ff;
-  --success: #00d97f;
-  --warning: #ffa500;
-  --error: #ff6b6b;
-  --border: #3a4052;
+  color-scheme: dark;
+  --bg-primary: #170a11;   /* porphyre — page */
+  --bg-secondary: #1f0e17; /* surfaces */
+  --bg-tertiary: #2a1420;  /* cards */
+  --text-primary: #f1e8d7; /* ivoire */
+  --text-secondary: #b3a393;
+  --accent-primary: #d6b25e; /* or */
+  --accent-secondary: #b98bb0; /* améthyste, second accent (charts, highlights) */
+  --success: #7dc4a2;
+  --warning: #e3a857;
+  --error: #d9606f;
+  --border: #45283a;
+  --on-accent: #120810; /* text on gold buttons */
 }
 
 [data-theme="light"] {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f9fc;
-  --bg-tertiary: #eef2f9;
-  --text-primary: #1a202c;
-  --text-secondary: #718096;
-  --accent-primary: #0080cc;
-  --accent-secondary: #8b5cf6;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --border: #e2e8f0;
+  color-scheme: light;
+  --bg-primary: #faf6ee;   /* vélin */
+  --bg-secondary: #f3ecdf;
+  --bg-tertiary: #ffffff;
+  --text-primary: #2a1420;
+  --text-secondary: #6e5a60;
+  --accent-primary: #86621c; /* or, darkened: ≥ 5:1 on vélin and with white text */
+  --accent-secondary: #7e4f8e;
+  --success: #23704d;
+  --warning: #b36b12;
+  --error: #b83a4b;
+  --border: #e3d6c3;
+  --on-accent: #ffffff;
 }
 
 /* Map tokens into Tailwind utilities (bg-base, text-ink, border-line, ...) */
@@ -43,6 +49,7 @@
   --color-warn: var(--warning);
   --color-bad: var(--error);
   --color-line: var(--border);
+  --color-on-accent: var(--on-accent);
   /* Aliases used across Programme & other pages that previously resolved to
      NOTHING (invisible borders, transparent dropdowns, missing warning colors). */
   --color-warning: var(--warning);
@@ -73,8 +80,36 @@ body,
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 15.5px;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Display face for page titles and big figures, used with restraint. */
+h1,
+.font-display {
+  font-family: "Cormorant Garamond", Garamond, "Times New Roman", serif;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+h1 {
+  font-size: 1.12em;
+}
+.tabular-nums,
+table {
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -106,10 +141,10 @@ body {
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.25);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-primary) 25%, transparent);
   }
   50% {
-    box-shadow: 0 0 16px 2px rgba(0, 217, 255, 0.25);
+    box-shadow: 0 0 16px 2px color-mix(in srgb, var(--accent-primary) 25%, transparent);
   }
 }
 .glow {

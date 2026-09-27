@@ -11,7 +11,7 @@ import EntityFormModal from '../components/common/EntityFormModal';
 import { SectionHeader, BigStat, tint } from '../components/learning/design';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
-const PIE_COLORS = ['#00d9ff', '#b366ff', '#00d97f', '#ffa500', '#ff6b6b', '#7aa2ff'];
+const PIE_COLORS = ['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#7aa2ff'];
 const fr = (n) => (n ?? 0).toLocaleString('fr-FR');
 
 /**

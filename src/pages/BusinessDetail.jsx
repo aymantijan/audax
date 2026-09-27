@@ -522,7 +522,7 @@ export default function BusinessDetail() {
                             <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 9 }} tickFormatter={(d) => d.slice(5)} />
                             <YAxis hide domain={['auto', 'auto']} />
                             <Tooltip {...tooltipStyle} />
-                            <Line type="monotone" dataKey="value" stroke="#00d9ff" strokeWidth={2} dot={{ r: 2 }} />
+                            <Line type="monotone" dataKey="value" stroke="var(--accent-primary)" strokeWidth={2} dot={{ r: 2 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       )}

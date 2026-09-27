@@ -50,7 +50,7 @@ export default function QuickAdd() {
           className="rounded-full flex items-center justify-center shadow-xl cursor-pointer transition-transform"
           style={{ width: 52, height: 52, background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', transform: open ? 'rotate(45deg)' : 'none' }}
         >
-          {open ? <X size={22} className="text-black" /> : <Plus size={22} className="text-black" />}
+          {open ? <X size={22} className="text-on-accent" /> : <Plus size={22} className="text-on-accent" />}
         </button>
       </div>
       <QuickEntryModal open={quickOpen} onClose={() => setQuickOpen(false)} />

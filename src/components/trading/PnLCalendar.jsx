@@ -46,7 +46,7 @@ export default function PnLCalendar({ trades, currency = 'USD' }) {
   const cellColor = (pnl) => {
     if (pnl == null) return 'transparent';
     const intensity = 0.15 + (Math.abs(pnl) / maxAbs) * 0.55;
-    return pnl >= 0 ? `rgba(0, 217, 127, ${intensity})` : `rgba(255, 107, 107, ${intensity})`;
+    return pnl >= 0 ? `color-mix(in srgb, var(--success) calc(${intensity} * 100%), transparent)` : `color-mix(in srgb, var(--error) calc(${intensity} * 100%), transparent)`;
   };
 
   const selectedTrades = selectedDay ? trades.filter((t) => t.date === selectedDay).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)) : [];

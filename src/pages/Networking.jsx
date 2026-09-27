@@ -11,7 +11,7 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, Empty
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 
-const DOMAIN_COLOR = { Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: '#b366ff', General: 'var(--text-secondary)' };
+const DOMAIN_COLOR = { Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: 'var(--accent-secondary)', General: 'var(--text-secondary)' };
 const PERSONALITY_NAMES = PERSONALITIES.map((p) => p.name).sort();
 const PERSONALITY_OPTIONS = [{ value: '', label: '— Aucune —' }, ...PERSONALITY_NAMES.map((n) => ({ value: n, label: n }))];
 

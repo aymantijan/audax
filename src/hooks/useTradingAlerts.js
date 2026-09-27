@@ -20,7 +20,7 @@ export function useTradingAlerts() {
       const fire = (accountId, conditionKey, body) => {
         const key = `${accountId}|${conditionKey}`;
         if (alerts.lastShown[key] === today) return;
-        new Notification('AUDAX Trading', { body });
+        new Notification('VAUDAX Trading', { body });
         markAlertShown(key, today);
       };
 

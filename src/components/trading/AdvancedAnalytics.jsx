@@ -96,7 +96,7 @@ export default function AdvancedAnalytics({ trades, currency = 'USD', instrument
                 <Tooltip {...tooltipStyle} formatter={(v, name) => (name === 'winRate' ? fmtPct(v) : v)} />
                 <Bar dataKey="winRate" radius={[4, 4, 0, 0]}>
                   {dow.map((d) => (
-                    <Cell key={d.key} fill={d.winRate >= 50 ? '#00d97f' : '#ff6b6b'} />
+                    <Cell key={d.key} fill={d.winRate >= 50 ? 'var(--success)' : 'var(--error)'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -127,8 +127,8 @@ export default function AdvancedAnalytics({ trades, currency = 'USD', instrument
                       const v = corr.matrix[a][b];
                       const bg =
                         v === null ? 'transparent'
-                        : v > 0 ? `rgba(0, 217, 127, ${Math.abs(v) * 0.35})`
-                        : `rgba(255, 107, 107, ${Math.abs(v) * 0.35})`;
+                        : v > 0 ? `color-mix(in srgb, var(--success) calc(${Math.abs(v) * 0.35} * 100%), transparent)`
+                        : `color-mix(in srgb, var(--error) calc(${Math.abs(v) * 0.35} * 100%), transparent)`;
                       return (
                         <td key={b} className="py-1.5 px-2 text-center rounded" style={{ background: bg }}>
                           {v === null ? '·' : v.toFixed(2)}

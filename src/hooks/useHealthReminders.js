@@ -34,11 +34,11 @@ export function useHealthReminders() {
       const hasWorkout = workouts.some((w) => w.date === today);
 
       if (now.getHours() >= MORNING_HOUR && !hasMorningLog && reminders.lastMorningReminderDate !== today) {
-        new Notification('AUDAX Health', { body: "You haven't logged your morning check-in yet." });
+        new Notification('VAUDAX · Santé', { body: 'Tu n’as pas encore fait ton check-in du matin.' });
         markMorningReminderShown();
       }
       if (now.getHours() >= WORKOUT_HOUR && !hasWorkout && reminders.lastWorkoutReminderDate !== today) {
-        new Notification('AUDAX Health', { body: 'No workout logged today yet — even a short session keeps momentum.' });
+        new Notification('VAUDAX · Santé', { body: 'Pas encore de séance aujourd’hui : même une séance courte entretient l’élan.' });
         markWorkoutReminderShown();
       }
 
@@ -49,7 +49,7 @@ export function useHealthReminders() {
       const gapMin = prefs.waterReminderGapMin ?? 180;
       const sinceLastWater = reminders.lastWaterReminderAt ? (Date.now() - reminders.lastWaterReminderAt) / 60000 : Infinity;
       if (chrono.hydrationGaps.lastIntakeHoursAgo != null && chrono.hydrationGaps.lastIntakeHoursAgo * 60 > gapMin && sinceLastWater > gapMin) {
-        new Notification('AUDAX Health', { body: `Aucune eau depuis ${chrono.hydrationGaps.lastIntakeHoursAgo}h — pense à boire.` });
+        new Notification('VAUDAX · Santé', { body: `Aucune eau depuis ${chrono.hydrationGaps.lastIntakeHoursAgo}h — pense à boire.` });
         markWaterReminderShown();
       }
 
@@ -62,7 +62,7 @@ export function useHealthReminders() {
         const [h, m] = time.split(':').map(Number);
         const target = h * 60 + m;
         if (Math.abs(nowMinutes - target) <= MEAL_WINDOW_MIN) {
-          if (!pushActive) new Notification('AUDAX Health', { body: `C'est l'heure prévue pour ton repas (${time}).` });
+          if (!pushActive) new Notification('VAUDAX · Santé', { body: `C'est l'heure prévue pour ton repas (${time}).` });
           markMealReminderShown(key);
         }
       });
@@ -72,7 +72,7 @@ export function useHealthReminders() {
         const [h, m] = prefs.bedtimeTarget.split(':').map(Number);
         const target = h * 60 + m;
         if (Math.abs(nowMinutes - target) <= MEAL_WINDOW_MIN) {
-          if (!pushActive) new Notification('AUDAX Health', { body: `Heure de coucher visée (${prefs.bedtimeTarget}) — la régularité du sommeil compte autant que sa durée.` });
+          if (!pushActive) new Notification('VAUDAX · Santé', { body: `Heure de coucher visée (${prefs.bedtimeTarget}) — la régularité du sommeil compte autant que sa durée.` });
           markBedtimeReminderShown();
         }
       }

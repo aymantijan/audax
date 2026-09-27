@@ -148,7 +148,7 @@ export default function Dashboard() {
     // the already-computed synergy score rather than a separate formula.
     ...(networkingEnabled && contacts.length ? [{ label: 'Réseau', value: synergy.subScores.networking ?? 0, sub: `${contacts.length} contact${contacts.length !== 1 ? 's' : ''}`, color: '#0a66c2' }] : []),
     ...(careerEnabled && applications.length ? [{ label: 'Carrière', value: synergy.subScores.career ?? 0, sub: `${applications.length} candidature${applications.length !== 1 ? 's' : ''}`, color: 'var(--accent-primary)' }] : []),
-    ...(contentEnabled && posts.length ? [{ label: 'Contenu', value: synergy.subScores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: '#ff6b6b' }] : []),
+    ...(contentEnabled && posts.length ? [{ label: 'Contenu', value: synergy.subScores.content ?? 0, sub: `${posts.length} publication${posts.length !== 1 ? 's' : ''}`, color: 'var(--error)' }] : []),
     ...(focusEnabled && focusSessions.length ? [{ label: 'Deep Work', value: synergy.subScores.focus ?? 0, sub: `${Math.round(focusSessions.reduce((a, s) => a + s.durationMinutes, 0) / 60)} h enregistrées`, color: '#ffa94d' }] : []),
     // Fundraising/Freelance/Creative/Real Estate (2026-08-27) — same pattern.
     ...(fundraisingEnabled && investors.length ? [{ label: 'Levée de fonds', value: synergy.subScores.fundraising ?? 0, sub: `${investors.length} investisseur${investors.length !== 1 ? 's' : ''}`, color: '#845ef7' }] : []),
@@ -310,7 +310,7 @@ export default function Dashboard() {
       <Link to="/leaderboard" className="block">
         <div className="rounded-xl border border-line bg-card px-5 py-4 flex items-center gap-4 hover:border-accent transition-colors">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' }}>
-            <Award size={22} className="text-black" />
+            <Award size={22} className="text-on-accent" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[11px] text-mute uppercase tracking-wide">Grade {grade.current.level} · {grade.current.era}</div>
@@ -417,7 +417,7 @@ export default function Dashboard() {
                 <RadarChart data={radarData} outerRadius="75%">
                   <PolarGrid stroke="var(--border)" />
                   <PolarAngleAxis dataKey="domain" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
-                  <Radar dataKey="score" stroke="#00d9ff" fill="#00d9ff" fillOpacity={0.25} />
+                  <Radar dataKey="score" stroke="var(--accent-primary)" fill="var(--accent-primary)" fillOpacity={0.25} />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
@@ -463,8 +463,8 @@ export default function Dashboard() {
               <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="weighted" stroke="#00d9ff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="average" stroke="#b366ff" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
+              <Line type="monotone" dataKey="weighted" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="average" stroke="var(--accent-secondary)" strokeWidth={1.5} strokeDasharray="4 3" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>

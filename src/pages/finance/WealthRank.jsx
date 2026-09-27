@@ -48,7 +48,7 @@ export default function WealthRank() {
               className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"
               style={{ background: 'linear-gradient(135deg, var(--warning), var(--accent-secondary))' }}
             >
-              <Crown size={28} className="text-black" />
+              <Crown size={28} className="text-on-accent" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs text-mute uppercase tracking-wide">Rang {rank.current.level} · {rank.current.era}</div>
@@ -92,7 +92,7 @@ export default function WealthRank() {
           <option value="all">Toutes les ères</option>
           {WEALTH_ERAS.map((e) => <option key={e} value={e}>{e}</option>)}
         </select>
-        <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-black bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
+        <button onClick={jumpToMine} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
           <Crosshair size={14} /> Mon rang
         </button>
       </div>

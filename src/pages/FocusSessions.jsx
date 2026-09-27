@@ -12,8 +12,8 @@ import { useLearningStore } from '../store/learningStore';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const DOMAIN_COLOR = {
-  Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: '#b366ff',
-  Learning: '#66ccff', Health: '#ff6b6b', Networking: '#0a66c2', Career: 'var(--accent-primary)', Content: '#ff9f43', Projects: '#00d9ff', General: 'var(--text-secondary)',
+  Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: 'var(--accent-secondary)',
+  Learning: '#66ccff', Health: 'var(--error)', Networking: '#0a66c2', Career: 'var(--accent-primary)', Content: '#ff9f43', Projects: 'var(--accent-primary)', General: 'var(--text-secondary)',
 };
 
 const blank = () => ({ domain: 'General', durationMinutes: '', date: todayKey(), notes: '' });

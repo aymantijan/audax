@@ -26,7 +26,7 @@ let pushActive = false;
 function notify(body, tag) {
   if (pushActive) { if (document.visibilityState === 'visible') toast(`🎓 ${body}`, 'info'); return; }
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    const n = new Notification('AUDAX · Cours', { body, tag });
+    const n = new Notification('VAUDAX · Cours', { body, tag });
     n.onclick = () => { window.focus(); n.close(); };
   } else toast(`🎓 ${body}`, 'info');
 }

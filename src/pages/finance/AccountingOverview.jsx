@@ -9,7 +9,7 @@ import BadgeList from '../../components/common/BadgeList';
 import { useFinanceMode } from '../../components/finance/financeMode';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
-const PIE_COLORS = ['#00d9ff', '#b366ff', '#00d97f', '#ffa500', '#ff6b6b', '#7aa2ff', '#f7c948', '#9ae6b4'];
+const PIE_COLORS = ['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#7aa2ff', '#f7c948', '#9ae6b4'];
 
 export default function AccountingOverview() {
   const store = useAccountingStore();
@@ -107,7 +107,7 @@ export default function AccountingOverview() {
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="var(--border)" />
-              <Bar dataKey="produits" name={simple ? "Revenus" : "Produits (cl. 7)"} fill="#00d97f" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="produits" name={simple ? "Revenus" : "Produits (cl. 7)"} fill="var(--success)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="charges" name={simple ? "Dépenses" : "Charges (cl. 6)"} fill="#ff6b6b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

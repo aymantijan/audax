@@ -151,9 +151,9 @@ export default function Navbar() {
         {/* Left: logo */}
         <button className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center">
-            <Zap size={16} className="text-black" />
+            <Zap size={16} className="text-on-accent" />
           </span>
-          <span className="text-lg font-bold tracking-widest hidden sm:inline">AUDAX</span>
+          <span className="text-lg font-bold tracking-widest hidden sm:inline">VAUDAX</span>
         </button>
 
         {/* Center: nav links */}

@@ -277,7 +277,7 @@ function PushCta() {
       <BellRing size={17} className="text-accent shrink-0" />
       <div className="flex-1 min-w-[12rem] text-sm">
         <b className="text-ink">Rappels de cours, même app fermée.</b>{' '}
-        <span className="text-mute">{state === 'unsupported' ? 'Ce navigateur ne gère pas les notifications push : installez AUDAX sur l’écran d’accueil (PWA).' : 'Activez-les sur chaque appareil (téléphone surtout).'}</span>
+        <span className="text-mute">{state === 'unsupported' ? 'Ce navigateur ne gère pas les notifications push : installez VAUDAX sur l’écran d’accueil (PWA).' : 'Activez-les sur chaque appareil (téléphone surtout).'}</span>
       </div>
       {state === 'off' && <Button className="!py-1.5" onClick={enable}>Activer</Button>}
     </div>

@@ -31,7 +31,7 @@ export default function JournalAnalysis({ trades, currency = 'USD' }) {
               <Tooltip {...tooltipStyle} formatter={(v, name, p) => [`${fmtPct(v)} win rate (${p.payload.count} trades, avg ${fmtSignedMoney(p.payload.avgPnl, currency)})`, '']} />
               <Bar dataKey="winRate" radius={[4, 4, 0, 0]}>
                 {qualityCorr.map((d) => (
-                  <Cell key={d.label} fill={d.winRate >= 50 ? '#00d97f' : '#ff6b6b'} />
+                  <Cell key={d.label} fill={d.winRate >= 50 ? 'var(--success)' : 'var(--error)'} />
                 ))}
               </Bar>
             </BarChart>
@@ -77,7 +77,7 @@ export default function JournalAnalysis({ trades, currency = 'USD' }) {
               <XAxis dataKey="label" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
               <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} formatter={(v) => (v == null ? 'no trades' : fmtPct(v))} />
-              <Line type="monotone" dataKey="pct" stroke="#00d9ff" strokeWidth={2} dot connectNulls />
+              <Line type="monotone" dataKey="pct" stroke="var(--accent-primary)" strokeWidth={2} dot connectNulls />
             </LineChart>
           </ResponsiveContainer>
         ) : (

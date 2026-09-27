@@ -33,7 +33,7 @@ export function markDataSeeded() {
       clearAllData();
       markDataSeeded();
       // eslint-disable-next-line no-console
-      console.log('AUDAX: demo data cleared. Fresh start ready.');
+      console.log('VAUDAX: demo data cleared. Fresh start ready.');
     }
   } catch {
     /* localStorage unavailable — nothing to clear */

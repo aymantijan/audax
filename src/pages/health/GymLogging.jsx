@@ -371,7 +371,7 @@ export default function GymLogging({ pendingPrompt }) {
                 <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} />
-                <Line type="monotone" dataKey="maxWeight" name={`Poids max (${weightUnit})`} stroke="#00d9ff" strokeWidth={2} dot connectNulls />
+                <Line type="monotone" dataKey="maxWeight" name={`Poids max (${weightUnit})`} stroke="var(--accent-primary)" strokeWidth={2} dot connectNulls />
                 {projectionData.length > 0 && (
                   <Line type="monotone" dataKey="projected" name="Projection (1RM estimé)" stroke="#7c5cff" strokeWidth={2} strokeDasharray="5 4" dot connectNulls />
                 )}

@@ -112,7 +112,7 @@ export default function ScheduleEventModal({ open, onClose, title = 'Schedule', 
               <Input value={summary} onChange={(e) => setSummary(e.target.value)} autoFocus />
             </Field>
             {recurring && (
-              <Field label="Repeats on" hint="Weekly, until this is marked complete/archived in AUDAX — then future occurrences stop automatically.">
+              <Field label="Repeats on" hint="Weekly, until this is marked complete/archived in VAUDAX — then future occurrences stop automatically.">
                 <WeekdayPicker value={weekdays} onChange={setWeekdays} options={WEEKDAYS} />
               </Field>
             )}

@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
   webpush.setVapidDetails('mailto:audax-app@example.com', vapidPublicKey, vapidPrivateKey);
 
-  const payload = JSON.stringify({ title: 'AUDAX', body: 'Push notifications are working — this is a test.' });
+  const payload = JSON.stringify({ title: 'VAUDAX', body: 'Push notifications are working — this is a test.' });
   const results = await Promise.allSettled(
     subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload))
   );

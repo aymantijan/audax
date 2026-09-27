@@ -61,7 +61,7 @@ export default function PnLCalendar() {
   const cellColor = (resultat) => {
     if (resultat == null) return 'transparent';
     const intensity = 0.15 + (Math.abs(resultat) / maxAbs) * 0.55;
-    return resultat >= 0 ? `rgba(0, 217, 127, ${intensity})` : `rgba(255, 107, 107, ${intensity})`;
+    return resultat >= 0 ? `color-mix(in srgb, var(--success) calc(${intensity} * 100%), transparent)` : `color-mix(in srgb, var(--error) calc(${intensity} * 100%), transparent)`;
   };
 
   // Détail du jour sélectionné : une ligne par mouvement de résultat (compte

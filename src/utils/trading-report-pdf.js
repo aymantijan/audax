@@ -387,7 +387,7 @@ export async function exportTradingReportPDF(account, trades) {
     doc.line(marginL, pageH - 11, pageW - marginR, pageH - 11);
     doc.setFontSize(7);
     doc.setTextColor(...MUTE);
-    doc.text(`AUDAX · ${account.name}`, marginL, pageH - 7);
+    doc.text(`VAUDAX · ${account.name}`, marginL, pageH - 7);
     doc.text(`Page ${p} / ${total}`, pageW - marginR, pageH - 7, { align: 'right' });
     doc.setTextColor(0);
   }

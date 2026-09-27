@@ -45,7 +45,7 @@ export default function PwaUpdatePrompt() {
       ) : (
         <>
           <WifiOff size={16} className="text-good shrink-0" />
-          <span className="flex-1">AUDAX fonctionne maintenant hors ligne.</span>
+          <span className="flex-1">VAUDAX fonctionne maintenant hors ligne.</span>
         </>
       )}
       <button onClick={close} className="text-mute hover:text-ink shrink-0 cursor-pointer">

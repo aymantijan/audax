@@ -37,9 +37,9 @@ export default function PredictionsPanel({ account, trades, currency = 'USD' }) 
                 <XAxis dataKey="step" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} label={{ value: 'Trades ahead', position: 'insideBottom', offset: -2, fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} formatter={(v, name) => [fmtMoney(v, 0, currency), name === 'p90' ? 'Optimistic (p90)' : name === 'p10' ? 'Pessimistic (p10)' : 'Median']} />
-                <Area type="monotone" dataKey="p90" stroke="none" fill="#00d9ff" fillOpacity={0.08} />
+                <Area type="monotone" dataKey="p90" stroke="none" fill="var(--accent-primary)" fillOpacity={0.08} />
                 <Area type="monotone" dataKey="p10" stroke="none" fill="var(--bg-secondary)" fillOpacity={1} />
-                <Area type="monotone" dataKey="p50" stroke="#00d9ff" strokeWidth={2} fill="none" />
+                <Area type="monotone" dataKey="p50" stroke="var(--accent-primary)" strokeWidth={2} fill="none" />
               </AreaChart>
             </ResponsiveContainer>
             <p className="text-[11px] text-mute mt-2">

@@ -239,7 +239,7 @@ export default function CursusView() {
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               {terms.map((t) => (
                 <button key={t.id} onClick={() => setActiveTerm(t.id)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold cursor-pointer transition-colors ${t.id === term.id ? 'bg-accent text-black' : 'bg-card/70 border border-line text-mute hover:text-ink'}`}>
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold cursor-pointer transition-colors ${t.id === term.id ? 'bg-accent text-on-accent' : 'bg-card/70 border border-line text-mute hover:text-ink'}`}>
                   {t.name}
                 </button>
               ))}

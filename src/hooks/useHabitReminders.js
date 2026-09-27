@@ -32,7 +32,7 @@ export function useHabitReminders() {
         const log = st.logs.find((l) => l.habitId === h.id && l.date === today);
         if (log?.completed || log?.joker) continue;
         const body = `C’est l’heure : ${h.name}${h.duration ? ` (${h.duration} min)` : ''}`;
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('AUDAX · Habitudes', { body, tag: `habit-${h.id}` });
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('VAUDAX · Habitudes', { body, tag: `habit-${h.id}` });
         else toast(`⏰ ${body}`, 'info');
         st.markHabitReminderShown(h.id, today);
       }

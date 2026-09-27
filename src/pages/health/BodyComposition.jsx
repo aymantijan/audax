@@ -39,7 +39,7 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 
   let y = 20;
   doc.setFontSize(18);
-  doc.text('AUDAX — Monthly Health Report', 14, y);
+  doc.text('VAUDAX — Bilan santé mensuel', 14, y);
   y += 8;
   doc.setFontSize(10);
   doc.setTextColor(120);
@@ -442,10 +442,10 @@ export default function BodyComposition() {
               <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
               <Tooltip {...tooltipStyle} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="weight" stroke="#00d9ff" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Weight (raw)" />
+              <Line type="monotone" dataKey="weight" stroke="var(--accent-primary)" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Weight (raw)" />
               <Line type="monotone" dataKey="bodyFat" stroke="#ff6b6b" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Body fat (raw)" />
-              <Line type="monotone" dataKey="waist" stroke="#00d97f" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Waist (raw)" />
-              <Line type="monotone" data={smoothed.weight.map((e) => ({ date: e.date.slice(5), weightMA: e.weightKgMA }))} dataKey="weightMA" stroke="#00d9ff" strokeWidth={2.5} dot={false} name="Weight (7j MA)" />
+              <Line type="monotone" dataKey="waist" stroke="var(--success)" strokeWidth={1.5} strokeOpacity={0.4} dot={false} name="Waist (raw)" />
+              <Line type="monotone" data={smoothed.weight.map((e) => ({ date: e.date.slice(5), weightMA: e.weightKgMA }))} dataKey="weightMA" stroke="var(--accent-primary)" strokeWidth={2.5} dot={false} name="Weight (7j MA)" />
               <Line type="monotone" data={smoothed.bodyFat.map((e) => ({ date: e.date.slice(5), bodyFatMA: e.bodyFatPctMA }))} dataKey="bodyFatMA" stroke="#ff6b6b" strokeWidth={2.5} dot={false} name="Body fat (7j MA)" />
             </LineChart>
           </ResponsiveContainer>

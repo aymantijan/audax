@@ -83,7 +83,7 @@ export default function Onboarding() {
       <div className="w-full max-w-lg">
         <div className="flex items-center justify-center gap-2 mb-6">
           <Zap size={24} className="text-accent" />
-          <span className="text-xl font-bold tracking-widest">AUDAX</span>
+          <span className="text-xl font-bold tracking-widest">VAUDAX</span>
         </div>
 
         {step === 0 && (

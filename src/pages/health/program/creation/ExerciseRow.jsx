@@ -10,7 +10,7 @@ const MG_COLORS = {
   chest: '#ef4444', back: '#3b82f6', shoulders: '#f59e0b', biceps: '#a855f7',
   triceps: '#ec4899', forearms: '#6366f1', quads: '#22c55e', hamstrings: '#14b8a6',
   glutes: '#f97316', calves: '#64748b', core: '#06b6d4', full_body: '#8b5cf6',
-  ladder: '#b366ff', sprint: '#ef4444', reactivity: '#f59e0b', plyo: '#22c55e', mobility: '#06b6d4', stretch: '#64748b',
+  ladder: 'var(--accent-secondary)', sprint: '#ef4444', reactivity: '#f59e0b', plyo: '#22c55e', mobility: '#06b6d4', stretch: '#64748b',
 };
 
 // The picker/labels differ between strength work and agility/mobility drills.

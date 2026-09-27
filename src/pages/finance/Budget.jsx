@@ -381,7 +381,7 @@ export default function Budget() {
               <Tooltip {...tooltipStyle} formatter={(v) => fmtMAD(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="Budget" fill="#7aa2ff" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Réel" fill="#00d9ff" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Réel" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

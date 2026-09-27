@@ -6,9 +6,9 @@ import { Card, Button, Field, Select, Input } from '../../components/common/ui';
 
 const tooltipStyle = { contentStyle: { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 } };
 const SLOTS = [
-  { value: 'morning', label: 'Morning', color: '#00d9ff' },
-  { value: 'postWorkout', label: 'Post-workout', color: '#00d97f' },
-  { value: 'afternoon', label: 'Afternoon', color: '#ffa500' },
+  { value: 'morning', label: 'Morning', color: 'var(--accent-primary)' },
+  { value: 'postWorkout', label: 'Post-workout', color: 'var(--success)' },
+  { value: 'afternoon', label: 'Afternoon', color: 'var(--warning)' },
   { value: 'evening', label: 'Evening', color: '#7c5cff' },
 ];
 

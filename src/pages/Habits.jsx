@@ -542,7 +542,7 @@ async function enableReminders(setEnabled) {
   }
   setEnabled(true);
   toast(typeof Notification !== 'undefined' && Notification.permission === 'granted'
-    ? 'Rappels activés : notification à l’heure choisie (AUDAX ouvert).'
+    ? 'Rappels activés : notification à l’heure choisie (VAUDAX ouvert).'
     : 'Rappels activés dans l’app (notifications du navigateur refusées).', 'success');
 }
 
@@ -799,7 +799,7 @@ export default function Habits() {
                         <div key={h.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${done ? 'border-good/40' : 'border-line bg-surface'}`} style={{ ...(done ? { background: tint('var(--success)', 8) } : {}), marginLeft: depth ? depth * 18 : undefined }}>
                           {depth > 0 && <CornerDownRight size={14} className="text-mute -ml-1 shrink-0" />}
                           <button onClick={() => toggleHabit(h.id, date)} title={h.source ? 'Suivi automatique' : done ? 'Décocher' : 'Fait'}
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${h.source ? 'cursor-default' : 'cursor-pointer'} ${done ? 'bg-good border-good text-black' : isJoker ? 'border-accent2 text-accent2' : 'border-line hover:border-accent'}`}>
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${h.source ? 'cursor-default' : 'cursor-pointer'} ${done ? 'bg-good border-good text-on-accent' : isJoker ? 'border-accent2 text-accent2' : 'border-line hover:border-accent'}`}>
                             {done ? <Check size={16} strokeWidth={3} /> : isJoker ? <Snowflake size={14} /> : h.source ? <Zap size={13} className="text-mute" /> : null}
                           </button>
                           <div className="min-w-0 flex-1">
@@ -926,8 +926,8 @@ export default function Habits() {
                 <YAxis domain={[0, 10]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                 <Tooltip {...tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line type="monotone" dataKey="Énergie" stroke="#00d9ff" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Sommeil" stroke="#00d97f" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Énergie" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Sommeil" stroke="var(--success)" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="Stress" stroke="#ff6b6b" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>

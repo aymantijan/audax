@@ -13,7 +13,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 const TOKEN_KEY = 'audax-google-calendar-token';
 const CALENDAR_ID_KEY = 'audax-google-calendar-id';
-const AUDAX_CALENDAR_NAME = 'AUDAX';
+const AUDAX_CALENDAR_NAME = 'AUDAX'; // technical: existing users' Google calendar is found by this exact name — do not rename
 const WEEKDAY_RRULE = { mon: 'MO', tue: 'TU', wed: 'WE', thu: 'TH', fri: 'FR', sat: 'SA', sun: 'SU' };
 
 let tokenClient = null;
