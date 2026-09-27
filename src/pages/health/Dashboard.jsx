@@ -11,6 +11,7 @@ import { useProgramStore } from '../../store/programStore';
 import DailyView from './program/DailyView';
 import DisciplineCard from './program/DisciplineCard';
 import { tierFor } from './program/ReadinessCard';
+import HealthImportCard from '../../components/health/HealthImportCard';
 
 export default function Dashboard({ goTo }) {
   const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap, nutritionPlans, proteinTargetG, waterLogs, waterTargetMl, getGoalsWithProgress } = useHealthStore();
@@ -284,6 +285,7 @@ export default function Dashboard({ goTo }) {
       )}
 
       <BadgeList badges={badges} />
+      <HealthImportCard />
     </div>
   );
 }

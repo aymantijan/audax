@@ -63,6 +63,7 @@ export const useHealthStore = create(
       },
       deleteFoodOverride: (foodName) => set({ foodOverrides: Object.fromEntries(Object.entries(get().foodOverrides).filter(([n]) => n !== foodName)) }),
       bodyComp: [], // [{ id, date, weightKg, waistCm, neckCm, hipCm, heightCm, sex, absRating, bodyFatPct, bodyFatMethod, photo }]
+      activityDays: [], // [{ date, steps, distanceKm, activeKcal, source: 'apple'|'googlefit' }] — imported (components/health/HealthImportCard.jsx)
       recoveryLogs: [], // [{ id, date, activities:['sleep8','meditation','stretching','cold','massage'] }]
       checkins: [], // [{ id, date, slot:'morning'|'postWorkout'|'afternoon'|'evening', energy, stress, note }]
       pendingPrompts: [], // [{ id, habitId, habitName, type, duration, createdAt }] — habit→Health "log it?" queue

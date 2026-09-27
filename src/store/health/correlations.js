@@ -347,7 +347,7 @@ export const correlationsSlice = (set, get) => ({
 
       resetAll: () =>
         set({
-          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, foodOverrides: {}, bodyComp: [], recoveryLogs: [],
+          workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, foodOverrides: {}, bodyComp: [], activityDays: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], bloodTests: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',
           reminders: {
