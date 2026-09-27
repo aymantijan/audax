@@ -5,6 +5,8 @@
 // sévérité (danger > warning > success > info). Toutes les entrées sont
 // optionnelles — un domaine absent ne produit simplement aucune observation.
 
+import { fmtMAD } from './formatters';
+
 const SEVERITY_ORDER = { danger: 0, warning: 1, success: 2, info: 3 };
 
 function push(list, level, domain, message) {
@@ -19,7 +21,7 @@ export function buildObservations({ accounting, trading, habits, learning, skill
     const { analysis, esg, budgetVariance, goalRows } = accounting;
     if (analysis) {
       if (analysis.tresorerieNette < 0) {
-        push(obs, 'danger', 'Finance', `Trésorerie nette négative (${Math.round(analysis.tresorerieNette)} DH) — le fonds de roulement ne couvre pas le besoin en fonds de roulement.`);
+        push(obs, 'danger', 'Finance', `Trésorerie nette négative (${fmtMAD(analysis.tresorerieNette)}) — le fonds de roulement ne couvre pas le besoin en fonds de roulement.`);
       }
       if (analysis.fondsRoulement < 0) {
         push(obs, 'danger', 'Finance', 'Fonds de roulement négatif — des emplois durables sont financés par des ressources court terme.');
@@ -38,12 +40,12 @@ export function buildObservations({ accounting, trading, habits, learning, skill
     }
     for (const v of budgetVariance || []) {
       if (v.cls === 6 && !v.favorable && v.amount > 0) {
-        push(obs, v.reel > v.amount * 1.25 ? 'danger' : 'warning', 'Budget', `${v.label} : ${Math.round(v.reel)} DH dépensés pour ${Math.round(v.amount)} DH budgétés.`);
+        push(obs, v.reel > v.amount * 1.25 ? 'danger' : 'warning', 'Budget', `${v.label} : ${fmtMAD(v.reel)} dépensés pour ${fmtMAD(v.amount)} budgétés.`);
       }
     }
     for (const g of goalRows || []) {
       if (g.achieved) continue;
-      if (g.onTrack === false) push(obs, 'warning', 'Objectifs', `Objectif « ${g.name} » hors rythme — projection ${Math.round(g.projected)} DH à l'échéance pour une cible de ${Math.round(g.targetAmount)} DH.`);
+      if (g.onTrack === false) push(obs, 'warning', 'Objectifs', `Objectif « ${g.name} » hors rythme — projection ${fmtMAD(g.projected)} à l'échéance pour une cible de ${fmtMAD(g.targetAmount)}.`);
       else if (g.onTrack === true && g.progress >= 90) push(obs, 'success', 'Objectifs', `Objectif « ${g.name} » presque atteint (${Math.round(g.progress)}%).`);
     }
   }

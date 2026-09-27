@@ -52,7 +52,7 @@ export const valuationSlice = (set, get) => ({
           const initial = Number(data.initialAmount) || 0;
           if (initial > 0) {
             const { unallocated } = get().getGoalAllocation();
-            if (initial > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur tes comptes.` };
+            if (initial > unallocated + 0.005) return { ok: false, error: `Seulement ${fmtMAD(unallocated)} non affectés sur tes comptes.` };
             if (initial >= targetAmount) return { ok: false, error: 'Le montant de départ atteint déjà la cible.' };
             contributions = [{ id: uid(), date: localDateKey(new Date()), amount: initial, note: 'Épargne déjà constituée' }];
           }
@@ -80,8 +80,8 @@ export const valuationSlice = (set, get) => ({
         const current = (g.contributions || []).reduce((s, c) => s + Number(c.amount), 0);
         if (amt > 0) {
           const { unallocated } = get().getGoalAllocation();
-          if (amt > unallocated + 0.005) return { ok: false, error: `Seulement ${Math.round(unallocated)} DH non affectés sur tes comptes.` };
-        } else if (-amt > current + 0.005) return { ok: false, error: `L'enveloppe ne contient que ${Math.round(current)} DH.` };
+          if (amt > unallocated + 0.005) return { ok: false, error: `Seulement ${fmtMAD(unallocated)} non affectés sur tes comptes.` };
+        } else if (-amt > current + 0.005) return { ok: false, error: `L'enveloppe ne contient que ${fmtMAD(current)}.` };
         set({ goals: get().goals.map((x) => (x.id === id ? stamp({ ...x, kind, contributions: [...(x.contributions || []), { id: uid(), date: localDateKey(new Date()), amount: amt, note }] }) : x)) });
         return { ok: true };
       },

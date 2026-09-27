@@ -17,6 +17,7 @@ import { useContentStore } from '../store/contentStore';
 import { classOf } from './chart-of-accounts';
 import { useLearningStore } from '../store/learningStore';
 import { dayAttendance } from './attendance';
+import { baseCurrencyShort } from './formatters';
 
 const sum = (arr, f) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
 
@@ -38,7 +39,7 @@ export const HABIT_SOURCES = [
   { value: 'career_touches', label: 'Échanges avec des contacts (Carrière › Réseau)', unit: 'échange(s)', section: 'Carrière', get: (d) => (useNetworkingStore.getState().contacts || []).reduce((n, c) => n + (c.touches || []).filter((t) => t.date === d).length, 0) },
   { value: 'career_posts', label: 'Publications (Carrière › Visibilité)', unit: 'publication(s)', section: 'Carrière', get: (d) => (useContentStore.getState().posts || []).filter((p) => p.status === 'Publié' && p.publishedDate === d).length },
   { value: 'expenses_logged', label: 'Opérations saisies (Finances)', unit: 'opération(s)', section: 'Finances', get: (d) => (useAccountingStore.getState().journal || []).filter((e) => e.date === d).length },
-  { value: 'spent_amount', label: 'Montant dépensé (Finances)', unit: 'DH', section: 'Finances', get: (d) => Math.round(sum((useAccountingStore.getState().journal || []).filter((e) => e.date === d), (e) => sum(e.lines.filter((l) => classOf(l.account) === 6), (l) => (Number(l.debit) || 0) - (Number(l.credit) || 0)))) },
+  { value: 'spent_amount', label: 'Montant dépensé (Finances)', get unit() { return baseCurrencyShort(); }, section: 'Finances', get: (d) => Math.round(sum((useAccountingStore.getState().journal || []).filter((e) => e.date === d), (e) => sum(e.lines.filter((l) => classOf(l.account) === 6), (l) => (Number(l.debit) || 0) - (Number(l.credit) || 0)))) },
 ];
 export const sourceMeta = (v) => HABIT_SOURCES.find((s) => s.value === v) || null;
 

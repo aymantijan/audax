@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAccountingStore } from '../store/accountingStore';
-import { todayKey } from '../utils/formatters';
+import { todayKey, fmtMAD } from '../utils/formatters';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -20,7 +20,7 @@ export function useBudgetAlerts() {
       for (const row of getBudgetAlerts()) {
         const key = `${row.account}|${mk}`;
         if (budgetAlerts.lastShown[key] === today) continue;
-        new Notification('VAUDAX Finance', { body: `Budget dépassé : ${row.label} — ${row.reel} DH / ${row.amount} DH (+${Math.round(row.severity.over)}%).` });
+        new Notification('VAUDAX Finance', { body: `Budget dépassé : ${row.label} — ${fmtMAD(row.reel)} / ${fmtMAD(row.amount)} (+${Math.round(row.severity.over)}%).` });
         markBudgetAlertShown(key, today);
       }
     };

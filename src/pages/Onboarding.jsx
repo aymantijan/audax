@@ -1,76 +1,103 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Zap, TrendingUp, Wallet, HeartPulse, BookOpen, Flame, ArrowRight, Check, Sparkles, Handshake, FlaskConical,
-  Users, Briefcase, Megaphone, Timer, Rocket, Palette, Building2,
-} from 'lucide-react';
+import { Zap, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
+import { useAccountingStore } from '../store/accountingStore';
+import { useHealthStore } from '../store/healthStore';
+import { useCareerStore } from '../store/careerStore';
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
-import { Button, Card } from '../components/common/ui';
+import { CURRENCIES } from '../utils/currency';
+import { AIMS, SITUATIONS, COUNTRIES, GOAL_TEMPLATES, buildOnboardingPlan, guessCountry } from '../utils/onboarding-plan';
+import { MODULES, POLES, isModuleEnabled } from '../utils/navigation';
+import { Button, Card, Field, Input, Select } from '../components/common/ui';
 
-// Curated cross-domain starter set — one or two easy, high-signal habits per
-// domain (not the full 55+ template catalog, which would be overwhelming on
-// a first screen). Looked up by exact name from HABIT_TEMPLATES so the real
-// XP/skill-link/frequency metadata comes along instead of being re-typed here.
-// For every profile: body, reading, money and wellbeing first; the first four
-// are preselected. (These are the catalogue's French names — they had drifted
-// from the English ones, which left this step empty.)
-const STARTER_HABIT_NAMES = [
-  'Sport le matin', '8 h de sommeil ou plus',
-  'Lecture quotidienne (30 min)', 'Noter ses dépenses du jour',
-  'Boire 8 verres d’eau', 'Méditation (10 min)',
-  'Journal quotidien', 'Journal de gratitude',
-  'Vérifier son budget chaque semaine', 'Réviser un concept par jour',
-  'Journal de trading quotidien', 'Revoir le P&L du jour',
-];
 const ALL_TEMPLATE_ITEMS = HABIT_TEMPLATES.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group })));
-const STARTER_HABITS = STARTER_HABIT_NAMES.map((name) => ALL_TEMPLATE_ITEMS.find((it) => it.name === name)).filter(Boolean);
+const templateByName = (name) => ALL_TEMPLATE_ITEMS.find((it) => it.name === name);
+const OPTIONAL_MODULES = POLES.flatMap((p) => p.modules).filter((k) => MODULES[k].flag);
 
-const DOMAIN_TOUR = [
-  { icon: BookOpen, title: 'Études et apprentissage', text: 'Cursus, emploi du temps, assiduité, fiches de révision, lectures, et un arbre de plus de 450 compétences qui progresse avec ce que tu fais vraiment.' },
-  { icon: Wallet, title: 'Argent', text: 'Dépenses, budgets, épargne, échéances et patrimoine, avec une vraie comptabilité en arrière-plan.' },
-  { icon: HeartPulse, title: 'Santé', text: 'Sommeil, sport, nutrition, récupération et forme du jour.' },
-  { icon: TrendingUp, title: 'Travail, projets et trading', text: 'Carrière, freelance, projets, et un journal de trading multi-comptes pour ceux qui tradent.' },
-];
+function Chip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`ui-btn flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm transition-colors cursor-pointer ${active ? 'border-accent bg-accent/10 text-accent' : 'border-line text-ink hover:border-accent'}`}
+    >
+      {active && <Check size={14} />}
+      {children}
+    </button>
+  );
+}
 
+function Steps({ step }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 mb-4" aria-label={`Étape ${step + 1} sur 3`}>
+      {[0, 1, 2].map((i) => (
+        <span key={i} className={`h-1.5 rounded-full transition-all ${i === step ? 'w-8 bg-accent' : i < step ? 'w-4 bg-accent/50' : 'w-4 bg-line'}`} />
+      ))}
+    </div>
+  );
+}
+
+// First run: start from what the person wants to change in their life, not
+// from a list of modules. Everything proposed here stays editable afterwards.
 export default function Onboarding() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const addHabit = useHabitStore((s) => s.addHabit);
-  const [step, setStep] = useState(0);
-  const [selected, setSelected] = useState(() => new Set(STARTER_HABITS.slice(0, 4).map((h) => h.name)));
-  // pe/business both seed from the same first choice — Onboarding asks one
-  // combined "Deals & Business" question; independent on/off per page lives
-  // in Settings for anyone who later wants just one of the two.
-  const [modules, setModules] = useState(() => ({
-    trading: user?.enabledModules?.trading ?? true,
-    pe: user?.enabledModules?.pe ?? user?.enabledModules?.deals ?? true,
-    business: user?.enabledModules?.business ?? user?.enabledModules?.deals ?? true,
-    engineering: user?.enabledModules?.engineering ?? false,
-    networking: user?.enabledModules?.networking ?? true,
-    career: user?.enabledModules?.career ?? true,
-    content: user?.enabledModules?.content ?? true,
-    focus: user?.enabledModules?.focus ?? true,
-    fundraising: user?.enabledModules?.fundraising ?? false,
-    freelance: user?.enabledModules?.freelance ?? true,
-    creative: user?.enabledModules?.creative ?? false,
-    realEstate: user?.enabledModules?.realEstate ?? false,
-  }));
 
-  const toggle = (name) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      next.has(name) ? next.delete(name) : next.add(name);
-      return next;
-    });
+  const [step, setStep] = useState(0);
+  const [aims, setAims] = useState([]);
+  const [situation, setSituation] = useState(null);
+  const [country, setCountry] = useState(() => {
+    try { return guessCountry(Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { return 'OTHER'; }
+  });
+  const [currency, setCurrency] = useState(() => COUNTRIES.find((c) => c.key === country)?.currency || 'EUR');
+
+  // Proposal (step 3), recomputed from the answers until the person edits it.
+  const plan = useMemo(() => buildOnboardingPlan({ aims, situation }), [aims, situation]);
+  const [modules, setModules] = useState(null);
+  const [habits, setHabits] = useState(null);
+  const [goals, setGoals] = useState(null);
+  const [savingsAmount, setSavingsAmount] = useState('');
+
+  const toggleIn = (list, key) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
+
+  const toProposal = () => {
+    setModules(plan.modules);
+    setHabits(plan.habits);
+    setGoals(plan.goals);
+    setStep(2);
+  };
+
+  const pickCountry = (key) => {
+    setCountry(key);
+    setCurrency(COUNTRIES.find((c) => c.key === key)?.currency || currency);
+  };
 
   const finish = () => {
-    updateProfile({ enabledModules: modules });
-    for (const habit of STARTER_HABITS) {
-      if (selected.has(habit.name)) addHabit(habit);
+    updateProfile({ enabledModules: modules, situation, country, aims });
+    // Currency: only on an empty ledger (a new account), never re-based silently.
+    const acc = useAccountingStore.getState();
+    if (!acc.journal?.length && acc.setBaseCurrency) acc.setBaseCurrency(currency);
+    for (const name of habits) {
+      const t = templateByName(name);
+      if (t) addHabit(t);
+    }
+    for (const g of goals) {
+      if (g === 'savings') {
+        const amount = Number(String(savingsAmount).replace(/\s/g, '').replace(',', '.'));
+        if (amount > 0) useAccountingStore.getState().addGoal({ name: 'Épargne de précaution', kind: 'envelope', targetAmount: amount });
+      } else if (g === 'workouts') {
+        useHealthStore.getState().addGoal({ title: GOAL_TEMPLATES.workouts.label, metric: { key: 'workout_frequency' }, target: 3, direction: 'higher', silent: true });
+      } else if (g === 'sleep') {
+        useHealthStore.getState().addGoal({ title: GOAL_TEMPLATES.sleep.label, metric: { key: 'sleep_hours' }, target: 7.5, direction: 'higher', silent: true });
+      } else if (g === 'job' || g === 'launch') {
+        useCareerStore.getState().addPlan({ title: GOAL_TEMPLATES[g].label, domain: user?.occupation || 'Général' });
+      }
     }
     completeOnboarding();
     navigate('/today');
@@ -81,30 +108,27 @@ export default function Onboarding() {
     navigate('/today');
   };
 
+  const currencyOptions = CURRENCIES.filter((c) => c.code !== 'BTC').map((c) => ({ value: c.code, label: `${c.label} (${c.short})` }));
+
   return (
-    <div className="min-h-screen bg-base text-ink flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
-        <div className="flex items-center justify-center gap-2 mb-6">
+    <div className="min-h-screen bg-base text-ink flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-xl">
+        <div className="flex items-center justify-center gap-2 mb-5">
           <Zap size={24} className="text-accent" />
-          <span className="text-xl font-bold tracking-widest">VAUDAX</span>
+          <span className="font-display text-2xl tracking-widest">VAUDAX</span>
         </div>
+        <Steps step={step} />
 
         {step === 0 && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Bienvenue, {user?.name}.</h1>
-            <p className="text-mute text-sm mb-5">Toute ta vie au même endroit. Voici ce que tu peux y suivre.</p>
-            <div className="space-y-3">
-              {DOMAIN_TOUR.map((d) => (
-                <div key={d.title} className="flex items-start gap-3 bg-surface border border-line rounded-lg px-4 py-3">
-                  <d.icon size={18} className="text-accent shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-medium">{d.title}</div>
-                    <div className="text-xs text-mute">{d.text}</div>
-                  </div>
-                </div>
+            <h1 className="text-2xl font-bold mb-1">Bienvenue, {user?.name}.</h1>
+            <p className="text-mute text-sm mb-5">Qu’est-ce que tu veux améliorer ? Choisis autant de réponses que tu veux.</p>
+            <div className="flex flex-wrap gap-2">
+              {AIMS.map((a) => (
+                <Chip key={a.key} active={aims.includes(a.key)} onClick={() => setAims((l) => toggleIn(l, a.key))}>{a.label}</Chip>
               ))}
             </div>
-            <Button className="w-full mt-5" onClick={() => setStep(1)}>
+            <Button className="w-full mt-6" onClick={() => setStep(1)}>
               <span className="flex items-center justify-center gap-2">Suivant <ArrowRight size={15} /></span>
             </Button>
           </Card>
@@ -112,110 +136,90 @@ export default function Onboarding() {
 
         {step === 1 && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Quelles sections veux-tu ?</h1>
-            <p className="text-mute text-sm mb-5">Désactive ce dont tu n’as pas besoin : tu pourras changer ça à tout moment dans Paramètres.</p>
-            <div className="space-y-2">
-              {[
-                { key: 'trading', icon: TrendingUp, title: 'Trading', text: 'Journal multi-comptes, gestion du risque, suivi de la psychologie.' },
-                // One combined question toggles BOTH `pe`/`business` at once — the two
-                // pages (Deals split from Business Projects, 2026-08-26) can be turned
-                // on/off independently later in Settings, but onboarding stays one step.
-                { key: 'dealsAndBusiness', keys: ['pe', 'business'], icon: Handshake, title: 'Investissements et projets business', text: 'Suivi de deals (private equity, capital-risque) et de projets, du petit projet perso (étapes et tâches) à la vraie entreprise (phases, KPIs, comptabilité).' },
-                { key: 'engineering', icon: FlaskConical, title: 'Ingénierie', text: 'Journal de laboratoire et suivi de projets de conception (génie chimique et domaines proches).' },
-                { key: 'networking', icon: Users, title: 'Réseau', text: 'Contacts, relances et historique des échanges : recruteurs, mentors, anciens élèves.' },
-                { key: 'career', icon: Briefcase, title: 'Carrière', text: 'Suivi des candidatures : envoyée, entretien, offre.' },
-                { key: 'content', icon: Megaphone, title: 'Contenu', text: 'Publications et engagement : LinkedIn, blog, portfolio.' },
-                { key: 'focus', icon: Timer, title: 'Deep Work', text: 'Un minuteur de concentration et l’historique de tes sessions, qui font progresser le domaine travaillé.' },
-                { key: 'fundraising', icon: Rocket, title: 'Levée de fonds', text: 'Suivi des investisseurs pour les fondateurs qui lèvent des fonds : contacté, term sheet, closing.' },
-                { key: 'freelance', icon: Briefcase, title: 'Freelance', text: 'Clients, heures et factures, pour les indépendants et consultants.' },
-                { key: 'creative', icon: Palette, title: 'Création', text: 'Œuvres, pratique et expositions, pour les artistes, musiciens et auteurs.' },
-                { key: 'realEstate', icon: Building2, title: 'Immobilier', text: 'Biens locatifs : cash-flow et rentabilité par bien.' },
-              ].map((m) => {
-                const keys = m.keys || [m.key];
-                const on = keys.every((k) => modules[k]);
-                return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setModules((s) => { const next = { ...s }; for (const k of keys) next[k] = !on; return next; })}
-                    className={`w-full flex items-start gap-3 text-left border rounded-lg px-4 py-3 cursor-pointer transition-colors ${
-                      on ? 'border-accent bg-accent/10' : 'border-line hover:text-ink'
-                    }`}
-                  >
-                    <m.icon size={18} className={`shrink-0 mt-0.5 ${on ? 'text-accent' : 'text-mute'}`} />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium flex items-center gap-1.5">{m.title} {on && <Check size={13} className="text-accent" />}</div>
-                      <div className="text-xs text-mute">{m.text}</div>
-                    </div>
-                  </button>
-                );
-              })}
+            <h1 className="text-2xl font-bold mb-1">Ta situation</h1>
+            <p className="text-mute text-sm mb-4">Pour te proposer les bons outils.</p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {SITUATIONS.map((s) => (
+                <Chip key={s.key} active={situation === s.key} onClick={() => setSituation(situation === s.key ? null : s.key)}>{s.label}</Chip>
+              ))}
             </div>
-            <div className="flex gap-2 mt-5">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Pays">
+                <Select value={country} onChange={(e) => pickCountry(e.target.value)} options={COUNTRIES.map((c) => ({ value: c.key, label: c.label }))} />
+              </Field>
+              <Field label="Devise" hint="Celle de tes comptes. Modifiable plus tard dans Finances.">
+                <Select value={currency} onChange={(e) => setCurrency(e.target.value)} options={currencyOptions} />
+              </Field>
+            </div>
+            <div className="flex gap-3 mt-6">
               <Button variant="secondary" className="flex-1" onClick={() => setStep(0)}>Retour</Button>
-              <Button className="flex-1" onClick={() => setStep(2)}>
-                <span className="flex items-center justify-center gap-2">Suivant <ArrowRight size={15} /></span>
+              <Button className="flex-1" onClick={toProposal}>
+                <span className="flex items-center justify-center gap-2">Voir ma proposition <ArrowRight size={15} /></span>
               </Button>
             </div>
           </Card>
         )}
 
-        {step === 2 && (
+        {step === 2 && modules && (
           <Card>
-            <h1 className="text-xl font-bold mb-1">Choisis tes premières habitudes</h1>
-            <p className="text-mute text-sm mb-5">Elles se cochent en un geste depuis « Aujourd’hui ». Tu pourras en ajouter ou les modifier plus tard dans Habitudes.</p>
-            <div className="flex flex-wrap gap-2">
-              {STARTER_HABITS.map((h) => {
-                const on = selected.has(h.name);
-                return (
-                  <button
-                    key={h.name}
-                    type="button"
-                    onClick={() => toggle(h.name)}
-                    className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${
-                      on ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'
-                    }`}
-                  >
-                    {on && <Check size={13} />} {h.name}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex gap-2 mt-5">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Retour</Button>
-              <Button className="flex-1" onClick={() => setStep(3)}>
-                <span className="flex items-center justify-center gap-2">Suivant ({selected.size} choisie{selected.size > 1 ? 's' : ''}) <ArrowRight size={15} /></span>
-              </Button>
-            </div>
-          </Card>
-        )}
+            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2"><Sparkles size={20} className="text-accent" /> Voici ce que je te propose</h1>
+            <p className="text-mute text-sm mb-5">Tout reste modifiable plus tard. Études, Santé, Finances, Habitudes et Objectifs sont toujours là.</p>
 
-        {step === 3 && (
-          <Card>
-            <div className="text-center py-4">
-              <Sparkles size={32} className="text-accent mx-auto mb-3" />
-              <h1 className="text-xl font-bold mb-1">C’est prêt.</h1>
-              <p className="text-mute text-sm mb-5">
-                {selected.size > 0
-                  ? `${selected.size} habitude${selected.size > 1 ? 's' : ''} t’attend${selected.size > 1 ? 'ent' : ''} dans « Aujourd’hui » : coche-les au fil de la journée.`
-                  : 'Aucune habitude choisie : tu pourras en ajouter à tout moment depuis Habitudes.'}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-mute justify-center">
-                <Flame size={13} /> Premier conseil : fais ton check-in du matin chaque jour, il nourrit ton score Santé et les alertes d’épuisement.
+            <section className="mb-5">
+              <h2 className="text-xs text-mute uppercase tracking-wide mb-2">Modules en plus</h2>
+              <div className="flex flex-wrap gap-2">
+                {OPTIONAL_MODULES.map((k) => {
+                  const active = isModuleEnabled({ enabledModules: modules }, k);
+                  const flags = Array.isArray(MODULES[k].flag) ? MODULES[k].flag : [MODULES[k].flag];
+                  return (
+                    <Chip key={k} active={active} onClick={() => setModules((m) => ({ ...m, ...Object.fromEntries(flags.map((f) => [f, !active])) }))}>
+                      {MODULES[k].label}
+                    </Chip>
+                  );
+                })}
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setStep(2)}>Retour</Button>
-              <Button className="flex-1" onClick={finish}>Aller à Aujourd’hui</Button>
+            </section>
+
+            <section className="mb-5">
+              <h2 className="text-xs text-mute uppercase tracking-wide mb-2">Premières habitudes</h2>
+              <div className="flex flex-wrap gap-2">
+                {[...new Set([...plan.habits, ...habits])].filter(templateByName).map((name) => (
+                  <Chip key={name} active={habits.includes(name)} onClick={() => setHabits((l) => toggleIn(l, name))}>{name}</Chip>
+                ))}
+              </div>
+            </section>
+
+            {plan.goals.length > 0 && (
+              <section className="mb-2">
+                <h2 className="text-xs text-mute uppercase tracking-wide mb-2">Objectifs de départ</h2>
+                <div className="space-y-2">
+                  {plan.goals.map((g) => (
+                    <div key={g} className="flex flex-wrap items-center gap-3">
+                      <Chip active={goals.includes(g)} onClick={() => setGoals((l) => toggleIn(l, g))}>{GOAL_TEMPLATES[g].label}</Chip>
+                      {g === 'savings' && goals.includes(g) && (
+                        <div className="w-40">
+                          <Input inputMode="decimal" aria-label={`Montant à mettre de côté (${currency})`} placeholder={`Montant (${currency})`} value={savingsAmount} onChange={(e) => setSavingsAmount(e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {goals.includes('savings') && !(Number(String(savingsAmount).replace(',', '.')) > 0) && (
+                  <p className="text-[11px] text-mute mt-1.5">Sans montant, l’objectif d’épargne ne sera pas créé : tu pourras le faire dans Finances.</p>
+                )}
+              </section>
+            )}
+
+            <div className="flex gap-3 mt-6">
+              <Button variant="secondary" className="flex-1" onClick={() => setStep(1)}>Retour</Button>
+              <Button className="flex-1" onClick={finish}>C’est parti</Button>
             </div>
           </Card>
         )}
 
-        {step === 0 && (
-          <button onClick={skip} className="w-full text-center text-xs text-mute hover:text-ink mt-4 cursor-pointer">
-            Passer cette étape
-          </button>
-        )}
+        <button type="button" onClick={skip} className="w-full text-center text-xs text-mute hover:text-ink mt-4 cursor-pointer">
+          Passer et tout régler plus tard
+        </button>
       </div>
     </div>
   );

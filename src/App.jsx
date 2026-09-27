@@ -1,4 +1,4 @@
-import { useEffect, lazy } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useSkillStore } from './store/skillStore';
@@ -20,6 +20,7 @@ import MainLayout from './components/layout/MainLayout';
 import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
+import { PageLoader } from './components/common/ui';
 
 // Route-level code splitting: each page (and its heavy deps — recharts, d3)
 // downloads on first visit instead of bloating the initial bundle.
@@ -160,6 +161,8 @@ export default function App() {
   return (
     <>
       <PwaUpdatePrompt />
+      {/* Top-level fallback: /onboarding and other lazy pages outside MainLayout */}
+      <Suspense fallback={<PageLoader />}>
       <Routes>
       <Route path="/welcome" element={user ? <Navigate to="/" replace /> : <Welcome />} />
       <Route
@@ -217,6 +220,7 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

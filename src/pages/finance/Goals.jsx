@@ -177,7 +177,7 @@ export default function Goals() {
           )}
           {!editing && <p className="text-[11px] text-mute">{kindMeta(form.kind).desc}</p>}
           <Field label="Nom de l'objectif">
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.kind === 'networth' ? 'ex : Patrimoine 100 000 DH' : "ex : Fonds d'urgence 6 mois"} autoFocus />
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.kind === 'networth' ? `ex : Patrimoine ${fmtMAD(100000)}` : "ex : Fonds d'urgence 6 mois"} autoFocus />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label={`Montant cible (${baseCurrencyShort()})`}><Input type="number" step="any" min="0" value={form.targetAmount} onChange={(e) => setForm({ ...form, targetAmount: e.target.value })} /></Field>

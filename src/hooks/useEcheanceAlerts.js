@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAccountingStore } from '../store/accountingStore';
-import { todayKey } from '../utils/formatters';
+import { todayKey, fmtMAD } from '../utils/formatters';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -22,7 +22,7 @@ export function useEcheanceAlerts() {
       for (const row of overdue) {
         const key = `${row.id}|${row.occurrenceDate}`;
         if (echeanceAlerts.lastShown[key] === today) continue;
-        new Notification('VAUDAX Finance', { body: `Échéance en retard : ${row.label} (${row.occurrenceDate}) — ${row.amount} DH.` });
+        new Notification('VAUDAX Finance', { body: `Échéance en retard : ${row.label} (${row.occurrenceDate}) — ${fmtMAD(row.amount)}.` });
         markEcheanceAlertShown(key, today);
       }
     };
