@@ -1,6 +1,7 @@
 // Programme Supabase layer — wave 2 — overrides, session logs, nutrition templates, habit links (moved verbatim from program-api.js, F3).
 import { supabase } from '../supabase';
 import { requireSupabase, getUserId, unwrap } from './shared';
+import { fetchPhases } from './structure';
 
 // Event Overrides (Wave 2)
 // ===========================================================================
