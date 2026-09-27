@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import handler from '../api/extract-timetable.js';
+import handler from '../api/extract.js';
 import { parseTimetableLines } from '../src/utils/academic.js';
 
 const fakeRes = () => {
@@ -18,7 +18,7 @@ test('keeps only import-format lines, which the timetable parser then reads', as
   globalThis.fetch = async () => sse('Voici :\n- Finance ; Lundi ; 8h30-10h00 ; M. A ; B12 ; Cours\n```\nMarketing ; Mardi ; 13h-14h30 ;  ;  ; TD\n');
   try {
     const res = fakeRes();
-    await handler({ method: 'POST', headers: {}, body: { mimeType: 'image/jpeg', data: 'AAAA' } }, res);
+    await handler({ method: 'POST', headers: {}, body: { kind: 'timetable', mimeType: 'image/jpeg', data: 'AAAA' } }, res);
     assert.equal(res.statusCode, 200);
     const { rows, errors } = parseTimetableLines(res.body.text);
     assert.equal(rows.length, 2);
@@ -32,6 +32,18 @@ test('keeps only import-format lines, which the timetable parser then reads', as
 test('refuses other file types', async () => {
   process.env.GEMINI_API_KEY = 'k';
   const res = fakeRes();
-  await handler({ method: 'POST', headers: {}, body: { mimeType: 'text/html', data: 'x' } }, res);
+  await handler({ method: 'POST', headers: {}, body: { kind: 'timetable', mimeType: 'text/html', data: 'x' } }, res);
   assert.equal(res.statusCode, 400);
+});
+
+import { parseReceipt } from '../api/extract.js';
+
+test('receipt: keeps the total, a valid date and currency, drops what is unreadable', () => {
+  assert.deepEqual(parseReceipt('{"amount":"23,50","currency":"EUR","date":"2026-09-26","merchant":"Boulangerie","category":"alimentation"}'),
+    { amount: 23.5, currency: 'EUR', date: '2026-09-26', merchant: 'Boulangerie', category: 'alimentation' });
+  const r = parseReceipt('```json\n{"amount": null, "currency": "euros", "date": "26/09", "merchant": null, "category": null}\n```');
+  assert.equal(r.amount, null);
+  assert.equal(r.currency, null);
+  assert.equal(r.date, null);
+  assert.equal(parseReceipt('not json'), null);
 });

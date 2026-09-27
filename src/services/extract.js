@@ -28,9 +28,7 @@ export async function fileToPayload(file) {
   return { mimeType: 'image/jpeg', data: await toBase64(blob) };
 }
 
-// Sends a photo/PDF of a timetable to /api/extract-timetable; resolves with
-// import-format text lines to review. Errors carry the same codes as the assistant.
-export async function extractTimetable(file) {
+async function callExtract(kind, file) {
   const payload = await fileToPayload(file);
   const headers = { 'Content-Type': 'application/json' };
   if (isSupabaseConfigured) {
@@ -39,7 +37,7 @@ export async function extractTimetable(file) {
   }
   let res;
   try {
-    res = await fetch('/api/extract-timetable', { method: 'POST', headers, body: JSON.stringify(payload) });
+    res = await fetch('/api/extract', { method: 'POST', headers, body: JSON.stringify({ kind, ...payload }) });
   } catch {
     throw Object.assign(new Error('offline'), { code: 'offline' });
   }
@@ -48,8 +46,14 @@ export async function extractTimetable(file) {
     const code = res.status === 401 ? 'auth' : res.status === 404 ? 'not_configured' : res.status === 413 ? 'too_large' : body.error || 'failed';
     throw Object.assign(new Error(code), { code });
   }
-  return body.text || '';
+  return body;
 }
+
+// Photo/PDF of a timetable → import-format text lines to review.
+export const extractTimetable = async (file) => (await callExtract('timetable', file)).text || '';
+
+// Photo of a receipt → { amount, currency, date, merchant, category } to review.
+export const extractReceipt = (file) => callExtract('receipt', file);
 
 export const EXTRACT_ERRORS = {
   too_large: 'Fichier trop lourd : prends une photo plus petite ou un PDF de moins de 3,5 Mo.',

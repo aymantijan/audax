@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Sparkles, History, Check } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Sparkles, History, Check, Camera, Loader2 } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { guessCategory, lastCashAccount, topCategories } from '../../utils/bank-import';
 import { classOf } from '../../utils/chart-of-accounts';
@@ -9,7 +9,9 @@ import { toast } from '../../store/uiStore';
 import { Button, Modal } from '../common/ui';
 import AccountSelect from '../common/AccountSelect';
 import { MoneyInput, moneyToEntry } from './CurrencyUI';
-import { formatMoney } from '../../utils/currency';
+import { formatMoney, CURRENCIES, rateFor } from '../../utils/currency';
+import { extractReceipt, EXTRACT_ERRORS } from '../../services/extract';
+import { ASSISTANT_ERRORS } from '../../services/assistant';
 
 const KINDS = {
   expense: { label: 'Dépense', Icon: ArrowUpRight, color: 'var(--error)' },
@@ -33,10 +35,34 @@ export default function QuickEntryModal({ open, onClose }) {
   const [date, setDate] = useState(todayKey());
   const [count, setCount] = useState(0);
   const amountRef = useRef(null);
+  const receiptRef = useRef(null);
+  const [reading, setReading] = useState(false);
+  const [readNote, setReadNote] = useState('');
+
+  // Photo of a receipt → amount, currency, date and merchant filled in, to check before saving.
+  const readReceipt = async (file) => {
+    setReading(true);
+    setReadNote('');
+    try {
+      const r = await extractReceipt(file);
+      if (!r.amount) { setReadNote('Montant illisible sur la photo : saisis-le à la main.'); return; }
+      const cur = r.currency && CURRENCIES.some((c) => c.code === r.currency) ? r.currency : null;
+      setKind('expense');
+      setMoney({ amount: String(r.amount), currency: cur && cur !== baseCurrency ? cur : null, rate: cur && cur !== baseCurrency ? rateFor(cur, baseCurrency, fxRates) : null });
+      if (r.merchant) setLabel(r.merchant);
+      if (r.date) setDate(r.date);
+      setCategory(null);
+      setReadNote('Lu sur le reçu : vérifie avant d’enregistrer.');
+    } catch (err) {
+      setReadNote(EXTRACT_ERRORS[err.code] || ASSISTANT_ERRORS[err.code] || ASSISTANT_ERRORS.failed);
+    } finally {
+      setReading(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
-    setKind('expense'); setMoney({ amount: '', currency: null, rate: null }); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0);
+    setKind('expense'); setMoney({ amount: '', currency: null, rate: null }); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0); setReadNote('');
     setTimeout(() => amountRef.current?.focus(), 50);
   }, [open]);
 
@@ -95,10 +121,21 @@ export default function QuickEntryModal({ open, onClose }) {
         <div className="py-2" style={{ color: amount ? K.color : undefined }}>
           <MoneyInput big value={money} onChange={setMoney} inputRef={amountRef} />
         </div>
+        {kind === 'expense' && (
+          <div className="flex flex-col items-center gap-1 -mt-2">
+            <input ref={receiptRef} type="file" accept="image/*,application/pdf" capture="environment" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) readReceipt(f); }} />
+            <button type="button" disabled={reading} onClick={() => receiptRef.current?.click()}
+              className="ui-btn flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-mute hover:text-ink hover:border-accent cursor-pointer disabled:opacity-50">
+              {reading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} {reading ? 'Lecture du reçu…' : 'Photo du reçu'}
+            </button>
+            {readNote && <span className="text-[11px] text-mute text-center">{readNote}</span>}
+          </div>
+        )}
 
         <div>
           <input list="quick-labels" value={label} onChange={(e) => { setLabel(e.target.value); setCategory(null); }}
-            placeholder={kind === 'expense' ? 'Quoi ? (Café Omar, Marjane, taxi…)' : 'D’où ? (bourse, salaire, freelance…)'}
+            placeholder={kind === 'expense' ? 'Quoi ? (café, courses, taxi…)' : 'D’où ? (bourse, salaire, freelance…)'}
             className="w-full bg-surface border border-line rounded-lg px-3 py-2.5 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
           <datalist id="quick-labels">{labelOptions.map((l) => <option key={l} value={l} />)}</datalist>
           {label.trim() && !category && guess.source !== 'default' && (

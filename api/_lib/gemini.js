@@ -12,8 +12,9 @@ const API = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export const isGeminiConfigured = () => !!process.env.GEMINI_API_KEY;
 
-function body({ system, contents, maxTokens, temperature = 0.6 }, model) {
+function body({ system, contents, maxTokens, temperature = 0.6, json = false }, model) {
   const generationConfig = { maxOutputTokens: maxTokens, temperature };
+  if (json) generationConfig.responseMimeType = 'application/json';
   // 2.5 models "think" by default, which eats the output budget of short
   // answers; the coaching replies don't need it.
   if (model.startsWith('gemini-2.5')) generationConfig.thinkingConfig = { thinkingBudget: 0 };
