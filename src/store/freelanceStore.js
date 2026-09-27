@@ -6,21 +6,41 @@ import { toast } from './uiStore';
 import { evaluateBadges } from '../utils/badges';
 import { useAccountingStore } from './accountingStore';
 import { invoiceTotals, addDaysKey } from '../utils/invoice';
+import { billingOf, hoursOf } from '../utils/billing';
 
 const FREELANCE_INCOME = '721'; // Classe 7 · Freelance & consulting (utils/chart-of-accounts.js)
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-// Cash-basis bookkeeping: a received payment = treasury (5xx) debit / 721
-// credit in Finances, converted to the base currency when the client pays
-// in another one (the original amount is kept in entry.fx).
-function postIncome({ date, amount, currency, account, label }) {
+// Cash-basis bookkeeping: a received payment is posted in Finances, converted
+// to the base currency when the client pays in another one (the original
+// amount is kept in entry.fx). For an invoice it is split properly:
+//   debit  treasury (5xx)                 = amount received
+//   debit  347 Impôt retenu à la source   = withholding (still your income)
+//   credit 447 TVA facturée à reverser    = VAT (not income)
+//   credit revenue account (721 default)  = amount excl. VAT, minus any deposit
+//                                           already booked when it was received
+// A payment without invoice (deposit…) stays treasury / revenue.
+const WITHHOLDING_ACCOUNT = '347';
+const VAT_ACCOUNT = '447';
+function postIncome({ date, amount, currency, account, label, incomeAccount = FREELANCE_INCOME, split = null }) {
   const acc = useAccountingStore.getState();
   const foreign = currency && currency !== acc.baseCurrency;
-  const baseAmt = foreign ? r2(acc.toBase(amount, currency)) : r2(amount);
+  const toBase = (v) => (foreign ? r2(acc.toBase(v, currency)) : r2(v));
+  const baseAmt = toBase(amount);
   if (!(baseAmt > 0)) return { ok: false, error: 'Montant invalide.' };
+  const lines = [{ account, debit: baseAmt, credit: 0 }];
+  let revenue = baseAmt;
+  if (split) {
+    const wh = toBase(split.withholding || 0);
+    const vat = toBase(split.vat || 0);
+    if (wh > 0) lines.push({ account: WITHHOLDING_ACCOUNT, debit: wh, credit: 0 });
+    if (vat > 0) lines.push({ account: VAT_ACCOUNT, debit: 0, credit: vat });
+    revenue = r2(baseAmt + wh - vat); // balanced by construction, whatever the rounding
+  }
+  if (revenue > 0) lines.push({ account: incomeAccount, debit: 0, credit: revenue });
+  else if (revenue < 0) lines.push({ account: incomeAccount, debit: -revenue, credit: 0 });
   return acc.addEntry({
-    date, label,
-    lines: [{ account, debit: baseAmt, credit: 0 }, { account: FREELANCE_INCOME, debit: 0, credit: baseAmt }],
+    date, label, lines,
     ...(foreign ? { fx: { currency, amount: r2(amount), rate: baseAmt / amount } } : {}),
   });
 }
@@ -73,7 +93,9 @@ export const useFreelanceStore = create(
           startDate: data.startDate || todayKey(),
           endDate: '',
           notes: data.notes || '',
+          billing: data.billing || null, // null = one hourly rate (utils/billing.js billingOf)
           timeLogs: [],
+          expenses: [],
           payments: [],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -87,6 +109,8 @@ export const useFreelanceStore = create(
       editEngagement: (id, updates) => {
         const clean = { ...updates };
         if (clean.hourlyRate !== undefined) clean.hourlyRate = Number(clean.hourlyRate) || 0;
+        // Keep the old single rate in step with the first hourly rate of the profile.
+        if (clean.billing?.rates?.length) { const h = clean.billing.rates.find((r) => r.unit === 'h'); if (h) clean.hourlyRate = Number(h.price) || 0; }
         set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, ...clean, updatedAt: Date.now() } : e)) });
       },
       deleteEngagement: (id) => {
@@ -117,29 +141,56 @@ export const useFreelanceStore = create(
         get().checkBadges();
       },
 
-      logHours: (id, data) => {
+      // One work entry at one of the client's rates (hours, days, units…).
+      logWork: (id, data) => {
         const engagement = get().engagements.find((e) => e.id === id);
-        if (!engagement) return;
-        const entry = { id: uid(), date: data.date || todayKey(), hours: Number(data.hours) || 0, note: data.note || '', createdAt: Date.now() };
+        const qty = Number(String(data.qty ?? data.hours ?? '').replace(',', '.')) || 0;
+        if (!engagement || !(qty > 0)) return;
+        const b = billingOf(engagement);
+        const entry = { id: uid(), date: data.date || todayKey(), qty, rateId: data.rateId || b.rates[0].id, note: data.note || '', createdAt: Date.now() };
+        const h = hoursOf(entry, b);
         set({
           engagements: get().engagements.map((e) =>
-            e.id === id ? { ...e, timeLogs: [...(e.timeLogs || []), entry], hoursLogged: (e.hoursLogged || 0) + entry.hours, updatedAt: Date.now() } : e
+            e.id === id ? { ...e, timeLogs: [...(e.timeLogs || []), entry], hoursLogged: r2((e.hoursLogged || 0) + h), updatedAt: Date.now() } : e
           ),
         });
-        useSkillStore.getState().awardXP(HOURS_SKILL, HOURS_XP, `${entry.hours}h · ${engagement.clientName}`);
-        toast(`${entry.hours}h loggées · +${HOURS_XP} XP`, 'success');
+        useSkillStore.getState().awardXP(HOURS_SKILL, HOURS_XP, `${engagement.clientName}`);
+        toast(`Travail noté · +${HOURS_XP} XP`, 'success');
+      },
+      logHours: (id, data) => get().logWork(id, { ...data, qty: data.hours }),
+      // Commission: on an amount, or on the net profit (revenue − costs).
+      logCommission: (id, data) => {
+        const engagement = get().engagements.find((e) => e.id === id);
+        if (!engagement) return;
+        const n = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')) || 0);
+        const entry = { id: uid(), kind: 'commission', date: data.date || todayKey(), note: data.note || '', createdAt: Date.now() };
+        if (data.on === 'profit') { entry.revenue = n(data.revenue) || 0; entry.costs = n(data.costs) || 0; } else entry.base = n(data.base) || 0;
+        if (data.pct !== '' && data.pct != null) entry.pct = Number(data.pct) || 0;
+        set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, timeLogs: [...(e.timeLogs || []), entry], updatedAt: Date.now() } : e)) });
+        toast('Opération notée', 'success');
       },
       deleteTimeLog: (id, logId) => {
         const engagement = get().engagements.find((e) => e.id === id);
         const log = engagement?.timeLogs.find((t) => t.id === logId);
         if (!log) return;
-        useSkillStore.getState().removeXP(HOURS_SKILL, HOURS_XP, 'time log deleted');
+        if (log.kind !== 'commission') useSkillStore.getState().removeXP(HOURS_SKILL, HOURS_XP, 'time log deleted');
+        const h = hoursOf(log, billingOf(engagement));
         set({
           engagements: get().engagements.map((e) =>
-            e.id === id ? { ...e, timeLogs: e.timeLogs.filter((t) => t.id !== logId), hoursLogged: Math.max(0, (e.hoursLogged || 0) - log.hours), updatedAt: Date.now() } : e
+            e.id === id ? { ...e, timeLogs: e.timeLogs.filter((t) => t.id !== logId), hoursLogged: Math.max(0, r2((e.hoursLogged || 0) - h)), updatedAt: Date.now() } : e
           ),
         });
       },
+
+      // Expenses to recharge to the client (with an optional markup).
+      addExpense: (id, data) => {
+        const amount = Number(String(data.amount ?? '').replace(',', '.')) || 0;
+        if (!String(data.label || '').trim() || !(amount > 0)) return { ok: false, error: 'Libellé et montant requis.' };
+        const x = { id: uid(), date: data.date || todayKey(), label: data.label.trim(), amount, markupPct: Number(data.markupPct) || 0, vatRate: data.vatRate === '' || data.vatRate == null ? null : Number(data.vatRate), rebill: data.rebill !== false, invoiceId: '', createdAt: Date.now() };
+        set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, expenses: [...(e.expenses || []), x], updatedAt: Date.now() } : e)) });
+        return { ok: true };
+      },
+      deleteExpense: (id, expenseId) => set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, expenses: (e.expenses || []).filter((x) => x.id !== expenseId || x.invoiceId) } : e)) }),
 
       // Distinct from timeLogs — a payment is cash actually received, not
       // hours worked. invoicedTotal/paidTotal stay separate so "billed but
@@ -149,7 +200,7 @@ export const useFreelanceStore = create(
         if (!engagement) return null;
         const entry = { id: uid(), date: data.date || todayKey(), amount: Number(data.amount) || 0, note: data.note || '', invoiceId: data.invoiceId || '', entryId: '', account: '', createdAt: Date.now() };
         if (data.account) {
-          const res = postIncome({ date: entry.date, amount: entry.amount, currency: engagement.currency, account: data.account, label: `Freelance — ${engagement.clientName}${entry.note ? ` (${entry.note})` : ''}` });
+          const res = postIncome({ date: entry.date, amount: entry.amount, currency: engagement.currency, account: data.account, incomeAccount: engagement.billing?.incomeAccount || FREELANCE_INCOME, split: data.split || null, label: `Freelance — ${engagement.clientName}${entry.note ? ` (${entry.note})` : ''}` });
           if (res.ok) { entry.entryId = res.id; entry.account = data.account; } else toast(`Paiement noté, mais pas comptabilisé : ${res.error}`, 'error');
         }
         set({
@@ -167,7 +218,9 @@ export const useFreelanceStore = create(
         const e = get().engagements.find((x) => x.id === id);
         const p = e?.payments.find((x) => x.id === paymentId);
         if (!p || p.entryId) return;
-        const res = postIncome({ date: p.date, amount: p.amount, currency: e.currency, account, label: `Freelance — ${e.clientName}${p.note ? ` (${p.note})` : ''}` });
+        const inv = p.invoiceId ? (get().invoices || []).find((i) => i.id === p.invoiceId) : null;
+        const t = inv ? invoiceTotals(inv) : null;
+        const res = postIncome({ date: p.date, amount: p.amount, currency: e.currency, account, incomeAccount: e.billing?.incomeAccount || FREELANCE_INCOME, split: t ? { vat: t.vat, withholding: t.withholding } : null, label: `Freelance — ${e.clientName}${p.note ? ` (${p.note})` : ''}` });
         if (!res.ok) return toast(res.error, 'error');
         set({ engagements: get().engagements.map((x) => (x.id === id ? { ...x, payments: x.payments.map((q) => (q.id === paymentId ? { ...q, entryId: res.id, account } : q)) } : x)) });
       },
@@ -185,39 +238,94 @@ export const useFreelanceStore = create(
       },
 
       // ── Invoices (Carrière n°4) ──
-      invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '' },
+      // catalog: [{ id, label, unit, price, vatRate|null }] — reusable services in quotes and invoices.
+      invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '', catalog: [] },
       setInvoiceSettings: (s) => set({ invoiceSettings: { ...get().invoiceSettings, ...s } }),
       invoices: [], // [{ id, number, engagementId, date, dueDate, lines: [{ id, description, qty, unitPrice }], vatRate, currency, status: 'sent'|'paid'|'cancelled', paymentId, paidAt, timeLogIds, notes, createdAt }]
+      // data: { lines: [{ description, qty, unit, unitPrice, vatRate?, discountPct? }], date, dueDate,
+      //   vatRate, discountPct, withholdingPct, deposit, notes,
+      //   refs: { timeLogIds, expenseIds, milestoneIds, retainerMonths }, blockPurchase: { hours } }
       createInvoice: (engagementId, data) => {
         const e = get().engagements.find((x) => x.id === engagementId);
         if (!e) return { ok: false, error: 'Client introuvable.' };
-        const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({ id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unitPrice: Number(l.unitPrice) || 0 }));
+        const numOr = (v, d = null) => (v === '' || v == null ? d : Number(String(v).replace(',', '.')));
+        const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({
+          id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unit: l.unit || '', unitPrice: Number(l.unitPrice) || 0,
+          vatRate: numOr(l.vatRate), discountPct: numOr(l.discountPct, 0) || 0,
+        }));
         if (!lines.length) return { ok: false, error: 'Ajoute au moins une ligne.' };
         const st = get().invoiceSettings;
         const date = data.date || todayKey();
         const number = `${st.prefix || 'FAC'}-${date.slice(0, 4)}-${String(st.nextNumber || 1).padStart(3, '0')}`;
+        const refs = { timeLogIds: [], expenseIds: [], milestoneIds: [], retainerMonths: [], ...(data.refs || {}) };
+        if (data.timeLogIds) refs.timeLogIds = [...refs.timeLogIds, ...data.timeLogIds];
         const inv = {
           id: uid(), number, engagementId, date, dueDate: data.dueDate || addDaysKey(date, Number(st.paymentTermsDays) || 30),
-          lines, vatRate: Number(data.vatRate ?? st.vatRate) || 0, currency: e.currency || useAccountingStore.getState().baseCurrency,
-          status: 'sent', paymentId: '', paidAt: '', timeLogIds: data.timeLogIds || [], notes: data.notes || '', createdAt: Date.now(),
+          lines, vatRate: Number(data.vatRate ?? st.vatRate) || 0, discountPct: Number(data.discountPct) || 0,
+          withholdingPct: Number(data.withholdingPct) || 0, deposit: Number(data.deposit) || 0,
+          currency: e.currency || useAccountingStore.getState().baseCurrency,
+          status: 'sent', paymentId: '', paidAt: '', timeLogIds: refs.timeLogIds, refs, notes: data.notes || '', createdAt: Date.now(),
         };
-        const logIds = new Set(inv.timeLogIds);
+        const logIds = new Set(refs.timeLogIds);
+        const expIds = new Set(refs.expenseIds);
+        const msIds = new Set(refs.milestoneIds);
+        const block = data.blockPurchase?.hours ? { id: uid(), date, hours: Number(data.blockPurchase.hours), invoiceId: inv.id } : null;
         set({
           invoices: [...(get().invoices || []), inv],
           invoiceSettings: { ...st, nextNumber: (st.nextNumber || 1) + 1 },
-          engagements: get().engagements.map((x) => (x.id === engagementId ? { ...x, timeLogs: (x.timeLogs || []).map((t) => (logIds.has(t.id) ? { ...t, invoiceId: inv.id } : t)), updatedAt: Date.now() } : x)),
+          engagements: get().engagements.map((x) => {
+            if (x.id !== engagementId) return x;
+            const b = x.billing;
+            return {
+              ...x,
+              timeLogs: (x.timeLogs || []).map((t) => (logIds.has(t.id) ? { ...t, invoiceId: inv.id } : t)),
+              expenses: (x.expenses || []).map((y) => (expIds.has(y.id) ? { ...y, invoiceId: inv.id } : y)),
+              retainerBilled: [...new Set([...(x.retainerBilled || []), ...refs.retainerMonths])],
+              blockPurchases: block ? [...(x.blockPurchases || []), block] : x.blockPurchases,
+              billing: b?.fixed?.milestones?.length && msIds.size
+                ? { ...b, fixed: { ...b.fixed, milestones: b.fixed.milestones.map((m) => (msIds.has(m.id) ? { ...m, invoiceId: inv.id } : m)) } }
+                : b,
+              invoicedTotal: r2((x.invoicedTotal || 0) + invoiceTotals(inv).due),
+              updatedAt: Date.now(),
+            };
+          }),
         });
         toast(`Facture ${number} créée`, 'success');
         return { ok: true, id: inv.id };
       },
+      // Sell a prepaid package of hours: one invoice, and the hours become available.
+      sellBlock: (engagementId, { hours, price, date }) => get().createInvoice(engagementId, {
+        date, lines: [{ description: `Paquet de ${hours} h prépayées`, qty: 1, unit: 'forfait', unitPrice: Number(price) || 0 }],
+        blockPurchase: { hours },
+      }),
+      addCatalogItem: (item) => {
+        const price = Number(String(item.price ?? '').replace(',', '.')) || 0;
+        if (!String(item.label || '').trim()) return;
+        const st = get().invoiceSettings;
+        set({ invoiceSettings: { ...st, catalog: [...(st.catalog || []), { id: uid(), label: item.label.trim(), unit: item.unit || 'forfait', price, vatRate: item.vatRate === '' || item.vatRate == null ? null : Number(item.vatRate) }] } });
+      },
+      removeCatalogItem: (id) => { const st = get().invoiceSettings; set({ invoiceSettings: { ...st, catalog: (st.catalog || []).filter((c) => c.id !== id) } }); },
       cancelInvoice: (invoiceId) => {
         const inv = (get().invoices || []).find((i) => i.id === invoiceId);
         if (!inv || inv.status === 'paid') return;
+        const months = new Set(inv.refs?.retainerMonths || []);
         set({
           invoices: get().invoices.map((i) => (i.id === invoiceId ? { ...i, status: 'cancelled' } : i)),
-          engagements: get().engagements.map((x) => (x.id === inv.engagementId ? { ...x, timeLogs: (x.timeLogs || []).map((t) => (t.invoiceId === invoiceId ? { ...t, invoiceId: '' } : t)) } : x)),
+          engagements: get().engagements.map((x) => {
+            if (x.id !== inv.engagementId) return x;
+            const b = x.billing;
+            return {
+              ...x,
+              timeLogs: (x.timeLogs || []).map((t) => (t.invoiceId === invoiceId ? { ...t, invoiceId: '' } : t)),
+              expenses: (x.expenses || []).map((y) => (y.invoiceId === invoiceId ? { ...y, invoiceId: '' } : y)),
+              retainerBilled: (x.retainerBilled || []).filter((m) => !months.has(m)),
+              blockPurchases: (x.blockPurchases || []).filter((p) => p.invoiceId !== invoiceId),
+              billing: b?.fixed?.milestones?.length ? { ...b, fixed: { ...b.fixed, milestones: b.fixed.milestones.map((m) => (m.invoiceId === invoiceId ? { ...m, invoiceId: '' } : m)) } } : b,
+              invoicedTotal: Math.max(0, r2((x.invoicedTotal || 0) - invoiceTotals(inv).due)),
+            };
+          }),
         });
-        toast(`Facture ${inv.number} annulée — les heures redeviennent facturables`, 'info');
+        toast(`Facture ${inv.number} annulée : ce qu’elle contenait redevient à facturer`, 'info');
       },
       markInvoiceReminded: (invoiceId, date = todayKey()) => set({
         invoices: get().invoices.map((i) => (i.id === invoiceId ? { ...i, reminders: [...(i.reminders || []), date] } : i)),
@@ -228,14 +336,15 @@ export const useFreelanceStore = create(
       createQuote: (engagementId, data) => {
         const e = get().engagements.find((x) => x.id === engagementId);
         if (!e) return { ok: false, error: 'Client introuvable.' };
-        const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({ id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unitPrice: Number(l.unitPrice) || 0 }));
+        const numOr = (v, d = null) => (v === '' || v == null ? d : Number(String(v).replace(',', '.')));
+        const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({ id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unit: l.unit || '', unitPrice: Number(l.unitPrice) || 0, vatRate: numOr(l.vatRate), discountPct: numOr(l.discountPct, 0) || 0 }));
         if (!lines.length) return { ok: false, error: 'Ajoute au moins une ligne.' };
         const st = get().invoiceSettings;
         const date = data.date || todayKey();
         const n = st.nextQuoteNumber || 1;
         const quote = {
           id: uid(), number: `${st.quotePrefix || 'DEV'}-${date.slice(0, 4)}-${String(n).padStart(3, '0')}`, engagementId, date,
-          validUntil: data.validUntil || addDaysKey(date, 30), lines, vatRate: Number(data.vatRate ?? st.vatRate) || 0,
+          validUntil: data.validUntil || addDaysKey(date, 30), lines, vatRate: Number(data.vatRate ?? st.vatRate) || 0, discountPct: Number(data.discountPct) || 0,
           currency: e.currency || useAccountingStore.getState().baseCurrency, status: 'sent', invoiceId: '', notes: data.notes || '', createdAt: Date.now(),
         };
         set({ quotes: [...(get().quotes || []), quote], invoiceSettings: { ...st, nextQuoteNumber: n + 1 } });
@@ -246,7 +355,7 @@ export const useFreelanceStore = create(
       quoteToInvoice: (quoteId) => {
         const q = (get().quotes || []).find((x) => x.id === quoteId);
         if (!q || q.status === 'invoiced') return { ok: false, error: 'Devis déjà facturé.' };
-        const res = get().createInvoice(q.engagementId, { lines: q.lines, vatRate: q.vatRate, notes: `Selon devis ${q.number}.${q.notes ? ` ${q.notes}` : ''}` });
+        const res = get().createInvoice(q.engagementId, { lines: q.lines, vatRate: q.vatRate, discountPct: q.discountPct, notes: `Selon devis ${q.number}.${q.notes ? ` ${q.notes}` : ''}` });
         if (!res.ok) return res;
         set({ quotes: get().quotes.map((x) => (x.id === quoteId ? { ...x, status: 'invoiced', invoiceId: res.id } : x)) });
         return res;
@@ -257,7 +366,8 @@ export const useFreelanceStore = create(
       payInvoice: (invoiceId, { date, account }) => {
         const inv = (get().invoices || []).find((i) => i.id === invoiceId);
         if (!inv || inv.status !== 'sent') return;
-        const paymentId = get().logPayment(inv.engagementId, { date: date || todayKey(), amount: invoiceTotals(inv).total, note: inv.number, invoiceId, account });
+        const t = invoiceTotals(inv);
+        const paymentId = get().logPayment(inv.engagementId, { date: date || todayKey(), amount: t.due, note: inv.number, invoiceId, account, split: { vat: t.vat, withholding: t.withholding } });
         if (!paymentId) return;
         set({ invoices: get().invoices.map((i) => (i.id === invoiceId ? { ...i, status: 'paid', paymentId, paidAt: date || todayKey() } : i)) });
       },
@@ -278,7 +388,7 @@ export const useFreelanceStore = create(
         return { hours, revenue };
       },
 
-      resetAll: () => set({ engagements: [], awardedBadges: [], invoices: [], quotes: [], invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '' } }),
+      resetAll: () => set({ engagements: [], awardedBadges: [], invoices: [], quotes: [], invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '', catalog: [] } }),
     }),
     {
       name: 'audax-freelance',

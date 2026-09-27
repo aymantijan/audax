@@ -32,7 +32,7 @@ export function RemindersCard({ onOpenClient }) {
                 <span className="text-mute">{inv.number}</span>
                 <span className="text-bad text-xs">{daysLate} j de retard</span>
                 {last && <span className="text-xs text-mute">· relancé le {fmtDateShort(last)}</span>}
-                <span className="ml-auto font-data">{fmtMoneyCur(invoiceTotals(inv).total, inv.currency)}</span>
+                <span className="ml-auto font-data">{fmtMoneyCur(invoiceTotals(inv).due, inv.currency)}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setShown(shown === inv.id ? null : inv.id)}>{shown === inv.id ? 'Masquer le message' : 'Voir le message de relance'}</Button>

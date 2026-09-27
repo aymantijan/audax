@@ -62,17 +62,18 @@ export function Field({ label, children, hint }) {
 const inputCls =
   'w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent';
 
-export function Input(props) {
-  return <input className={inputCls} {...props} />;
+// A className adds to the base style (layout, width…) instead of replacing it.
+export function Input({ className = '', ...props }) {
+  return <input className={`${inputCls} ${className}`} {...props} />;
 }
 
-export function Textarea(props) {
-  return <textarea rows={2} className={inputCls} {...props} />;
+export function Textarea({ className = '', ...props }) {
+  return <textarea rows={2} className={`${inputCls} ${className}`} {...props} />;
 }
 
-export function Select({ options, children, ...props }) {
+export function Select({ options, children, className = '', ...props }) {
   return (
-    <select className={inputCls} {...props}>
+    <select className={`${inputCls} ${className}`} {...props}>
       {children ||
         options.map((o) =>
           typeof o === 'string' ? (

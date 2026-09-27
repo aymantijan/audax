@@ -39,33 +39,52 @@ export async function exportInvoicePDF(inv, engagement, settings, { kind = 'invo
   if (engagement.description) { txt('Objet', L, y + 6, { size: 8, bold: true, color: MUTE }); block([engagement.description], L, y + 12, { size: 10 }); }
   y += 40;
 
-  // Lines table
-  const cols = { desc: L + 2, qty: 128, pu: 158, tot: R - 2 };
+  // Lines table: description, quantity, unit, unit price, VAT (when rates differ), total excl. tax
+  const t = invoiceTotals(inv);
+  const rates = [...new Set(inv.lines.map((l) => Number(l.vatRate ?? inv.vatRate) || 0))];
+  const showVat = rates.length > 1;
+  const hasDisc = inv.lines.some((l) => Number(l.discountPct) > 0);
+  const cols = { desc: L + 2, qty: 112, unit: 116, pu: 152, vat: 164, tot: R - 2 };
   doc.setFillColor(...ACCENT); doc.rect(L, y, R - L, 8, 'F');
-  txt('Désignation', cols.desc, y + 5.5, { size: 9, bold: true, color: [255, 255, 255] });
-  txt('Qté', cols.qty, y + 5.5, { size: 9, bold: true, color: [255, 255, 255], align: 'right' });
-  txt(`Prix unit. (${cur})`, cols.pu, y + 5.5, { size: 9, bold: true, color: [255, 255, 255], align: 'right' });
-  txt(`Total (${cur})`, cols.tot, y + 5.5, { size: 9, bold: true, color: [255, 255, 255], align: 'right' });
+  const white = { size: 8.5, bold: true, color: [255, 255, 255] };
+  txt('Désignation', cols.desc, y + 5.5, white);
+  txt('Qté', cols.qty, y + 5.5, { ...white, align: 'right' });
+  txt('Unité', cols.unit, y + 5.5, white);
+  txt(`P.U. (${cur})`, cols.pu, y + 5.5, { ...white, align: 'right' });
+  if (showVat) txt('TVA', cols.vat, y + 5.5, white);
+  txt(`Total HT (${cur})`, cols.tot, y + 5.5, { ...white, align: 'right' });
   y += 8;
   for (const l of inv.lines) {
-    const parts = doc.splitTextToSize(l.description, 95);
+    const disc = Number(l.discountPct) || 0;
+    const text = disc ? `${l.description} (remise ${String(disc).replace('.', ',')} %)` : l.description;
+    const parts = doc.splitTextToSize(text, 80);
     const h = Math.max(8, parts.length * 4.6 + 3.4);
     if (y + h > 250) { doc.addPage(); y = 22; }
-    parts.forEach((p, i) => txt(p, cols.desc, y + 5.2 + i * 4.6, { size: 9.5 }));
-    txt(String(l.qty).replace('.', ','), cols.qty, y + 5.2, { size: 9.5, align: 'right' });
-    txt(fmtAmount(l.unitPrice), cols.pu, y + 5.2, { size: 9.5, align: 'right' });
-    txt(fmtAmount(l.qty * l.unitPrice), cols.tot, y + 5.2, { size: 9.5, align: 'right' });
+    parts.forEach((pp, i) => txt(pp, cols.desc, y + 5.2 + i * 4.6, { size: 9 }));
+    txt(String(l.qty).replace('.', ','), cols.qty, y + 5.2, { size: 9, align: 'right' });
+    txt(l.unit || '', cols.unit, y + 5.2, { size: 8.5, color: MUTE });
+    txt(fmtAmount(l.unitPrice), cols.pu, y + 5.2, { size: 9, align: 'right' });
+    if (showVat) txt(`${String(Number(l.vatRate ?? inv.vatRate) || 0).replace('.', ',')} %`, cols.vat, y + 5.2, { size: 8.5, color: MUTE });
+    txt(fmtAmount(l.qty * l.unitPrice * (1 - disc / 100)), cols.tot, y + 5.2, { size: 9, align: 'right' });
     y += h;
     doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(L, y, R, y);
   }
 
   // Totals
-  const t = invoiceTotals(inv);
   y += 6;
+  if (y > 240) { doc.addPage(); y = 22; }
   const row = (label, value, bold = false) => { txt(label, 150, y, { size: bold ? 11 : 9.5, bold, align: 'right' }); txt(`${fmtAmount(value)} ${cur}`, R - 2, y, { size: bold ? 11 : 9.5, bold, align: 'right' }); y += bold ? 7 : 5.5; };
+  if (hasDisc || Number(inv.discountPct) > 0) {
+    row('Total brut HT', t.gross);
+    row(Number(inv.discountPct) > 0 && !hasDisc ? `Remise ${String(inv.discountPct).replace('.', ',')} %` : 'Remises', -t.discount);
+  }
   row('Total HT', t.subtotal);
-  if (Number(inv.vatRate) > 0) row(`TVA ${String(inv.vatRate).replace('.', ',')} %`, t.vat);
-  row(Number(inv.vatRate) > 0 ? 'Total TTC' : 'Total à payer', t.total, true);
+  for (const [r, v] of Object.entries(t.vatByRate)) row(`TVA ${String(r).replace('.', ',')} %`, v);
+  const last = !(t.withholding > 0) && !(t.deposit > 0);
+  row(t.vat ? 'Total TTC' : 'Total', t.total, last);
+  if (t.withholding > 0) row(`Retenue à la source ${String(inv.withholdingPct).replace('.', ',')} %`, -t.withholding);
+  if (t.deposit > 0) row('Acompte déjà versé', -t.deposit);
+  if (!last) row('Net à payer', t.due, true);
 
   // Payment + notes + footer
   y += 6;

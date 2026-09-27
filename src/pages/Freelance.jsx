@@ -16,6 +16,12 @@ import BadgeList from '../components/common/BadgeList';
 import { tooltipStyle } from '../components/common/chart-theme';
 import QuotesTab from '../components/freelance/Quotes';
 import { RemindersCard, RevenueCard } from '../components/freelance/FreelanceMoney';
+import InvoiceBuilder from '../components/freelance/InvoiceBuilder';
+import BillingEditor from '../components/freelance/BillingEditor';
+import WorkTab from '../components/freelance/WorkTab';
+import ExpensesTab from '../components/freelance/ExpensesTab';
+import CatalogEditor from '../components/freelance/CatalogEditor';
+import { billingOf, unbilledItems, itemsValue, unitShort, BILLING_MODES } from '../utils/billing';
 
 const STATUS_COLOR = { Prospect: 'var(--text-secondary)', Actif: 'var(--success)', 'En pause': 'var(--warning)', 'Terminé': 'var(--accent-secondary)' };
 const INV_STATUS = { sent: ['À encaisser', 'var(--warning)'], paid: ['Payée', 'var(--success)'], cancelled: ['Annulée', 'var(--text-secondary)'] };
@@ -39,7 +45,7 @@ function ClientForm({ initial, onSubmit, submitLabel, onCancel }) {
         <Field label="Statut"><Select value={f.status} onChange={set('status')} options={ENGAGEMENT_STATUSES} /></Field>
         <Field label="Date de début"><Input type="date" value={f.startDate} onChange={set('startDate')} /></Field>
         <Field label="Devise de facturation"><Select value={f.currency} onChange={set('currency')} options={CURRENCIES} /></Field>
-        <Field label={`Taux horaire (${f.currency})`}><Input type="number" min="0" step="any" value={f.hourlyRate} onChange={set('hourlyRate')} /></Field>
+        {!f.hideRate && <Field label={`Taux horaire (${f.currency})`} hint="Point de départ : jours, forfaits, abonnements, commissions… se règlent ensuite dans l’onglet Facturation."><Input type="number" min="0" step="any" value={f.hourlyRate} onChange={set('hourlyRate')} /></Field>}
         <Field label="Email du client"><Input value={f.clientEmail} onChange={set('clientEmail')} /></Field>
         <Field label="Identifiant fiscal du client (ICE…)"><Input value={f.clientTaxId} onChange={set('clientTaxId')} /></Field>
       </div>
@@ -61,7 +67,7 @@ function SettingsModal({ onClose }) {
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   return (
     <Modal open onClose={onClose} title="Mes informations de facturation" wide>
-      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); setInvoiceSettings({ ...f, nextNumber: Math.max(1, Number(f.nextNumber) || 1), paymentTermsDays: Number(f.paymentTermsDays) || 30, vatRate: Number(f.vatRate) || 0 }); onClose(); }}>
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); setInvoiceSettings({ ...Object.fromEntries(Object.entries(f).filter(([k]) => k !== 'catalog')), nextNumber: Math.max(1, Number(f.nextNumber) || 1), paymentTermsDays: Number(f.paymentTermsDays) || 30, vatRate: Number(f.vatRate) || 0 }); onClose(); }}>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="Nom ou raison sociale"><Input value={f.issuerName} onChange={set('issuerName')} /></Field>
           <Field label="Email"><Input value={f.issuerEmail} onChange={set('issuerEmail')} /></Field>
@@ -76,85 +82,13 @@ function SettingsModal({ onClose }) {
           <Field label="Délai de paiement (jours)"><Input type="number" min="0" value={f.paymentTermsDays} onChange={set('paymentTermsDays')} /></Field>
           <Field label="TVA par défaut (%)"><Input type="number" min="0" step="0.1" value={f.vatRate} onChange={set('vatRate')} /></Field>
         </div>
+        <CatalogEditor />
         <Field label="Mention en bas de facture" hint="Ton statut fiscal détermine la mention exacte (TVA ou exonération) : vérifie-la auprès d’un comptable."><Input value={f.footer} onChange={set('footer')} /></Field>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Annuler</Button>
           <Button type="submit">Enregistrer</Button>
         </div>
       </form>
-    </Modal>
-  );
-}
-
-function InvoiceModal({ engagement, onClose }) {
-  const { createInvoice, invoiceSettings } = useFreelanceStore();
-  const unbilled = (engagement.timeLogs || []).filter((t) => !t.invoiceId).sort((a, b) => a.date.localeCompare(b.date));
-  const [picked, setPicked] = useState(unbilled.map((t) => t.id));
-  const [extra, setExtra] = useState([]);
-  const [f, setF] = useState({ date: todayKey(), dueDate: addDaysKey(todayKey(), Number(invoiceSettings.paymentTermsDays) || 30), vatRate: invoiceSettings.vatRate || 0, notes: '' });
-  const [error, setError] = useState('');
-  const rate = Number(engagement.hourlyRate) || 0;
-  const lines = [
-    ...unbilled.filter((t) => picked.includes(t.id)).map((t) => ({ description: `${t.note || engagement.description || 'Prestation'} (${fmtDateShort(t.date)})`, qty: t.hours, unitPrice: rate })),
-    ...extra,
-  ];
-  const totals = invoiceTotals({ lines, vatRate: f.vatRate });
-  const cur = engagement.currency;
-  return (
-    <Modal open onClose={onClose} title={`Nouvelle facture — ${engagement.clientName}`} wide>
-      <div className="space-y-4">
-        {unbilled.length > 0 ? (
-          <div>
-            <div className="text-xs text-mute mb-1.5">Heures non facturées ({unbilled.reduce((a, t) => a + t.hours, 0)} h à {fmtMoneyCur(rate, cur)}/h)</div>
-            <ul className="space-y-1 max-h-40 overflow-y-auto">
-              {unbilled.map((t) => (
-                <li key={t.id}>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="accent-[var(--accent-primary)]" checked={picked.includes(t.id)} onChange={(e) => setPicked((p) => (e.target.checked ? [...p, t.id] : p.filter((x) => x !== t.id)))} />
-                    <span className="flex-1">{t.note || 'Prestation'} <span className="text-xs text-mute">{fmtDateShort(t.date)}</span></span>
-                    <span className="text-xs tabular-nums">{t.hours} h</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            {!rate && <p className="text-[11px] text-warn mt-1">Aucun taux horaire sur ce client : renseigne-le (onglet Client) ou ajoute des lignes au forfait.</p>}
-          </div>
-        ) : <p className="text-sm text-mute">Aucune heure à facturer : ajoute des lignes au forfait ci-dessous.</p>}
-
-        <div>
-          <div className="text-xs text-mute mb-1.5">Lignes au forfait</div>
-          {extra.map((l, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 mb-2">
-              <Input className="col-span-7" value={l.description} onChange={(e) => setExtra((x) => x.map((y, j) => (j === i ? { ...y, description: e.target.value } : y)))} placeholder="Désignation" />
-              <Input className="col-span-2" type="number" min="0" step="any" value={l.qty} onChange={(e) => setExtra((x) => x.map((y, j) => (j === i ? { ...y, qty: e.target.value } : y)))} />
-              <Input className="col-span-2" type="number" min="0" step="any" value={l.unitPrice} onChange={(e) => setExtra((x) => x.map((y, j) => (j === i ? { ...y, unitPrice: e.target.value } : y)))} placeholder="Prix" />
-              <button className="col-span-1 text-mute hover:text-bad cursor-pointer" onClick={() => setExtra((x) => x.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
-            </div>
-          ))}
-          <button className="text-xs text-accent hover:underline cursor-pointer flex items-center gap-1" onClick={() => setExtra((x) => [...x, { description: '', qty: 1, unitPrice: '' }])}><Plus size={12} /> Ajouter une ligne</button>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-3">
-          <Field label="Date"><Input type="date" value={f.date} onChange={(e) => setF((p) => ({ ...p, date: e.target.value, dueDate: addDaysKey(e.target.value, Number(invoiceSettings.paymentTermsDays) || 30) }))} /></Field>
-          <Field label="Échéance"><Input type="date" value={f.dueDate} onChange={(e) => setF((p) => ({ ...p, dueDate: e.target.value }))} /></Field>
-          <Field label="TVA (%)"><Input type="number" min="0" step="0.1" value={f.vatRate} onChange={(e) => setF((p) => ({ ...p, vatRate: e.target.value }))} /></Field>
-        </div>
-        <Field label="Note sur la facture (optionnel)"><Input value={f.notes} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))} /></Field>
-        <div className="rounded-lg bg-surface border border-line px-3 py-2 text-sm flex flex-wrap gap-x-5 justify-end">
-          <span>HT {fmtMoneyCur(totals.subtotal, cur)}</span>
-          {Number(f.vatRate) > 0 && <span>TVA {fmtMoneyCur(totals.vat, cur)}</span>}
-          <b>Total {fmtMoneyCur(totals.total, cur)}</b>
-        </div>
-        {error && <p className="text-bad text-sm">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button onClick={() => {
-            const res = createInvoice(engagement.id, { ...f, lines, timeLogIds: picked });
-            if (!res.ok) return setError(res.error);
-            onClose();
-          }}><span className="flex items-center gap-1.5"><FileText size={14} /> Créer la facture {invoiceSettings.prefix}-{f.date.slice(0, 4)}-{String(invoiceSettings.nextNumber || 1).padStart(3, '0')}</span></Button>
-        </div>
-      </div>
     </Modal>
   );
 }
@@ -191,25 +125,27 @@ function EngagementDetail({ engagementId, onClose }) {
   const { logHours, deleteTimeLog, logPayment, deletePayment, postPayment, cancelInvoice, payInvoice, editEngagement, deleteEngagement, invoiceSettings } = store;
   const engagement = store.engagements.find((e) => e.id === engagementId);
   const invoices = (store.invoices || []).filter((i) => i.engagementId === engagementId).sort((a, b) => (a.date < b.date ? 1 : -1));
-  const [tab, setTab] = useState('heures');
-  const [hours, setHours] = useState({ hours: '', note: '', date: todayKey() });
+  const [tab, setTab] = useState('travail');
   const [newInvoice, setNewInvoice] = useState(false);
   const [paying, setPaying] = useState(null); // invoice | 'free' | { post: paymentId }
   if (!engagement) return null;
   const cur = engagement.currency;
-  const unbilledH = (engagement.timeLogs || []).filter((t) => !t.invoiceId).reduce((a, t) => a + t.hours, 0);
-  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((a, i) => a + invoiceTotals(i).total, 0);
+  const b = billingOf(engagement);
+  const toBill = itemsValue(unbilledItems(engagement, todayKey()));
+  const modes = BILLING_MODES.filter((m) => m.key !== 'rates' && b[m.key]?.enabled).map((m) => m.label);
+  const mainRate = b.rates[0];
+  const outstanding = invoices.filter((i) => i.status === 'sent').reduce((a, i) => a + invoiceTotals(i).due, 0);
   const quoteCount = (store.quotes || []).filter((q) => q.engagementId === engagementId).length;
-  const tabs = [['heures', `Heures (${engagement.hoursLogged || 0} h)`], ['devis', `Devis (${quoteCount})`], ['factures', `Factures (${invoices.length})`], ['paiements', `Paiements (${(engagement.payments || []).length})`], ['client', 'Client']];
+  const tabs = [['travail', 'Travail'], ['facturation', 'Facturation'], ['frais', `Frais (${(engagement.expenses || []).length})`], ['devis', `Devis (${quoteCount})`], ['factures', `Factures (${invoices.length})`], ['paiements', `Paiements (${(engagement.payments || []).length})`], ['client', 'Client']];
 
   return (
     <Modal open onClose={onClose} title={engagement.clientName} wide>
       <div className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div className="bg-surface border border-line rounded-lg py-2"><div className="text-lg font-bold">{unbilledH} h</div><div className="text-[10px] text-mute">à facturer</div></div>
+          <div className="bg-surface border border-line rounded-lg py-2"><div className="text-lg font-bold">{fmtMoneyCur(toBill, cur)}</div><div className="text-[10px] text-mute">à facturer</div></div>
           <div className="bg-surface border border-line rounded-lg py-2"><div className="text-lg font-bold text-warn">{fmtMoneyCur(outstanding, cur)}</div><div className="text-[10px] text-mute">à encaisser</div></div>
           <div className="bg-surface border border-line rounded-lg py-2"><div className="text-lg font-bold text-good">{fmtMoneyCur(engagement.paidTotal || 0, cur)}</div><div className="text-[10px] text-mute">encaissé</div></div>
-          <div className="bg-surface border border-line rounded-lg py-2"><div className="text-lg font-bold">{engagement.hourlyRate ? fmtMoneyCur(engagement.hourlyRate, cur) : '—'}</div><div className="text-[10px] text-mute">par heure</div></div>
+          <div className="bg-surface border border-line rounded-lg py-2 px-1"><div className="text-lg font-bold truncate">{modes.length ? modes[0] : mainRate.price ? fmtMoneyCur(mainRate.price, cur) : '—'}</div><div className="text-[10px] text-mute truncate">{modes.length ? (modes.length > 1 ? `+ ${modes.slice(1).join(', ')}` : 'mode de facturation') : `par ${unitShort(mainRate)}${b.rates.length > 1 ? ` · ${b.rates.length} tarifs` : ''}`}</div></div>
         </div>
         <div className="flex gap-1 border-b border-line overflow-x-auto">
           {tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap cursor-pointer ${tab === k ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'}`}>{l}</button>)}
@@ -217,32 +153,9 @@ function EngagementDetail({ engagementId, onClose }) {
 
         {tab === 'devis' && <QuotesTab engagement={engagement} />}
 
-        {tab === 'heures' && (
-          <div className="space-y-3">
-            <form className="grid sm:grid-cols-4 gap-2 items-end" onSubmit={(e) => { e.preventDefault(); if (!(Number(hours.hours) > 0)) return; logHours(engagement.id, hours); setHours((h) => ({ ...h, hours: '', note: '' })); }}>
-              <Field label="Heures"><Input type="number" step="0.25" min="0" value={hours.hours} onChange={(e) => setHours((h) => ({ ...h, hours: e.target.value }))} placeholder="2,5" /></Field>
-              <Field label="Date"><Input type="date" value={hours.date} onChange={(e) => setHours((h) => ({ ...h, date: e.target.value }))} /></Field>
-              <Field label="Travail réalisé"><Input value={hours.note} onChange={(e) => setHours((h) => ({ ...h, note: e.target.value }))} placeholder="ex. Modèle DCF" /></Field>
-              <Button type="submit"><span className="flex items-center gap-1.5"><Clock size={14} /> Ajouter</span></Button>
-            </form>
-            {(engagement.timeLogs || []).length ? (
-              <ul className="space-y-1.5 max-h-56 overflow-y-auto">
-                {[...engagement.timeLogs].sort((a, b) => (a.date < b.date ? 1 : -1)).map((t) => {
-                  const inv = t.invoiceId ? invoices.find((i) => i.id === t.invoiceId) : null;
-                  return (
-                    <li key={t.id} className="flex items-center gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
-                      <span className="font-medium w-12">{t.hours} h</span>
-                      <span className="flex-1 text-xs text-mute">{fmtDateShort(t.date)}{t.note ? ` · ${t.note}` : ''}</span>
-                      {inv ? <span className="text-[10px] text-good">facturée · {inv.number}</span> : <span className="text-[10px] text-warn">à facturer</span>}
-                      {!inv && <button className="text-mute hover:text-bad cursor-pointer" onClick={() => deleteTimeLog(engagement.id, t.id)}><Trash2 size={13} /></button>}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : <EmptyState>Aucune heure.</EmptyState>}
-            {unbilledH > 0 && <Button onClick={() => setNewInvoice(true)}><span className="flex items-center gap-1.5"><FileText size={14} /> Facturer ces heures</span></Button>}
-          </div>
-        )}
+        {tab === 'travail' && <WorkTab engagement={engagement} invoices={invoices} onInvoice={() => setNewInvoice(true)} />}
+        {tab === 'facturation' && <BillingEditor key={engagement.id} engagement={engagement} />}
+        {tab === 'frais' && <ExpensesTab engagement={engagement} invoices={invoices} />}
 
         {tab === 'factures' && (
           <div className="space-y-3">
@@ -258,7 +171,7 @@ function EngagementDetail({ engagementId, onClose }) {
                       <span className="font-medium">{inv.number}</span>
                       <span className="text-xs text-mute">{fmtDateShort(inv.date)} · échéance {fmtDateShort(inv.dueDate)}</span>
                       <span className="text-xs font-semibold" style={{ color: late ? 'var(--error)' : color }}>{late ? 'En retard' : label}</span>
-                      <span className="flex-1 text-right font-semibold tabular-nums">{fmtMoneyCur(invoiceTotals(inv).total, inv.currency)}</span>
+                      <span className="flex-1 text-right font-semibold tabular-nums">{fmtMoneyCur(invoiceTotals(inv).due, inv.currency)}</span>
                       <button className="p-1 text-mute hover:text-accent cursor-pointer" title="PDF" onClick={() => exportInvoicePDF(inv, engagement, invoiceSettings)}><Download size={14} /></button>
                       {inv.status === 'sent' && <Button className="!py-1 !px-2 text-xs" onClick={() => setPaying(inv)}>Encaisser</Button>}
                       {inv.status === 'sent' && <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Annuler la facture" onClick={() => { if (confirm(`Annuler la facture ${inv.number} ? Son numéro ne sera pas réutilisé.`)) cancelInvoice(inv.id); }}><Ban size={14} /></button>}
@@ -290,13 +203,13 @@ function EngagementDetail({ engagementId, onClose }) {
         )}
 
         {tab === 'client' && (
-          <ClientForm initial={{ clientName: engagement.clientName, description: engagement.description || '', status: engagement.status, hourlyRate: engagement.hourlyRate || '', currency: engagement.currency || 'MAD', startDate: engagement.startDate || todayKey(), clientEmail: engagement.clientEmail || '', clientAddress: engagement.clientAddress || '', clientTaxId: engagement.clientTaxId || '', notes: engagement.notes || '' }}
-            submitLabel="Enregistrer" onSubmit={(f) => editEngagement(engagement.id, f)} />
+          <ClientForm initial={{ hideRate: true, clientName: engagement.clientName, description: engagement.description || '', status: engagement.status, hourlyRate: engagement.hourlyRate || '', currency: engagement.currency || 'MAD', startDate: engagement.startDate || todayKey(), clientEmail: engagement.clientEmail || '', clientAddress: engagement.clientAddress || '', clientTaxId: engagement.clientTaxId || '', notes: engagement.notes || '' }}
+            submitLabel="Enregistrer" onSubmit={({ hideRate, hourlyRate, ...f }) => editEngagement(engagement.id, f)} />
         )}
         {tab === 'client' && <button className="text-xs text-bad hover:underline cursor-pointer" onClick={() => { if (confirm(`Supprimer « ${engagement.clientName} » et son historique ?`)) { deleteEngagement(engagement.id); onClose(); } }}>Supprimer ce client</button>}
       </div>
 
-      {newInvoice && <InvoiceModal engagement={engagement} onClose={() => { setNewInvoice(false); setTab('factures'); }} />}
+      {newInvoice && <InvoiceBuilder engagement={engagement} onClose={() => { setNewInvoice(false); setTab('factures'); }} />}
       {paying && paying !== 'free' && !paying.post && <PayModal title={`Encaisser ${paying.number}`} amountText={fmtMoneyCur(invoiceTotals(paying).total, paying.currency)} onClose={() => setPaying(null)} onConfirm={({ date, account }) => payInvoice(paying.id, { date, account })} />}
       {paying === 'free' && <PayModal title="Paiement reçu" askAmount onClose={() => setPaying(null)} onConfirm={({ date, account, amount, note }) => logPayment(engagement.id, { date, amount, note, account })} />}
       {paying?.post && <PayModal title="Comptabiliser ce paiement" onClose={() => setPaying(null)} onConfirm={({ account }) => account && postPayment(engagement.id, paying.post, account)} />}
@@ -317,7 +230,7 @@ export default function Freelance() {
   const curOf = (id) => engagements.find((e) => e.id === id)?.currency;
   const totalPaid = engagements.reduce((a, e) => a + toBase(e.paidTotal || 0, e.currency), 0);
   const open = (invoices || []).filter((i) => i.status === 'sent');
-  const outstanding = open.reduce((a, i) => a + toBase(invoiceTotals(i).total, i.currency || curOf(i.engagementId)), 0);
+  const outstanding = open.reduce((a, i) => a + toBase(invoiceTotals(i).due, i.currency || curOf(i.engagementId)), 0);
   const overdue = open.filter((i) => i.dueDate < todayKey());
   const byClient = useMemo(
     () => [...engagements].filter((e) => e.hoursLogged > 0).sort((a, b) => b.hoursLogged - a.hoursLogged).slice(0, 8).map((e) => ({ name: e.clientName, hours: e.hoursLogged })),

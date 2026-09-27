@@ -54,12 +54,14 @@ export const CHART_OF_ACCOUNTS = [
   { code: '341', label: 'Prêts accordés à des tiers', cls: 3 },
   { code: '345', label: 'Dépôts & cautions versés', cls: 3 },
   { code: '346', label: 'Avances & acomptes versés', cls: 3 },
+  { code: '347', label: 'Impôt retenu à la source (à déduire)', cls: 3 },
   { code: '348', label: 'Autres créances', cls: 3 },
 
   // ── Classe 4 · Dettes à court terme ──
   { code: '441', label: 'Cartes de crédit', cls: 4 },
   { code: '445', label: 'Factures à payer', cls: 4 },
   { code: '446', label: 'Dettes envers des proches', cls: 4 },
+  { code: '447', label: 'TVA facturée à reverser', cls: 4 },
   { code: '448', label: 'Autres dettes court terme', cls: 4 },
 
   // ── Classe 5 · Trésorerie ──

@@ -2,10 +2,36 @@
 // the store, the UI and the PDF.
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+// Lines: { qty, unitPrice, vatRate?, discountPct? } (a line without vatRate uses
+// the invoice's). Invoice: vatRate, discountPct, withholdingPct (retenue à la
+// source, on the amount before tax), deposit (already paid, deducted).
+// `total` = with tax; `due` = what the client still has to pay. Old invoices
+// (no discount/withholding/deposit) give due === total.
 export function invoiceTotals(inv) {
-  const subtotal = r2((inv?.lines || []).reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), 0));
-  const vat = r2(subtotal * ((Number(inv?.vatRate) || 0) / 100));
-  return { subtotal, vat, total: r2(subtotal + vat) };
+  const lines = inv?.lines || [];
+  const invDisc = (Number(inv?.discountPct) || 0) / 100;
+  let gross = 0;
+  let net = 0;
+  const vatByRate = {};
+  for (const l of lines) {
+    const base = (Number(l.qty) || 0) * (Number(l.unitPrice) || 0);
+    const afterLine = base * (1 - (Number(l.discountPct) || 0) / 100);
+    const lineNet = afterLine * (1 - invDisc);
+    gross += base;
+    net += lineNet;
+    const rate = Number(l.vatRate ?? inv?.vatRate) || 0;
+    if (rate) vatByRate[rate] = (vatByRate[rate] || 0) + (lineNet * rate) / 100;
+  }
+  const subtotal = r2(net);
+  const vat = r2(Object.values(vatByRate).reduce((a, v) => a + v, 0));
+  const total = r2(subtotal + vat);
+  const withholding = r2(subtotal * ((Number(inv?.withholdingPct) || 0) / 100));
+  const deposit = r2(Number(inv?.deposit) || 0);
+  return {
+    gross: r2(gross), discount: r2(gross - net), subtotal, vat,
+    vatByRate: Object.fromEntries(Object.entries(vatByRate).map(([k, v]) => [k, r2(v)])),
+    total, withholding, deposit, due: r2(total - withholding - deposit),
+  };
 }
 
 /** 1234.5 → "1 234,50" with plain spaces (jsPDF's standard fonts have no narrow no-break space). */
@@ -44,7 +70,7 @@ export function monthlyRevenue(engagements, today, months = 12, toBase = (a) => 
 
 /** A polite reminder, firmer after the first one. Plain text, ready to paste in an e-mail. */
 export function reminderMessage(inv, engagement, settings, { daysLate, count = 0 } = {}) {
-  const total = fmtMoneyCur(invoiceTotals(inv).total, inv.currency);
+  const total = fmtMoneyCur(invoiceTotals(inv).due, inv.currency);
   const date = inv.dueDate ? inv.dueDate.split('-').reverse().join('/') : '';
   const who = settings?.issuerName || '';
   const opening = count === 0
