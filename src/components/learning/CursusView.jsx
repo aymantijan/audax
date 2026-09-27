@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Pencil, GraduationCap, Layers, ClipboardList, CalendarClock, Target, Settings2, ChevronRight, AlertTriangle, CheckCircle2,
-  Scale,
-} from 'lucide-react';
+  Scale, FileDown } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
 import {
   termResult, overallResult, requiredGrade, upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, fmtGrade,
@@ -18,6 +17,8 @@ import { ForecastBadge, useForecastContext } from './Forecast';
 import { forecastSubject, forecastTerm } from '../../utils/prediction';
 import { subjectPass, hasLevelMarks } from '../../utils/academic';
 import { TermModal, ModuleModal, BulkImportModal, GradingSettingsModal, CourseFormModal, EvaluationSplitModal } from './CursusModals';
+import { exportTranscriptPDF } from '../../utils/transcript-pdf';
+import { useAuthStore } from '../../store/authStore';
 
 // Semester progress through its dates (week X / Y).
 function termProgress(term, today) {
@@ -259,6 +260,7 @@ export default function CursusView() {
             <Button variant="secondary" onClick={() => setModuleModal({})}><span className="flex items-center gap-1.5"><Layers size={14} /> Module</span></Button>
             <Button variant="secondary" onClick={() => setBulkOpen(true)}><span className="flex items-center gap-1.5"><ClipboardList size={14} /> Coller une liste</span></Button>
             <Button variant="secondary" onClick={() => setSplitOpen(true)}><span className="flex items-center gap-1.5"><Scale size={14} /> Répartition des notes</span></Button>
+            <Button variant="secondary" onClick={() => exportTranscriptPDF({ name: useAuthStore.getState().user?.name || '', terms, modules: academic.modules, courses, settings })}><span className="flex items-center gap-1.5"><FileDown size={14} /> Relevé (PDF)</span></Button>
             <Button onClick={() => setSubjectModal({})}><span className="flex items-center gap-1.5"><Plus size={15} /> Matière</span></Button>
           </div>
         </div>
