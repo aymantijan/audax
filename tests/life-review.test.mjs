@@ -28,6 +28,7 @@ test('one week of figures across sections', () => {
   assert.equal(w.tradingPnl, 25);
   assert.equal(w.readingDays, 1);
   assert.equal(w.sleepHours, 7.5);
+  assert.equal(w.habitsRate, 29); // 2 of 7 days, as a percentage
 });
 
 test('a week in progress only counts the days lived', () => {

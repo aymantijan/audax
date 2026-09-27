@@ -41,7 +41,7 @@ export function weekFigures(data, weekMonday, today) {
   const { habits = [], logs = [], energyLogs = [], workouts = [], sessions = [], journal = [], trades = [], readLog = [], courses, academic, attendance } = data;
 
   const hc = habitCompliance(habits, logs, days, to);
-  out.habitsRate = hc.total ? Math.round(hc.rate) : null;
+  out.habitsRate = hc.total ? Math.round(hc.rate * 100) : null;
 
   const sleeps = energyLogs.filter((l) => inRange(l.date, from, to)).map(sleepHoursOf).filter((h) => h != null);
   out.sleepHours = round1(avg(sleeps));
