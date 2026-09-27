@@ -7,10 +7,10 @@
 // Requests use the Gemini-style shape the endpoints already build:
 //   { system, contents: [{ role: 'user'|'model', parts: [{ text } | { inlineData: { mimeType, data } }] }],
 //     maxTokens, temperature, json }
-import { geminiStream } from './gemini.js';
+import { geminiStream, GEMINI_MODELS } from './gemini.js';
 
 export const PROVIDERS = {
-  gemini: { label: 'Gemini', defaultModel: 'gemini-2.5-flash' },
+  gemini: { label: 'Gemini', defaultModel: null }, // automatic: newest available flash model
   claude: { label: 'Claude', defaultModel: 'claude-haiku-4-5-20251001' },
   openai: { label: 'ChatGPT', defaultModel: 'gpt-4o-mini' },
   openrouter: { label: 'OpenRouter', defaultModel: 'openrouter/auto' },
@@ -118,7 +118,8 @@ export async function aiStream(req, onText, { userKey = null, fetchImpl = fetch 
   }
   const model = userKey.model || PROVIDERS[userKey.provider].defaultModel;
   if (userKey.provider === 'gemini') {
-    const { model: m } = await geminiStream(req, onText, { fetchImpl, key: userKey.key, models: [model] });
+    // A chosen model is tried first; if Google no longer serves it, the newest available one is used.
+    const { model: m } = await geminiStream(req, onText, { fetchImpl, key: userKey.key, models: userKey.model ? [userKey.model, ...GEMINI_MODELS] : GEMINI_MODELS });
     return { provider: 'gemini', model: m };
   }
   if (userKey.provider === 'claude') await claudeStream(userKey.key, model, req, onText, fetchImpl);
@@ -138,5 +139,6 @@ export function keyError(e, userKey) {
   if (userKey && (e?.status === 401 || e?.status === 403)) return 'bad_key';
   if (userKey && e?.status === 400 && /api.?key|invalid.*key|x-api-key/i.test(e?.detail || '')) return 'bad_key';
   if (userKey && e?.status === 402) return 'no_credit';
+  if (userKey && e?.status === 404) return 'bad_model';
   return e?.status === 429 ? 'busy' : 'failed';
 }

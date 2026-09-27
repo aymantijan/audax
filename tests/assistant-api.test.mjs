@@ -28,12 +28,44 @@ test('falls back to the next free model on 429, then gives up with the last stat
   await assert.rejects(geminiText({ system: 's', contents: [], maxTokens: 10 }, { fetchImpl: async () => new Response('x', { status: 429 }) }), (e) => e.status === 429);
 });
 
-test('2.5 models run without thinking so short answers are not cut', async () => {
+test('2.5 models run without thinking; newer ones get room to think', async () => {
   process.env.GEMINI_API_KEY = 'test';
-  let sent;
-  await geminiStream({ system: 's', contents: [], maxTokens: 10 }, () => {}, { fetchImpl: async (_u, init) => { sent = JSON.parse(init.body); return sse(['x']); } });
-  assert.equal(sent.generationConfig.thinkingConfig.thinkingBudget, 0);
-  assert.equal(sent.systemInstruction.parts[0].text, 's');
+  const bodies = [];
+  const fetchImpl = async (_u, init) => { bodies.push(JSON.parse(init.body)); return sse(['x']); };
+  await geminiStream({ system: 's', contents: [], maxTokens: 10 }, () => {}, { fetchImpl, models: ['gemini-2.5-flash'] });
+  await geminiStream({ system: 's', contents: [], maxTokens: 10 }, () => {}, { fetchImpl, models: ['gemini-3.8-flash'] });
+  assert.equal(bodies[0].generationConfig.thinkingConfig.thinkingBudget, 0);
+  assert.equal(bodies[1].generationConfig.thinkingConfig, undefined);
+  assert.ok(bodies[1].generationConfig.maxOutputTokens > 1000);
+  assert.equal(bodies[0].systemInstruction.parts[0].text, 's');
+});
+
+test('retired models: the newest flash model available to the key is found and used', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.includes('?pageSize')) {
+      return new Response(JSON.stringify({ models: [
+        { name: 'models/gemini-4.1-flash-lite', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/gemini-4.1-flash', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/gemini-4.1-flash-image', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] },
+      ] }));
+    }
+    if (url.includes('gemini-4.1-flash:')) return sse(['ok']);
+    return new Response('{"error":{"code":404,"message":"no longer available to new users"}}', { status: 404 });
+  };
+  const { text, model } = await geminiText({ system: 's', contents: [], maxTokens: 10 }, { fetchImpl, key: 'fresh-key' });
+  assert.equal(text, 'ok');
+  assert.equal(model, 'gemini-4.1-flash');
+  assert.ok(calls.some((u) => u.includes('?pageSize')));
+});
+
+test('a refused key stops at once instead of trying every model', async () => {
+  let n = 0;
+  const fetchImpl = async () => { n += 1; return new Response('API key not valid', { status: 400 }); };
+  await assert.rejects(geminiText({ system: 's', contents: [], maxTokens: 10 }, { fetchImpl, key: 'bad' }), (e) => e.status === 400);
+  assert.equal(n, 1);
 });
 
 test('quota: -1 from the database means the limit is reached; errors fail open', async () => {

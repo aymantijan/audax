@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 // different account never uses someone else's key.
 // byOwner: { [ownerId]: { active: provider|null, keys: { [provider]: { key, model } } } }
 export const AI_PROVIDERS = [
-  { key: 'gemini', label: 'Gemini', defaultModel: 'gemini-2.5-flash', where: 'aistudio.google.com/apikey', free: 'Offre gratuite disponible' },
+  { key: 'gemini', label: 'Gemini', defaultModel: 'automatique (le plus récent)', where: 'aistudio.google.com/apikey', free: 'Offre gratuite disponible' },
   { key: 'claude', label: 'Claude', defaultModel: 'claude-haiku-4-5-20251001', where: 'console.anthropic.com → API Keys', free: 'Payant à l’usage' },
   { key: 'openai', label: 'ChatGPT', defaultModel: 'gpt-4o-mini', where: 'platform.openai.com/api-keys', free: 'Payant à l’usage' },
   { key: 'openrouter', label: 'OpenRouter', defaultModel: 'openrouter/auto', where: 'openrouter.ai/keys', free: 'Modèles gratuits « :free » disponibles' },

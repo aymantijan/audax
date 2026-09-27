@@ -14,7 +14,7 @@ export async function askAssistant({ question, context, history, facts }, onText
   }
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => ({}));
-    const code = res.status === 401 ? 'auth' : res.status === 404 ? 'not_configured' : ['quota', 'bad_key', 'no_credit', 'not_configured'].includes(body.error) ? body.error : body.error === 'busy' || res.status === 429 ? 'busy' : 'failed';
+    const code = res.status === 401 ? 'auth' : res.status === 404 ? 'not_configured' : ['quota', 'bad_key', 'no_credit', 'bad_model', 'not_configured'].includes(body.error) ? body.error : body.error === 'busy' || res.status === 429 ? 'busy' : 'failed';
     throw Object.assign(new Error(code), { code, limit: body.limit });
   }
   const reader = res.body.getReader();
@@ -32,6 +32,7 @@ export async function askAssistant({ question, context, history, facts }, onText
 export const ASSISTANT_ERRORS = {
   not_configured: 'Aucune clé d’IA pour l’instant : ajoute la tienne dans Paramètres → Assistant (Gemini a une offre gratuite).',
   bad_key: 'Ta clé d’IA est refusée par le fournisseur : vérifie-la dans Paramètres → Assistant.',
+  bad_model: 'Ce modèle d’IA n’existe pas ou plus chez le fournisseur : laisse le champ Modèle vide dans Paramètres → Assistant.',
   no_credit: 'Ton compte chez le fournisseur d’IA n’a plus de crédit : recharge-le ou choisis une autre clé dans Paramètres → Assistant.',
   quota: 'Tu as utilisé les questions gratuites du jour. Ça repart demain, ou ajoute ta propre clé dans Paramètres → Assistant.',
   busy: 'Le service gratuit est très demandé en ce moment. Réessaie dans une minute.',
