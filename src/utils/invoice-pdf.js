@@ -1,14 +1,16 @@
-// Invoice PDF (Carrière n°4). Plain A4 layout: issuer, invoice number and
-// dates, client block, lines table, totals (HT / TVA / TTC), payment details.
+// Invoice and quote PDF (Carrière n°4). Plain A4 layout: issuer, number and
+// dates, client block, lines table, totals (HT / TVA / TTC), then payment details
+// (invoice) or validity and a signature box (quote).
 import { invoiceTotals, fmtAmount } from './invoice';
 
 const INK = [26, 30, 40];
 const MUTE = [110, 118, 130];
-const ACCENT = [0, 140, 179];
+const ACCENT = [42, 20, 32]; // VAUDAX porphyry
 const LINE = [220, 224, 230];
 const dmy = (d) => (d ? d.split('-').reverse().join('/') : '');
 
-export async function exportInvoicePDF(inv, engagement, settings) {
+export async function exportInvoicePDF(inv, engagement, settings, { kind = 'invoice' } = {}) {
+  const quote = kind === 'quote';
   const { default: jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const L = 18; const R = 192;
@@ -23,15 +25,15 @@ export async function exportInvoicePDF(inv, engagement, settings) {
   // Issuer (left) + title (right)
   txt(settings.issuerName || 'Votre nom', L, y, { size: 13, bold: true });
   const issuerEnd = block([settings.issuerAddress, settings.issuerEmail, settings.issuerPhone, settings.taxIds], L, y + 6, { size: 9, color: MUTE });
-  txt('FACTURE', R, y, { size: 20, bold: true, color: ACCENT, align: 'right' });
+  txt(quote ? 'DEVIS' : 'FACTURE', R, y, { size: 20, bold: true, color: ACCENT, align: 'right' });
   txt(`N° ${inv.number}`, R, y + 7, { size: 10, bold: true, align: 'right' });
   txt(`Date : ${dmy(inv.date)}`, R, y + 12.5, { size: 9, color: MUTE, align: 'right' });
-  txt(`Échéance : ${dmy(inv.dueDate)}`, R, y + 17, { size: 9, color: MUTE, align: 'right' });
+  txt(quote ? `Valable jusqu’au : ${dmy(inv.validUntil)}` : `Échéance : ${dmy(inv.dueDate)}`, R, y + 17, { size: 9, color: MUTE, align: 'right' });
   y = Math.max(issuerEnd, y + 22) + 6;
 
   // Client
   doc.setFillColor(245, 247, 250); doc.roundedRect(108, y, R - 108, 30, 2, 2, 'F');
-  txt('FACTURÉ À', 112, y + 6, { size: 8, bold: true, color: MUTE });
+  txt(quote ? 'ADRESSÉ À' : 'FACTURÉ À', 112, y + 6, { size: 8, bold: true, color: MUTE });
   txt(engagement.clientName, 112, y + 12, { size: 11, bold: true });
   block([engagement.clientAddress, engagement.clientEmail, engagement.clientTaxId], 112, y + 17, { size: 9, color: MUTE });
   if (engagement.description) { txt('Objet', L, y + 6, { size: 8, bold: true, color: MUTE }); block([engagement.description], L, y + 12, { size: 10 }); }
@@ -67,8 +69,15 @@ export async function exportInvoicePDF(inv, engagement, settings) {
 
   // Payment + notes + footer
   y += 6;
-  if (settings.bankDetails) { txt('Règlement', L, y, { size: 9, bold: true }); y = block([settings.bankDetails], L, y + 5, { size: 9, color: MUTE }) + 2; }
-  txt(`Paiement attendu avant le ${dmy(inv.dueDate)}.`, L, y, { size: 9, color: MUTE }); y += 6;
+  if (quote) {
+    txt(`Devis valable jusqu’au ${dmy(inv.validUntil)}.`, L, y, { size: 9, color: MUTE }); y += 8;
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.roundedRect(120, y, R - 120, 28, 2, 2);
+    txt('Bon pour accord — date et signature', 124, y + 6, { size: 8, bold: true, color: MUTE });
+    y += 34;
+  } else {
+    if (settings.bankDetails) { txt('Règlement', L, y, { size: 9, bold: true }); y = block([settings.bankDetails], L, y + 5, { size: 9, color: MUTE }) + 2; }
+    txt(`Paiement attendu avant le ${dmy(inv.dueDate)}.`, L, y, { size: 9, color: MUTE }); y += 6;
+  }
   if (inv.notes) y = block([inv.notes], L, y, { size: 9, color: MUTE }) + 2;
   if (inv.status === 'paid') { doc.setDrawColor(22, 163, 116); doc.setLineWidth(0.8); doc.roundedRect(R - 44, 60, 40, 12, 2, 2); txt(`PAYÉE ${dmy(inv.paidAt)}`, R - 24, 67.8, { size: 10, bold: true, color: [22, 163, 116], align: 'center' }); }
   if (settings.footer) { txt(settings.footer, 105, 287, { size: 8, color: MUTE, align: 'center' }); }

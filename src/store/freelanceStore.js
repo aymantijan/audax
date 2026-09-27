@@ -219,6 +219,40 @@ export const useFreelanceStore = create(
         });
         toast(`Facture ${inv.number} annulée — les heures redeviennent facturables`, 'info');
       },
+      markInvoiceReminded: (invoiceId, date = todayKey()) => set({
+        invoices: get().invoices.map((i) => (i.id === invoiceId ? { ...i, reminders: [...(i.reminders || []), date] } : i)),
+      }),
+
+      // ── Quotes (devis): same lines as an invoice; an accepted quote becomes one ──
+      quotes: [], // [{ id, number, engagementId, date, validUntil, lines, vatRate, currency, status: 'sent'|'accepted'|'refused'|'invoiced', invoiceId, notes, createdAt }]
+      createQuote: (engagementId, data) => {
+        const e = get().engagements.find((x) => x.id === engagementId);
+        if (!e) return { ok: false, error: 'Client introuvable.' };
+        const lines = (data.lines || []).filter((l) => String(l.description || '').trim() && Number(l.qty) > 0).map((l) => ({ id: uid(), description: String(l.description).trim(), qty: Number(l.qty), unitPrice: Number(l.unitPrice) || 0 }));
+        if (!lines.length) return { ok: false, error: 'Ajoute au moins une ligne.' };
+        const st = get().invoiceSettings;
+        const date = data.date || todayKey();
+        const n = st.nextQuoteNumber || 1;
+        const quote = {
+          id: uid(), number: `${st.quotePrefix || 'DEV'}-${date.slice(0, 4)}-${String(n).padStart(3, '0')}`, engagementId, date,
+          validUntil: data.validUntil || addDaysKey(date, 30), lines, vatRate: Number(data.vatRate ?? st.vatRate) || 0,
+          currency: e.currency || useAccountingStore.getState().baseCurrency, status: 'sent', invoiceId: '', notes: data.notes || '', createdAt: Date.now(),
+        };
+        set({ quotes: [...(get().quotes || []), quote], invoiceSettings: { ...st, nextQuoteNumber: n + 1 } });
+        toast(`Devis ${quote.number} créé`, 'success');
+        return { ok: true, id: quote.id };
+      },
+      setQuoteStatus: (quoteId, status) => set({ quotes: (get().quotes || []).map((q) => (q.id === quoteId ? { ...q, status } : q)) }),
+      quoteToInvoice: (quoteId) => {
+        const q = (get().quotes || []).find((x) => x.id === quoteId);
+        if (!q || q.status === 'invoiced') return { ok: false, error: 'Devis déjà facturé.' };
+        const res = get().createInvoice(q.engagementId, { lines: q.lines, vatRate: q.vatRate, notes: `Selon devis ${q.number}.${q.notes ? ` ${q.notes}` : ''}` });
+        if (!res.ok) return res;
+        set({ quotes: get().quotes.map((x) => (x.id === quoteId ? { ...x, status: 'invoiced', invoiceId: res.id } : x)) });
+        return res;
+      },
+      deleteQuote: (quoteId) => set({ quotes: (get().quotes || []).filter((q) => q.id !== quoteId) }),
+
       // Paid in full: records the payment (and its Finances entry when an account is given).
       payInvoice: (invoiceId, { date, account }) => {
         const inv = (get().invoices || []).find((i) => i.id === invoiceId);
@@ -244,7 +278,7 @@ export const useFreelanceStore = create(
         return { hours, revenue };
       },
 
-      resetAll: () => set({ engagements: [], awardedBadges: [], invoices: [], invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '' } }),
+      resetAll: () => set({ engagements: [], awardedBadges: [], invoices: [], quotes: [], invoiceSettings: { prefix: 'FAC', nextNumber: 1, issuerName: '', issuerAddress: '', issuerEmail: '', issuerPhone: '', taxIds: '', bankDetails: '', paymentTermsDays: 30, vatRate: 0, footer: '' } }),
     }),
     {
       name: 'audax-freelance',

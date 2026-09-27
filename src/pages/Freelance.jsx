@@ -14,6 +14,8 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, Empty
 import AccountSelect from '../components/common/AccountSelect';
 import BadgeList from '../components/common/BadgeList';
 import { tooltipStyle } from '../components/common/chart-theme';
+import QuotesTab from '../components/freelance/Quotes';
+import { RemindersCard, RevenueCard } from '../components/freelance/FreelanceMoney';
 
 const STATUS_COLOR = { Prospect: 'var(--text-secondary)', Actif: 'var(--success)', 'En pause': 'var(--warning)', 'Terminé': 'var(--accent-secondary)' };
 const INV_STATUS = { sent: ['À encaisser', 'var(--warning)'], paid: ['Payée', 'var(--success)'], cancelled: ['Annulée', 'var(--text-secondary)'] };
@@ -197,7 +199,8 @@ function EngagementDetail({ engagementId, onClose }) {
   const cur = engagement.currency;
   const unbilledH = (engagement.timeLogs || []).filter((t) => !t.invoiceId).reduce((a, t) => a + t.hours, 0);
   const outstanding = invoices.filter((i) => i.status === 'sent').reduce((a, i) => a + invoiceTotals(i).total, 0);
-  const tabs = [['heures', `Heures (${engagement.hoursLogged || 0} h)`], ['factures', `Factures (${invoices.length})`], ['paiements', `Paiements (${(engagement.payments || []).length})`], ['client', 'Client']];
+  const quoteCount = (store.quotes || []).filter((q) => q.engagementId === engagementId).length;
+  const tabs = [['heures', `Heures (${engagement.hoursLogged || 0} h)`], ['devis', `Devis (${quoteCount})`], ['factures', `Factures (${invoices.length})`], ['paiements', `Paiements (${(engagement.payments || []).length})`], ['client', 'Client']];
 
   return (
     <Modal open onClose={onClose} title={engagement.clientName} wide>
@@ -211,6 +214,8 @@ function EngagementDetail({ engagementId, onClose }) {
         <div className="flex gap-1 border-b border-line overflow-x-auto">
           {tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap cursor-pointer ${tab === k ? 'text-accent border-accent' : 'text-mute border-transparent hover:text-ink'}`}>{l}</button>)}
         </div>
+
+        {tab === 'devis' && <QuotesTab engagement={engagement} />}
 
         {tab === 'heures' && (
           <div className="space-y-3">
@@ -325,7 +330,7 @@ export default function Freelance() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Freelance</h1>
-          <p className="text-mute text-sm mt-1">Clients, heures, factures et paiements — chaque paiement reçu arrive dans Finances.</p>
+          <p className="text-mute text-sm mt-1">Devis, heures, factures, relances et paiements : chaque paiement reçu arrive dans Finances.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setSettingsOpen(true)}><span className="flex items-center gap-1.5"><Settings2 size={15} /> Facturation</span></Button>
@@ -340,15 +345,8 @@ export default function Freelance() {
         <Stat label="À encaisser" value={fmtMAD(outstanding)} color={overdue.length ? 'var(--error)' : outstanding ? 'var(--warning)' : undefined} sub={overdue.length ? `${overdue.length} facture(s) en retard` : `${open.length} facture(s) en attente`} />
       </div>
 
-      {overdue.length > 0 && (
-        <div className="rounded-xl border border-bad/40 bg-bad/5 px-4 py-3 text-sm space-y-1">
-          {overdue.map((i) => (
-            <button key={i.id} className="block text-left hover:underline cursor-pointer" onClick={() => setDetailId(i.engagementId)}>
-              Relancer <b>{engagements.find((e) => e.id === i.engagementId)?.clientName}</b> — {i.number}, échue le {fmtDateShort(i.dueDate)} ({fmtMoneyCur(invoiceTotals(i).total, i.currency)})
-            </button>
-          ))}
-        </div>
-      )}
+      <RemindersCard onOpenClient={setDetailId} />
+      <RevenueCard />
 
       {byClient.length > 1 && (
         <Card title="Heures par client">
