@@ -95,7 +95,7 @@ export const dailySlice = (set, get) => ({
         };
         set({ bodyComp: [...get().bodyComp.filter((b) => b.date !== entry.date), entry] });
         useSkillStore.getState().awardXP('health-discipline-lv1', 3, 'body composition logged');
-        toast(`Body composition logged${entryDate === todayKey() ? '' : ` for ${entryDate}`}`, 'success');
+        toast(`Mesures enregistrées${entryDate === todayKey() ? '' : ` pour le ${entryDate}`}`, 'success');
       },
       deleteBodyComp: (id) => set({ bodyComp: get().bodyComp.filter((b) => b.id !== id) }),
 
@@ -122,7 +122,7 @@ export const dailySlice = (set, get) => ({
         if (fulfillsPromptId) get().dismissPrompt(fulfillsPromptId);
         if (activities?.length) useHabitStore.getState().completeLinkedHabits('recovery', target);
         get().checkBadges();
-        toast(`Recovery logged${target === todayKey() ? '' : ` for ${target}`}`, 'success');
+        toast(`Récupération enregistrée${target === todayKey() ? '' : ` pour le ${target}`}`, 'success');
       },
 
       // ─────────── Water intake ───────────
@@ -170,7 +170,7 @@ export const dailySlice = (set, get) => ({
         const entry = { id: uid(), date: date || todayKey(), flow, symptoms, notes, endDate: null, createdAt: Date.now() };
         set({ cycleLogs: [...get().cycleLogs.filter((c) => c.date !== entry.date), entry].sort((a, b) => (a.date < b.date ? -1 : 1)) });
         useSkillStore.getState().awardXP('health-discipline-lv1', 3, 'cycle logged');
-        toast('Cycle entry logged', 'success');
+        toast('Cycle enregistré', 'success');
       },
       // Sets an end date on the most recent OPEN (no endDate yet) cycle log —
       // period length is optional context, not required for phase estimation.

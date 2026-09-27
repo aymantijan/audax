@@ -32,7 +32,7 @@ function recomputeUnlocks(skills, { silent = false } = {}) {
     for (const def of SKILL_TREE) {
       if (next[def.id]?.locked && def.prereqs.every((p) => (next[p]?.level ?? 0) >= 2)) {
         next[def.id] = { ...next[def.id], locked: false };
-        if (!silent) toast(`Skill unlocked: ${def.name}`, 'success');
+        if (!silent) toast(`Compétence débloquée : ${def.name}`, 'success');
         changed = true;
       }
     }
@@ -106,7 +106,7 @@ export const useSkillStore = create(
         };
         skills = recomputeUnlocks(skills);
         set({ skills, consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
-        if (leveled) toast(`${SKILL_MAP[skillId].name} leveled up to Lv${level}!`, 'success');
+        if (leveled) toast(`${SKILL_MAP[skillId].name} passe au niveau ${level} !`, 'success');
       },
 
       // Reverse XP (e.g. trade deleted). Simple subtraction, no de-leveling below current floor.
@@ -156,7 +156,7 @@ export const useSkillStore = create(
           const daysSince = (now - s.lastPracticed) / day;
           if (daysSince > 90 && s.level > 1 && s.decayStatus !== 'decayed') {
             skills[id] = { ...s, level: s.level - 1, decayStatus: 'decayed', lastPracticed: now };
-            toast(`${SKILL_MAP[id].name} decayed to Lv${s.level - 1} — practice it soon`, 'warning');
+            toast(`${SKILL_MAP[id].name} redescend au niveau ${s.level - 1} : pratique-la bientôt`, 'warning');
             changed = true;
           } else if (daysSince > 60 && s.level > 1 && s.decayStatus === 'active') {
             skills[id] = { ...s, decayStatus: 'warning' };

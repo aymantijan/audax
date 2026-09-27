@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
 import PoleSubNav from './PoleSubNav';
+import SampleBanner from './SampleBanner';
 import AssistantPanel from '../assistant/AssistantPanel';
 import { StudyTimerDock } from '../learning/StudyTimer';
 import { useAutoHabitSync } from '../../hooks/useAutoHabitSync';
@@ -21,6 +22,7 @@ export default function MainLayout() {
           hence md:pb-0. */}
       <main className="pt-16 pb-20 md:pb-0">
         <PoleSubNav />
+        <SampleBanner />
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* resetKey: navigating away from a crashed page auto-clears the error */}
           <ErrorBoundary resetKey={location.pathname}>

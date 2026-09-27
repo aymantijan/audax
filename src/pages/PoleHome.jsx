@@ -17,6 +17,8 @@ import { useEngineeringStore } from '../store/engineeringStore';
 import { fmtMAD, todayKey } from '../utils/formatters';
 import { MODULES, isModuleEnabled, poleByKey, withModule } from '../utils/navigation';
 import { toast } from '../store/uiStore';
+import { useNavigate } from 'react-router-dom';
+import { hasSampleFor, loadSample } from '../utils/sample-data';
 import { Button, Card } from '../components/common/ui';
 
 const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
@@ -107,12 +109,18 @@ function ModuleTile({ moduleKey }) {
 export default function PoleHome({ poleKey }) {
   const pole = poleByKey(poleKey);
   const { user, updateProfile } = useAuthStore();
+  const navigate = useNavigate();
   const on = pole.modules.filter((k) => isModuleEnabled(user, k));
   const off = pole.modules.filter((k) => !isModuleEnabled(user, k));
 
   const enable = (k) => {
     updateProfile({ enabledModules: withModule(user, k, true) });
     toast(`${MODULES[k].label} est activé.`, 'success');
+  };
+  const tryWithSample = (k) => {
+    updateProfile({ enabledModules: withModule(user, k, true) });
+    loadSample(k);
+    navigate(MODULES[k].to);
   };
 
   return (
@@ -144,9 +152,14 @@ export default function PoleHome({ poleKey }) {
                     <div className="text-sm font-medium">{m.label}</div>
                     {m.desc && <div className="text-xs text-mute">{m.desc}</div>}
                   </div>
-                  <Button variant="secondary" className="!px-3 !py-1.5 text-xs shrink-0" onClick={() => enable(k)}>
-                    <span className="flex items-center gap-1.5"><Plus size={13} /> Activer</span>
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    {hasSampleFor(k) && (
+                      <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => tryWithSample(k)}>Essayer avec un exemple</Button>
+                    )}
+                    <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => enable(k)}>
+                      <span className="flex items-center gap-1.5"><Plus size={13} /> Activer</span>
+                    </Button>
+                  </div>
                 </li>
               );
             })}

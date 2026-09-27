@@ -54,7 +54,7 @@ export const workoutsSlice = (set, get) => ({
         // for something already logged.
         useHabitStore.getState().completeLinkedHabits(w.type === 'strength' ? 'strength' : 'cardio', w.date);
         get().checkBadges();
-        toast(`Workout logged: ${w.exercise || w.type}`, 'success');
+        toast(`Séance enregistrée : ${w.exercise || w.type}`, 'success');
         if (newPR) toast(`🏆 New PR: ${newPR.exercise} — ${newPR.weight}kg!`, 'success');
       },
 
@@ -88,7 +88,7 @@ export const workoutsSlice = (set, get) => ({
             createdAt: Date.now(),
           }));
         if (!entries.length) {
-          toast('Add at least one exercise with a set before finishing the session.', 'warning');
+          toast('Ajoute au moins un exercice avec une série avant de terminer la séance.', 'warning');
           return;
         }
         // PR detection BEFORE inserting — only celebrates an exercise that
@@ -120,7 +120,7 @@ export const workoutsSlice = (set, get) => ({
         // logger already did.
         useHabitStore.getState().completeLinkedHabits('strength', date);
         get().checkBadges();
-        toast(`Session logged: ${entries.length} exercise${entries.length !== 1 ? 's' : ''}`, 'success');
+        toast(`Séance enregistrée : ${entries.length} exercice${entries.length !== 1 ? 's' : ''}`, 'success');
         for (const pr of newPRs) toast(`🏆 New PR: ${pr.exercise} — ${pr.weight}kg!`, 'success');
       },
 
@@ -152,7 +152,7 @@ export const workoutsSlice = (set, get) => ({
             };
           }),
         });
-        toast('Workout updated', 'success');
+        toast('Séance modifiée', 'success');
       },
 
       // Edits a gym session: replaces every `workouts` entry sharing this
@@ -181,10 +181,10 @@ export const workoutsSlice = (set, get) => ({
             createdAt: original?.createdAt ?? Date.now(),
           }));
         if (!entries.length) {
-          toast('A session needs at least one exercise with a set.', 'warning');
+          toast('Une séance doit contenir au moins un exercice avec une série.', 'warning');
           return;
         }
         set({ workouts: [...others, ...entries] });
-        toast('Session updated', 'success');
+        toast('Séance modifiée', 'success');
       },
 });

@@ -83,7 +83,7 @@ export const useDealsStore = create(
         const award = useSkillStore.getState().awardXP;
         const awards = dealLogAwards();
         for (const { skillId, amount } of awards) award(skillId, amount, `deal: ${deal.name}`);
-        toast(`Deal logged: ${deal.name} · +${awards.reduce((a, x) => a + x.amount, 0)} XP · log tasks to earn more`, 'success');
+        toast(`Deal ajouté : ${deal.name} · +${awards.reduce((a, x) => a + x.amount, 0)} XP · ajoute ses tâches pour progresser`, 'success');
         get().checkBadges();
         return deal.id;
       },
@@ -121,7 +121,7 @@ export const useDealsStore = create(
             if (t.status === 'done') remove(t.skillId, t.xpAmount, 'deal deleted');
           }
         }
-        toast('Deal deleted', 'info');
+        toast('Deal supprimé', 'info');
       },
 
       addTask: (dealId, data) => {
@@ -138,7 +138,7 @@ export const useDealsStore = create(
           googleEventLink: null,
         };
         set({ deals: get().deals.map((d) => (d.id === dealId ? { ...d, tasks: [...(d.tasks || []), task], updatedAt: Date.now() } : d)) });
-        toast(`Task added: ${task.title}`, 'info');
+        toast(`Tâche ajoutée : ${task.title}`, 'info');
         return task.id;
       },
 
@@ -181,7 +181,7 @@ export const useDealsStore = create(
         const { awardXP, removeXP } = useSkillStore.getState();
         if (status === 'done') {
           awardXP(task.skillId, task.xpAmount, `task: ${task.title} (${deal.name})`);
-          toast(`Task complete: ${task.title} · +${task.xpAmount} ${SKILL_MAP[task.skillId]?.name || ''} XP`, 'success');
+          toast(`Tâche terminée : ${task.title} · +${task.xpAmount} XP ${SKILL_MAP[task.skillId]?.name || ''}`, 'success');
         } else if (task.status === 'done') {
           removeXP(task.skillId, task.xpAmount, 'task reopened');
         }
@@ -203,7 +203,7 @@ export const useDealsStore = create(
         if (task.status === 'done') useSkillStore.getState().removeXP(task.skillId, task.xpAmount, 'task deleted');
         if (task.googleEventId) deleteCalendarEvent(task.googleEventId);
         set({ deals: get().deals.map((d) => (d.id === dealId ? { ...d, tasks: d.tasks.filter((t) => t.id !== taskId), updatedAt: Date.now() } : d)) });
-        toast('Task deleted', 'info');
+        toast('Tâche supprimée', 'info');
       },
 
       // Records the Google Calendar event a task's "Schedule" action created.
