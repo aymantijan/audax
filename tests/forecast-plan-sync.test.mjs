@@ -79,3 +79,14 @@ test('first sync of a newly synced store merges both devices instead of overwrit
   assert.deepEqual(m.engagements.map((e) => `${e.id}:${e.clientName}`), ['a:A', 'b:B-local', 'c:C']); // union, newer wins
   assert.deepEqual(m.invoiceSettings, { prefix: 'FAC', nextNumber: 4, footer: 'x' }); // cloud wins on conflicts, local fills gaps
 });
+
+test('server Santé reminders fire once in their 5-minute window, in the user’s timezone', async () => {
+  const { dueHealthReminders } = await import('../api/class-reminders.js');
+  const health = { healthProfile: { reminderPrefs: { timezone: 'Africa/Casablanca', mealWindows: ['12:30'], bedtimeTarget: '23:00' } } };
+  const at = (iso) => dueHealthReminders(health, new Date(iso)).map((x) => x.tag);
+  assert.deepEqual(at('2026-09-28T11:29:00Z'), []); // 12:29 local
+  assert.deepEqual(at('2026-09-28T11:30:00Z'), ['meal-12:30']); // 12:30
+  assert.deepEqual(at('2026-09-28T11:34:00Z'), ['meal-12:30']);
+  assert.deepEqual(at('2026-09-28T11:35:00Z'), []); // next run: already sent
+  assert.deepEqual(at('2026-09-28T22:00:00Z'), ['bedtime']);
+});

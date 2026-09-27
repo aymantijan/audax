@@ -2,6 +2,11 @@ import { useEffect } from 'react';
 import { useHealthStore } from '../store/healthStore';
 import { useHabitStore } from '../store/habitStore';
 import { todayKey } from '../utils/formatters';
+import { getPushSubscription } from '../services/push';
+
+// Meals & bedtime also go out by Web Push (api/class-reminders.js, every 5 min):
+// with a subscription, skip the local notification for those two.
+let pushActive = false;
 
 const CHECK_INTERVAL_MS = 60 * 1000; // 1 min — tight enough to catch meal/water windows on time
 const MORNING_HOUR = 8;
@@ -16,6 +21,7 @@ const MEAL_WINDOW_MIN = 10; // fire within ±10 min of a scheduled meal time, on
 // backstop — see that file's header for why it can't replace this one.
 export function useHealthReminders() {
   useEffect(() => {
+    getPushSubscription().then((sub) => { pushActive = !!sub; }).catch(() => {});
     const check = () => {
       const state = useHealthStore.getState();
       const { reminders, workouts, healthProfile, markMorningReminderShown, markWorkoutReminderShown, markWaterReminderShown, markMealReminderShown, markBedtimeReminderShown, getChronoSummary } = state;
@@ -56,7 +62,7 @@ export function useHealthReminders() {
         const [h, m] = time.split(':').map(Number);
         const target = h * 60 + m;
         if (Math.abs(nowMinutes - target) <= MEAL_WINDOW_MIN) {
-          new Notification('AUDAX Health', { body: `C'est l'heure prévue pour ton repas (${time}).` });
+          if (!pushActive) new Notification('AUDAX Health', { body: `C'est l'heure prévue pour ton repas (${time}).` });
           markMealReminderShown(key);
         }
       });
@@ -66,7 +72,7 @@ export function useHealthReminders() {
         const [h, m] = prefs.bedtimeTarget.split(':').map(Number);
         const target = h * 60 + m;
         if (Math.abs(nowMinutes - target) <= MEAL_WINDOW_MIN) {
-          new Notification('AUDAX Health', { body: `Heure de coucher visée (${prefs.bedtimeTarget}) — la régularité du sommeil compte autant que sa durée.` });
+          if (!pushActive) new Notification('AUDAX Health', { body: `Heure de coucher visée (${prefs.bedtimeTarget}) — la régularité du sommeil compte autant que sa durée.` });
           markBedtimeReminderShown();
         }
       }
