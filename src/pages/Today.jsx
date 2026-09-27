@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Fragment, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
@@ -31,11 +31,15 @@ import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/fo
 import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/ui';
 import { NextClassBanner } from '../components/learning/Attendance';
 import BriefingCard from '../components/today/BriefingCard';
+import { arrangeCards } from '../utils/today-layout';
+import { TodayTabs, OrganizeButton } from '../components/today/TodayLayoutControls';
+import Dashboard from './Dashboard';
 import ExamDayCard from '../components/learning/ExamDayCard';
 import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 
 export default function Today() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const today = todayKey();
 
@@ -135,387 +139,451 @@ export default function Today() {
   const habitsRemaining = dueToday.length - doneToday.length;
   const allHabitsDone = dueToday.length > 0 && habitsRemaining === 0;
 
-  return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Bonjour, {user?.name}</h1>
-          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — ce qu'il te reste à faire aujourd'hui.</p>
-        </div>
-        <Link to="/dashboard" className="text-sm text-accent hover:underline flex items-center gap-1 shrink-0">
-          Bilan complet <ArrowRight size={14} />
-        </Link>
-      </div>
-
-      <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
-
-      <ExamDayCard />
-
-      <NudgeCard />
-
-      {/* Sunday and Monday: time to look back at the week */}
-      {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}
-
-      {/* ---- Class check-in (attendance habit) ---- */}
-      <NextClassBanner />
-
-      {/* ---- Habits: the primary daily checklist ---- */}
-      <Card
-        title="Habitudes du jour"
-        action={<span className="text-xs text-mute">{doneToday.length}/{dueToday.length}</span>}
-      >
-        {dueToday.length ? (
-          <ul className="space-y-2">
-            {dueToday.map((h) => {
-              const done = logs.some((l) => l.habitId === h.id && l.date === today && l.completed);
-              const streak = habitStreak(h.id, logs, today, h);
-              return (
-                <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-                  <button type="button" aria-label={done ? `Décocher ${h.name}` : `Cocher ${h.name}`} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
-                    {done ? <CheckCircle2 size={19} /> : <Circle size={19} className="text-mute" />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
-                    <div className="text-[11px] text-mute">
-                      {HABIT_CATEGORY_LABELS[h.category] || h.category}
-                      {h.mandatory ? ' · obligatoire' : ''}
-                      {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
-                      {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
-                    </div>
-                  </div>
-                  {streak >= 3 && <Flame size={14} className="text-warn shrink-0" />}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <EmptyState>Aucune habitude programmée aujourd'hui.</EmptyState>
-        )}
-        {allHabitsDone && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-good">
-            <Sparkles size={15} /> Tout est fait — protège ta série demain.
-          </div>
-        )}
-      </Card>
-
-      {/* ---- Morning check-in ---- */}
-      <Card title="Check-in du matin">
-        {todayEnergyLog ? (
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <div className="text-mute text-xs">Énergie</div>
-              <div className="text-lg font-semibold">{todayEnergyLog.energyStartLevel}/10</div>
-            </div>
-            <div>
-              <div className="text-mute text-xs">Sommeil</div>
-              <div className="text-lg font-semibold">{todayEnergyLog.sleepData?.sleepQualityScore ?? '—'}/10</div>
-            </div>
-            <div>
-              <div className="text-mute text-xs">Stress</div>
-              <div className="text-lg font-semibold">{todayEnergyLog.stressLevel}/10</div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm text-mute">
-              <Sunrise size={16} /> Pas encore fait aujourd'hui.
-            </div>
-            <Link to="/habits">
-              <Button className="!px-3 !py-1.5 text-xs">Faire le check-in</Button>
-            </Link>
-          </div>
-        )}
-      </Card>
-
-      {/* ---- Trading ---- */}
-      {/* BUGFIX (2026-08-26): same module-gating bug already fixed on Dashboard.jsx
-          and Navbar/MobileTabBar — this card rendered unconditionally, showing the
-          account/P&L/risk banners to a user who explicitly turned Trading off in
-          Settings/Onboarding. Today.jsx already gates its Engineering section this
-          way (see below); Trading never had the equivalent check. */}
-      {(user?.enabledModules?.trading ?? true) && (
-      <Card
-        title="Trading"
-        action={
-          <Link to="/trading" className="text-xs text-accent hover:underline flex items-center gap-1">
-            Ouvrir <ChevronRight size={12} />
-          </Link>
-        }
-      >
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2 text-sm">
-            <Wallet size={16} className="text-mute" />
-            <span className="text-ink font-medium">{activeAccount?.name || 'Aucun compte'}</span>
-            <span className="text-mute">{fmtMoney(accountValue, 0, currency)}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-sm">
-            {monthStats.totalPnl >= 0 ? <TrendingUp size={15} className="text-good" /> : <TrendingDown size={15} className="text-bad" />}
-            <span className={monthStats.totalPnl >= 0 ? 'text-good' : 'text-bad'}>{fmtSignedMoney(monthStats.totalPnl, currency)}</span>
-            <span className="text-mute text-xs">ce mois</span>
-          </div>
-          <div className="text-sm text-mute">{tradesToday.length} trade{tradesToday.length !== 1 ? 's' : ''} aujourd'hui</div>
-        </div>
-        {(unjournaledToday > 0 || riskBreaches > 0) && (
-          <div className="mt-3 space-y-1.5">
-            {riskBreaches > 0 && (
-              <div className="flex items-center gap-2 text-xs text-bad">
-                <AlertTriangle size={13} /> {riskBreaches} règle{riskBreaches !== 1 ? 's' : ''} de risque en dépassement — vérifie ton compte.
-              </div>
-            )}
-            {unjournaledToday > 0 && (
-              <div className="flex items-center gap-2 text-xs text-warn">
-                <AlertTriangle size={13} /> {unjournaledToday} trade{unjournaledToday !== 1 ? 's' : ''} du jour sans journal.
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
-      )}
-
-      {/* ---- Finance: échéances ---- */}
-      {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
-        <Card title="Échéances">
-          <ul className="space-y-2">
-            {overdueEcheances.map((e) => (
-              <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} overdue accountingStore={accountingStore} />
-            ))}
-            {upcomingEcheances.map((e) => (
-              <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} accountingStore={accountingStore} />
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {/* ---- Health ---- */}
-      <Card
-        title="Santé"
-        action={
-          <Link to="/health" className="text-xs text-accent hover:underline flex items-center gap-1">
-            Ouvrir <ChevronRight size={12} />
-          </Link>
-        }
-      >
-        <div className="flex items-center gap-6 text-sm flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <HeartPulse size={15} className={workedOutToday ? 'text-good' : 'text-mute'} />
-            <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? 'Séance enregistrée' : 'Pas de séance'}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Receipt size={15} className={loggedMealToday ? 'text-good' : 'text-mute'} />
-            <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? 'Repas enregistré' : 'Aucun repas enregistré'}</span>
-          </div>
-        </div>
-        {pendingPrompts.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {pendingPrompts.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
-                <span>Enregistrer « {p.habitName} » comme activité santé ?</span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Link to="/health">
-                    <Button className="!px-2.5 !py-1 text-xs">Enregistrer</Button>
-                  </Link>
-                  <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
-                    Ignorer
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {/* ---- Engineering ---- */}
-      {(user?.enabledModules?.engineering ?? false) && (
+  // Every card of the page, in the default order; the person can reorder or hide
+  // them (Organiser), saved in their profile so every device shows the same page.
+  const cards = [
+    { id: 'briefing', label: 'Briefing du jour', node: (
+      <>
+        <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
+      </>
+    ) },
+    { id: 'exam', label: 'Mode examen', node: (
+      <>
+        <ExamDayCard />
+      </>
+    ) },
+    { id: 'nudge', label: 'Suggestions de modules', node: (
+      <>
+        <NudgeCard />
+      </>
+    ) },
+    { id: 'week', label: 'Bilan de la semaine (dimanche et lundi)', node: (
+      <>
+        {/* Sunday and Monday: time to look back at the week */}
+        {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}
+      </>
+    ) },
+    { id: 'nextClass', label: 'Prochain cours', node: (
+      <>
+        {/* ---- Class check-in (attendance habit) ---- */}
+        <NextClassBanner />
+      </>
+    ) },
+    { id: 'habits', label: 'Habitudes du jour', node: (
+      <>
+        {/* ---- Habits: the primary daily checklist ---- */}
         <Card
-          title="Ingénierie"
+          title="Habitudes du jour"
+          action={<span className="text-xs text-mute">{doneToday.length}/{dueToday.length}</span>}
+        >
+          {dueToday.length ? (
+            <ul className="space-y-2">
+              {dueToday.map((h) => {
+                const done = logs.some((l) => l.habitId === h.id && l.date === today && l.completed);
+                const streak = habitStreak(h.id, logs, today, h);
+                return (
+                  <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
+                    <button type="button" aria-label={done ? `Décocher ${h.name}` : `Cocher ${h.name}`} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
+                      {done ? <CheckCircle2 size={19} /> : <Circle size={19} className="text-mute" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
+                      <div className="text-[11px] text-mute">
+                        {HABIT_CATEGORY_LABELS[h.category] || h.category}
+                        {h.mandatory ? ' · obligatoire' : ''}
+                        {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
+                        {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
+                      </div>
+                    </div>
+                    {streak >= 3 && <Flame size={14} className="text-warn shrink-0" />}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyState>Aucune habitude programmée aujourd'hui.</EmptyState>
+          )}
+          {allHabitsDone && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-good">
+              <Sparkles size={15} /> Tout est fait — protège ta série demain.
+            </div>
+          )}
+        </Card>
+      </>
+    ) },
+    { id: 'checkin', label: 'Check-in du matin', node: (
+      <>
+        {/* ---- Morning check-in ---- */}
+        <Card title="Check-in du matin">
+          {todayEnergyLog ? (
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-mute text-xs">Énergie</div>
+                <div className="text-lg font-semibold">{todayEnergyLog.energyStartLevel}/10</div>
+              </div>
+              <div>
+                <div className="text-mute text-xs">Sommeil</div>
+                <div className="text-lg font-semibold">{todayEnergyLog.sleepData?.sleepQualityScore ?? '—'}/10</div>
+              </div>
+              <div>
+                <div className="text-mute text-xs">Stress</div>
+                <div className="text-lg font-semibold">{todayEnergyLog.stressLevel}/10</div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-mute">
+                <Sunrise size={16} /> Pas encore fait aujourd'hui.
+              </div>
+              <Link to="/habits">
+                <Button className="!px-3 !py-1.5 text-xs">Faire le check-in</Button>
+              </Link>
+            </div>
+          )}
+        </Card>
+      </>
+    ) },
+    { id: 'trading', label: 'Trading', node: (
+      <>
+        {/* ---- Trading ---- */}
+        {/* BUGFIX (2026-08-26): same module-gating bug already fixed on Dashboard.jsx
+            and Navbar/MobileTabBar — this card rendered unconditionally, showing the
+            account/P&L/risk banners to a user who explicitly turned Trading off in
+            Settings/Onboarding. Today.jsx already gates its Engineering section this
+            way (see below); Trading never had the equivalent check. */}
+        {(user?.enabledModules?.trading ?? true) && (
+        <Card
+          title="Trading"
           action={
-            <Link to="/engineering" className="text-xs text-accent hover:underline flex items-center gap-1">
+            <Link to="/trading" className="text-xs text-accent hover:underline flex items-center gap-1">
+              Ouvrir <ChevronRight size={12} />
+            </Link>
+          }
+        >
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-sm">
+              <Wallet size={16} className="text-mute" />
+              <span className="text-ink font-medium">{activeAccount?.name || 'Aucun compte'}</span>
+              <span className="text-mute">{fmtMoney(accountValue, 0, currency)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-sm">
+              {monthStats.totalPnl >= 0 ? <TrendingUp size={15} className="text-good" /> : <TrendingDown size={15} className="text-bad" />}
+              <span className={monthStats.totalPnl >= 0 ? 'text-good' : 'text-bad'}>{fmtSignedMoney(monthStats.totalPnl, currency)}</span>
+              <span className="text-mute text-xs">ce mois</span>
+            </div>
+            <div className="text-sm text-mute">{tradesToday.length} trade{tradesToday.length !== 1 ? 's' : ''} aujourd'hui</div>
+          </div>
+          {(unjournaledToday > 0 || riskBreaches > 0) && (
+            <div className="mt-3 space-y-1.5">
+              {riskBreaches > 0 && (
+                <div className="flex items-center gap-2 text-xs text-bad">
+                  <AlertTriangle size={13} /> {riskBreaches} règle{riskBreaches !== 1 ? 's' : ''} de risque en dépassement — vérifie ton compte.
+                </div>
+              )}
+              {unjournaledToday > 0 && (
+                <div className="flex items-center gap-2 text-xs text-warn">
+                  <AlertTriangle size={13} /> {unjournaledToday} trade{unjournaledToday !== 1 ? 's' : ''} du jour sans journal.
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+        )}
+      </>
+    ) },
+    { id: 'echeances', label: 'Échéances', node: (
+      <>
+        {/* ---- Finance: échéances ---- */}
+        {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
+          <Card title="Échéances">
+            <ul className="space-y-2">
+              {overdueEcheances.map((e) => (
+                <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} overdue accountingStore={accountingStore} />
+              ))}
+              {upcomingEcheances.map((e) => (
+                <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} accountingStore={accountingStore} />
+              ))}
+            </ul>
+          </Card>
+        )}
+      </>
+    ) },
+    { id: 'health', label: 'Santé', node: (
+      <>
+        {/* ---- Health ---- */}
+        <Card
+          title="Santé"
+          action={
+            <Link to="/health" className="text-xs text-accent hover:underline flex items-center gap-1">
               Ouvrir <ChevronRight size={12} />
             </Link>
           }
         >
           <div className="flex items-center gap-6 text-sm flex-wrap">
             <div className="flex items-center gap-1.5">
-              <FlaskConical size={15} className={loggedLabToday ? 'text-good' : 'text-mute'} />
-              <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience enregistrée' : 'Aucune expérience enregistrée'}</span>
+              <HeartPulse size={15} className={workedOutToday ? 'text-good' : 'text-mute'} />
+              <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? 'Séance enregistrée' : 'Pas de séance'}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-mute">{activeEngProjects.length} projet{activeEngProjects.length !== 1 ? 's' : ''} en cours</span>
+              <Receipt size={15} className={loggedMealToday ? 'text-good' : 'text-mute'} />
+              <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? 'Repas enregistré' : 'Aucun repas enregistré'}</span>
             </div>
           </div>
-          {activeEngProjects.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {activeEngProjects.slice(0, 3).map((p) => (
-                <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                  <Link to={`/engineering/${p.id}`} className="hover:text-accent">{p.name}</Link>
-                  <span className="text-xs text-mute">{ENGINEERING_PROJECT_STAGES[p.stageIndex]}</span>
+          {pendingPrompts.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {pendingPrompts.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
+                  <span>Enregistrer « {p.habitName} » comme activité santé ?</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Link to="/health">
+                      <Button className="!px-2.5 !py-1 text-xs">Enregistrer</Button>
+                    </Link>
+                    <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
+                      Ignorer
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-          {deadlineAlerts.length > 0 && (
-            <div className="mt-3 space-y-1.5">
-              {deadlineAlerts.map(({ project, overdue }) => (
-                <div key={project.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
-                  <AlertTriangle size={13} />
-                  <Link to={`/engineering/${project.id}`} className="hover:underline">{project.name}</Link>
-                  {overdue ? ` — échéance dépassée (${fmtDate(project.deadline)})` : ` — échéance le ${fmtDate(project.deadline)}`}
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
-      )}
-
-      {/* ---- Deals & Business ---- */}
-      {((user?.enabledModules?.pe ?? true) || (user?.enabledModules?.business ?? true)) && (ongoingDeals.length > 0 || businesses.length > 0) && (
-        <Card title="Private equity & business">
-          <div className="flex items-center gap-6 text-sm flex-wrap">
-            {(user?.enabledModules?.pe ?? true) && (
-              <Link to="/deals" className="flex items-center gap-1.5 hover:text-accent">
-                <Handshake size={15} className="text-mute" />
-                <span>{ongoingDeals.length} deal{ongoingDeals.length !== 1 ? 's' : ''} en cours{openDealTasks > 0 ? ` · ${openDealTasks} tâche${openDealTasks !== 1 ? 's' : ''} ouverte${openDealTasks !== 1 ? 's' : ''}` : ''}</span>
+      </>
+    ) },
+    { id: 'engineering', label: 'Ingénierie', node: (
+      <>
+        {/* ---- Engineering ---- */}
+        {(user?.enabledModules?.engineering ?? false) && (
+          <Card
+            title="Ingénierie"
+            action={
+              <Link to="/engineering" className="text-xs text-accent hover:underline flex items-center gap-1">
+                Ouvrir <ChevronRight size={12} />
               </Link>
-            )}
-            {(user?.enabledModules?.business ?? true) && (
-              <Link to="/businesses" className="flex items-center gap-1.5 hover:text-accent">
-                <Rocket size={15} className="text-mute" />
-                <span>{activeBusinesses.length} business actif{activeBusinesses.length !== 1 ? 's' : ''} ({businesses.length} suivi{businesses.length !== 1 ? 's' : ''})</span>
-              </Link>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* ---- Networking / Career / Content / Focus ---- */}
-      {(() => {
-        const netOn = user?.enabledModules?.networking ?? false;
-        const careerOn = user?.enabledModules?.career ?? false;
-        const contentOn = user?.enabledModules?.content ?? false;
-        const focusOn = user?.enabledModules?.focus ?? false;
-        const anyOn = netOn || careerOn || contentOn || focusOn;
-        const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || focusStore.sessions.length > 0;
-        if (!anyOn || !anyData) return null;
-        return (
-          <Card title="Réseau, carrière, contenu & concentration">
+            }
+          >
             <div className="flex items-center gap-6 text-sm flex-wrap">
-              {netOn && contacts.length > 0 && (
-                <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
-                  <Users size={15} className="text-mute" />
-                  <span>{contacts.length} contact{contacts.length !== 1 ? 's' : ''}{followUpAlerts.length > 0 ? ` · ${followUpAlerts.length} relance${followUpAlerts.length !== 1 ? 's' : ''}` : ''}</span>
-                </Link>
-              )}
-              {careerOn && applications.length > 0 && (
-                <Link to="/career" className="flex items-center gap-1.5 hover:text-accent">
-                  <Briefcase size={15} className="text-mute" />
-                  <span>{openApplications.length} candidature{openApplications.length !== 1 ? 's' : ''} en cours</span>
-                </Link>
-              )}
-              {contentOn && contentPosts.length > 0 && (
-                <Link to="/content" className="flex items-center gap-1.5 hover:text-accent">
-                  <Megaphone size={15} className="text-mute" />
-                  <span>{contentPosts.length} publication{contentPosts.length !== 1 ? 's' : ''}</span>
-                </Link>
-              )}
-              {focusOn && focusStore.sessions.length > 0 && (
-                <Link to="/focus" className="flex items-center gap-1.5 hover:text-accent">
-                  <Timer size={15} className="text-mute" />
-                  <span>{todayFocusMinutes > 0 ? `${todayFocusMinutes} min aujourd'hui` : 'Aucune session aujourd\'hui'}</span>
-                </Link>
-              )}
+              <div className="flex items-center gap-1.5">
+                <FlaskConical size={15} className={loggedLabToday ? 'text-good' : 'text-mute'} />
+                <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience enregistrée' : 'Aucune expérience enregistrée'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-mute">{activeEngProjects.length} projet{activeEngProjects.length !== 1 ? 's' : ''} en cours</span>
+              </div>
             </div>
-            {followUpAlerts.length > 0 && (
+            {activeEngProjects.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {activeEngProjects.slice(0, 3).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
+                    <Link to={`/engineering/${p.id}`} className="hover:text-accent">{p.name}</Link>
+                    <span className="text-xs text-mute">{ENGINEERING_PROJECT_STAGES[p.stageIndex]}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {deadlineAlerts.length > 0 && (
               <div className="mt-3 space-y-1.5">
-                {followUpAlerts.map(({ contact, overdue }) => (
-                  <div key={contact.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
+                {deadlineAlerts.map(({ project, overdue }) => (
+                  <div key={project.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
                     <AlertTriangle size={13} />
-                    <Link to="/networking" className="hover:underline">{contact.name}</Link>
-                    {overdue ? ' — relance en retard' : ' — relance à venir'}
+                    <Link to={`/engineering/${project.id}`} className="hover:underline">{project.name}</Link>
+                    {overdue ? ` — échéance dépassée (${fmtDate(project.deadline)})` : ` — échéance le ${fmtDate(project.deadline)}`}
                   </div>
                 ))}
               </div>
             )}
           </Card>
-        );
-      })()}
-
-      {/* ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) */}
-      {(() => {
-        const fundraisingOn = user?.enabledModules?.fundraising ?? false;
-        const freelanceOn = user?.enabledModules?.freelance ?? false;
-        const creativeOn = user?.enabledModules?.creative ?? false;
-        const realEstateOn = user?.enabledModules?.realEstate ?? false;
-        const anyOn = fundraisingOn || freelanceOn || creativeOn || realEstateOn;
-        const anyData = investors.length > 0 || engagements.length > 0 || creativeWorks.length > 0 || properties.length > 0;
-        if (!anyOn || !anyData) return null;
-        return (
-          <Card title="Levée de fonds, freelance, création & immobilier">
+        )}
+      </>
+    ) },
+    { id: 'business', label: 'Private equity et projets', node: (
+      <>
+        {/* ---- Deals & Business ---- */}
+        {((user?.enabledModules?.pe ?? true) || (user?.enabledModules?.business ?? true)) && (ongoingDeals.length > 0 || businesses.length > 0) && (
+          <Card title="Private equity & business">
             <div className="flex items-center gap-6 text-sm flex-wrap">
-              {fundraisingOn && investors.length > 0 && (
-                <Link to="/fundraising" className="flex items-center gap-1.5 hover:text-accent">
+              {(user?.enabledModules?.pe ?? true) && (
+                <Link to="/deals" className="flex items-center gap-1.5 hover:text-accent">
+                  <Handshake size={15} className="text-mute" />
+                  <span>{ongoingDeals.length} deal{ongoingDeals.length !== 1 ? 's' : ''} en cours{openDealTasks > 0 ? ` · ${openDealTasks} tâche${openDealTasks !== 1 ? 's' : ''} ouverte${openDealTasks !== 1 ? 's' : ''}` : ''}</span>
+                </Link>
+              )}
+              {(user?.enabledModules?.business ?? true) && (
+                <Link to="/businesses" className="flex items-center gap-1.5 hover:text-accent">
                   <Rocket size={15} className="text-mute" />
-                  <span>{openInvestors.length} investisseur{openInvestors.length !== 1 ? 's' : ''} en cours</span>
-                </Link>
-              )}
-              {freelanceOn && engagements.length > 0 && (
-                <Link to="/freelance" className="flex items-center gap-1.5 hover:text-accent">
-                  <Briefcase size={15} className="text-mute" />
-                  <span>{activeEngagements.length} client{activeEngagements.length !== 1 ? 's' : ''} actif{activeEngagements.length !== 1 ? 's' : ''}</span>
-                </Link>
-              )}
-              {creativeOn && creativeWorks.length > 0 && (
-                <Link to="/creative" className="flex items-center gap-1.5 hover:text-accent">
-                  <Palette size={15} className="text-mute" />
-                  <span>{inProgressWorks.length} œuvre{inProgressWorks.length !== 1 ? 's' : ''} en cours</span>
-                </Link>
-              )}
-              {realEstateOn && properties.length > 0 && (
-                <Link to="/real-estate" className="flex items-center gap-1.5 hover:text-accent">
-                  <Building2 size={15} className="text-mute" />
-                  <span>{ownedProperties.length} bien{ownedProperties.length !== 1 ? 's' : ''} possédé{ownedProperties.length !== 1 ? 's' : ''}</span>
+                  <span>{activeBusinesses.length} business actif{activeBusinesses.length !== 1 ? 's' : ''} ({businesses.length} suivi{businesses.length !== 1 ? 's' : ''})</span>
                 </Link>
               )}
             </div>
           </Card>
-        );
-      })()}
-
-      {/* ---- Learning & reading ---- */}
-      {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (
-        <Card title="Apprentissage & lecture">
-          <div className="space-y-3">
-            {focusCourse && (
-              <Link
-                to={`/learning/course/${focusCourse.id}`}
-                className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5 hover:border-accent transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <BookOpen size={15} className="text-mute shrink-0" />
-                  <span className="text-sm truncate">{focusCourse.name}</span>
-                </div>
-                <Badge color="var(--accent-primary)">{Math.round(calculateCourseProgress(focusCourse))}%</Badge>
-              </Link>
-            )}
-            {activeBookInfo && (
-              <div className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <BookOpen size={15} className="text-mute shrink-0" />
-                  <span className="text-sm truncate">{activeBookInfo.title}</span>
-                </div>
-                {!readToday ? (
-                  <Link to="/learning/readings" className="text-xs text-accent hover:underline shrink-0">
-                    Lire aujourd'hui
+        )}
+      </>
+    ) },
+    { id: 'career', label: 'Réseau, carrière et concentration', node: (
+      <>
+        {/* ---- Networking / Career / Content / Focus ---- */}
+        {(() => {
+          const netOn = user?.enabledModules?.networking ?? false;
+          const careerOn = user?.enabledModules?.career ?? false;
+          const contentOn = user?.enabledModules?.content ?? false;
+          const focusOn = user?.enabledModules?.focus ?? false;
+          const anyOn = netOn || careerOn || contentOn || focusOn;
+          const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || focusStore.sessions.length > 0;
+          if (!anyOn || !anyData) return null;
+          return (
+            <Card title="Réseau, carrière, contenu & concentration">
+              <div className="flex items-center gap-6 text-sm flex-wrap">
+                {netOn && contacts.length > 0 && (
+                  <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
+                    <Users size={15} className="text-mute" />
+                    <span>{contacts.length} contact{contacts.length !== 1 ? 's' : ''}{followUpAlerts.length > 0 ? ` · ${followUpAlerts.length} relance${followUpAlerts.length !== 1 ? 's' : ''}` : ''}</span>
                   </Link>
-                ) : (
-                  <span className="text-xs text-good shrink-0 flex items-center gap-1">
-                    <Flame size={12} /> série {readingStreak}j
-                  </span>
+                )}
+                {careerOn && applications.length > 0 && (
+                  <Link to="/career" className="flex items-center gap-1.5 hover:text-accent">
+                    <Briefcase size={15} className="text-mute" />
+                    <span>{openApplications.length} candidature{openApplications.length !== 1 ? 's' : ''} en cours</span>
+                  </Link>
+                )}
+                {contentOn && contentPosts.length > 0 && (
+                  <Link to="/content" className="flex items-center gap-1.5 hover:text-accent">
+                    <Megaphone size={15} className="text-mute" />
+                    <span>{contentPosts.length} publication{contentPosts.length !== 1 ? 's' : ''}</span>
+                  </Link>
+                )}
+                {focusOn && focusStore.sessions.length > 0 && (
+                  <Link to="/focus" className="flex items-center gap-1.5 hover:text-accent">
+                    <Timer size={15} className="text-mute" />
+                    <span>{todayFocusMinutes > 0 ? `${todayFocusMinutes} min aujourd'hui` : 'Aucune session aujourd\'hui'}</span>
+                  </Link>
                 )}
               </div>
-            )}
-          </div>
-        </Card>
-      )}
+              {followUpAlerts.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {followUpAlerts.map(({ contact, overdue }) => (
+                    <div key={contact.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
+                      <AlertTriangle size={13} />
+                      <Link to="/networking" className="hover:underline">{contact.name}</Link>
+                      {overdue ? ' — relance en retard' : ' — relance à venir'}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          );
+        })()}
+      </>
+    ) },
+    { id: 'other', label: 'Levée de fonds, freelance, création, immobilier', node: (
+      <>
+        {/* ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) */}
+        {(() => {
+          const fundraisingOn = user?.enabledModules?.fundraising ?? false;
+          const freelanceOn = user?.enabledModules?.freelance ?? false;
+          const creativeOn = user?.enabledModules?.creative ?? false;
+          const realEstateOn = user?.enabledModules?.realEstate ?? false;
+          const anyOn = fundraisingOn || freelanceOn || creativeOn || realEstateOn;
+          const anyData = investors.length > 0 || engagements.length > 0 || creativeWorks.length > 0 || properties.length > 0;
+          if (!anyOn || !anyData) return null;
+          return (
+            <Card title="Levée de fonds, freelance, création & immobilier">
+              <div className="flex items-center gap-6 text-sm flex-wrap">
+                {fundraisingOn && investors.length > 0 && (
+                  <Link to="/fundraising" className="flex items-center gap-1.5 hover:text-accent">
+                    <Rocket size={15} className="text-mute" />
+                    <span>{openInvestors.length} investisseur{openInvestors.length !== 1 ? 's' : ''} en cours</span>
+                  </Link>
+                )}
+                {freelanceOn && engagements.length > 0 && (
+                  <Link to="/freelance" className="flex items-center gap-1.5 hover:text-accent">
+                    <Briefcase size={15} className="text-mute" />
+                    <span>{activeEngagements.length} client{activeEngagements.length !== 1 ? 's' : ''} actif{activeEngagements.length !== 1 ? 's' : ''}</span>
+                  </Link>
+                )}
+                {creativeOn && creativeWorks.length > 0 && (
+                  <Link to="/creative" className="flex items-center gap-1.5 hover:text-accent">
+                    <Palette size={15} className="text-mute" />
+                    <span>{inProgressWorks.length} œuvre{inProgressWorks.length !== 1 ? 's' : ''} en cours</span>
+                  </Link>
+                )}
+                {realEstateOn && properties.length > 0 && (
+                  <Link to="/real-estate" className="flex items-center gap-1.5 hover:text-accent">
+                    <Building2 size={15} className="text-mute" />
+                    <span>{ownedProperties.length} bien{ownedProperties.length !== 1 ? 's' : ''} possédé{ownedProperties.length !== 1 ? 's' : ''}</span>
+                  </Link>
+                )}
+              </div>
+            </Card>
+          );
+        })()}
+      </>
+    ) },
+    { id: 'learning', label: 'Études et lecture', node: (
+      <>
+        {/* ---- Learning & reading ---- */}
+        {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (
+          <Card title="Apprentissage & lecture">
+            <div className="space-y-3">
+              {focusCourse && (
+                <Link
+                  to={`/learning/course/${focusCourse.id}`}
+                  className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5 hover:border-accent transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <BookOpen size={15} className="text-mute shrink-0" />
+                    <span className="text-sm truncate">{focusCourse.name}</span>
+                  </div>
+                  <Badge color="var(--accent-primary)">{Math.round(calculateCourseProgress(focusCourse))}%</Badge>
+                </Link>
+              )}
+              {activeBookInfo && (
+                <div className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <BookOpen size={15} className="text-mute shrink-0" />
+                    <span className="text-sm truncate">{activeBookInfo.title}</span>
+                  </div>
+                  {!readToday ? (
+                    <Link to="/learning/readings" className="text-xs text-accent hover:underline shrink-0">
+                      Lire aujourd'hui
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-good shrink-0 flex items-center gap-1">
+                      <Flame size={12} /> série {readingStreak}j
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+      </>
+    ) },
+  ];
+
+  // One page, two views: today's cards, and the Bilan (ex-Tableau de bord).
+  const view = searchParams.get('vue') === 'bilan' ? 'bilan' : 'today';
+  const setView = (v) => setSearchParams(v === 'bilan' ? { vue: 'bilan' } : {}, { replace: true });
+
+  if (view === 'bilan') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-center"><TodayTabs view={view} onChange={setView} /></div>
+        <Dashboard />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex justify-center"><TodayTabs view={view} onChange={setView} /></div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Bonjour, {user?.name}</h1>
+          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — ce qu'il te reste à faire aujourd'hui.</p>
+        </div>
+        <OrganizeButton cards={cards} />
+      </div>
+
+      {arrangeCards(cards, user?.todayLayout).map((c) => <Fragment key={c.id}>{c.node}</Fragment>)}
     </div>
   );
 }

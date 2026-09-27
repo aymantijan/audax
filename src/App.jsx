@@ -28,7 +28,6 @@ import { PageLoader } from './components/common/ui';
 // 404 — one automatic reload fetches the current build instead of crashing.
 const Onboarding = lazy(lazyWithRetry(() => import('./pages/Onboarding'), 'Onboarding'));
 const Today = lazy(lazyWithRetry(() => import('./pages/Today'), 'Today'));
-const Dashboard = lazy(lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard'));
 const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
 const TradingAccountDetail = lazy(lazyWithRetry(() => import('./pages/TradingAccountDetail'), 'TradingAccountDetail'));
 const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
@@ -178,7 +177,7 @@ export default function App() {
       >
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<Today />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Navigate to="/today?vue=bilan" replace />} />
         <Route path="/trading" element={<Trading />} />
         <Route path="/trading/accounts" element={<Navigate to="/trading?tab=accounts" replace />} />
         <Route path="/trading/account/:id" element={<TradingAccountDetail />} />
