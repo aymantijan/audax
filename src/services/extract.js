@@ -51,6 +51,23 @@ export const extractTimetable = async (file) => (await callExtract('timetable', 
 // Photo of a receipt → { amount, currency, date, merchant, category } to review.
 export const extractReceipt = (file) => callExtract('receipt', file);
 
+// One free sentence → a raw draft from the AI (checked again by normalizeDraft).
+export async function extractCapture(text, context) {
+  const headers = await aiRequestHeaders();
+  let res;
+  try {
+    res = await fetch('/api/extract', { method: 'POST', headers, body: JSON.stringify({ kind: 'text', text, context }) });
+  } catch {
+    throw Object.assign(new Error('offline'), { code: 'offline' });
+  }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const code = res.status === 401 ? 'auth' : res.status === 404 ? 'not_configured' : body.error || 'failed';
+    throw Object.assign(new Error(code), { code });
+  }
+  return body.draft || null;
+}
+
 export const EXTRACT_ERRORS = {
   too_large: 'Fichier trop lourd : prends une photo plus petite ou un PDF de moins de 3,5 Mo.',
   bad_file: 'Format non pris en charge : photo (JPEG, PNG) ou PDF.',
