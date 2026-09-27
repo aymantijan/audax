@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Build stamp sent with crash reports (services/error-log.js).
+  define: { __APP_VERSION__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
   plugins: [
     react(),
     tailwindcss(),

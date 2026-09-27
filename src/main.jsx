@@ -3,6 +3,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { installErrorLog } from './services/error-log';
+
+installErrorLog(); // F7: crashes seen by users reach the Supabase error log
 import './styles/globals.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

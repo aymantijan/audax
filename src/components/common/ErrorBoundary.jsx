@@ -1,5 +1,7 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { logError } from '../../services/error-log';
+
 
 const CHUNK_ERROR_RE = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Loading chunk .* failed/i;
 const CHUNK_RETRY_KEY = 'audax-chunk-retry:boundary';
@@ -24,6 +26,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary]', error, info?.componentStack);
+    logError('react', error, info?.componentStack);
     if (CHUNK_ERROR_RE.test(error?.message || '') && !sessionStorage.getItem(CHUNK_RETRY_KEY)) {
       sessionStorage.setItem(CHUNK_RETRY_KEY, '1');
       this.setState({ reloading: true });

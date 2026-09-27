@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus, Key, Copy } from 'lucide-react';
+import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Plus, Key, Copy, History } from 'lucide-react';
 import { FOOD_DB, getServingOptions, lookupFood } from '../utils/nutrition-db';
 import { MOROCCO_FOOD_COST_TIERS } from '../utils/morocco-food-budget';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
-import { isSupabaseConfigured } from '../services/supabase';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { listBackups } from '../services/sync-base-store';
 import { getSession } from '../services/auth-supabase';
 import { getApiKeyStatus, createOrRotateApiKey, revokeApiKey } from '../services/api-keys';
 import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
@@ -34,6 +35,10 @@ import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-flashcards', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
+
+// Sports programme data lives only in Supabase tables (programStore is not
+// persisted locally): the export includes them (own rows only, RLS).
+const PROGRAM_TABLES = ['programs', 'program_phases', 'program_sessions', 'program_session_exercises', 'program_session_logs', 'program_weekly_structure', 'program_event_overrides', 'program_locations', 'program_goals', 'program_kpis', 'program_kpi_values', 'program_habit_links', 'program_discipline_daily', 'program_trophies', 'program_alerts', 'program_nutrition_templates'];
 
 const FOOD_CATEGORIES = [
   { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
@@ -135,6 +140,28 @@ export default function SettingsPage() {
     toast('Fiche corrigée', 'success');
   };
   const fileRef = useRef(null);
+  const [safetyCopies, setSafetyCopies] = useState([]);
+  useEffect(() => {
+    let owner = null;
+    try { owner = JSON.parse(localStorage.getItem('audax-data-owner') || 'null'); } catch { owner = null; }
+    if (owner) listBackups(owner).then(setSafetyCopies).catch(() => {});
+  }, []);
+  // Put back the local copy taken before the switch to the new sync (F2):
+  // written into the stores' saved state, then the reload syncs it.
+  const restoreSafetyCopies = () => {
+    if (!safetyCopies.length) return;
+    if (!confirm('Remettre les données telles qu’elles étaient sur cet appareil avant la nouvelle synchronisation ? Les modifications faites depuis dans ces sections seront remplacées.')) return;
+    for (const b of safetyCopies) {
+      const key = `audax-${b.name}`;
+      if (!STORE_KEYS.includes(key) || !b.data) continue;
+      let version = 0;
+      try { version = JSON.parse(localStorage.getItem(key) || '{}').version ?? 0; } catch { version = 0; }
+      localStorage.setItem(key, JSON.stringify({ state: b.data, version }));
+    }
+    markDataSeeded();
+    toast('Copie de sécurité restaurée, rechargement…', 'success');
+    setTimeout(() => window.location.reload(), 800);
+  };
   // Cloud status: 'active' (Supabase session live), 'offline' (configured, no session), 'unconfigured'
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'checking' : 'unconfigured');
   const [cloudUserId, setCloudUserId] = useState(null); // needed by the API Access card below — cloudStatus alone doesn't carry the id
@@ -234,20 +261,30 @@ export default function SettingsPage() {
     }
   };
 
-  const exportJSON = () => {
+  const exportJSON = async () => {
     const data = {
       app: 'AUDAX',
       version: 1,
       exportedAt: new Date().toISOString(),
       stores: Object.fromEntries(STORE_KEYS.map((k) => [k, JSON.parse(localStorage.getItem(k) || 'null')])),
     };
+    // Signed in: add the sports programme (Supabase-only data). Read-only here;
+    // restoring it from a file is not supported yet (the file keeps it safe).
+    if (isSupabaseConfigured && (await getSession())) {
+      const cloudTables = {};
+      for (const t of PROGRAM_TABLES) {
+        const { data: rows, error } = await supabase.from(t).select('*');
+        if (!error) cloudTables[t] = rows;
+      }
+      data.cloudTables = cloudTables;
+    }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `audax-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `vaudax-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('Backup exported', 'success');
+    toast('Sauvegarde téléchargée', 'success');
   };
 
   const importJSON = (e) => {
@@ -257,15 +294,15 @@ export default function SettingsPage() {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (data.app !== 'AUDAX' || !data.stores) throw new Error('Not an AUDAX backup');
+        if (data.app !== 'AUDAX' || !data.stores) throw new Error('ce fichier n’est pas une sauvegarde Vaudax');
         for (const [key, value] of Object.entries(data.stores)) {
           if (STORE_KEYS.includes(key) && value !== null) localStorage.setItem(key, JSON.stringify(value));
         }
         markDataSeeded(); // protect the restored data from the one-time demo wipe on reload
-        toast('Backup imported — reloading…', 'success');
+        toast('Sauvegarde restaurée, rechargement…', 'success');
         setTimeout(() => window.location.reload(), 800);
       } catch (err) {
-        toast(`Import failed: ${err.message}`, 'error');
+        toast(`Restauration impossible : ${err.message}`, 'error');
       }
     };
     reader.readAsText(file);
@@ -711,19 +748,29 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Data (local-first)">
+      <Card title="Tes données">
         <p className="text-sm text-mute mb-4">
-          All data lives in this browser's localStorage and syncs to the cloud when you're signed in. Export regularly — a JSON backup restores everything, including skill XP and synergy history.
+          Tes données sont d’abord sur cet appareil, puis synchronisées sur ton compte quand tu es connecté. Télécharge une sauvegarde de temps en temps : elle contient tout (y compris ton programme sportif si tu es connecté) et se restaure en un clic.
         </p>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" onClick={exportJSON}>
-            <span className="flex items-center gap-2"><Download size={15} /> Export JSON backup</span>
+            <span className="flex items-center gap-2"><Download size={15} /> Télécharger une sauvegarde</span>
           </Button>
           <Button variant="secondary" onClick={() => fileRef.current?.click()}>
-            <span className="flex items-center gap-2"><Upload size={15} /> Import backup</span>
+            <span className="flex items-center gap-2"><Upload size={15} /> Restaurer une sauvegarde</span>
           </Button>
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={importJSON} />
         </div>
+        {safetyCopies.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-line text-sm">
+            <p className="text-mute">
+              <b className="text-ink">Copie de sécurité automatique</b> : prise sur cet appareil le {new Date(safetyCopies[safetyCopies.length - 1].at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}, juste avant la nouvelle synchronisation ({safetyCopies.length} section{safetyCopies.length > 1 ? 's' : ''}). À n’utiliser que si des données ont disparu.
+            </p>
+            <Button variant="secondary" className="mt-3" onClick={restoreSafetyCopies}>
+              <span className="flex items-center gap-2"><History size={15} /> Restaurer la copie de sécurité</span>
+            </Button>
+          </div>
+        )}
       </Card>
 
       <Card title="Danger Zone">

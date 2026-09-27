@@ -58,3 +58,23 @@ export async function backupOnce(userId, name, data) {
   if (existing) return;
   await tx('readwrite', (s) => s.put({ at: new Date().toISOString(), data }, key));
 }
+
+/** Safety copies taken before the first three-way sync (see backupOnce), newest first. */
+export async function listBackups(userId) {
+  const prefix = `backup:${userId}:`;
+  const out = await openDb().then((db) => new Promise((resolve) => {
+    if (!db) return resolve([]);
+    try {
+      const rows = [];
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).openCursor();
+      req.onsuccess = () => {
+        const c = req.result;
+        if (!c) return resolve(rows);
+        if (String(c.key).startsWith(prefix)) rows.push({ name: String(c.key).slice(prefix.length), at: c.value?.at, data: c.value?.data });
+        c.continue();
+      };
+      req.onerror = () => resolve(rows);
+    } catch { resolve([]); }
+  }));
+  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
