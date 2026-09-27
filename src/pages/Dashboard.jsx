@@ -36,6 +36,7 @@ import AccountSwitcher from '../components/common/AccountSwitcher';
 import { startOfMonth } from 'date-fns';
 import { occupationOf } from '../utils/occupations';
 import LifeReviewCard from '../components/today/LifeReviewCard';
+import CrossInsightsCard from '../components/today/CrossInsightsCard';
 
 
 export default function Dashboard() {
@@ -275,6 +276,7 @@ export default function Dashboard() {
       </div>
 
       <LifeReviewCard />
+      <CrossInsightsCard />
 
       {burnout.burnoutRisk && (
         <div className="border border-bad/50 bg-bad/10 rounded-xl p-4 space-y-2">
