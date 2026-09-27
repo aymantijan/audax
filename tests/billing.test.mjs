@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { billingOf, unbilledItems, billedHours, blockAllocation, periodStart, periodLabel, commissionOf, itemsValue, mergeRefs, effectiveHourlyRate } from '../src/utils/billing.js';
+import { billingOf, unbilledItems, billedHours, hoursOf, blockAllocation, periodStart, periodLabel, commissionOf, itemsValue, mergeRefs, effectiveHourlyRate } from '../src/utils/billing.js';
 import { invoiceTotals } from '../src/utils/invoice.js';
 
 const base = { id: 'e', startDate: '2026-07-01', timeLogs: [], expenses: [] };
@@ -46,14 +46,27 @@ test('monthly subscription billed in advance, with included hours and overage', 
   assert.equal(periodLabel('2026-10', 3), '4e trimestre 2026');
 });
 
-test('sales agent: 50 % of the net profit, never negative', () => {
-  const b = { ...billingOf({}), commission: { enabled: true, pct: 50 } };
-  assert.equal(commissionOf({ revenue: 30000, costs: 18000 }, b).amount, 6000);
-  assert.equal(commissionOf({ revenue: 1000, costs: 1500 }, b).amount, 0);
-  const e = { ...base, billing: b, timeLogs: [{ id: 'c1', kind: 'commission', date: '2026-09-10', revenue: 30000, costs: 18000, note: 'Lot septembre' }] };
+test('commission: a percentage of an amount', () => {
+  const b = { ...billingOf({}), commission: { enabled: true, pct: 10 } };
+  assert.equal(commissionOf({ base: 25000 }, b).amount, 2500);
+  const e = { ...base, billing: b, timeLogs: [{ id: 'c1', kind: 'commission', date: '2026-09-10', base: 25000, note: 'Contrat X' }] };
   const [line] = unbilledItems(e, '2026-09-27');
-  assert.equal(line.unitPrice, 6000);
-  assert.match(line.description, /ventes 30\s000 − coûts 18\s000 = 12\s000/);
+  assert.equal(line.unitPrice, 2500);
+  assert.match(line.description, /Commission 10 % sur 25\s000 — Contrat X/);
+});
+
+test('variable income: the amount as noted, no rate, no calculation', () => {
+  const b = { ...billingOf({}), variable: { enabled: true } };
+  assert.equal(billingOf({}).variable.enabled, false);
+  const e = { ...base, billing: b, timeLogs: [
+    { id: 'v1', kind: 'variable', date: '2026-09-30', amount: 7340.5, note: 'Ventes de septembre' },
+    { id: 'v2', kind: 'variable', date: '2026-08-31', amount: 5000, note: 'Ventes d’août', invoiceId: 'inv1' },
+  ] };
+  const items = unbilledItems(e, '2026-09-30');
+  assert.equal(items.length, 1);
+  assert.deepEqual([items[0].qty, items[0].unitPrice, items[0].description], [1, 7340.5, 'Ventes de septembre']);
+  assert.deepEqual(items[0].refs.timeLogIds, ['v1']);
+  assert.equal(hoursOf(e.timeLogs[0], b), 0);
 });
 
 test('fixed price with a payment schedule; time is tracked, not billed', () => {

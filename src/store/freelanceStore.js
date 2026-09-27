@@ -158,22 +158,30 @@ export const useFreelanceStore = create(
         toast(`Travail noté · +${HOURS_XP} XP`, 'success');
       },
       logHours: (id, data) => get().logWork(id, { ...data, qty: data.hours }),
-      // Commission: on an amount, or on the net profit (revenue − costs).
+      // Commission: a percentage of an amount.
       logCommission: (id, data) => {
         const engagement = get().engagements.find((e) => e.id === id);
-        if (!engagement) return;
-        const n = (v) => (v === '' || v == null ? null : Number(String(v).replace(',', '.')) || 0);
-        const entry = { id: uid(), kind: 'commission', date: data.date || todayKey(), note: data.note || '', createdAt: Date.now() };
-        if (data.on === 'profit') { entry.revenue = n(data.revenue) || 0; entry.costs = n(data.costs) || 0; } else entry.base = n(data.base) || 0;
+        const base = Number(String(data.base ?? '').replace(',', '.')) || 0;
+        if (!engagement || !(base > 0)) return;
+        const entry = { id: uid(), kind: 'commission', date: data.date || todayKey(), base, note: data.note || '', createdAt: Date.now() };
         if (data.pct !== '' && data.pct != null) entry.pct = Number(data.pct) || 0;
         set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, timeLogs: [...(e.timeLogs || []), entry], updatedAt: Date.now() } : e)) });
         toast('Opération notée', 'success');
+      },
+      // Variable income, to put on an invoice later (amounts already received go
+      // straight to logPayment instead).
+      logVariable: (id, data) => {
+        const amount = Number(String(data.amount ?? '').replace(',', '.')) || 0;
+        if (!(amount > 0)) return;
+        const entry = { id: uid(), kind: 'variable', date: data.date || todayKey(), amount, note: data.note || '', createdAt: Date.now() };
+        set({ engagements: get().engagements.map((e) => (e.id === id ? { ...e, timeLogs: [...(e.timeLogs || []), entry], updatedAt: Date.now() } : e)) });
+        toast('Montant à facturer noté', 'success');
       },
       deleteTimeLog: (id, logId) => {
         const engagement = get().engagements.find((e) => e.id === id);
         const log = engagement?.timeLogs.find((t) => t.id === logId);
         if (!log) return;
-        if (log.kind !== 'commission') useSkillStore.getState().removeXP(HOURS_SKILL, HOURS_XP, 'time log deleted');
+        if (!log.kind) useSkillStore.getState().removeXP(HOURS_SKILL, HOURS_XP, 'time log deleted');
         const h = hoursOf(log, billingOf(engagement));
         set({
           engagements: get().engagements.map((e) =>

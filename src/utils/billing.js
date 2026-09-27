@@ -9,13 +9,14 @@
 //                 includedHours, overagePrice },                            // subscription, per period
 //   fixed:      { enabled, amount, milestones: [{ id, label, pct, due }] }, // fixed price + schedule
 //   block:      { enabled, hours, price },                                 // prepaid hours
-//   commission: { enabled, pct },                                          // % of an amount or of the net profit
+//   commission: { enabled, pct },                                          // % of an amount
+//   variable:   { enabled },                                               // variable income: no rate, amounts as received
 //   discountPct: 0, withholdingPct: 0,
 // }
 // Work entries (engagement.timeLogs): { id, date, qty, rateId, note, invoiceId }
 //   (old entries: { hours } = qty in hours at the default rate). Commission
-//   entries: { kind: 'commission', base } or { kind: 'commission', revenue, costs }
-//   (net profit = revenue − costs, never below 0). Expenses: engagement.expenses.
+//   entries: { kind: 'commission', base }. Variable amounts to invoice:
+//   { kind: 'variable', amount, note }. Expenses: engagement.expenses.
 
 export const RATE_UNITS = [
   { key: 'h', label: 'heure', short: 'h' },
@@ -29,7 +30,8 @@ export const BILLING_MODES = [
   { key: 'retainer', label: 'Abonnement', hint: 'Un montant fixe par mois, trimestre, semestre ou année, facturé en début ou en fin de période, avec des heures incluses si tu veux.' },
   { key: 'fixed', label: 'Forfait', hint: 'Un prix pour le projet, payé selon un échéancier (acompte, étapes, solde). Le temps passé sert au suivi.' },
   { key: 'block', label: 'Paquet d’heures prépayé', hint: 'Le client achète un paquet d’heures ; le temps passé est décompté, le dépassement facturé.' },
-  { key: 'commission', label: 'Commission', hint: 'Un pourcentage d’un montant (vente, contrat) ou du bénéfice net (ventes − coûts).' },
+  { key: 'commission', label: 'Commission', hint: 'Un pourcentage d’un montant (vente, contrat).' },
+  { key: 'variable', label: 'Revenu variable', hint: 'Pas de taux, pas de calcul : tu notes chaque montant reçu (il va directement dans ta compta), ou un montant à facturer.' },
 ];
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -44,6 +46,7 @@ export function billingOf(e) {
     fixed: { enabled: false, amount: 0, milestones: [] },
     block: { enabled: false, hours: 0, price: 0 },
     commission: { enabled: false, pct: 0 },
+    variable: { enabled: false },
     discountPct: 0, withholdingPct: 0,
     ...(e?.billing || {}),
     ...(e?.billing?.rates?.length ? {} : { rates: [{ id: 'default', label: 'Temps passé', price: num(e?.hourlyRate), unit: 'h', unitLabel: '', vatRate: null }] }),
@@ -56,7 +59,7 @@ export const unitShort = (rate) => (rate?.unit === 'unit' ? rate.unitLabel || 'u
 
 // Hours an entry represents (for retainers, prepaid blocks, statistics).
 export function hoursOf(t, billing) {
-  if (t.kind === 'commission') return 0;
+  if (t.kind === 'commission' || t.kind === 'variable') return 0;
   const rate = rateOf(billing, t.rateId);
   const q = qtyOf(t);
   if (rate.unit === 'h') return q;
@@ -83,7 +86,7 @@ const dmy = (d) => (d ? d.split('-').reverse().slice(0, 2).join('/') : '');
 export function blockAllocation(entries, purchases, billing) {
   let balance = (purchases || []).reduce((a, p) => a + num(p.hours), 0);
   const covered = new Set();
-  for (const t of [...entries].filter((x) => x.kind !== 'commission').sort((a, b) => (a.date < b.date ? -1 : 1))) {
+  for (const t of [...entries].filter((x) => x.kind !== 'commission' && x.kind !== 'variable').sort((a, b) => (a.date < b.date ? -1 : 1))) {
     const h = hoursOf(t, billing);
     if (h > 0 && balance >= h - 1e-9) { covered.add(t.id); balance -= h; }
   }
@@ -107,7 +110,7 @@ export function unbilledItems(e, today) {
     }
   }
 
-  const work = open.filter((t) => t.kind !== 'commission');
+  const work = open.filter((t) => t.kind !== 'commission' && t.kind !== 'variable');
   if (!b.fixed?.enabled && work.length) {
     let billable = work;
     if (b.block?.enabled) {
@@ -158,6 +161,10 @@ export function unbilledItems(e, today) {
     items.push({ key: `com-${t.id}`, kind: 'commission', description: c.description, qty: 1, unit: 'forfait', unitPrice: c.amount, vatRate: null, refs: refs({ timeLogIds: [t.id] }) });
   }
 
+  for (const t of open.filter((x) => x.kind === 'variable')) {
+    items.push({ key: `var-${t.id}`, kind: 'variable', description: t.note || 'Prestation', qty: 1, unit: 'forfait', unitPrice: r2(t.amount), vatRate: null, refs: refs({ timeLogIds: [t.id] }) });
+  }
+
   for (const x of (e.expenses || []).filter((y) => !y.invoiceId && y.rebill !== false)) {
     const markup = num(x.markupPct);
     items.push({ key: `exp-${x.id}`, kind: 'expense', description: `Frais : ${x.label}${markup ? ` (+${markup} %)` : ''}`, qty: 1, unit: 'forfait', unitPrice: r2(num(x.amount) * (1 + markup / 100)), vatRate: x.vatRate ?? null, refs: refs({ expenseIds: [x.id] }) });
@@ -199,17 +206,10 @@ export function periodLabel(p, every = 1) {
   return `${short(p)} – ${short(addMonths(p, n - 1))}`;
 }
 
-// Commission of one entry: on an amount, or on the net profit (revenue − costs, never negative).
+// Commission of one entry: a percentage of an amount.
 export function commissionOf(t, b) {
   const pct = num(t.pct ?? b.commission?.pct);
   const fr = (n) => r2(n).toLocaleString('fr-FR');
-  if (t.revenue != null || t.costs != null) {
-    const profit = Math.max(0, num(t.revenue) - num(t.costs));
-    return {
-      base: profit, amount: r2(profit * pct / 100),
-      description: `Commission ${pct} % sur le bénéfice net : ventes ${fr(t.revenue)} − coûts ${fr(t.costs)} = ${fr(profit)}${t.note ? ` — ${t.note}` : ''}`,
-    };
-  }
   return { base: num(t.base), amount: r2(num(t.base) * pct / 100), description: `Commission ${pct} % sur ${fr(t.base)}${t.note ? ` — ${t.note}` : ''}` };
 }
 

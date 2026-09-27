@@ -129,8 +129,11 @@ export default function BillingEditor({ engagement }) {
       {section('commission', (
         <div className="grid grid-cols-2 gap-2">
           <Field label="Taux (%)"><Input type="number" min="0" max="100" step="any" value={num(b.commission?.pct)} onChange={(e) => setIn('commission', 'pct', e.target.value)} /></Field>
-          <Field label="Calculée sur"><Select value={b.commission?.on || 'amount'} onChange={(e) => setIn('commission', 'on', e.target.value)} options={[{ value: 'amount', label: 'Un montant (vente, contrat…)' }, { value: 'profit', label: 'Le bénéfice net (ventes − coûts)' }]} /></Field>
         </div>
+      ))}
+
+      {section('variable', (
+        <p className="text-xs text-mute">Dans l’onglet Travail, tu notes chaque montant : « Encaissé » l’enregistre tout de suite dans ta compta, « À facturer » le met sur ta prochaine facture.</p>
       ))}
 
       <div className="rounded-lg border border-line p-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
