@@ -128,7 +128,7 @@ export function HabitFormModal({ open, onClose, habit }) {
     const [group, name] = value.split('||');
     const tpl = HABIT_TEMPLATES.find((g) => g.group === group)?.items.find((i) => i.name === name);
     if (!tpl) return;
-    const linkedSkill = tpl.linkedSkill && skills[tpl.linkedSkill] && !skills[tpl.linkedSkill].locked ? tpl.linkedSkill : '';
+    const linkedSkill = tpl.linkedSkill && skills[tpl.linkedSkill] ? tpl.linkedSkill : '';
     setF({ ...blankHabit(), ...tpl, linkedSkill, timesPerWeek: tpl.frequency === 'weekly' ? tpl.timesPerWeek || 1 : 3, source: tpl.source || '', unit: tpl.unit || unitOf(sourceMeta(tpl.source)) });
   };
   const submit = (e) => {

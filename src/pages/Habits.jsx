@@ -7,7 +7,7 @@ import { useHabitStore } from '../store/habitStore';
 import { useTradingStore } from '../store/tradingStore';
 import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit, quitBest } from '../utils/calculations';
 import { checkBurnoutTriggers } from '../utils/burnout';
-import { HABIT_CATEGORIES, HABIT_MOMENTS, WEEKDAYS, SKILL_MAP } from '../utils/constants';
+import { HABIT_CATEGORIES, HABIT_MOMENTS, WEEKDAYS } from '../utils/constants';
 import { todayKey, dateKey, fmtDate } from '../utils/formatters';
 import { Card, Button, Modal, EmptyState, ProgressBar, playSeal } from '../components/common/ui';
 import BadgeList from '../components/common/BadgeList';
@@ -16,6 +16,7 @@ import { tooltipStyle } from '../components/common/chart-theme';
 import { tint, MOMENT_ICON, catLabel } from '../components/habits/habit-ui';
 import { CheckinModal, HabitFormModal, PauseModal, HabitDetailModal } from '../components/habits/HabitModals';
 import { QuantityControl, QuitCard, orderChains, enableReminders, CoachCard } from '../components/habits/HabitCards';
+import { skillLabel } from '../utils/skill-families';
 
 export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
@@ -196,7 +197,7 @@ export default function Habits() {
                               <span>{catLabel(h.category)}</span>
                               {h.duration ? <span>· {h.duration} min</span> : null}
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
-                              <span>· +{h.xpReward} XP{h.linkedSkill && SKILL_MAP[h.linkedSkill] ? ` → ${SKILL_MAP[h.linkedSkill].name}` : ''}</span>
+                              <span>· +{h.xpReward} XP{h.linkedSkill ? ` → ${skillLabel(h.linkedSkill)}` : ''}</span>
                               {h.mandatory && <span className="text-warning">· obligatoire</span>}
                               {h.mini && <span className="text-accent">· version mini</span>}
                               {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}

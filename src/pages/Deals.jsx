@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { Plus, Trash2, Briefcase, Pencil } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useDealsStore } from '../store/dealsStore';
-import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_STATUS_LABEL, DEAL_STATUS_OPTIONS, DEAL_SKILL, DEAL_STAGES, SKILL_MAP } from '../utils/constants';
+import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS, DEAL_STATUS_LABEL, DEAL_STATUS_OPTIONS, DEAL_SKILL, DEAL_STAGES } from '../utils/constants';
 import { fmtMoney, fmtDateShort } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 import { tooltipStyle } from '../components/common/chart-theme';
+import { skillLabel } from '../utils/skill-families';
 
 const STATUS_COLOR = { ongoing: 'var(--accent-primary)', completed: 'var(--success)', passed: 'var(--text-secondary)' };
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
@@ -98,7 +99,7 @@ export default function PrivateEquity() {
             {DEAL_TYPES.map((t) => (
               <div key={t} className="text-sm">
                 <Badge color="var(--accent-secondary)">{t}</Badge>
-                <span className="text-mute ml-2">{(DEAL_SKILL[t] || []).map((id) => SKILL_MAP[id]?.name).filter(Boolean).join(', ')}</span>
+                <span className="text-mute ml-2">{(DEAL_SKILL[t] || []).map((id) => skillLabel(id)).join(', ')}</span>
               </div>
             ))}
           </div>

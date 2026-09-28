@@ -43,6 +43,8 @@ export function useAllGoals() {
   const habitLogs = useHabitStore((s) => s.logs);
   const careerPlans = useCareerStore((s) => s.plans);
   const skillLevels = useSkillStore((s) => s.skills);
+  const skillProofs = useSkillStore((s) => s.proofs);
+  const skillMastery = useSkillStore((s) => s.mastery);
   const journal = useAccountingStore((s) => s.journal);
   const financeGoals = useAccountingStore((s) => s.goals);
   const courses = useLearningStore((s) => s.courses);
@@ -137,7 +139,7 @@ export function useAllGoals() {
     // ── Carrière (objectifs datés) ──
     for (const p of careerPlans || []) {
       if (p.status === 'dropped') continue;
-      const pr = planProgress(p, skillLevels, today);
+      const pr = planProgress(p, { skills: skillLevels, proofs: skillProofs, mastery: skillMastery }, today);
       out.push({
         key: `cr-${p.id}`, domain: 'career', title: p.title,
         progress: p.status === 'achieved' ? 100 : pr.pct,
@@ -162,5 +164,5 @@ export function useAllGoals() {
       });
     }
     return out;
-  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, careerPlans, skillLevels, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, careerPlans, skillLevels, skillProofs, skillMastery, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -3,12 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Pencil, Plus, Trash2, ListChecks, CalendarPlus, CalendarCheck, Clock, ArrowRight, Check } from 'lucide-react';
 import { useDealsStore, suggestTaskAward } from '../store/dealsStore';
 import { computeDealReturns, blankDealModel } from '../utils/deal-valuation';
-import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS_LABEL, DEAL_STATUS_OPTIONS, DEAL_STAGES, DEAL_STAGE_STATUS, SKILL_MAP } from '../utils/constants';
+import { DEAL_TYPES, DEAL_ROLES, DEAL_STATUS_LABEL, DEAL_STATUS_OPTIONS, DEAL_STAGES, DEAL_STAGE_STATUS } from '../utils/constants';
 import { fmtMoney, fmtDateShort, fmtPct } from '../utils/formatters';
 import { Card, Stat, Button, Field, Input, Select, Modal, Badge, EmptyState, ProgressBar } from '../components/common/ui';
 import SkillPicker from '../components/common/SkillPicker';
 import EntityFormModal from '../components/common/EntityFormModal';
 import ScheduleEventModal from '../components/common/ScheduleEventModal';
+import { skillLabel } from '../utils/skill-families';
 
 const STATUS_COLOR = { ongoing: 'var(--accent-primary)', completed: 'var(--success)', passed: 'var(--text-secondary)' };
 const STAGE_STATUS_COLOR = { 'not-started': 'var(--text-secondary)', 'in-progress': 'var(--warning)', blocked: 'var(--error)', done: 'var(--success)' };
@@ -246,7 +247,7 @@ export default function DealDetail() {
                       <div className={t.status === 'done' ? 'line-through text-mute' : ''}>{t.title}</div>
                       {t.stage && <div className="text-[11px] text-mute mt-0.5">{t.stage}</div>}
                     </td>
-                    <td className="py-2.5 pr-4"><Badge color="var(--accent-primary)">{SKILL_MAP[t.skillId]?.name || t.skillId}</Badge></td>
+                    <td className="py-2.5 pr-4"><Badge color="var(--accent-primary)">{skillLabel(t.skillId)}</Badge></td>
                     <td className="py-2.5 pr-4 text-right">{t.xpAmount}</td>
                     <td className="py-2.5 pr-3">
                       <button

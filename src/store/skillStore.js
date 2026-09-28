@@ -5,6 +5,8 @@ import { advance, preview, freshMomentumState, CONSISTENCY_CONFIG } from '../uti
 import { domainXpBreakdown } from '../utils/xp-domains';
 import { todayKey } from '../utils/formatters';
 import { toast } from './uiStore';
+import { computeFamilyStates, familyIdOf, newlyAvailable, FAMILY_MAP, DEFAULT_MODELS } from '../utils/skill-families';
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 const freshSkills = () =>
   Object.fromEntries(
@@ -67,6 +69,9 @@ export const useSkillStore = create(
     (set, get) => ({
       skills: freshSkills(),
       consistency: freshMomentumState(), // global XP consistency multiplier — see utils/momentum.js
+      proofs: {}, // familyId → [{ id, kind, title, date, note }] — lifts the level-4/5 cap
+      mastery: {}, // familyId → best level ever reached (kept forever)
+      activeModels: DEFAULT_MODELS, // skill-tree models shown (see utils/skill-families.js)
 
       // THE single choke point every domain funnels XP through (trades, courses,
       // readings, habits, journal entries...). That makes it the one place to
@@ -77,7 +82,9 @@ export const useSkillStore = create(
       // instead of just letting raw grinding close the gap.
       awardXP: (skillId, amount, source = 'manual') => {
         const skill = get().skills[skillId];
-        if (!skill || skill.locked || amount <= 0) return;
+        // Every real activity counts, even on a compétence not yet discovered.
+        if (!skill || amount <= 0) return;
+        const before = computeFamilyStates(get());
         const today = todayKey();
         const multiplier = preview(get().consistency, today, CONSISTENCY_CONFIG).momentum;
         const effective = Math.max(1, Math.round(amount * multiplier));
@@ -104,9 +111,18 @@ export const useSkillStore = create(
             xpLog: [...skill.xpLog, { date: Date.now(), amount: effective, source, rawAmount: amount, multiplier }],
           },
         };
-        skills = recomputeUnlocks(skills);
-        set({ skills, consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
-        if (leveled) toast(`${SKILL_MAP[skillId].name} passe au niveau ${level} !`, 'success');
+        skills = recomputeUnlocks(skills, { silent: true });
+        const famId = familyIdOf(skillId);
+        const after = computeFamilyStates({ ...get(), skills });
+        const from = before[famId]?.level || 0;
+        const to = after[famId]?.level || 0;
+        const mastery = to > (get().mastery?.[famId] || 0) ? { ...get().mastery, [famId]: to } : get().mastery;
+        set({ skills, mastery, consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
+        const unlocked = newlyAvailable(before, after);
+        const name = FAMILY_MAP[famId]?.name || skillId;
+        if (to > from) toast(`${name} passe au niveau ${to} !`, 'success');
+        else if (after[famId]?.capped && !before[famId]?.capped) toast(`${name} : ajoute une preuve pour passer au niveau ${to + 1}`, 'info');
+        for (const id of unlocked.slice(0, 3)) toast(`Nouvelle compétence débloquée : ${FAMILY_MAP[id].name}`, 'success');
       },
 
       // Reverse XP (e.g. trade deleted). Simple subtraction, no de-leveling below current floor.
@@ -122,48 +138,30 @@ export const useSkillStore = create(
         });
       },
 
-      // Manual declaration: "I already know this." Unlocks the node (level >= 2 so
-      // dependents can open) with 0 XP, flagged as manually acquired.
-      acquireManually: (skillId) => {
-        const skill = get().skills[skillId];
-        if (!skill) return;
-        let skills = {
-          ...get().skills,
-          [skillId]: {
-            ...skill,
-            locked: false,
-            level: Math.max(skill.level, 2),
-            manualAcquired: true,
-            decayStatus: 'active',
-            lastPracticed: Date.now(),
-            xpLog: [...skill.xpLog, { date: Date.now(), amount: 0, source: 'manual acquisition' }],
-          },
-        };
-        skills = recomputeUnlocks(skills);
-        set({ skills });
-        toast(`${SKILL_MAP[skillId].name} marked as acquired`, 'success');
+      // A proof lifts the level cap (levels 4 and 5): exam passed, certificate,
+      // delivered project, measured result.
+      addProof: (familyId, { kind = 'other', title = '', date = '', note = '' }) => {
+        if (!FAMILY_MAP[familyId] || !title.trim()) return;
+        const before = computeFamilyStates(get());
+        const proof = { id: uid(), kind, title: title.trim(), date: date || todayKey(), note: note.trim(), createdAt: Date.now() };
+        const proofs = { ...get().proofs, [familyId]: [...(get().proofs?.[familyId] || []), proof] };
+        const after = computeFamilyStates({ ...get(), proofs });
+        const from = before[familyId]?.level || 0;
+        const to = after[familyId]?.level || 0;
+        const mastery = to > (get().mastery?.[familyId] || 0) ? { ...get().mastery, [familyId]: to } : get().mastery;
+        set({ proofs, mastery });
+        toast(to > from ? `${FAMILY_MAP[familyId].name} passe au niveau ${to} !` : 'Preuve ajoutée', 'success');
       },
 
-      // Daily decay pass: >60d warning, >90d drop a level (Lv2+ only)
-      checkDecay: () => {
-        const now = Date.now();
-        const day = 24 * 60 * 60 * 1000;
-        let changed = false;
-        const skills = { ...get().skills };
-        for (const id of Object.keys(skills)) {
-          const s = skills[id];
-          if (!s.lastPracticed || s.locked) continue;
-          const daysSince = (now - s.lastPracticed) / day;
-          if (daysSince > 90 && s.level > 1 && s.decayStatus !== 'decayed') {
-            skills[id] = { ...s, level: s.level - 1, decayStatus: 'decayed', lastPracticed: now };
-            toast(`${SKILL_MAP[id].name} redescend au niveau ${s.level - 1} : pratique-la bientôt`, 'warning');
-            changed = true;
-          } else if (daysSince > 60 && s.level > 1 && s.decayStatus === 'active') {
-            skills[id] = { ...s, decayStatus: 'warning' };
-            changed = true;
-          }
-        }
-        if (changed) set({ skills });
+      // A level already reached stays (mastery); removing a proof only affects what comes next.
+      removeProof: (familyId, proofId) => {
+        const list = (get().proofs?.[familyId] || []).filter((p) => p.id !== proofId);
+        set({ proofs: { ...get().proofs, [familyId]: list } });
+      },
+
+      toggleModel: (modelId) => {
+        const cur = get().activeModels || DEFAULT_MODELS;
+        set({ activeModels: cur.includes(modelId) ? cur.filter((m) => m !== modelId) : [...cur, modelId] });
       },
 
       // Total positive XP ever earned across all skills — the literal, raw
@@ -185,7 +183,7 @@ export const useSkillStore = create(
       // Live consistency multiplier (0.7–1.25) + current cross-app streak.
       getConsistencyState: () => preview(get().consistency, todayKey(), CONSISTENCY_CONFIG),
 
-      resetAll: () => set({ skills: freshSkills(), consistency: freshMomentumState() }),
+      resetAll: () => set({ skills: freshSkills(), consistency: freshMomentumState(), proofs: {}, mastery: {}, activeModels: DEFAULT_MODELS }),
     }),
     {
       name: 'audax-skills',

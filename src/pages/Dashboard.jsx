@@ -37,6 +37,7 @@ import { startOfMonth } from 'date-fns';
 import { occupationOf } from '../utils/occupations';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 import CrossInsightsCard from '../components/today/CrossInsightsCard';
+import { skillLabel } from '../utils/skill-families';
 
 
 export default function Dashboard() {
@@ -482,7 +483,7 @@ export default function Dashboard() {
               {fastestSkills.map((s) => (
                 <li key={s.id} className="flex items-center gap-2 text-sm">
                   <Rocket size={14} className="text-accent shrink-0" />
-                  <span className="flex-1 truncate">{SKILL_MAP[s.id]?.name}</span>
+                  <span className="flex-1 truncate">{skillLabel(s.id)}</span>
                   <Badge color="var(--accent-primary)">+{s.xpMonth} XP</Badge>
                 </li>
               ))}
@@ -515,7 +516,7 @@ export default function Dashboard() {
                 <li key={`m${i}`} className="flex items-center gap-2 text-sm">
                   <Award size={14} className="text-accent2 shrink-0" />
                   <span className="flex-1 truncate">
-                    {SKILL_MAP[m.id]?.name} : niveau {m.level} atteint ({LEVEL_NAMES_FR[m.level] || LEVEL_NAMES[m.level]})
+                    {skillLabel(m.id)} : niveau {m.level} atteint ({LEVEL_NAMES_FR[m.level] || LEVEL_NAMES[m.level]})
                   </span>
                   <span className="text-[11px] text-mute">{fmtDate(m.date)}</span>
                 </li>

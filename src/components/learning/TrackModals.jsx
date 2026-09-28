@@ -12,7 +12,7 @@ import { Button, Card, Field, Input, Modal, Select, ProgressBar } from '../commo
 import SkillPicker from '../common/SkillPicker';
 import { SectionHeader, tint } from './design';
 
-// Skill ids suggested per track type (only unlocked ones are applied).
+// Skill ids suggested per track type.
 const SUGGESTED_SKILLS = {
   trading: ['trading-discipline-lv1', 'risk-management-lv1', 'technical-analysis-lv1'],
   language: ['written-communication-lv1'],
@@ -39,7 +39,7 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
   const type = f.trackType;
   const setType = (t) => {
     const lv = t === 'language' ? { level: 'B1', targetLevel: 'C1' } : { level: 'L1', targetLevel: 'L3' };
-    setF((x) => ({ ...x, trackType: t, ...(course ? {} : lv), linkedSkills: (SUGGESTED_SKILLS[t] || []).filter((id) => skills[id] && !skills[id].locked) }));
+    setF((x) => ({ ...x, trackType: t, ...(course ? {} : lv), linkedSkills: (SUGGESTED_SKILLS[t] || []).filter((id) => skills[id]) }));
   };
 
   const submit = (e) => {

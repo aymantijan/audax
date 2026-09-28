@@ -1,5 +1,6 @@
 // Career plan maths (Carrière n°2): objective progress/status and the routine week.
 import { todayKey } from './formatters';
+import { familyLevelOf } from './skill-families';
 
 /** Monday-based week containing `day`. */
 export function weekRange(day = todayKey()) {
@@ -11,10 +12,11 @@ export function weekRange(day = todayKey()) {
 
 /**
  * Progress of an objective: required skills (manual tick, or auto when the
- * linked skill-tree node reaches its target level) + milestones.
+ * linked compétence reaches its target level) + milestones.
+ * skillStore: { skills, proofs, mastery } from the skill store.
  */
-export function planProgress(plan, skillLevels, today = todayKey()) {
-  const skillDone = (s) => s.done || (s.skillId && (skillLevels?.[s.skillId]?.level || 0) >= (Number(s.targetLevel) || 3));
+export function planProgress(plan, skillStore, today = todayKey()) {
+  const skillDone = (s) => s.done || (s.skillId && familyLevelOf(skillStore, s.skillId) >= (Number(s.targetLevel) || 3));
   const items = [...(plan.skills || []).map(skillDone), ...(plan.milestones || []).map((m) => !!m.done)];
   const pct = items.length ? Math.round((items.filter(Boolean).length / items.length) * 100) : 0;
   const overdueMilestones = (plan.milestones || []).filter((m) => !m.done && m.due && m.due < today);

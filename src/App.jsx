@@ -1,7 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { useSkillStore } from './store/skillStore';
 import { useTradingStore } from './store/tradingStore';
 import { useHealthStore } from './store/healthStore';
 import { isSupabaseConfigured } from './services/supabase';
@@ -80,16 +79,11 @@ function CareerRedirect({ tab }) {
 
 export default function App() {
   const user = useAuthStore((s) => s.user);
-  const checkDecay = useSkillStore((s) => s.checkDecay);
   const ensureAccounts = useTradingStore((s) => s.ensureAccounts);
 
   useEffect(() => {
     document.documentElement.dataset.theme = user?.theme || 'dark';
   }, [user?.theme]);
-
-  useEffect(() => {
-    checkDecay(); // daily skill decay pass on app load
-  }, [checkDecay]);
 
   useEffect(() => {
     if (user) ensureAccounts(); // one-time migration/bootstrap of tradingStore.accounts[]

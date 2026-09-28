@@ -6,13 +6,14 @@ import { useSkillStore } from '../../store/skillStore';
 import { useLearningStore } from '../../store/learningStore';
 import { useNetworkingStore } from '../../store/networkingStore';
 import { useContentStore } from '../../store/contentStore';
-import { SKILL_MAP, domainLabel } from '../../utils/constants';
+import { domainLabel } from '../../utils/constants';
 import { calculateCourseProgress } from '../../utils/course-progress';
 import { fmtDate, todayKey } from '../../utils/formatters';
 import { useCareerDomains } from '../../hooks/useCareerDomains';
 import { Card, Button, Field, Input, Select, Textarea, Modal, ProgressBar, EmptyState } from '../common/ui';
 import SkillPicker from '../common/SkillPicker';
 import { planProgress, weekRange } from '../../utils/career-plan';
+import { skillLabel, familyLevelOf } from '../../utils/skill-families';
 
 const PLAN_TYPES = ['Stage', 'Stage de fin d’études (PFE)', 'Alternance', 'CDI', 'CDD', 'VIE / international', 'Freelance', 'Création d’entreprise', 'Autre'];
 
@@ -74,14 +75,14 @@ function SkillModal({ planId, onClose }) {
     <Modal open onClose={onClose} title="Compétence à acquérir" wide>
       <form className="space-y-3" onSubmit={(e) => {
         e.preventDefault();
-        const name = f.name.trim() || SKILL_MAP[f.skillId]?.name || '';
+        const name = f.name.trim() || skillLabel(f.skillId) || '';
         if (!name) return;
         addPlanItem(planId, 'skills', { name, skillId: f.skillId || '', targetLevel: Number(f.targetLevel) || 3, courseId: f.courseId || '' });
         onClose();
       }}>
         <Field label="Compétence" hint="ex. Modélisation LBO, Excel avancé, anglais B2, CFA niveau 1"><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} autoFocus /></Field>
         <Field label="Relier à l’arbre de compétences (optionnel)" hint="Elle se coche seule quand ce nœud atteint le niveau visé">
-          <SkillPicker multi={false} value={f.skillId} onChange={(id) => setF((p) => ({ ...p, skillId: id || '', name: p.name || SKILL_MAP[id]?.name || '' }))} placeholder="Rechercher une compétence…" />
+          <SkillPicker multi={false} value={f.skillId} onChange={(id) => setF((p) => ({ ...p, skillId: id || '', name: p.name || skillLabel(id) || '' }))} placeholder="Rechercher une compétence…" />
         </Field>
         <div className="grid sm:grid-cols-2 gap-3">
           {f.skillId && <Field label="Niveau visé (1–5)"><Input type="number" min="1" max="5" value={f.targetLevel} onChange={(e) => setF((p) => ({ ...p, targetLevel: e.target.value }))} /></Field>}
@@ -101,10 +102,13 @@ function SkillModal({ planId, onClose }) {
 function PlanCard({ plan, onEdit }) {
   const { editPlan, deletePlan, addPlanItem, editPlanItem, deletePlanItem, applications } = useCareerStore();
   const skills = useSkillStore((s) => s.skills);
+  const proofs = useSkillStore((s) => s.proofs);
+  const mastery = useSkillStore((s) => s.mastery);
+  const skillStore = { skills, proofs, mastery };
   const courses = useLearningStore((s) => s.courses);
   const [skillOpen, setSkillOpen] = useState(false);
   const [milestone, setMilestone] = useState({ title: '', due: '' });
-  const pr = planProgress(plan, skills);
+  const pr = planProgress(plan, skillStore);
   const [label, color] = STATUS[pr.status];
   const linkedApps = applications.filter((a) => a.planId === plan.id);
   const daysLeft = plan.targetDate ? Math.ceil((new Date(`${plan.targetDate}T12:00:00`) - new Date(`${todayKey()}T12:00:00`)) / 86400000) : null;
@@ -139,7 +143,7 @@ function PlanCard({ plan, onEdit }) {
             <ul className="space-y-1.5">
               {plan.skills.map((s) => {
                 const done = pr.skillDone(s);
-                const lvl = s.skillId ? skills[s.skillId]?.level || 0 : null;
+                const lvl = s.skillId ? familyLevelOf(skillStore, s.skillId) : null;
                 const course = s.courseId ? courses.find((c) => c.id === s.courseId) : null;
                 const auto = s.skillId && !s.done && done;
                 return (

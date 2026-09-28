@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
 import { X, Search } from 'lucide-react';
-import { SKILL_TREE, SKILL_MAP } from '../../utils/constants';
-import { useSkillStore } from '../../store/skillStore';
+import { FAMILIES, MODEL_MAP, entryNodeOf, familyIdOf, skillLabel } from '../../utils/skill-families';
 import { Badge } from './ui';
 
-// Searchable skill selector for a 200+ skill tree.
+// Searchable compétence selector. Stored values stay node ids (what the XP
+// engines award to); a picked compétence is stored as its first node.
 // multi: value = [ids], onChange([ids]) · single: value = id|'', onChange(id)
 export default function SkillPicker({ value, onChange, multi = true, placeholder = 'Chercher une compétence…' }) {
-  const skills = useSkillStore((s) => s.skills);
   const [query, setQuery] = useState('');
 
   const selected = multi ? value : value ? [value] : [];
@@ -15,15 +14,14 @@ export default function SkillPicker({ value, onChange, multi = true, placeholder
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return SKILL_TREE.filter(
-      (d) =>
-        !skills[d.id]?.locked &&
-        !selected.includes(d.id) &&
-        (d.name.toLowerCase().includes(q) || d.category.toLowerCase().includes(q) || d.subcategory.toLowerCase().includes(q))
+    const taken = new Set(selected.map(familyIdOf));
+    return FAMILIES.filter(
+      (f) => !taken.has(f.id) && (f.name.toLowerCase().includes(q) || f.branch.toLowerCase().includes(q) || MODEL_MAP[f.model]?.label.toLowerCase().includes(q))
     ).slice(0, 12);
-  }, [query, skills, selected]);
+  }, [query, selected]);
 
-  const add = (id) => {
+  const add = (familyId) => {
+    const id = entryNodeOf(familyId);
     if (multi) onChange([...selected, id]);
     else onChange(id);
     setQuery('');
@@ -39,7 +37,7 @@ export default function SkillPicker({ value, onChange, multi = true, placeholder
         <div className="flex flex-wrap gap-1.5 mb-2">
           {selected.map((id) => (
             <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent border border-accent/40">
-              {SKILL_MAP[id]?.name || id}
+              {skillLabel(id)}
               <button type="button" onClick={() => remove(id)} className="hover:text-bad cursor-pointer">
                 <X size={11} />
               </button>
@@ -66,12 +64,12 @@ export default function SkillPicker({ value, onChange, multi = true, placeholder
               className="w-full text-left px-3 py-2 text-sm hover:bg-card cursor-pointer flex items-center justify-between gap-2"
             >
               <span>{d.name}</span>
-              <Badge color="var(--accent-secondary)">{d.category} · {d.subcategory}</Badge>
+              <Badge color="var(--accent-secondary)">{MODEL_MAP[d.model]?.label} · {d.branch}</Badge>
             </button>
           ))}
         </div>
       )}
-      {query && !results.length && <div className="text-xs text-mute mt-1">No unlocked skills match "{query}".</div>}
+      {query && !results.length && <div className="text-xs text-mute mt-1">Aucune compétence ne correspond à « {query} ».</div>}
     </div>
   );
 }

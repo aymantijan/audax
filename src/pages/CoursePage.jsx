@@ -16,7 +16,7 @@ import { ResourcesCard, TrackFormModal } from '../components/learning/TrackModal
 import { TrackLevelCard } from '../components/learning/TracksView';
 import { trackMeta } from '../utils/tracks';
 import { calculateCourseProgress } from '../utils/course-progress';
-import { GRADES, GRADE_XP, SKILL_MAP } from '../utils/constants';
+import { GRADES, GRADE_XP } from '../utils/constants';
 import { uid } from '../utils/formatters';
 import {
   isAcademic, subjectResult, requiredGrade, simulateAverage, mentionFor, EVALUATION_TYPES, SLOT_KINDS, WEEKDAYS, fmtGrade, normGrade, letterFor, subjectPass,
@@ -29,6 +29,7 @@ import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tin
 import { courseColor } from '../components/learning/TimetableView';
 import { CourseEndControl, CourseAttendanceSummary, ClassNotesCard } from '../components/learning/Attendance';
 import { ForecastCard } from '../components/learning/Forecast';
+import { skillLabel } from '../utils/skill-families';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
 const parseNum = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
@@ -464,7 +465,7 @@ export default function CoursePage() {
         <Card>
           <SectionHeader title="Compétences liées" subtitle="Reçoivent de l'XP quand le cours est terminé." />
           <div className="flex flex-wrap gap-1.5">
-            {course.linkedSkills.map((id) => <Badge key={id} color="var(--accent-secondary)">{SKILL_MAP[id]?.name || id}</Badge>)}
+            {course.linkedSkills.map((id) => <Badge key={id} color="var(--accent-secondary)">{skillLabel(id)}</Badge>)}
           </div>
         </Card>
       )}

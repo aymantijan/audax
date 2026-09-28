@@ -45,7 +45,7 @@ export function CourseFormModal({ open, onClose, kind: initialKind = 'academic',
     const [group, name] = value.split('||');
     const tpl = COURSE_TEMPLATES.find((g) => g.group === group)?.items.find((i) => i.name === name);
     if (!tpl) return setF({ ...f, template: value });
-    setF({ ...f, template: value, name: tpl.name, linkedSkills: tpl.skills.filter((id) => skills[id] && !skills[id].locked) });
+    setF({ ...f, template: value, name: tpl.name, linkedSkills: tpl.skills.filter((id) => skills[id]) });
   };
 
   const submit = (e) => {
