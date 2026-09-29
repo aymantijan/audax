@@ -64,6 +64,27 @@ const CATEGORY_MODEL = {
   'Revenue-Based Financing': 'investissement', 'Academics (ISCAE)': 'iscae',
 };
 
+// Where points come from. Feeding a compétence from several kinds of source
+// (learning + practice + regularity + results) earns up to +30 % points.
+export const SOURCE_KINDS = [
+  { id: 'apprendre', label: 'Apprendre', hint: 'un cours, une lecture' },
+  { id: 'pratiquer', label: 'Pratiquer', hint: 'une séance, un trade, une tâche, une écriture' },
+  { id: 'regularite', label: 'Régularité', hint: 'une habitude liée, un mois tenu' },
+  { id: 'resultat', label: 'Résultat', hint: 'un objectif atteint, une étape validée' },
+];
+export const VARIETY_STEP = 0.1;
+const RESULT_RE = /objectif atteint|^goal|badge|phase passed|mission terminée|œuvre terminée|payout|un an de|échéance payée/i;
+const LEARN_RE = /^(course|cours|reading|completed|long read|genre|lecture|livre|flashcard|révision|revision|study|étude)/i;
+const REGULAR_RE = /^(habit|habitude|mois |semaine |trimestre |épargne|patrimoine)/i;
+export function sourceKind(source) {
+  const src = String(source || '').trim();
+  if (!src || /^manual/i.test(src)) return null;
+  if (RESULT_RE.test(src)) return 'resultat';
+  if (LEARN_RE.test(src)) return 'apprendre';
+  if (REGULAR_RE.test(src)) return 'regularite';
+  return 'pratiquer';
+}
+
 export const familyIdOf = (nodeId) => String(nodeId || '').replace(/-lv\d+$/, '');
 const tierOf = (nodeId) => Number((/-lv(\d+)$/.exec(nodeId) || [])[1] || 1);
 
@@ -123,7 +144,7 @@ function levelFrom(points, activities, proofs, { ignoreProofs = false, ignoreAct
  */
 export function familyTotals(fam, skills) {
   let points = 0, activities = 0, legacyPoints = 0, last = 0, manual = false;
-  const sources = new Set();
+  const kinds = new Set();
   const recent = [];
   for (const nodeId of fam.nodes) {
     const s = skills?.[nodeId];
@@ -136,13 +157,19 @@ export function familyTotals(fam, skills) {
         activities++;
         if (e.date < CUTOVER) legacyPoints += amt;
         if (e.date > last) last = e.date;
-        sources.add(String(e.source || 'manual').split(':')[0].trim().toLowerCase());
+        const k = sourceKind(e.source);
+        if (k) kinds.add(k);
         recent.push(e);
       } else if (amt < 0 && e.date < CUTOVER) legacyPoints += amt;
     }
   }
   recent.sort((a, b) => b.date - a.date);
-  return { points: Math.max(0, points), activities, legacyPoints: Math.max(0, legacyPoints), last: last || null, manual, sources: sources.size, recent: recent.slice(0, 30) };
+  const rawPoints = Math.max(0, points);
+  const bonus = Math.max(0, kinds.size - 1) * VARIETY_STEP;
+  return {
+    points: Math.round(rawPoints * (1 + bonus)), rawPoints, bonus, kinds: SOURCE_KINDS.filter((k) => kinds.has(k.id)).map((k) => k.id),
+    activities, legacyPoints: Math.max(0, legacyPoints), last: last || null, manual, recent: recent.slice(0, 30),
+  };
 }
 
 const legacyLevel = (t) => Math.max(levelFrom(t.legacyPoints, 0, 0, { ignoreProofs: true, ignoreActivities: true }), t.manual ? 2 : 0);

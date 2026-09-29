@@ -10,6 +10,8 @@ import {
 import { Stat, Button, Modal, Card } from '../components/common/ui';
 import SkillList from '../components/skills/SkillList';
 import SkillDetail from '../components/skills/SkillDetail';
+import { SkillProfile, UpcomingTrials } from '../components/skills/SkillProfile';
+import { useAllGoals } from '../hooks/useAllGoals';
 import { lazyWithRetry } from '../utils/lazyRetry';
 
 // three.js only loads when the 3D view is shown.
@@ -61,6 +63,7 @@ export default function Skills() {
   const habits = useHabitStore((s) => s.habits);
   const plans = useCareerStore((s) => s.plans);
 
+  const goals = useAllGoals();
   const wide = useWide();
   const galaxyRef = useRef(null);
   const [view, setView] = useState(() => read(VIEW_KEY) || '3d');
@@ -120,6 +123,12 @@ export default function Skills() {
     setSearch('');
     if (fly && is3d) galaxyRef.current?.flyTo({ node: id });
   };
+  const showModel = (modelId) => {
+    if (is3d) {
+      galaxyRef.current?.flyTo({ cluster: modelId });
+      document.querySelector('.sg-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else document.getElementById(`skills-model-${modelId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const setViewKept = (v) => { setView(v); write(VIEW_KEY, v); };
   const shownModels = MODELS.filter((m) => visibleIds.some((id) => FAMILY_MAP[id].model === m.id));
 
@@ -130,7 +139,7 @@ export default function Skills() {
       <div>
         <h1 className="text-2xl font-bold">Compétences</h1>
         <p className="text-mute text-sm mt-1">
-          Chaque cours, habitude, lecture ou séance nourrit tes compétences. Un niveau demande des points et des activités régulières ; les niveaux 4 et 5 demandent une preuve. Un niveau atteint reste acquis.
+          Chaque cours, habitude, lecture ou séance nourrit tes compétences. Un niveau demande des points et des activités régulières ; varier les sources rapporte plus ; les niveaux 4 et 5 demandent une preuve. Un niveau atteint reste acquis.
         </p>
       </div>
 
@@ -140,6 +149,10 @@ export default function Skills() {
         <Stat label="Preuves" value={proofN} sub={cappedN ? `${cappedN} en attente d’une preuve` : undefined} />
         <Stat label="Points au total" value={lifetime} />
       </div>
+
+      <SkillProfile states={states} visibleIds={visibleIds} onModel={showModel} />
+
+      <UpcomingTrials goals={goals} states={states} onSkill={(id) => open(id)} />
 
       {recap && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 text-sm">

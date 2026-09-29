@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Plus } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useSkillStore } from '../store/skillStore';
+import { computeFamilyStates } from '../utils/skill-families';
 import { useCreativeStore } from '../store/creativeStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useTradingStore } from '../store/tradingStore';
@@ -36,8 +38,11 @@ const SUMMARIES = {
     return { main: plural(books, 'livre', 'livres'), sub: 'dans ta bibliothèque' };
   },
   skills: function SkillsSummary() {
-    const unlocked = useSkillStore((s) => Object.values(s.skills || {}).filter((k) => (k?.level || 0) >= 1).length);
-    return { main: plural(unlocked, 'compétence', 'compétences'), sub: 'au niveau 1 ou plus' };
+    const skills = useSkillStore((s) => s.skills);
+    const proofs = useSkillStore((s) => s.proofs);
+    const mastery = useSkillStore((s) => s.mastery);
+    const practised = useMemo(() => Object.values(computeFamilyStates({ skills, proofs, mastery })).filter((f) => f.level > 0).length, [skills, proofs, mastery]);
+    return { main: plural(practised, 'compétence', 'compétences'), sub: 'pratiquées' };
   },
   creative: function CreativeSummary() {
     const works = useCreativeStore((s) => s.works.length);

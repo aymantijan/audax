@@ -28,7 +28,7 @@ export default function SkillList({ states, visibleIds, query, onSelect }) {
   return (
     <div className="space-y-6">
       {groups.map(({ model, branches }) => (
-        <section key={model.id}>
+        <section key={model.id} id={`skills-model-${model.id}`} className="scroll-mt-20">
           <h2 className="text-sm font-semibold mb-2">{model.label}</h2>
           <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
             {branches.map(([branch, fams]) => (

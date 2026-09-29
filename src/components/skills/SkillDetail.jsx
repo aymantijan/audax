@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Lock, Award, Trash2, Sparkles, Clock } from 'lucide-react';
 import { useSkillStore } from '../../store/skillStore';
 import {
-  FAMILY_MAP, MODEL_MAP, LEVELS, LEVEL_LABELS, PROOF_KINDS, UNLOCK_LEVEL, nextRequirementText,
+  FAMILY_MAP, MODEL_MAP, LEVELS, LEVEL_LABELS, PROOF_KINDS, UNLOCK_LEVEL, SOURCE_KINDS, VARIETY_STEP, nextRequirementText,
 } from '../../utils/skill-families';
 import { fmtDate, todayKey } from '../../utils/formatters';
 import { Badge, Button, Field, Input, Select, ProgressBar, IconButton } from '../common/ui';
@@ -92,6 +92,30 @@ export default function SkillDetail({ familyId, states, onNavigate }) {
         </div>
       ) : (
         <div className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--accent-primary)' }}><Sparkles size={14} /> Maîtrise complète — elle reste acquise.</div>
+      )}
+
+      {st.activities > 0 && (
+        <div>
+          <div className="flex justify-between text-xs mb-1.5">
+            <span className="font-semibold text-mute uppercase tracking-wide">Sources variées</span>
+            <span className="font-data" style={{ color: st.bonus > 0 ? 'var(--success)' : 'var(--text-secondary)' }}>bonus +{Math.round(st.bonus * 100)} %</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {SOURCE_KINDS.map((k) => {
+              const on = st.kinds.includes(k.id);
+              return (
+                <div key={k.id} title={k.hint} className="rounded-md border px-1.5 py-1 text-[11px] text-center" style={{ borderColor: on ? 'var(--success)' : 'var(--border)', color: on ? 'var(--success)' : 'var(--text-secondary)' }}>
+                  {on ? '✓ ' : ''}{k.label}
+                </div>
+              );
+            })}
+          </div>
+          {st.kinds.length < SOURCE_KINDS.length && (
+            <p className="text-xs text-mute mt-1.5">
+              +{Math.round(VARIETY_STEP * 100)} % de points en la nourrissant aussi par : {SOURCE_KINDS.filter((k) => !st.kinds.includes(k.id)).map((k) => `${k.label.toLowerCase()} (${k.hint})`).join(' · ')}.
+            </p>
+          )}
+        </div>
       )}
 
       {st.level > st.earned && st.level > 0 && (

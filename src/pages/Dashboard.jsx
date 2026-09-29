@@ -28,7 +28,7 @@ import { habitCompliance, weightedGPA, habitStreak, tradeStats } from '../utils/
 import { checkBurnoutTriggers } from '../utils/burnout';
 import { buildObservations } from '../utils/observations';
 import { calculateCourseProgress } from '../utils/course-progress';
-import { GRADE_POINTS, SKILL_MAP, LEVEL_NAMES } from '../utils/constants';
+import { GRADE_POINTS } from '../utils/constants';
 import { fmtMoney, fmtSignedMoney, fmtMAD, fmtPct, fmtDate, todayKey } from '../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -37,7 +37,7 @@ import { startOfMonth } from 'date-fns';
 import { occupationOf } from '../utils/occupations';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 import CrossInsightsCard from '../components/today/CrossInsightsCard';
-import { skillLabel } from '../utils/skill-families';
+import { skillLabel, familyIdOf, computeFamilyStates, LEVEL_LABELS } from '../utils/skill-families';
 
 
 export default function Dashboard() {
@@ -64,6 +64,12 @@ export default function Dashboard() {
   const tradingStore = useTradingStore();
   const courses = useLearningStore((s) => s.courses);
   const skills = useSkillStore((s) => s.skills);
+  const skillProofs = useSkillStore((s) => s.proofs);
+  const skillMastery = useSkillStore((s) => s.mastery);
+  const skillLevelUps = useSkillStore((s) => s.levelUps);
+  // Compétences (chains folded into one family, one level 0-5) — see utils/skill-families.js
+  const famStates = useMemo(() => Object.values(computeFamilyStates({ skills, proofs: skillProofs, mastery: skillMastery })), [skills, skillProofs, skillMastery]);
+  const famPractised = famStates.filter((f) => f.level > 0);
   const deals = useDealsStore((s) => s.deals);
   const businesses = useBusinessStore((s) => s.businesses);
   const labEntries = useEngineeringStore((s) => s.labEntries);
@@ -80,9 +86,6 @@ export default function Dashboard() {
   const { habits, logs, energyLogs } = useHabitStore();
   const synergy = useSynergy();
 
-  const PE_TRACKS = ['PE', 'GE', 'VC', 'RBF'];
-  const peSkillsUnlocked = Object.values(skills).filter((s) => !s.locked && PE_TRACKS.includes(SKILL_MAP[s.id]?.track)).length;
-  const peSkillsTotal = Object.values(skills).filter((s) => PE_TRACKS.includes(SKILL_MAP[s.id]?.track)).length;
   const dealSize = deals.reduce((a, d) => a + (d.size || 0), 0);
 
   const readingRows = useMemo(
@@ -133,7 +136,7 @@ export default function Dashboard() {
     [acctTrades, activeAccountId]
   );
   const lifeBalance = [
-    { label: 'Compétences', value: Math.round((Object.values(skills).filter((s) => !s.locked).length / Object.values(skills).length) * 100), sub: `${Object.values(skills).filter((s) => !s.locked).length}/${Object.values(skills).length} débloquées`, color: 'var(--accent-primary)' },
+    { label: 'Compétences', value: famPractised.length ? Math.round((famPractised.reduce((a, f) => a + f.level, 0) / (famPractised.length * 5)) * 100) : 0, sub: `${famPractised.length} pratiquée${famPractised.length > 1 ? 's' : ''} · niveau moyen ${famPractised.length ? (famPractised.reduce((a, f) => a + f.level, 0) / famPractised.length).toFixed(1) : 0}/5`, color: 'var(--accent-primary)' },
     { label: 'Cours', value: courses.length ? Math.round((courses.filter((c) => c.status === 'completed').length / courses.length) * 100) : 0, sub: `${courses.filter((c) => c.status === 'completed').length}/${courses.length} terminés`, color: 'var(--accent-secondary)' },
     { label: 'Lecture', value: readingRows.length ? Math.round((readingRows.filter((r) => r.status === 'completed').length / readingRows.length) * 100) : 0, sub: `${totalPagesRead.toLocaleString('fr-FR')} pages · série de ${readingStreak} j`, color: 'var(--warning)' },
     ...(peEnabled ? [{ label: 'Private equity', value: Math.min(100, deals.length * 20), sub: deals.length ? fmtMoney(dealSize) + ' au total' : 'suivi PE / VC', color: 'var(--success)' }] : []),
@@ -199,12 +202,12 @@ export default function Dashboard() {
           }
         : undefined,
       skills: {
-        decayedCount: Object.values(skills).filter((s) => s.decayStatus === 'decayed').length,
-        warningCount: Object.values(skills).filter((s) => s.decayStatus === 'warning').length,
+        idleCount: famPractised.filter((f) => f.last && Date.now() - f.last > 90 * 86400000).length,
+        cappedCount: famStates.filter((f) => f.capped).length,
       },
       readings: { streak: readingStreak, inProgressCount: readingRows.filter((r) => r.status !== 'completed').length },
     });
-  }, [hasJournal, accountingStore, acctTrades, tradingStore, activeAccountId, monthTrades, monthStats, activeHabits, logs, today, courses, gpa, skills, readingStreak, readingRows]);
+  }, [hasJournal, accountingStore, acctTrades, tradingStore, activeAccountId, monthTrades, monthStats, activeHabits, logs, today, courses, gpa, famStates, readingStreak, readingRows]);
 
   const OBS_ICON = { danger: AlertTriangle, warning: AlertCircle, success: CheckCircle2, info: Info };
   const OBS_COLOR = { danger: 'var(--error)', warning: 'var(--warning)', success: 'var(--success)', info: 'var(--text-secondary)' };
@@ -227,24 +230,22 @@ export default function Dashboard() {
     score,
   }));
 
-  // Skills gaining the most XP this month
+  // Compétences gaining the most points this month
   const fastestSkills = useMemo(() => {
     const ms = startOfMonth(new Date()).getTime();
-    return Object.values(skills)
-      .map((s) => ({ id: s.id, level: s.level, xpMonth: (s.xpLog || []).filter((e) => e.date >= ms && e.amount > 0).reduce((a, e) => a + e.amount, 0) }))
-      .filter((s) => s.xpMonth > 0)
-      .sort((a, b) => b.xpMonth - a.xpMonth)
-      .slice(0, 5);
+    const byFamily = {};
+    for (const s of Object.values(skills)) {
+      const pts = (s.xpLog || []).filter((e) => e.date >= ms && e.amount > 0).reduce((a, e) => a + e.amount, 0);
+      if (pts > 0) { const f = familyIdOf(s.id); byFamily[f] = (byFamily[f] || 0) + pts; }
+    }
+    return Object.entries(byFamily).map(([id, xpMonth]) => ({ id, xpMonth })).sort((a, b) => b.xpMonth - a.xpMonth).slice(0, 5);
   }, [skills]);
 
-  // Level-ups in the last 30 days
+  // Compétence level-ups in the last 30 days
   const milestones = useMemo(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return Object.values(skills)
-      .flatMap((s) => (s.levelUpDates || []).filter((d) => d >= cutoff).map((d) => ({ id: s.id, date: d, level: s.level })))
-      .sort((a, b) => b.date - a.date)
-      .slice(0, 5);
-  }, [skills]);
+    return (skillLevelUps || []).filter((u) => u.date >= cutoff).map((u) => ({ id: u.family, date: u.date, level: u.level })).reverse().slice(0, 5);
+  }, [skillLevelUps]);
 
   const topStreaks = useMemo(
     () =>
@@ -484,12 +485,12 @@ export default function Dashboard() {
                 <li key={s.id} className="flex items-center gap-2 text-sm">
                   <Rocket size={14} className="text-accent shrink-0" />
                   <span className="flex-1 truncate">{skillLabel(s.id)}</span>
-                  <Badge color="var(--accent-primary)">+{s.xpMonth} XP</Badge>
+                  <Badge color="var(--accent-primary)">+{s.xpMonth} pts</Badge>
                 </li>
               ))}
             </ul>
           ) : (
-            <EmptyState>Pas encore d’XP gagnée ce mois-ci.</EmptyState>
+            <EmptyState>Pas encore de points gagnés ce mois-ci.</EmptyState>
           )}
         </Card>
 
@@ -516,7 +517,7 @@ export default function Dashboard() {
                 <li key={`m${i}`} className="flex items-center gap-2 text-sm">
                   <Award size={14} className="text-accent2 shrink-0" />
                   <span className="flex-1 truncate">
-                    {skillLabel(m.id)} : niveau {m.level} atteint ({LEVEL_NAMES_FR[m.level] || LEVEL_NAMES[m.level]})
+                    {skillLabel(m.id)} : niveau {m.level} atteint ({LEVEL_LABELS[m.level]})
                   </span>
                   <span className="text-[11px] text-mute">{fmtDate(m.date)}</span>
                 </li>
@@ -544,7 +545,6 @@ export default function Dashboard() {
 // can't split into words, so they get an explicit label; Learning/Finance/
 // Health just get their name capitalized.
 const PILLAR_LABEL = { metiersVentures: 'Métiers & projets', careerDevelopment: 'Carrière', growthOutput: 'Progression', learning: 'Apprentissage', finance: 'Finances', health: 'Santé' };
-const LEVEL_NAMES_FR = { 1: 'Débutant', 2: 'Intermédiaire', 3: 'Avancé', 4: 'Expert', 5: 'Maître' };
 const OBS_DOMAIN_FR = { Skills: 'Compétences', Finance: 'Finances', Trading: 'Trading', Habitudes: 'Habitudes', Apprentissage: 'Apprentissage', Lecture: 'Lecture', Objectifs: 'Objectifs', Budget: 'Budget' };
 function domainLabel(domain) {
   return PILLAR_LABEL[domain] || (domain ? domain[0].toUpperCase() + domain.slice(1) : domain);

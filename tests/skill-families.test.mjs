@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FAMILIES, FAMILY_MAP, MODELS, CUTOVER, familyIdOf, entryNodeOf, skillLabel,
-  computeFamilyStates, visibleFamilyIds, nextRequirementText, newlyAvailable, DEFAULT_MODELS,
+  computeFamilyStates, visibleFamilyIds, nextRequirementText, newlyAvailable, DEFAULT_MODELS, sourceKind,
 } from '../src/utils/skill-families.js';
 import { SKILL_TREE } from '../src/utils/skill-tree-data.js';
 
@@ -82,4 +82,27 @@ test('visible families: active models + practised + linked', () => {
   assert.ok(ids.has('vc-thesis'));          // linked
   assert.ok(ids.has('reading-habit'));      // default model "lecture"
   assert.ok(!ids.has('isc-fiscalite'));     // ISCAE model is off by default
+});
+
+test('source kinds: learning, practice, regularity, results', () => {
+  assert.equal(sourceKind('course: Stats'), 'apprendre');
+  assert.equal(sourceKind('reading: Dune'), 'apprendre');
+  assert.equal(sourceKind('trade (auto)'), 'pratiquer');
+  assert.equal(sourceKind('workout: Squat'), 'pratiquer');
+  assert.equal(sourceKind('habit: Lire 20 min'), 'regularite');
+  assert.equal(sourceKind('mois sans dépassement budgétaire : 2026-09'), 'regularite');
+  assert.equal(sourceKind('objectif atteint : 10 km'), 'resultat');
+  assert.equal(sourceKind('prop firm phase passed: FTMO'), 'resultat');
+  assert.equal(sourceKind('manual'), null);
+});
+
+test('varied sources earn up to +30 % points', () => {
+  const mk = (source) => ({ date: AFTER, amount: 100, source });
+  const one = computeFamilyStates({ skills: { 'dcf-analysis-lv1': node([mk('course: A'), mk('course: B')]) } })['dcf-analysis'];
+  assert.equal(one.points, 200);
+  assert.equal(one.bonus, 0);
+  const four = computeFamilyStates({ skills: { 'dcf-analysis-lv1': node([mk('course: A'), mk('task: B'), mk('habit: C'), mk('objectif atteint : D')]) } })['dcf-analysis'];
+  assert.equal(four.rawPoints, 400);
+  assert.equal(four.points, 520);
+  assert.deepEqual(four.kinds, ['apprendre', 'pratiquer', 'regularite', 'resultat']);
 });

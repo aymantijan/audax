@@ -6,6 +6,8 @@ import { domainXpBreakdown } from '../utils/xp-domains';
 import { todayKey } from '../utils/formatters';
 import { toast } from './uiStore';
 import { computeFamilyStates, familyIdOf, newlyAvailable, FAMILY_MAP, DEFAULT_MODELS } from '../utils/skill-families';
+// Family level-ups with their date (dashboard milestones). Last 100 kept.
+const logLevelUp = (list, family, from, to) => (to > from ? [...(list || []), { family, level: to, date: Date.now() }].slice(-100) : list || []);
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 const freshSkills = () =>
@@ -72,6 +74,7 @@ export const useSkillStore = create(
       proofs: {}, // familyId → [{ id, kind, title, date, note }] — lifts the level-4/5 cap
       mastery: {}, // familyId → best level ever reached (kept forever)
       activeModels: DEFAULT_MODELS, // skill-tree models shown (see utils/skill-families.js)
+      levelUps: [], // [{ family, level, date }] — compétence level-ups, newest last
 
       // THE single choke point every domain funnels XP through (trades, courses,
       // readings, habits, journal entries...). That makes it the one place to
@@ -117,7 +120,7 @@ export const useSkillStore = create(
         const from = before[famId]?.level || 0;
         const to = after[famId]?.level || 0;
         const mastery = to > (get().mastery?.[famId] || 0) ? { ...get().mastery, [famId]: to } : get().mastery;
-        set({ skills, mastery, consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
+        set({ skills, mastery, levelUps: logLevelUp(get().levelUps, famId, from, to), consistency: advance(get().consistency, today, CONSISTENCY_CONFIG) });
         const unlocked = newlyAvailable(before, after);
         const name = FAMILY_MAP[famId]?.name || skillId;
         if (to > from) toast(`${name} passe au niveau ${to} !`, 'success');
@@ -149,7 +152,7 @@ export const useSkillStore = create(
         const from = before[familyId]?.level || 0;
         const to = after[familyId]?.level || 0;
         const mastery = to > (get().mastery?.[familyId] || 0) ? { ...get().mastery, [familyId]: to } : get().mastery;
-        set({ proofs, mastery });
+        set({ proofs, mastery, levelUps: logLevelUp(get().levelUps, familyId, from, to) });
         toast(to > from ? `${FAMILY_MAP[familyId].name} passe au niveau ${to} !` : 'Preuve ajoutée', 'success');
       },
 
@@ -183,7 +186,7 @@ export const useSkillStore = create(
       // Live consistency multiplier (0.7–1.25) + current cross-app streak.
       getConsistencyState: () => preview(get().consistency, todayKey(), CONSISTENCY_CONFIG),
 
-      resetAll: () => set({ skills: freshSkills(), consistency: freshMomentumState(), proofs: {}, mastery: {}, activeModels: DEFAULT_MODELS }),
+      resetAll: () => set({ skills: freshSkills(), consistency: freshMomentumState(), proofs: {}, mastery: {}, activeModels: DEFAULT_MODELS, levelUps: [] }),
     }),
     {
       name: 'audax-skills',

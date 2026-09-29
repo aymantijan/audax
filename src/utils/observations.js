@@ -86,11 +86,11 @@ export function buildObservations({ accounting, trading, habits, learning, skill
     if (stalledCourses > 0) push(obs, 'info', 'Apprentissage', `${stalledCourses} cours actif${stalledCourses > 1 ? 's' : ''} sans progression récente.`);
   }
 
-  // ── Skills : décroissance, verrous ──
+  // ── Compétences : preuves attendues, pauses longues (un niveau ne se perd jamais) ──
   if (skills) {
-    const { decayedCount, warningCount } = skills;
-    if (decayedCount > 0) push(obs, 'warning', 'Skills', `${decayedCount} compétence${decayedCount > 1 ? 's ont' : ' a'} régressé par manque de pratique récente.`);
-    if (warningCount > 0) push(obs, 'info', 'Skills', `${warningCount} compétence${warningCount > 1 ? 's' : ''} sans pratique depuis 60+ jours — bientôt en régression.`);
+    const { cappedCount = 0, idleCount = 0 } = skills;
+    if (cappedCount > 0) push(obs, 'info', 'Skills', `${cappedCount} compétence${cappedCount > 1 ? 's attendent' : ' attend'} une preuve (examen, certificat, projet) pour passer au niveau suivant.`);
+    if (idleCount > 0) push(obs, 'info', 'Skills', `${idleCount} compétence${idleCount > 1 ? 's' : ''} sans pratique depuis plus de 3 mois — ton niveau reste acquis, un petit rappel pour l’entretenir.`);
   }
 
   // ── Lectures : streak, activité ──

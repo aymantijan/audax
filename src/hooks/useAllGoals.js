@@ -31,7 +31,8 @@ const daysTo = (date, today) => Math.round((new Date(`${date}T12:00:00`) - new D
  * Every goal of the app in one normalized list — each domain keeps its own
  * editor and engine (health metric engine, finance envelopes, academic
  * grades…), this is the read side:
- * { key, domain, title, progress, valueText, detail, targetDate, status, link }
+ * { key, domain, title, progress, valueText, detail, targetDate, status, link, skills? }
+ * skills: linked skill-tree node ids (courses, career plans)
  * status: 'achieved' | 'ontrack' | 'behind' | 'active'
  */
 export function useAllGoals() {
@@ -100,7 +101,7 @@ export function useAllGoals() {
           detail: req ? (req.status === 'secured' ? 'objectif assuré' : req.status === 'impossible' ? 'hors d’atteinte' : `il faut ${fmtGrade(req.needed)} sur ce qui reste`) : null,
           targetDate: next?.date || null,
           status: reached ? 'achieved' : req?.status === 'impossible' ? 'behind' : req?.status === 'secured' ? 'ontrack' : 'active',
-          link: `/learning/course/${c.id}`,
+          link: `/learning/course/${c.id}`, skills: c.linkedSkills || [],
         });
       }
       if (!isAcademic(c) && c.trackType && (c.targetLevel || c.targetDate)) {
@@ -112,7 +113,7 @@ export function useAllGoals() {
           valueText: `niveau ${c.level === 'A0' ? 'débutant' : levelLabel(c.trackType, c.level)} · feuille de route ${progress}%`,
           detail: null, targetDate: c.targetDate || null,
           status: c.status === 'completed' ? 'achieved' : late ? 'behind' : 'active',
-          link: `/learning/course/${c.id}`,
+          link: `/learning/course/${c.id}`, skills: c.linkedSkills || [],
         });
       }
     }
@@ -146,6 +147,7 @@ export function useAllGoals() {
         valueText: `préparation ${pr.pct}%${pr.skillsLeft ? ` · ${pr.skillsLeft} compétence${pr.skillsLeft > 1 ? 's' : ''} à acquérir` : ''}`,
         detail: pr.overdueMilestones.length ? `${pr.overdueMilestones.length} étape(s) en retard` : p.type || null,
         targetDate: p.targetDate || null, status: pr.status, link: GOAL_DOMAINS.career.link,
+        skills: (p.skills || []).map((x) => x.skillId).filter(Boolean),
       });
     }
 
