@@ -23,7 +23,8 @@ export const ATTENDANCE_STATUS = {
   cancelled: { label: 'Cours annulé', tone: 'var(--text-secondary)', neutral: true },
 };
 
-// Corrections offered on a class once it has ended (no retroactive "on time").
+// Corrections offered on a class once it has ended. "On time"/"late" come only
+// from a declared arrival time (see arrivalError), never from a bare status.
 export const PAST_CORRECTIONS = ['forgot', 'excused', 'cancelled', 'absent'];
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -94,7 +95,23 @@ export function occurrenceState(occ, records, nowMs = Date.now()) {
 }
 
 export const arriveBy = (occ, settings) => occ.startMs - (Number(withDefaults(settings).arriveBeforeMin) || 0) * 60000;
-export const checkInStatus = (occ, settings, nowMs = Date.now()) => (nowMs <= arriveBy(occ, settings) ? 'on_time' : 'late');
+/** Status from the time the student was actually in the room (not when they tapped). */
+export const checkInStatus = (occ, settings, arrivedMs = Date.now()) => (arrivedMs <= arriveBy(occ, settings) ? 'on_time' : 'late');
+
+/** "HH:MM" on the class's date → ms. */
+export const clockOn = (occ, hhmm) => at(occ.date, hhmm);
+
+/**
+ * Arrival time the student may declare for a class: from 3 h before its start
+ * to its end (checking in later — at the break, offline, after class — is
+ * fine, the declared time is what counts).
+ */
+export function arrivalError(occ, arrivedMs) {
+  if (!Number.isFinite(arrivedMs)) return 'Heure invalide.';
+  if (arrivedMs < occ.startMs - 3 * 3600000) return 'Trop tôt : plus de 3 h avant le début du cours.';
+  if (arrivedMs >= occ.endMs) return 'Après la fin du cours : choisis plutôt « Absent » ou « Présent (pointé après) ».';
+  return null;
+}
 export const fmtClock = (ms) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 /**

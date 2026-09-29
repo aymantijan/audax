@@ -301,13 +301,14 @@ function networkingScore(contacts, monthStart) {
 
 // New applications this month (outreach) + stage advances this month
 // (real progress through a funnel, weighted higher than just applying).
-function careerScore(applications, monthStart) {
+function careerScore(allApplications, monthStart) {
+  const applications = allApplications.filter((a) => a.stage !== 'Target'); // target list ≠ outreach
   if (!applications.length) return 0;
   const monthStartMs = monthStart.getTime();
   const monthNew = applications.filter((a) => a.createdAt >= monthStartMs).length;
   const monthAdvances = applications
     .flatMap((a) => a.stageHistory || [])
-    .filter((h) => h.stage !== 'Applied' && new Date(`${h.date}T00:00:00`).getTime() >= monthStartMs).length;
+    .filter((h) => h.stage !== 'Applied' && h.stage !== 'Target' && new Date(`${h.date}T00:00:00`).getTime() >= monthStartMs).length;
   const newComponent = clamp(monthNew * 15);
   const advanceComponent = clamp(monthAdvances * 20);
   return r1(clamp(newComponent * 0.4 + advanceComponent * 0.6));

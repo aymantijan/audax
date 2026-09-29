@@ -4,21 +4,6 @@ import { useAuthStore } from '../../store/authStore';
 import { arrangeCards, moveCard, toggleCard } from '../../utils/today-layout';
 import { Button, Modal, IconButton } from '../common/ui';
 
-// "Aujourd'hui | Bilan" — one page, two views.
-export function TodayTabs({ view, onChange }) {
-  const tabs = [['today', 'Aujourd’hui'], ['bilan', 'Bilan']];
-  return (
-    <div className="inline-flex rounded-xl border border-line bg-surface p-1" role="tablist" aria-label="Vue">
-      {tabs.map(([k, label]) => (
-        <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => onChange(k)}
-          className={`ui-btn rounded-lg px-4 py-1.5 text-sm font-medium cursor-pointer transition-colors ${view === k ? 'bg-card text-accent shadow-sm ring-1 ring-line' : 'text-mute hover:text-ink'}`}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // Reorder / hide the cards of Aujourd'hui. Saved in the profile (synced).
 export function OrganizeButton({ cards }) {
   const { user, updateProfile } = useAuthStore();

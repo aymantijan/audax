@@ -4,7 +4,7 @@ import { Briefcase, Plus, Trash2, Pencil, ArrowRight, AlertTriangle, Download, U
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useCareerStore } from '../store/careerStore';
 import { useNetworkingStore } from '../store/networkingStore';
-import { CAREER_STAGES, DEFAULT_CAREER_DOMAINS, APPLICATION_TYPES, stageLabel, domainLabel } from '../utils/constants';
+import { CAREER_STAGES, DEFAULT_CAREER_DOMAINS, APPLICATION_TYPES, APPLICATION_PRIORITIES, stageLabel, domainLabel, isRealApplication } from '../utils/constants';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { exportCareerReportPDF } from '../utils/career-report-pdf';
 import { useCareerDomains } from '../hooks/useCareerDomains';
@@ -20,7 +20,7 @@ import Content from './Content';
 import { tooltipStyle } from '../components/common/chart-theme';
 
 const STAGE_COLOR = {
-  Applied: 'var(--text-secondary)', Screening: 'var(--accent-primary)', Interview: 'var(--warning)',
+  Target: 'var(--border)', Applied: 'var(--text-secondary)', Screening: 'var(--accent-primary)', Interview: 'var(--warning)',
   Offer: 'var(--accent-secondary)', Accepted: 'var(--success)', Rejected: 'var(--error)', Withdrawn: 'var(--text-secondary)',
 };
 const OPEN_STAGES = CAREER_STAGES.filter((s) => !['Rejected', 'Withdrawn', 'Accepted'].includes(s));
@@ -36,7 +36,7 @@ const SPACES = [
   { key: 'historique', label: 'Historique', desc: 'Tout ton parcours', icon: History },
 ];
 
-const blank = () => ({ company: '', role: '', type: APPLICATION_TYPES[0], domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
+const blank = () => ({ stage: 'Applied', priority: '', company: '', role: '', type: APPLICATION_TYPES[0], domain: 'Général', appliedDate: todayKey(), location: '', salary: '', url: '', notes: '', referralContactId: '', planId: '' });
 function DomainsModal({ onClose }) {
   const { domains, setDomains } = useCareerStore();
   const [text, setText] = useState((domains?.length ? domains : DEFAULT_CAREER_DOMAINS).join('\n'));
@@ -82,7 +82,9 @@ function Pilotage() {
   const [view, setView] = useState('kanban');
 
   const byStage = useMemo(() => CAREER_STAGES.map((s) => ({ name: stageLabel(s), key: s, count: applications.filter((a) => a.stage === s).length })).filter((s) => s.count > 0), [applications]);
-  const active = applications.filter((a) => OPEN_STAGES.includes(a.stage));
+  const sentApps = applications.filter(isRealApplication);
+  const targets = applications.length - sentApps.length;
+  const active = sentApps.filter((a) => OPEN_STAGES.includes(a.stage));
   const offers = applications.filter((a) => a.stage === 'Offer' || a.stage === 'Accepted').length;
   const stale = useMemo(() => getStaleApplications(), [applications]); // eslint-disable-line react-hooks/exhaustive-deps
   const followUps = useMemo(() => getFollowUpAlerts(7), [contacts]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -102,13 +104,13 @@ function Pilotage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-end gap-2">
         {applications.length > 0 && (
-          <Button variant="secondary" onClick={() => exportCareerReportPDF(applications, conversion)}><span className="flex items-center gap-2"><Download size={16} /> Rapport PDF</span></Button>
+          <Button variant="secondary" onClick={() => exportCareerReportPDF(sentApps, conversion)}><span className="flex items-center gap-2"><Download size={16} /> Rapport PDF</span></Button>
         )}
         <Button onClick={() => setModal(true)}><span className="flex items-center gap-2"><Plus size={16} /> Nouvelle candidature</span></Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Candidatures" value={applications.length} />
+        <Stat label="Candidatures" value={sentApps.length} sub={targets ? `+ ${targets} cible${targets > 1 ? 's' : ''} à contacter` : undefined} />
         <Stat label="En cours" value={active.length} />
         <Stat label="Candidature → entretien" value={`${conversion.appliedToInterviewPct}%`} sub={`${conversion.interview}/${conversion.applied}`} />
         <Stat label="Offres" value={offers} color={offers ? 'var(--success)' : undefined} />
@@ -202,7 +204,7 @@ function Pilotage() {
         applications.length ? (
           <div className="grid md:grid-cols-4 gap-3 overflow-x-auto">
             {CAREER_STAGES.filter((s) => s !== 'Withdrawn').map((stage) => {
-              const items = applications.filter((a) => a.stage === stage);
+              const items = applications.filter((a) => a.stage === stage).sort((x, y) => (x.priority || 'Z').localeCompare(y.priority || 'Z'));
               if (!items.length && !OPEN_STAGES.includes(stage)) return null;
               return (
                 <div key={stage} className="min-w-[220px]">
@@ -217,11 +219,11 @@ function Pilotage() {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <button className="font-medium text-left hover:underline cursor-pointer" onClick={() => setEditing(a)}>{a.role}</button>
-                            <div className="text-xs text-mute">{a.company}</div>
+                            <div className="text-xs text-mute">{a.company}{a.priority ? <span className="ml-1.5 text-[10px] font-semibold text-accent">Priorité {a.priority}</span> : null}</div>
                           </div>
                           <button className="text-mute hover:text-accent cursor-pointer shrink-0" onClick={() => setEditing(a)}><Pencil size={12} /></button>
                         </div>
-                        <div className="text-[11px] text-mute mt-1.5">{fmtDateShort(a.appliedDate)} · {a.type || domainLabel(a.domain)}</div>
+                        <div className="text-[11px] text-mute mt-1.5">{a.stage === 'Target' ? 'pas encore contactée' : fmtDateShort(a.appliedDate)} · {a.type || domainLabel(a.domain)}</div>
                         {(() => { const next = (a.interviews || []).filter((i) => i.date >= todayKey()).sort((x, y) => x.date.localeCompare(y.date))[0]; return next ? <div className="text-[11px] text-accent mt-1 flex items-center gap-1"><CalendarClock size={10} /> {next.kind} · {fmtDateShort(next.date)}</div> : null; })()}
                         {a.offer && <div className="text-[11px] text-good mt-1 flex items-center gap-1"><BadgeCheck size={10} /> Offre{a.offer.salary ? ` · ${Number(a.offer.salary).toLocaleString('fr-FR')} ${a.offer.currency || ''}/mois` : ''}</div>}
                         {a.referralContactId && contactName(a.referralContactId) && (
@@ -262,7 +264,7 @@ function Pilotage() {
                       <td className="py-2.5 pr-4 text-mute">{a.role}</td>
                       <td className="py-2.5 pr-4"><Badge>{domainLabel(a.domain)}</Badge></td>
                       <td className="py-2.5 pr-4"><Select value={a.stage} onChange={(e) => setStage(a.id, e.target.value)} options={STAGE_OPTIONS} className="!py-1 !px-2 text-xs w-32" /></td>
-                      <td className="py-2.5 pr-4 text-mute">{fmtDateShort(a.appliedDate)}</td>
+                      <td className="py-2.5 pr-4 text-mute">{a.stage === 'Target' ? '—' : fmtDateShort(a.appliedDate)}</td>
                       <td className="py-2.5 pr-4">
                         {a.referralContactId && contactName(a.referralContactId) ? (
                           <button className="flex items-center gap-1 text-xs text-accent hover:underline cursor-pointer" onClick={() => navigate(`/career?tab=reseau&contact=${a.referralContactId}`)}>
@@ -285,8 +287,12 @@ function Pilotage() {
 
       <BadgeList badges={getBadges()} />
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Nouvelle candidature">
+      <Modal open={modal} onClose={() => setModal(false)} title={form.stage === 'Target' ? 'Nouvelle cible' : 'Nouvelle candidature'}>
         <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Statut"><Select value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value })} options={[{ value: 'Applied', label: 'Postulé' }, { value: 'Target', label: 'À cibler (pas encore contacté)' }]} /></Field>
+            <Field label="Priorité"><Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} options={[{ value: '', label: '—' }, ...APPLICATION_PRIORITIES.map((p) => ({ value: p, label: `Priorité ${p}` }))]} /></Field>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Entreprise"><Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} autoFocus /></Field>
             <Field label="Poste"><Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="ex. Stage analyste M&A" /></Field>
@@ -294,7 +300,7 @@ function Pilotage() {
           <Field label="Type"><Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={APPLICATION_TYPES} /></Field>
           <div className="grid grid-cols-3 gap-3">
             <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={domainOptions} /></Field>
-            <Field label="Date"><Input type="date" value={form.appliedDate} onChange={(e) => setForm({ ...form, appliedDate: e.target.value })} /></Field>
+            {form.stage !== 'Target' && <Field label="Date"><Input type="date" value={form.appliedDate} onChange={(e) => setForm({ ...form, appliedDate: e.target.value })} /></Field>}
             <Field label="Lieu"><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">

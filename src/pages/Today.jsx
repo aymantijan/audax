@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
   BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
@@ -32,14 +32,12 @@ import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/
 import { NextClassBanner } from '../components/learning/Attendance';
 import BriefingCard from '../components/today/BriefingCard';
 import { arrangeCards } from '../utils/today-layout';
-import { TodayTabs, OrganizeButton } from '../components/today/TodayLayoutControls';
-import Dashboard from './Dashboard';
+import { OrganizeButton } from '../components/today/TodayLayoutControls';
 import ExamDayCard from '../components/learning/ExamDayCard';
 import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 
 export default function Today() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const today = todayKey();
 
@@ -559,22 +557,8 @@ export default function Today() {
     ) },
   ];
 
-  // One page, two views: today's cards, and the Bilan (ex-Tableau de bord).
-  const view = searchParams.get('vue') === 'bilan' ? 'bilan' : 'today';
-  const setView = (v) => setSearchParams(v === 'bilan' ? { vue: 'bilan' } : {}, { replace: true });
-
-  if (view === 'bilan') {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-center"><TodayTabs view={view} onChange={setView} /></div>
-        <Dashboard />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex justify-center"><TodayTabs view={view} onChange={setView} /></div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Bonjour, {user?.name}</h1>

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   classesOn, occurrenceState, checkInStatus, dayAttendance, courseAttendance, courseEnd, pendingCaptures, withDefaults,
+  clockOn, arrivalError,
 } from '../src/utils/attendance.js';
 
 const settings = { activeTermId: 't', arriveBeforeMin: 5 };
@@ -23,6 +24,17 @@ test('check-in: on time up to arriveBeforeMin before the start, late after', () 
   assert.equal(checkInStatus(o, settings, at('2026-09-28T08:25:00')), 'on_time');
   assert.equal(checkInStatus(o, settings, at('2026-09-28T08:25:01')), 'late');
   assert.equal(checkInStatus(o, { ...settings, arriveBeforeMin: 10 }, at('2026-09-28T08:22:00')), 'late');
+});
+
+test('declared arrival: the time in the room counts, not the time of the tap', () => {
+  const [o] = classesOn([course()], academic(), '2026-09-28');
+  // in the room at 08:20, typed at the 10:00 break → still on time
+  const arrived = clockOn(o, '08:20');
+  assert.equal(arrivalError(o, arrived), null);
+  assert.equal(checkInStatus(o, settings, arrived), 'on_time');
+  assert.equal(checkInStatus(o, settings, clockOn(o, '08:40')), 'late');
+  assert.match(arrivalError(o, clockOn(o, '10:00')), /fin du cours/);
+  assert.match(arrivalError(o, clockOn(o, '05:00')), /Trop tôt/);
 });
 
 test('state: upcoming → open 1 h before → absent once over without a record', () => {

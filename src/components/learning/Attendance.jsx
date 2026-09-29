@@ -6,7 +6,7 @@ import { useHabitStore } from '../../store/habitStore';
 import { useFlashcardStore } from '../../store/flashcardStore';
 import {
   ATTENDANCE_STATUS, PAST_CORRECTIONS, classesOn, occurrenceState, arriveBy, fmtClock, dayAttendance,
-  courseAttendance, courseEnd, classWeekdays, dateKeyOf, withDefaults, pendingCaptures,
+  courseAttendance, courseEnd, classWeekdays, dateKeyOf, withDefaults, pendingCaptures, clockOn, arrivalError,
 } from '../../utils/attendance';
 import { isAcademic } from '../../utils/academic';
 import { Button, Card, Modal, Textarea, Field } from '../common/ui';
@@ -39,20 +39,75 @@ function StatusChip({ status }) {
   );
 }
 
+const hhmm = (ms) => fmtClock(ms);
+
+/**
+ * "What time were you in the room?" — the declared time decides on time /
+ * late, whenever it is typed (at the break, offline, after class, days later).
+ */
+export function ArrivalModal({ occ, onClose }) {
+  const checkIn = useLearningStore((s) => s.checkInClass);
+  const rec = useLearningStore((s) => (occ ? s.attendance[occ.key] : null));
+  const settings = useAcademicSettings();
+  const [time, setTime] = useState('');
+  useEffect(() => {
+    if (!occ) return;
+    const now = Date.now();
+    // Default: the time already recorded, else now if we are in the class window, else the class start.
+    const def = rec?.at && ATTENDANCE_STATUS[rec.status]?.present ? rec.at : now >= occ.startMs - 3 * 3600000 && now < occ.endMs ? now : occ.startMs;
+    setTime(hhmm(def));
+  }, [occ?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!occ) return null;
+  const arrived = clockOn(occ, time);
+  const err = time ? arrivalError(occ, arrived) : 'Indique une heure.';
+  const deadline = arriveBy(occ, settings);
+  const onTime = !err && arrived <= deadline;
+  const save = () => { if (err) return; checkIn(occ, arrived); onClose(); };
+  const dayLabel = new Date(`${occ.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  return (
+    <Modal open={!!occ} onClose={onClose} title={`En salle — ${occ.course.name}`}>
+      <div className="space-y-4">
+        <p className="text-sm text-mute">
+          Cours du {dayLabel}, {occ.start}–{occ.end}. À l’heure si tu étais en salle avant <b className="text-ink">{hhmm(deadline)}</b>.
+          Tu peux pointer plus tard (à la pause, sans connexion…) : c’est l’heure indiquée ici qui compte.
+        </p>
+        <Field label="J’étais en salle à">
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} autoFocus
+            className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-lg font-data text-ink focus:outline-none focus:border-accent" />
+        </Field>
+        <p className="text-sm" style={{ color: err ? 'var(--error)' : onTime ? 'var(--success)' : 'var(--warning)' }}>
+          {err || (onTime ? 'Compté à l’heure ✓' : `Compté en retard (${Math.round((arrived - deadline) / 60000)} min après ${hhmm(deadline)})`)}
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Annuler</Button>
+          <Button disabled={!!err} onClick={save}>Enregistrer</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // Small native select: corrections that make sense at this point of the class.
-function CorrectionMenu({ occ, state }) {
+function CorrectionMenu({ occ, state, onArrival }) {
   const setAttendance = useLearningStore((s) => s.setAttendance);
   const recorded = useLearningStore((s) => !!s.attendance[occ.key]);
   const ended = Date.now() >= occ.endMs;
   const options = ended ? PAST_CORRECTIONS.filter((s) => s !== state) : ['cancelled', 'excused'].filter((s) => s !== state);
+  const present = ATTENDANCE_STATUS[state]?.present;
   return (
     <select
       value=""
       aria-label="Corriger la présence"
       onClick={(e) => e.stopPropagation()}
-      onChange={(e) => setAttendance(occ.key, e.target.value === 'reset' ? null : e.target.value)}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === 'time') onArrival();
+        else setAttendance(occ.key, v === 'reset' ? null : v);
+      }}
       className="text-[11px] bg-transparent border border-line rounded-md px-1 py-0.5 text-mute cursor-pointer max-w-[6.5rem] focus:outline-none focus:border-accent">
       <option value="" disabled>Corriger…</option>
+      {(present || ended) && <option value="time">{present ? 'Modifier l’heure d’arrivée' : 'J’étais en salle à…'}</option>}
       {options.map((s) => <option key={s} value={s}>{ATTENDANCE_STATUS[s].label}</option>)}
       {recorded && <option value="reset">Réinitialiser</option>}
     </select>
@@ -113,8 +168,9 @@ export function ClassCaptureModal({ occ, onClose }) {
 export function ClassRow({ occ, now }) {
   const records = useLearningStore((s) => s.attendance);
   const hasNotes = useLearningStore((s) => !!s.classNotes[occ.key]);
-  const checkIn = useLearningStore((s) => s.checkInClass);
   const [capture, setCapture] = useState(null);
+  const [arrival, setArrival] = useState(null);
+  const rec = records[occ.key];
   const settings = useAcademicSettings();
   const state = occurrenceState(occ, records, now);
   const color = courseColor(occ.course.id);
@@ -141,16 +197,24 @@ export function ClassRow({ occ, now }) {
       </span>
       <span className="flex items-center gap-1.5 shrink-0">
         {state === 'open' ? (
-          <Button className="!py-1.5 !px-2.5 text-xs" onClick={() => checkIn(occ)}>
+          <Button className="!py-1.5 !px-2.5 text-xs" onClick={() => setArrival(occ)}>
             <span className="flex items-center gap-1"><DoorOpen size={13} /> En salle</span>
           </Button>
-        ) : state !== 'upcoming' && <StatusChip status={state} />}
+        ) : state !== 'upcoming' && (
+          <>
+            {rec?.at && ATTENDANCE_STATUS[state]?.present && state !== 'forgot' && (
+              <button type="button" onClick={() => setArrival(occ)} className="text-[11px] tabular-nums text-mute hover:text-accent cursor-pointer" title="Modifier l’heure d’arrivée">{fmtClock(rec.at)}</button>
+            )}
+            <StatusChip status={state} />
+          </>
+        )}
         {ATTENDANCE_STATUS[state]?.present && now >= occ.endMs - 10 * 60000 && (hasNotes
           ? <button onClick={() => setCapture(occ)} className="text-good cursor-pointer" title="Notes du cours"><Check size={14} /></button>
           : <Button variant="secondary" className="!py-1 !px-2 text-xs" onClick={() => setCapture(occ)}><span className="flex items-center gap-1"><NotebookPen size={12} /> Retenir</span></Button>)}
-        <CorrectionMenu occ={occ} state={state} />
+        <CorrectionMenu occ={occ} state={state} onArrival={() => setArrival(occ)} />
       </span>
       <ClassCaptureModal occ={capture} onClose={() => setCapture(null)} />
+      <ArrivalModal occ={arrival} onClose={() => setArrival(null)} />
     </div>
   );
 }
@@ -168,7 +232,7 @@ export function ClassesTodayCard() {
   return (
     <Card>
       <SectionHeader icon={Clock} title="Cours d'aujourd'hui"
-        subtitle={classes.length ? `${score.onTime}/${score.required} à l’heure · pointe « En salle » dès que tu arrives` : undefined}
+        subtitle={classes.length ? `${score.onTime}/${score.required} à l’heure · pointe « En salle » quand tu peux, avec ton heure d’arrivée réelle` : undefined}
         action={<Link to="/learning?tab=timetable" className="text-xs text-accent hover:underline">Emploi du temps</Link>} />
       {classes.length ? (
         <div className="space-y-2">{classes.map((o) => <ClassRow key={o.key} occ={o} now={now} />)}</div>
@@ -343,7 +407,7 @@ export function AttendanceOverview() {
 
       <Card>
         <SectionHeader icon={UserCheck} title="Assiduité"
-          subtitle={`À l’heure = pointé « En salle » au moins ${before} min avant le début. ${totals.req ? `${totals.onTime}/${totals.req} cours à l’heure · ${totals.absent} absence${totals.absent > 1 ? 's' : ''}` : 'Le suivi commence au premier cours.'}`}
+          subtitle={`À l’heure = en salle au moins ${before} min avant le début (l’heure d’arrivée indiquée, pas l’heure du pointage). ${totals.req ? `${totals.onTime}/${totals.req} cours à l’heure · ${totals.absent} absence${totals.absent > 1 ? 's' : ''}` : 'Le suivi commence au premier cours.'}`}
           action={habit
             ? <Link to="/habits" className="text-xs text-accent hover:underline flex items-center gap-1"><Repeat size={12} /> Habitude liée</Link>
             : <Button variant="secondary" className="!py-1.5" onClick={createHabit}><span className="flex items-center gap-1.5"><Repeat size={13} /> Créer l’habitude</span></Button>} />
@@ -382,8 +446,40 @@ export function AttendanceOverview() {
             </tbody>
           </table>
         </div>
+        <RecentClasses />
       </Card>
     </div>
+  );
+}
+
+/** Classes of the last 7 days, to fix a check-in afterwards (time, absence…). */
+function RecentClasses() {
+  const courses = useLearningStore((s) => s.courses);
+  const academic = useLearningStore((s) => s.academic);
+  const now = useNow();
+  const days = useMemo(() => {
+    const out = [];
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      const key = dateKeyOf(d);
+      const classes = classesOn(courses, academic, key);
+      if (classes.length) out.push({ key, classes });
+    }
+    return out;
+  }, [courses, academic, Math.floor(now / 3600000)]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!days.length) return null;
+  return (
+    <details className="mt-3 group">
+      <summary className="text-xs text-accent cursor-pointer select-none">Corriger un cours des 7 derniers jours</summary>
+      <div className="mt-3 space-y-3">
+        {days.map(({ key, classes }) => (
+          <div key={key}>
+            <div className="text-[11px] text-mute mb-1.5">{new Date(`${key}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+            <div className="space-y-1.5">{classes.map((o) => <ClassRow key={o.key} occ={o} now={now} />)}</div>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 

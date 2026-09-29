@@ -173,7 +173,7 @@ export default function App() {
       >
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<Today />} />
-        <Route path="/dashboard" element={<Navigate to="/today?vue=bilan" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/today" replace />} />
         <Route path="/trading" element={<Trading />} />
         <Route path="/trading/accounts" element={<Navigate to="/trading?tab=accounts" replace />} />
         <Route path="/trading/account/:id" element={<TradingAccountDetail />} />

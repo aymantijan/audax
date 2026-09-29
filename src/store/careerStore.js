@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
-import { CAREER_STAGES, CAREER_STAGE_SKILL, DEFAULT_INTERVIEW_QUESTIONS } from '../utils/constants';
+import { CAREER_STAGES, CAREER_STAGE_SKILL, DEFAULT_INTERVIEW_QUESTIONS, isRealApplication } from '../utils/constants';
 import { useSkillStore } from './skillStore';
 import { useNetworkingStore } from './networkingStore';
 import { toast } from './uiStore';
@@ -15,12 +15,13 @@ import { evaluateBadges } from '../utils/badges';
 const APP_XP = 4; // logging an application — the "did the outreach" credit
 const STAGE_XP = 8; // advancing a stage — awarded to the stage-specific skill
 
+const sent = (s) => s.applications.filter(isRealApplication); // targets are not applications yet
 const BADGE_DEFS = [
-  { id: 'first-application', name: 'Première candidature', tier: 'bronze', check: (s) => s.applications.length >= 1 },
-  { id: 'persistent', name: 'Persévérant', tier: 'silver', check: (s) => s.applications.length >= 15 },
+  { id: 'first-application', name: 'Première candidature', tier: 'bronze', check: (s) => sent(s).length >= 1 },
+  { id: 'persistent', name: 'Persévérant', tier: 'silver', check: (s) => sent(s).length >= 15 },
   { id: 'interview-landed', name: 'Entretien décroché', tier: 'silver', check: (s) => s.applications.some((a) => CAREER_STAGES.indexOf(a.stage) >= CAREER_STAGES.indexOf('Interview')) },
   { id: 'offer-received', name: 'Offre reçue', tier: 'gold', check: (s) => s.applications.some((a) => a.stage === 'Offer' || a.stage === 'Accepted') },
-  { id: 'domain-diverse', name: 'Large filet', tier: 'bronze', check: (s) => new Set(s.applications.map((a) => a.domain).filter(Boolean)).size >= 3 },
+  { id: 'domain-diverse', name: 'Large filet', tier: 'bronze', check: (s) => new Set(sent(s).map((a) => a.domain).filter(Boolean)).size >= 3 },
 ];
 
 export const useCareerStore = create(
@@ -37,13 +38,15 @@ export const useCareerStore = create(
 
       addApplication: (data) => {
         if (!data.company?.trim() || !data.role?.trim()) return { ok: false, error: "L'entreprise et le rôle sont requis." };
+        const target = data.stage === 'Target'; // on the target list, nothing sent yet
         const app = {
           id: uid(),
           company: data.company.trim(),
           role: data.role.trim(),
           domain: data.domain || 'General',
-          stage: 'Applied',
-          appliedDate: data.appliedDate || todayKey(),
+          stage: target ? 'Target' : 'Applied',
+          appliedDate: target ? '' : data.appliedDate || todayKey(),
+          priority: data.priority || '', // 'A' | 'B' | 'C' — how much this company matters
           location: data.location || '',
           salary: data.salary || '',
           url: data.url || '',
@@ -54,11 +57,15 @@ export const useCareerStore = create(
           interviews: [], // [{ id, date, time, kind, with, notes, feeling (1-5), thankYouSent, createdAt }]
           prep: { companyNotes: '', questionIds: [], storyIds: [], askThem: '' },
           offer: null, // { salary, currency, bonus, benefits, location, startDate, deadline, learning, career, culture, notes }
-          stageHistory: [{ stage: 'Applied', date: todayKey() }],
+          stageHistory: [{ stage: target ? 'Target' : 'Applied', date: todayKey() }],
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
         set({ applications: [...get().applications, app] });
+        if (target) {
+          toast(`Cible ajoutée : ${app.company}`, 'success');
+          return { ok: true, id: app.id };
+        }
         useSkillStore.getState().awardXP('written-communication-lv1', APP_XP, `candidature : ${app.company}`);
         toast(`Candidature loggée : ${app.company} · +${APP_XP} XP`, 'success');
         get().checkBadges();
@@ -70,10 +77,10 @@ export const useCareerStore = create(
         set({ applications: get().applications.filter((a) => a.id !== id) });
         if (app) {
           const remove = useSkillStore.getState().removeXP;
-          remove('written-communication-lv1', APP_XP, 'application deleted');
+          if (app.stage !== 'Target' || app.appliedDate) remove('written-communication-lv1', APP_XP, 'application deleted');
           for (const h of app.stageHistory || []) {
             const skillId = CAREER_STAGE_SKILL[h.stage] || 'written-communication-lv1';
-            if (h.stage !== 'Applied') remove(skillId, STAGE_XP, 'application deleted');
+            if (h.stage !== 'Applied' && h.stage !== 'Target') remove(skillId, STAGE_XP, 'application deleted');
           }
         }
         toast('Candidature supprimée', 'info');
@@ -85,12 +92,18 @@ export const useCareerStore = create(
       setStage: (id, stage) => {
         const app = get().applications.find((a) => a.id === id);
         if (!app || app.stage === stage) return;
+        // Leaving the target list = the application is actually sent today.
+        const sending = app.stage === 'Target' && stage !== 'Target' && !app.appliedDate;
         set({
           applications: get().applications.map((a) =>
-            a.id === id ? { ...a, stage, stageHistory: [...(a.stageHistory || []), { stage, date: todayKey() }], updatedAt: Date.now() } : a
+            a.id === id ? { ...a, stage, ...(sending ? { appliedDate: todayKey() } : {}), stageHistory: [...(a.stageHistory || []), { stage, date: todayKey() }], updatedAt: Date.now() } : a
           ),
         });
-        if (stage !== 'Applied') {
+        if (sending) {
+          useSkillStore.getState().awardXP('written-communication-lv1', APP_XP, `candidature : ${app.company}`);
+          if (stage === 'Applied') toast(`Candidature envoyée : ${app.company} · +${APP_XP} XP`, 'success');
+        }
+        if (stage !== 'Applied' && stage !== 'Target') {
           const skillId = CAREER_STAGE_SKILL[stage] || 'written-communication-lv1';
           useSkillStore.getState().awardXP(skillId, STAGE_XP, `${stage}: ${app.company}`);
           toast(`${app.company} → ${stage} · +${STAGE_XP} XP`, 'success');
@@ -112,7 +125,7 @@ export const useCareerStore = create(
       getStaleApplications: (days = 14, today = todayKey()) => {
         const cutoffMs = new Date(`${today}T00:00:00`).getTime() - days * 86400000;
         return get()
-          .applications.filter((a) => !['Accepted', 'Rejected', 'Withdrawn'].includes(a.stage))
+          .applications.filter((a) => !['Target', 'Accepted', 'Rejected', 'Withdrawn'].includes(a.stage))
           .map((a) => {
             const lastMoveDate = a.stageHistory?.length ? a.stageHistory[a.stageHistory.length - 1].date : a.appliedDate;
             return { app: a, lastMoveDate, staleMs: cutoffMs - new Date(`${lastMoveDate}T00:00:00`).getTime() };
@@ -125,7 +138,7 @@ export const useCareerStore = create(
       // not just current stage, so an application that got an offer and was
       // later marked Accepted still counts toward the Interview→Offer rate.
       getConversionStats: () => {
-        const apps = get().applications;
+        const apps = get().applications.filter(isRealApplication);
         const reached = (stage) => apps.filter((a) => (a.stageHistory || []).some((h) => h.stage === stage)).length;
         const applied = apps.length;
         const interview = reached('Interview');

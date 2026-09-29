@@ -33,7 +33,7 @@ export default function NudgeCard() {
     workouts: useHealthStore((s) => s.workouts.length),
     library: useReadingsStore((s) => s.progress.length),
     trades: useTradingStore((s) => s.trades.length),
-    applications: useCareerStore((s) => s.applications.length),
+    applications: useCareerStore((s) => s.applications.filter((a) => a.stage !== 'Target').length),
     contacts: useNetworkingStore((s) => s.contacts.length),
     posts: useContentStore((s) => s.posts.length),
     sessions: useFocusStore((s) => s.sessions.length),

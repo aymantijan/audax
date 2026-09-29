@@ -102,9 +102,12 @@ export const LIFE_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Genera
 // 2026-08-27 despite networkingStore's own comment promising this distinction.
 export const TOUCH_TYPES = ['Appel', 'Café', 'Email', 'Message', 'Événement', 'Autre'];
 
-export const CAREER_STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+// 'Target' = a company on the target list, nothing sent yet (not counted as an application).
+export const CAREER_STAGES = ['Target', 'Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+export const isRealApplication = (a) => a?.stage !== 'Target';
+export const APPLICATION_PRIORITIES = ['A', 'B', 'C'];
 // Stored values stay in English (existing data, XP maps); the UI shows these.
-export const CAREER_STAGE_LABEL = { Applied: 'Postulé', Screening: 'Présélection', Interview: 'Entretien', Offer: 'Offre', Accepted: 'Acceptée', Rejected: 'Refusée', Withdrawn: 'Retirée' };
+export const CAREER_STAGE_LABEL = { Target: 'À cibler', Applied: 'Postulé', Screening: 'Présélection', Interview: 'Entretien', Offer: 'Offre', Accepted: 'Acceptée', Rejected: 'Refusée', Withdrawn: 'Retirée' };
 export const stageLabel = (s) => CAREER_STAGE_LABEL[s] || s;
 // Career domains are user-editable (careerStore.domains); these are the defaults.
 export const DEFAULT_CAREER_DOMAINS = ['Finance de marché', 'Trading', 'Private equity', 'Audit & expertise', 'Conseil', 'Finance d’entreprise', 'Marketing', 'Entrepreneuriat', 'Ingénierie', 'Général'];

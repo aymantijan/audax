@@ -51,7 +51,7 @@ export default function CareerHistory() {
     }
     for (const x of profile.certifications || []) if (x.date) out.push({ kind: 'certification', month: true, date: day(x.date), title: `Certification — ${x.name}`, sub: x.issuer, milestone: true });
     for (const a of applications) {
-      for (const h of a.stageHistory?.length ? a.stageHistory : [{ stage: 'Applied', date: a.appliedDate }]) {
+      for (const h of (a.stageHistory?.length ? a.stageHistory : [{ stage: 'Applied', date: a.appliedDate }]).filter((x) => x.stage !== 'Target')) {
         const date = h.stage === 'Applied' ? a.appliedDate || h.date : h.date;
         out.push({ kind: 'application', date, title: `${STAGE_TEXT[h.stage] || stageLabel(h.stage)} — ${a.role}`, sub: a.company, milestone: h.stage === 'Offer' || h.stage === 'Accepted' });
       }

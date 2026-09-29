@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Mail, CalendarClock, CheckCircle2, Star } from 'lucide-react';
 import { useCareerStore } from '../../store/careerStore';
 import { useNetworkingStore } from '../../store/networkingStore';
-import { APPLICATION_TYPES, INTERVIEW_KINDS, CURRENCIES, DEFAULT_ASK_THEM, stageLabel, CAREER_STAGES } from '../../utils/constants';
+import { APPLICATION_TYPES, APPLICATION_PRIORITIES, INTERVIEW_KINDS, CURRENCIES, DEFAULT_ASK_THEM, stageLabel, CAREER_STAGES } from '../../utils/constants';
 import { fmtDate, todayKey } from '../../utils/formatters';
 import { useCareerDomains } from '../../hooks/useCareerDomains';
 import { Button, Field, Input, Select, Textarea, Modal } from '../common/ui';
@@ -22,7 +22,7 @@ function Infos({ app, onClose }) {
   const { editApplication, deleteApplication, plans } = useCareerStore();
   const contacts = useNetworkingStore((s) => s.contacts);
   const domainOptions = useCareerDomains();
-  const [f, setF] = useState({ company: app.company, role: app.role, type: app.type || '', domain: app.domain, appliedDate: app.appliedDate, location: app.location || '', salary: app.salary || '', url: app.url || '', referralContactId: app.referralContactId || '', planId: app.planId || '', notes: app.notes || '' });
+  const [f, setF] = useState({ company: app.company, role: app.role, type: app.type || '', domain: app.domain, appliedDate: app.appliedDate || '', priority: app.priority || '', location: app.location || '', salary: app.salary || '', url: app.url || '', referralContactId: app.referralContactId || '', planId: app.planId || '', notes: app.notes || '' });
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const openPlans = (plans || []).filter((p) => p.status !== 'dropped');
   return (
@@ -33,6 +33,7 @@ function Infos({ app, onClose }) {
         <Field label="Type"><Select value={f.type} onChange={set('type')} options={[{ value: '', label: '—' }, ...APPLICATION_TYPES.map((t) => ({ value: t, label: t }))]} /></Field>
         <Field label="Domaine"><Select value={f.domain} onChange={set('domain')} options={domainOptions} /></Field>
         <Field label="Date de candidature"><Input type="date" value={f.appliedDate} onChange={set('appliedDate')} /></Field>
+        <Field label="Priorité"><Select value={f.priority} onChange={set('priority')} options={[{ value: '', label: '—' }, ...APPLICATION_PRIORITIES.map((p) => ({ value: p, label: `Priorité ${p}` }))]} /></Field>
         <Field label="Lieu"><Input value={f.location} onChange={set('location')} /></Field>
         <Field label="Rémunération annoncée"><Input value={f.salary} onChange={set('salary')} /></Field>
         <Field label="Lien annonce"><Input value={f.url} onChange={set('url')} /></Field>

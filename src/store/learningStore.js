@@ -9,7 +9,7 @@ import { toast } from './uiStore';
 import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calendar';
 import { DEFAULT_ACADEMIC_SETTINGS, EVALUATION_PRESETS, subjectResult, letterFor, isAcademic } from '../utils/academic';
 import { resourcesOf } from '../utils/tracks';
-import { checkInStatus, ATTENDANCE_STATUS, fmtClock, arriveBy } from '../utils/attendance';
+import { checkInStatus, ATTENDANCE_STATUS, fmtClock, arriveBy, arrivalError } from '../utils/attendance';
 
 export const useLearningStore = create(
   persist(
@@ -311,17 +311,18 @@ export const useLearningStore = create(
 
       // ── Attendance ──
       // "Je suis en salle": on time when done `arriveBeforeMin` before the start.
-      checkInClass: (occ) => {
-        if (get().attendance[occ.key]) return;
-        const now = Date.now();
-        if (now >= occ.endMs) return;
-        const status = checkInStatus(occ, get().academic.settings, now);
-        set({ attendance: { ...get().attendance, [occ.key]: { status, at: now } } });
+      // Check in with the time the student was really in the room (defaults to
+      // now). Also used to edit that time later: the status follows the time.
+      checkInClass: (occ, arrivedMs = Date.now()) => {
+        if (arrivalError(occ, arrivedMs)) return;
+        const prev = get().attendance[occ.key];
+        const status = checkInStatus(occ, get().academic.settings, arrivedMs);
+        set({ attendance: { ...get().attendance, [occ.key]: { status, at: arrivedMs, checkedAt: Date.now() } } });
         if (status === 'on_time') {
-          get().recordActivity();
-          toast(`Présent à l’heure : ${occ.course.name} ✓`, 'success');
+          if (prev?.status !== 'on_time') get().recordActivity();
+          toast(`${prev ? 'Heure corrigée' : 'Présent'} : à l’heure (${fmtClock(arrivedMs)}) ✓`, 'success');
         } else {
-          toast(`Pointé en retard (il fallait être là à ${fmtClock(arriveBy(occ, get().academic.settings))})`, 'info');
+          toast(`En retard : en salle à ${fmtClock(arrivedMs)}, il fallait être là à ${fmtClock(arriveBy(occ, get().academic.settings))}`, 'info');
         }
       },
       saveClassNotes: (occ, points, cards = 0) => {
