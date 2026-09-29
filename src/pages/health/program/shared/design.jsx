@@ -3,7 +3,7 @@
  * One source of truth for session-type colours/icons, plus the layout pieces
  * (hero header, segmented tabs, section headers) used across Programme screens.
  */
-import { Dumbbell, HeartPulse, Zap, StretchHorizontal, Trophy, Leaf, CalendarRange, Flag } from 'lucide-react';
+import { Dumbbell, HeartPulse, Zap, StretchHorizontal, Trophy, Leaf, CalendarRange, Flag, Check } from 'lucide-react';
 
 export const SESSION_TYPES = [
   { value: 'strength', label: 'Musculation', short: 'Muscu', icon: Dumbbell, color: 'var(--accent-primary)' },
@@ -113,15 +113,70 @@ const STATUS = {
 
 const fmtDate = (s) => (s ? new Date(s + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '…');
 
+const localToday = () => new Date().toLocaleDateString('sv-SE');
+
+/**
+ * Where a phase stands, from its dates (and an explicit "completed"):
+ * 'done' — reached, kept for the record, can no longer be run;
+ * 'current' — today falls in it; 'upcoming' — not started yet.
+ */
+export function phaseState(phase, today = localToday()) {
+  if (!phase) return 'upcoming';
+  if (phase.status === 'completed' || (phase.end_date && phase.end_date < today)) return 'done';
+  if (phase.start_date <= today && phase.end_date >= today) return 'current';
+  return 'upcoming';
+}
+export const PHASE_STATE = {
+  done: { label: 'Atteinte', color: 'var(--success)' },
+  current: { label: 'En cours', color: 'var(--accent-primary)' },
+  upcoming: { label: 'À venir', color: 'var(--text-secondary)' },
+};
+
+export function PhaseStateBadge({ phase }) {
+  const s = PHASE_STATE[phaseState(phase)];
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap" style={{ background: tint(s.color, 16), color: s.color }}>
+      {phaseState(phase) === 'done' && <Check size={11} />}
+      {s.label}
+    </span>
+  );
+}
+
+/** The phases in order: reached ones stay listed (dimmed), the current one stands out. */
+export function PhaseList({ phases = [] }) {
+  if (phases.length < 2) return null;
+  const sorted = [...phases].sort((a, b) => a.phase_order - b.phase_order);
+  return (
+    <ol className="mt-5 space-y-2">
+      {sorted.map((p) => {
+        const st = phaseState(p);
+        return (
+          <li key={p.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${st === 'current' ? 'border-accent/50 bg-card' : 'border-line'} ${st === 'done' ? 'opacity-70' : ''}`}>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              style={{ background: tint(PHASE_STATE[st].color, 18), color: PHASE_STATE[st].color }}>
+              {st === 'done' ? <Check size={14} /> : p.phase_order}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-ink">Phase {p.phase_order} · {p.name}</span>
+              <span className="block text-[11px] text-mute">{fmtDate(p.start_date)} → {fmtDate(p.end_date)}{st === 'done' ? ' · consultable, ne peut plus être lancée' : ''}</span>
+            </span>
+            <PhaseStateBadge phase={p} />
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /**
  * Hero header: program name + status, current phase, block progress bar
  * (week X of Y, days left) and an action slot.
  */
 export function ProgramHero({ program, phases = [], actions }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const status = STATUS[program.status] || STATUS.draft;
-  const current = phases.find((p) => p.start_date <= today && p.end_date >= today)
-    || phases.find((p) => p.status === 'active') || null;
+  const current = phases.find((p) => phaseState(p, today) === 'current')
+    || phases.find((p) => p.status === 'active' && phaseState(p, today) !== 'done') || null;
 
   let progress = null;
   if (current) {
@@ -177,6 +232,8 @@ export function ProgramHero({ program, phases = [], actions }) {
           </div>
         </div>
       )}
+
+      <PhaseList phases={phases} />
     </div>
   );
 }

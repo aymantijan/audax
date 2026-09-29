@@ -3,7 +3,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react'
 import { Card, Button, Input, Field, Badge, EmptyState } from '../../../../components/common/ui';
 import { useProgramStore } from '../../../../store/programStore';
 import SessionBuilder from './SessionBuilder';
-import { TypeBadge, typeMeta } from '../shared/design';
+import { TypeBadge, typeMeta, PhaseStateBadge, phaseState } from '../shared/design';
 import WeeklyStructureEditor from './WeeklyStructureEditor';
 
 export default function PhaseEditor({ programId }) {
@@ -75,9 +75,10 @@ export default function PhaseEditor({ programId }) {
         const endDate = new Date(phase.end_date);
         const durationDays = Math.ceil((endDate - startDate) / 86400000) + 1;
         const durationWeeks = Math.round(durationDays / 7 * 10) / 10;
+        const done = phaseState(phase) === 'done'; // reached: kept for the record, not runnable
 
         return (
-          <Card key={phase.id} className={expanded ? 'ring-1 ring-accent/30' : ''}>
+          <Card key={phase.id} className={`${expanded ? 'ring-1 ring-accent/30' : ''} ${done ? 'opacity-80' : ''}`}>
             {/* Phase header */}
             <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => toggleExpand(phase.id)}>
               <div className="flex items-center gap-3">
@@ -86,6 +87,7 @@ export default function PhaseEditor({ programId }) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">Phase {phase.phase_order}</span>
                     <span className="text-sm text-ink">— {phase.name}</span>
+                    <PhaseStateBadge phase={phase} />
                     <Badge>{durationWeeks} sem.</Badge>
                     <Badge color="var(--success)">{sessions.length} séance(s)</Badge>
                   </div>
@@ -96,15 +98,21 @@ export default function PhaseEditor({ programId }) {
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" onClick={(e) => { e.stopPropagation(); handleDeletePhase(phase.id); }}>
-                <Trash2 size={14} />
-              </Button>
+              {!done && (
+                <Button variant="ghost" onClick={(e) => { e.stopPropagation(); handleDeletePhase(phase.id); }}>
+                  <Trash2 size={14} />
+                </Button>
+              )}
             </div>
 
             {/* Expanded: editable details */}
             {expanded && (
               <div className="mt-4 space-y-4 border-t border-line pt-4">
+                {done && (
+                  <p className="text-xs text-mute">Phase atteinte : elle reste consultable avec tes séances enregistrées, mais ne peut plus être lancée ni modifiée.</p>
+                )}
                 {/* Phase meta */}
+                {!done && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Field label="Nom">
                     <Input value={phase.name} onBlur={(e) => handleUpdatePhaseField(phase.id, 'name', e.target.value)} onChange={() => {}} defaultValue={phase.name} />
@@ -119,14 +127,17 @@ export default function PhaseEditor({ programId }) {
                     <Input value={phase.objective || ''} onChange={(e) => handleUpdatePhaseField(phase.id, 'objective', e.target.value)} placeholder="Objectif de la phase" />
                   </Field>
                 </div>
+                )}
 
                 {/* Sessions */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-semibold text-mute uppercase tracking-wide">Séances de cette phase</h4>
-                    <Button variant="secondary" onClick={() => { setEditingSessionFor(phase.id); setEditingSession(null); }}>
-                      <span className="flex items-center gap-1"><Plus size={14} /> Nouvelle séance</span>
-                    </Button>
+                    {!done && (
+                      <Button variant="secondary" onClick={() => { setEditingSessionFor(phase.id); setEditingSession(null); }}>
+                        <span className="flex items-center gap-1"><Plus size={14} /> Nouvelle séance</span>
+                      </Button>
+                    )}
                   </div>
 
                   {sessions.length > 0 ? (
@@ -135,8 +146,9 @@ export default function PhaseEditor({ programId }) {
                         <button
                           type="button"
                           key={sess.id}
-                          onClick={() => { setEditingSessionFor(phase.id); setEditingSession(sess); }}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/70 px-3 py-2.5 text-left transition-colors hover:border-accent/50 cursor-pointer"
+                          onClick={() => { if (!done) { setEditingSessionFor(phase.id); setEditingSession(sess); } }}
+                          disabled={done}
+                          className={`flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/70 px-3 py-2.5 text-left transition-colors ${done ? 'cursor-default' : 'hover:border-accent/50 cursor-pointer'}`}
                           style={{ borderLeft: `3px solid ${typeMeta(sess.type).color}` }}
                         >
                           <span className="min-w-0">
@@ -146,7 +158,7 @@ export default function PhaseEditor({ programId }) {
                               {sess.estimated_duration_min ? `${sess.estimated_duration_min} min` : ''}
                             </span>
                           </span>
-                          <span className="shrink-0 text-xs text-mute">Modifier</span>
+                          {!done && <span className="shrink-0 text-xs text-mute">Modifier</span>}
                         </button>
                       ))}
                     </div>
@@ -167,7 +179,7 @@ export default function PhaseEditor({ programId }) {
                 </div>
 
                 {/* Weekly structure */}
-                {sessions.length > 0 && (
+                {sessions.length > 0 && !done && (
                   <WeeklyStructureEditor phaseId={phase.id} />
                 )}
               </div>
