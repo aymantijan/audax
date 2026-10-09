@@ -62,7 +62,9 @@ test('server reminders: heads-up, nudge, silent once checked in, capture after c
     courses: [{ id: 'c', name: 'Consulting', kind: 'academic', termId: 't', status: 'active', slots: [{ id: 's', day: 1, start: '08:30', end: '10:00', room: 'Auditorium' }] }],
     academic: { settings: { activeTermId: 't', arriveBeforeMin: 10 }, terms: [{ id: 't', startDate: '2026-09-28' }], modules: [] }, attendance: {}, classNotes: {},
   };
-  const at = (iso) => dueClassReminders(learning, 'Africa/Casablanca', new Date(iso)).map((x) => x.tag.split('-')[0]);
+  // A fixed UTC+1 zone: Morocco's own offset changed in the tz database (2026c),
+  // and this test is about the reminder windows, not about Morocco.
+  const at = (iso) => dueClassReminders(learning, 'Etc/GMT-1', new Date(iso)).map((x) => x.tag.split('-')[0]);
   assert.deepEqual(at('2026-09-28T07:09:00Z'), []); // 08:09 local
   assert.deepEqual(at('2026-09-28T07:10:00Z'), ['class']); // 08:10 heads-up
   assert.deepEqual(at('2026-09-28T07:15:00Z'), ['class']); // 08:15 nudge (deadline 08:20)
@@ -82,7 +84,7 @@ test('first sync of a newly synced store merges both devices instead of overwrit
 
 test('server Santé reminders fire once in their 5-minute window, in the user’s timezone', async () => {
   const { dueHealthReminders } = await import('../api/class-reminders.js');
-  const health = { healthProfile: { reminderPrefs: { timezone: 'Africa/Casablanca', mealWindows: ['12:30'], bedtimeTarget: '23:00' } } };
+  const health = { healthProfile: { reminderPrefs: { timezone: 'Etc/GMT-1', mealWindows: ['12:30'], bedtimeTarget: '23:00' } } }; // fixed UTC+1
   const at = (iso) => dueHealthReminders(health, new Date(iso)).map((x) => x.tag);
   assert.deepEqual(at('2026-09-28T11:29:00Z'), []); // 12:29 local
   assert.deepEqual(at('2026-09-28T11:30:00Z'), ['meal-12:30']); // 12:30
