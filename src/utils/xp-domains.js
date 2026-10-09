@@ -25,7 +25,7 @@ const CATEGORY_TO_XP_DOMAIN = {
 };
 
 export const XP_DOMAINS = ['trading', 'finance', 'health', 'learning', 'growth'];
-export const XP_DOMAIN_LABELS = { trading: 'Trading', finance: 'Finance', health: 'Health', learning: 'Learning', growth: 'Growth' };
+export const XP_DOMAIN_LABELS = { trading: 'Trading', finance: 'Finances', health: 'Santé', learning: 'Études', growth: 'Progression' };
 
 export function domainForSkill(skillId) {
   const def = SKILL_MAP[skillId];

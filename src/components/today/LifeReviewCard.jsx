@@ -4,12 +4,9 @@ import { useHabitStore } from '../../store/habitStore';
 import { useHealthStore } from '../../store/healthStore';
 import { useFocusStore } from '../../store/focusStore';
 import { useAccountingStore } from '../../store/accountingStore';
-import { useTradingStore } from '../../store/tradingStore';
 import { useReadingsStore } from '../../store/readingsStore';
 import { useLearningStore } from '../../store/learningStore';
-import { useAuthStore } from '../../store/authStore';
 import { weekFigures, compareWeeks, weekHeadline, addDays, mondayOf } from '../../utils/life-review';
-import { isModuleEnabled } from '../../utils/navigation';
 import { fmtDateShort, fmtMAD, todayKey } from '../../utils/formatters';
 import { openAssistant } from '../../services/assistant';
 import { Card, Button } from '../common/ui';
@@ -30,27 +27,24 @@ const TREND = {
 export default function LifeReviewCard() {
   const today = todayKey();
   const [monday, setMonday] = useState(() => mondayOf(today));
-  const user = useAuthStore((s) => s.user);
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const workouts = useHealthStore((s) => s.workouts);
   const sessions = useFocusStore((s) => s.sessions);
   const journal = useAccountingStore((s) => s.journal);
-  const allTrades = useTradingStore((s) => s.trades);
   const readLog = useReadingsStore((s) => s.readLog);
   const courses = useLearningStore((s) => s.courses);
   const academic = useLearningStore((s) => s.academic);
   const attendance = useLearningStore((s) => s.attendance);
-  const trading = isModuleEnabled(user, 'trading');
 
   const { rows, headline } = useMemo(() => {
-    const data = { habits, logs, energyLogs, workouts, sessions, journal, trades: trading ? allTrades : [], readLog, courses, academic, attendance };
+    const data = { habits, logs, energyLogs, workouts, sessions, journal, readLog, courses, academic, attendance };
     const cur = weekFigures(data, monday, today);
     const prev = weekFigures(data, addDays(monday, -7), today);
     const r = compareWeeks(cur, prev);
     return { rows: r, headline: weekHeadline(r) };
-  }, [monday, today, habits, logs, energyLogs, workouts, sessions, journal, allTrades, trading, readLog, courses, academic, attendance]);
+  }, [monday, today, habits, logs, energyLogs, workouts, sessions, journal, readLog, courses, academic, attendance]);
 
   const isCurrent = monday === mondayOf(today);
   return (

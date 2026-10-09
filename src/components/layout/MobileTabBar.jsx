@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { MOBILE_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
 
-// Phone bottom bar: the five sections, Aujourd'hui in the middle and raised.
+// Phone bottom bar: the sections. Aujourd'hui is raised only when it sits in
+// the exact middle (odd number of sections).
 // Inside a section, the sub-menu under the top bar reaches its pages.
 export default function MobileTabBar() {
   const location = useLocation();
@@ -12,10 +13,10 @@ export default function MobileTabBar() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Sections"
     >
-      {MOBILE_POLES.map((key) => {
+      {MOBILE_POLES.map((key, i) => {
         const pole = poleByKey(key);
         const active = activePole?.key === key;
-        const center = key === 'today';
+        const center = key === 'today' && MOBILE_POLES.length % 2 === 1 && i === (MOBILE_POLES.length - 1) / 2;
         return (
           <Link
             key={key}

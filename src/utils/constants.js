@@ -1,167 +1,10 @@
 export { SKILL_TREE, SKILL_MAP, LEGACY_SKILL_MAP } from './skill-tree-data';
 export { CAREER_TRACKS, CAREER_GOALS } from './professional-skills';
 
-// Derived skill ids for a trade's auto-award (only unlocked skills actually receive XP).
-export const STRATEGY_SKILL = { Trend: 'trend-following-lv1', Range: 'range-trading-lv1', Breakout: 'breakout-trading-lv1' };
-export const INSTRUMENT_SKILL = { EURUSD: 'eurusd-mastery-lv1', GBPUSD: 'gbpusd-mastery-lv1', USDJPY: 'usdjpy-mastery-lv1', XAUUSD: 'gold-mastery-lv1', BTC: 'bitcoin-mastery-lv1' };
-export const MACRO_SKILL = { fedPolicy: 'central-bank-policy-lv1', inflation: 'inflation-cpi-lv1', growth: 'gdp-growth-data-lv1', riskSentiment: 'at-risk-onoff', volatility: 'volatility-analysis-lv1', usdStrength: 'capital-flows-lv1' };
-
-// Deal types → the PE/VC/GE skills their tasks target (see dealsStore.suggestTaskAward).
-// Scoped to what's actually worked on (PE/LBO, VC, Growth equity) — trimmed from the
-// original 6-type list; TASK_LEGACY_DEAL_SKILL below keeps the old full map so deals
-// logged under a since-removed type (RBF/M&A/Distressed) still migrate cleanly.
-export const DEAL_TYPES = ['LBO', 'Growth', 'VC'];
-export const DEAL_ROLES = ['Sourcing', 'Due Diligence', 'Modeling', 'Execution', 'Portfolio Ops'];
-export const DEAL_STATUS = ['ongoing', 'completed', 'passed'];
-// Stored values stay English (saved data); these are the French labels.
-export const DEAL_STATUS_LABEL = { ongoing: 'En cours', completed: 'Conclu', passed: 'Abandonné' };
-export const DEAL_STATUS_OPTIONS = DEAL_STATUS.map((s) => ({ value: s, label: DEAL_STATUS_LABEL[s] }));
-export const TASK_STATUS = ['todo', 'in-progress', 'done'];
-// The deal's process pipeline — a deal sits at one DEAL_STAGES index with a
-// DEAL_STAGE_STATUS state. Generic across LBO/VC/Growth (real-world PE deal
-// flow varies only in detail, not in these gates).
-export const DEAL_STAGES = [
-  'Sourcing',
-  'NDA / Screening',
-  'Management Meeting',
-  'Due Diligence',
-  'Valuation & Modeling',
-  'LOI / Term Sheet',
-  'Negotiation',
-  'Closing',
-];
-export const DEAL_STAGE_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
-export const DEAL_SKILL = {
-  LBO: ['pe-lbo-value-creation-lv1', 'pe-debt-structuring', 'pe-acquisition-valuation'],
-  Growth: ['ge-thesis', 'ge-scaling-strategy', 'ge-saas-metrics'],
-  VC: ['vc-thesis', 'vc-startup-eval', 'vc-term-sheets'],
-};
-// Old deal types no longer offered when logging a new deal, but a deal already
-// persisted with one of these still needs a valid skill list to suggest task XP for.
-export const TASK_LEGACY_DEAL_SKILL = {
-  ...DEAL_SKILL,
-  RBF: ['rbf-mechanics', 'rbf-structure', 'rbf-vs-equity'],
-  'M&A': ['ma-strategy-lv1', 'deal-structure-lv1', 'synergy-analysis-lv1'],
-  Distressed: ['bankruptcy-distress-lv1', 'credit-analysis-lv1'],
-};
-
-// ─────────── Engineering (chemical engineering students) ───────────
-// Mirrors the DEAL_STAGES/DEAL_STAGE_STATUS pipeline pattern above, but for
-// a design/research project instead of a deal — HAZOP/safety analysis is
-// its own gate rather than folded into "conception", since process safety
-// review is a distinct, mandatory step in real chemical engineering work,
-// not an afterthought.
-export const ENGINEERING_PROJECT_TYPES = ['Projet de conception', 'Projet de fin d\'études', 'Stage', 'Projet de recherche', 'TP long', 'Autre'];
-export const ENGINEERING_PROJECT_STAGES = [
-  'Cahier des charges',
-  'Recherche bibliographique',
-  'Conception / Dimensionnement',
-  'Simulation',
-  'Analyse de sécurité (HAZOP)',
-  'Optimisation',
-  'Rédaction du rapport',
-  'Soutenance',
-];
-export const ENGINEERING_PROJECT_STATUS = ['not-started', 'in-progress', 'blocked', 'done'];
-
-// Standard IEC 61882 HAZOP guide words — used to structure a real deviation
-// worksheet per project (added 2026-08-27) instead of leaving "Analyse de
-// sécurité (HAZOP)" as just another stage checkbox with no actual content.
-export const HAZOP_GUIDEWORDS = ['No/Not', 'More', 'Less', 'As Well As', 'Part Of', 'Reverse', 'Other Than', 'Early', 'Late'];
-export const HAZOP_SEVERITY = ['Faible', 'Modérée', 'Élevée', 'Critique'];
-export const HAZOP_LIKELIHOOD = ['Rare', 'Possible', 'Probable', 'Fréquente'];
-
-// Reuses Learning's GRADE_POINTS scale (below) so a project grade means the
-// same thing app-wide — a PFE/stage is graded in real life just like a
-// course is, and Engineering never had anywhere to record that.
-export const ENGINEERING_PROJECT_GRADES = ['A', 'B+', 'B', 'C+', 'C', 'D', 'F'];
-
-// Which skill-tree node a completed task's XP goes to, keyed by the project
-// stage it belongs to (see engineeringStore.setTaskStatus) — stages without
-// a distinct technical skill (spec, lit review, report, defense) fall back
-// to the general engineering-discipline node rather than a fabricated
-// "report-writing-lv1" node that doesn't correspond to a real course.
-export const ENGINEERING_STAGE_SKILL = {
-  'Cahier des charges': 'engineering-discipline-lv1',
-  'Recherche bibliographique': 'engineering-discipline-lv1',
-  'Conception / Dimensionnement': 'unit-operations-lv1',
-  'Simulation': 'process-simulation-lv1',
-  'Analyse de sécurité (HAZOP)': 'process-safety-lv1',
-  'Optimisation': 'reactor-engineering-lv1',
-  'Rédaction du rapport': 'engineering-discipline-lv1',
-  'Soutenance': 'engineering-discipline-lv1',
-};
-
-// ─────────── Networking / Career / Content / Projects (added 2026-08-27) ───────────
-// Shared domain tags — the app's own life domains (not CAREER_TRACKS, which is
-// PE/GE/VC/RBF-specific and doesn't cover Engineering or a general/unlabeled
-// contact/application/post).
-export const LIFE_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'General'];
-
-// How a networking touch actually happened — was a freeform note only until
-// 2026-08-27 despite networkingStore's own comment promising this distinction.
-export const TOUCH_TYPES = ['Appel', 'Café', 'Email', 'Message', 'Événement', 'Autre'];
-
-// 'Target' = a company on the target list, nothing sent yet (not counted as an application).
-export const CAREER_STAGES = ['Target', 'Applied', 'Screening', 'Interview', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
 export const isRealApplication = (a) => a?.stage !== 'Target';
-export const APPLICATION_PRIORITIES = ['A', 'B', 'C'];
-// Stored values stay in English (existing data, XP maps); the UI shows these.
-export const CAREER_STAGE_LABEL = { Target: 'À cibler', Applied: 'Postulé', Screening: 'Présélection', Interview: 'Entretien', Offer: 'Offre', Accepted: 'Acceptée', Rejected: 'Refusée', Withdrawn: 'Retirée' };
 export const stageLabel = (s) => CAREER_STAGE_LABEL[s] || s;
-// Career domains are user-editable (careerStore.domains); these are the defaults.
-export const DEFAULT_CAREER_DOMAINS = ['Finance de marché', 'Trading', 'Private equity', 'Audit & expertise', 'Conseil', 'Finance d’entreprise', 'Marketing', 'Entrepreneuriat', 'Ingénierie', 'Général'];
 const LEGACY_DOMAIN_LABEL = { General: 'Général', Engineering: 'Ingénierie', PE: 'Private equity' };
 export const domainLabel = (d) => LEGACY_DOMAIN_LABEL[d] || d;
-export const EXPERIENCE_TYPES = ['Stage', 'CDI', 'CDD', 'Alternance', 'Freelance', 'Emploi étudiant', 'Associatif', 'Projet'];
-export const LANGUAGE_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Langue maternelle'];
-export const APPLICATION_TYPES = ['Stage', 'Stage de fin d’études (PFE)', 'Alternance', 'CDI', 'CDD', 'VIE / international', 'Freelance / mission', 'Programme (graduate…)', 'Autre'];
-export const INTERVIEW_KINDS = ['Appel RH', 'Entretien opérationnel', 'Technique', 'Étude de cas', 'Test / assessment', 'Final / associé', 'Autre'];
-export const QUESTION_CATEGORIES = ['Motivation', 'Parcours', 'Comportemental (STAR)', 'Technique finance', 'Marchés', 'Étude de cas'];
-// Starter bank (editable) — generic business-school / finance interviews.
-export const DEFAULT_INTERVIEW_QUESTIONS = [
-  ['Motivation', 'Présentez-vous en 2 minutes.'],
-  ['Motivation', 'Pourquoi notre entreprise ?'],
-  ['Motivation', 'Pourquoi ce poste, ce métier ?'],
-  ['Motivation', 'Où vous voyez-vous dans 5 ans ?'],
-  ['Parcours', 'Parlez-moi de l’expérience dont vous êtes le plus fier.'],
-  ['Parcours', 'Pourquoi avoir choisi votre formation ?'],
-  ['Parcours', 'Quelle est votre plus grande faiblesse ?'],
-  ['Comportemental (STAR)', 'Racontez un échec et ce que vous en avez appris.'],
-  ['Comportemental (STAR)', 'Un conflit dans une équipe : comment l’avez-vous géré ?'],
-  ['Comportemental (STAR)', 'Une situation où vous avez pris le leadership.'],
-  ['Comportemental (STAR)', 'Un moment où vous avez travaillé sous forte pression.'],
-  ['Technique finance', 'Comment valorise-t-on une entreprise ? (DCF, multiples, transactions)'],
-  ['Technique finance', 'Expliquez les liens entre les trois états financiers.'],
-  ['Technique finance', 'Si les amortissements augmentent de 10, quel impact sur les trois états ?'],
-  ['Technique finance', 'Qu’est-ce que le WACC et comment le calcule-t-on ?'],
-  ['Technique finance', 'Qu’est-ce qu’un LBO et pourquoi utiliser de la dette ?'],
-  ['Marchés', 'Quelle est votre lecture actuelle des marchés ?'],
-  ['Marchés', 'Pitchez-moi une action ou une opération récente.'],
-  ['Étude de cas', 'Un client veut racheter un concurrent : quelles questions poser ?'],
-];
-export const DEFAULT_ASK_THEM = 'À quoi ressemble une journée type ?\nComment la performance est-elle évaluée ?\nQu’est-ce qui distingue ceux qui réussissent ici ?\nQuelles sont les prochaines étapes du processus ?';
-// Which skill a career-application stage advance targets — mirrors
-// ENGINEERING_STAGE_SKILL's keyed-by-stage pattern. All three ids are real,
-// unlocked-from-start Communication-category nodes (see skill-tree-data.js).
-export const CAREER_STAGE_SKILL = {
-  Applied: 'written-communication-lv1',
-  Screening: 'written-communication-lv1',
-  Interview: 'presentation-skills-lv1',
-  Offer: 'negotiation-lv1',
-  Accepted: 'negotiation-lv1',
-  Rejected: 'presentation-skills-lv1',
-  Withdrawn: 'presentation-skills-lv1',
-};
-
-export const CONTENT_PLATFORMS = ['LinkedIn', 'Blog', 'Portfolio', 'X/Twitter', 'YouTube', 'Newsletter', 'Autre'];
-
-// Editorial pipeline status — content used to be a publish-only retrospective
-// log (no way to plan ahead). 'Publié' stays the default on creation so
-// existing behavior (log something you just posted) is unchanged.
-export const CONTENT_STATUSES = ['Idée', 'Brouillon', 'Planifié', 'Publié'];
-
-export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement', 'Croissance', 'Pause/Fin'];
 
 // Deep-work sessions — a cross-cutting focus timer, not its own life domain
 // (see focusStore.js). Broader than LIFE_DOMAINS since a focus session can
@@ -169,7 +12,9 @@ export const PROJECT_STAGES = ['Idée', 'Validation', 'Construction', 'Lancement
 // Every id here is a real, unlocked-from-start skill (verified against
 // skill-tree-data.js / life-skills.js / professional-skills.js) — same
 // mistake-avoidance as ENGINEERING_STAGE_SKILL/CAREER_STAGE_SKILL above.
-export const FOCUS_DOMAINS = ['Trading', 'PE', 'Engineering', 'Business', 'Learning', 'Health', 'Networking', 'Career', 'Content', 'Projects', 'Creative', 'General'];
+// Trading, PE, Engineering, Business, Networking, Career and Content left with
+// their modules (2026-10-09); past sessions keep their domain (FocusSessions.jsx).
+export const FOCUS_DOMAINS = ['Learning', 'Health', 'Projects', 'Creative', 'General'];
 export const FOCUS_DOMAIN_SKILL = {
   Trading: 'trading-discipline-lv1',
   PE: 'three-statement-modeling-lv1',
@@ -185,37 +30,12 @@ export const FOCUS_DOMAIN_SKILL = {
   General: 'deep-focus-lv1',
 };
 
-// ── Fundraising (founders raising capital) — 2026-08-27 ─────────────────────
-// Symmetric to Career's applicant pipeline, but from the other side of the
-// table: an investor pipeline instead of a job pipeline. Every stage-skill id
-// verified real + unlocked-from-start in skill-tree-data.js.
-export const FUNDRAISING_STAGES = ['Contacted', 'Meeting', 'Diligence', 'Term Sheet', 'Closed', 'Passed'];
-export const FUNDRAISING_STAGE_SKILL = {
-  Contacted: 'written-communication-lv1',
-  Meeting: 'presentation-skills-lv1',
-  Diligence: 'written-communication-lv1',
-  'Term Sheet': 'negotiation-lv1',
-  Closed: 'ipo-capital-raising-lv1',
-  Passed: 'presentation-skills-lv1',
-};
-export const INVESTOR_TYPES = ['Angel', 'VC', 'Family Office', 'Corporate VC', 'Crowdfunding', 'Accelerator', 'Autre'];
-
-// ── Freelance / Consulting — 2026-08-27 ──────────────────────────────────────
-export const ENGAGEMENT_STATUSES = ['Prospect', 'Actif', 'En pause', 'Terminé'];
-
 // ── Creative practice (artists, musicians, writers) — 2026-08-27 ────────────
 export const CREATIVE_MEDIUMS = ['Peinture', 'Musique', 'Écriture', 'Photographie', 'Sculpture', 'Design', 'Autre'];
 export const CREATIVE_WORK_STATUSES = ['Idée', 'En cours', 'Terminé'];
 export const SHOWCASE_TYPES = ['Exposition', 'Concert', 'Publication', 'Festival', 'Autre'];
 
-// ── Real estate portfolio — 2026-08-27 ───────────────────────────────────────
-export const PROPERTY_TYPES = ['Appartement', 'Maison', 'Immeuble', 'Local commercial', 'Terrain', 'Autre'];
-export const PROPERTY_STATUSES = ['Recherche', 'Sous offre', 'Acquis', 'Loué', 'Vendu'];
-
 export const INITIAL_ACCOUNT_VALUE = 52000;
-
-export const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTC'];
-export const STRATEGIES = ['Trend', 'Range', 'Breakout'];
 
 // Per-account trading currency (Demo/Broker/Prop Firm each pick their own —
 // see tradingStore.js `accounts[].currency`, default 'USD' for pre-existing
@@ -236,16 +56,6 @@ export const CURRENCIES = [
 export const CURRENCY_SYMBOL = Object.fromEntries(CURRENCIES.map((c) => [c.value, c.symbol]));
 export const DIRECTIONS = ['long', 'short'];
 export const EMOTIONS = ['calm', 'greedy', 'scared', 'bored', 'FOMO', 'neutral'];
-
-// ---- Macro context tags (optional per trade) ----
-export const MACRO_FIELDS = [
-  { key: 'fedPolicy', label: 'Fed policy', options: ['hiking', 'pausing', 'cutting'] },
-  { key: 'inflation', label: 'Inflation', options: ['rising', 'stable', 'falling'] },
-  { key: 'growth', label: 'Growth outlook', options: ['strong', 'moderate', 'weak'] },
-  { key: 'riskSentiment', label: 'Risk sentiment', options: ['risk-on', 'neutral', 'risk-off'] },
-  { key: 'volatility', label: 'Volatility', options: ['low', 'normal', 'high'] },
-  { key: 'usdStrength', label: 'USD', options: ['strong', 'neutral', 'weak'] },
-];
 
 // ---- Finance: grouped transaction categories ----
 export const INCOME_SOURCES = [
@@ -290,7 +100,9 @@ export const LIABILITY_TYPES = [
   { key: 'otherLiabilities', label: 'Other liabilities' },
 ];
 
-export const HABIT_CATEGORIES = ['trading', 'learning', 'finance', 'health', 'reflection', 'recovery', 'engineering', 'career'];
+// Trading / engineering / career left the list with their modules (2026-10-09);
+// habits already filed under them keep that category (see Habits.jsx).
+export const HABIT_CATEGORIES = ['learning', 'finance', 'health', 'reflection', 'recovery'];
 // 'custom' = repeats only on the specific weekdays chosen in `habit.weekdays`
 // (e.g. Heavy Weight Lifting on Mon/Wed/Fri) — see utils/calculations.js#isHabitDueOn.
 // Labeled explicitly (not plain strings) so the day-picker option is discoverable
@@ -351,8 +163,6 @@ export const STRESS_ITEMS = [
 export const GRADES = ['A', 'B+', 'B', 'C+', 'C', 'D', 'F'];
 export const GRADE_XP = { A: 15, 'B+': 12, B: 10, 'C+': 7, C: 5, D: 0, F: 0 };
 export const GRADE_POINTS = { A: 4.0, 'B+': 3.5, B: 3.0, 'C+': 2.5, C: 2.0, D: 1.0, F: 0.0 };
-
-export const TRADE_XP = 5; // XP per linked skill when a trade is logged
 
 // XP needed to advance FROM a given level to the next one
 export const XP_TO_NEXT = { 1: 50, 2: 100, 3: 200, 4: 300, 5: Infinity };

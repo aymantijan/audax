@@ -9,19 +9,15 @@ export const AIMS = [
   { key: 'sleep', label: 'Mieux dormir', habits: ['8 h de sommeil ou plus'], goals: ['sleep'] },
   { key: 'calm', label: 'Moins de stress, plus d’énergie', habits: ['Méditation (10 min)', 'Journal de gratitude'] },
   { key: 'read', label: 'Lire plus', habits: ['Lecture quotidienne (30 min)'] },
-  { key: 'job', label: 'Trouver un emploi', modules: ['career'], goals: ['job'] },
-  { key: 'business', label: 'Lancer mon activité', modules: ['business', 'freelance'], goals: ['launch'] },
-  { key: 'trading', label: 'Trader avec discipline', habits: ['Journal de trading quotidien', 'Revoir le P&L du jour'], modules: ['trading'] },
-  { key: 'invest', label: 'Investir et suivre mon patrimoine', modules: ['realEstate'] },
   { key: 'create', label: 'Créer (art, musique, écriture…)', modules: ['creative'] },
 ];
 
 export const SITUATIONS = [
   { key: 'student', label: 'Étudiant·e', modules: ['focus'] },
   { key: 'employee', label: 'Salarié·e', modules: [] },
-  { key: 'freelancer', label: 'Indépendant·e', modules: ['freelance'] },
-  { key: 'founder', label: 'Entrepreneur·e', modules: ['business'] },
-  { key: 'jobseeker', label: 'En recherche d’emploi', modules: ['career'] },
+  { key: 'freelancer', label: 'Indépendant·e', modules: [] },
+  { key: 'founder', label: 'Entrepreneur·e', modules: [] },
+  { key: 'jobseeker', label: 'En recherche d’emploi', modules: [] },
   { key: 'parent', label: 'Parent au foyer', modules: [] },
   { key: 'none', label: 'Sans activité pour l’instant', modules: [] },
 ];
@@ -55,20 +51,19 @@ export const GOAL_TEMPLATES = {
   savings: { label: 'Mettre de l’argent de côté', needsAmount: true },
   workouts: { label: 'Faire 3 séances de sport par semaine' },
   sleep: { label: 'Dormir 7 h 30 en moyenne' },
-  job: { label: 'Trouver un emploi' },
-  launch: { label: 'Lancer mon activité' },
 };
 
 // Every optional module flag (see utils/navigation.js MODULES[*].flag).
-const ALL_FLAGS = ['trading', 'pe', 'business', 'engineering', 'networking', 'career', 'content', 'focus', 'fundraising', 'freelance', 'creative', 'realEstate'];
-const MODULE_FLAGS = { career: ['career', 'networking', 'content'] };
+// Removed modules (2026-10-09) keep their flags out of here: an old account's
+// stale flags are ignored by navigation.js, which no longer lists them.
+const ALL_FLAGS = ['focus', 'creative'];
 
 export function buildOnboardingPlan({ aims = [], situation = null }) {
   const chosen = AIMS.filter((a) => aims.includes(a.key));
   const sit = SITUATIONS.find((s) => s.key === situation);
   const on = new Set();
   for (const m of [...chosen.flatMap((a) => a.modules || []), ...(sit?.modules || [])]) {
-    for (const f of MODULE_FLAGS[m] || [m]) on.add(f);
+    on.add(m);
   }
   const modules = Object.fromEntries(ALL_FLAGS.map((f) => [f, on.has(f)]));
 

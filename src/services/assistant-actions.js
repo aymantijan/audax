@@ -3,7 +3,6 @@
 // touches, so "Annuler" puts it back exactly; a journal of what was applied is
 // kept on this device (localStorage 'vaudax-assistant-log', last 200).
 import { useAccountingStore } from '../store/accountingStore';
-import { useFreelanceStore } from '../store/freelanceStore';
 import { useHabitStore } from '../store/habitStore';
 import { useFlashcardStore } from '../store/flashcardStore';
 import { useHealthStore } from '../store/healthStore';
@@ -14,8 +13,6 @@ import { captureContext, saveDraft } from './capture';
 import { periodOf } from '../utils/objectives';
 import { miniChanges } from '../utils/habit-coach';
 import { guessCategory } from '../utils/bank-import';
-import { unbilledItems, mergeRefs } from '../utils/billing';
-import { addDaysKey } from '../utils/invoice';
 import { describeDraft } from '../utils/quick-capture';
 import { formatMoney } from '../utils/currency';
 import { fmtDateShort, todayKey } from '../utils/formatters';
@@ -47,25 +44,19 @@ export function describeAction(a) {
     case 'budget': return `${a.category} · ${money(a.amount)} ${PERIOD_LABEL[a.period]}`;
     case 'echeance': return `${a.label} · ${money(a.amount)} · ${fmtDateShort(a.date)}${a.recurrence !== 'once' ? ` (${PERIOD_LABEL[a.recurrence]})` : ''}`;
     case 'message': return a.to ? `Pour ${a.to}` : 'Message';
-    case 'invoice': {
-      const e = useFreelanceStore.getState().engagements.find((x) => x.id === a.clientId);
-      const items = e ? unbilledItems(e, todayKey()).filter((i) => !i.hidden) : [];
-      const total = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-      return items.length ? `${a.client} · ${items.length} ligne(s) · ${formatMoney(total, e.currency)} HT` : `${a.client} · rien à facturer pour l’instant`;
-    }
     default: return '';
   }
 }
 
 // Data (not functions) of the stores an action touches, to restore on "Annuler".
 const STORES = {
-  accounting: useAccountingStore, freelance: useFreelanceStore, habits: useHabitStore,
+  accounting: useAccountingStore, habits: useHabitStore,
   flashcards: useFlashcardStore, health: useHealthStore, focus: useFocusStore, learning: useLearningStore,
 };
 const TOUCHES = {
-  capture: ['accounting', 'freelance', 'health', 'habits', 'focus'],
+  capture: ['accounting', 'health', 'habits', 'focus'],
   study: ['habits'], flashcards: ['flashcards'], objective: ['habits'], habit_mini: ['habits'],
-  budget: ['accounting'], echeance: ['accounting'], invoice: ['freelance'], message: [],
+  budget: ['accounting'], echeance: ['accounting'], message: [],
 };
 const dataOf = (store) => Object.fromEntries(Object.entries(store.getState()).filter(([, v]) => typeof v !== 'function'));
 
@@ -141,25 +132,6 @@ function run(a) {
     }
     case 'message':
       return { ok: true };
-    case 'invoice': {
-      const fs = useFreelanceStore.getState();
-      const e = fs.engagements.find((x) => x.id === a.clientId);
-      if (!e) return { ok: false, error: 'Client introuvable.' };
-      const today = todayKey();
-      const items = unbilledItems(e, today);
-      const chosen = items.filter((i) => !i.hidden);
-      if (!chosen.length) return { ok: false, error: 'Rien à facturer pour ce client.' };
-      const covered = items.filter((i) => i.hidden && chosen.some((c) => c.key === `ret-${i.key.slice(4)}`));
-      const st = fs.invoiceSettings;
-      const b = e.billing || {};
-      const res = fs.createInvoice(e.id, {
-        date: today, dueDate: addDaysKey(today, Number(st.paymentTermsDays) || 30), vatRate: st.vatRate || 0,
-        discountPct: b.discountPct || '', withholdingPct: b.withholdingPct || '', deposit: '', notes: '',
-        lines: chosen.map((i) => ({ description: i.description, qty: i.qty, unit: i.unit, unitPrice: i.unitPrice, vatRate: i.vatRate ?? '', discountPct: '' })),
-        refs: mergeRefs([...chosen, ...covered]),
-      });
-      return res.ok ? { ok: true, to: '/freelance' } : res;
-    }
     default:
       return { ok: false, error: 'Action inconnue.' };
   }

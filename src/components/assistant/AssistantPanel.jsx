@@ -4,7 +4,7 @@ import { Sparkles, Send, Square, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useAllGoals } from '../../hooks/useAllGoals';
 import { askAssistant, ASSISTANT_ERRORS } from '../../services/assistant';
-import { buildAssistantContext, DEFAULT_SCOPES } from '../../utils/assistant-context';
+import { buildAssistantContext, DEFAULT_SCOPES, savedScopes } from '../../utils/assistant-context';
 import { Modal, Button } from '../common/ui';
 import { splitAnswer, normalizeActions } from '../../utils/assistant-actions';
 import { actionContext } from '../../services/assistant-actions';
@@ -20,7 +20,6 @@ const SUGGESTIONS = [
   { scope: 'today', text: 'Fais le bilan de ma semaine.' },
   { scope: 'patrimoine', text: 'Où part mon argent ce mois-ci ?' },
   { scope: 'sante', text: 'Comment mieux récupérer cette semaine ?' },
-  { scope: 'carriere', text: 'Quelle est ma priorité côté carrière ?' },
 ];
 
 // The assistant: one conversation for the whole app. The conversation lives
@@ -48,7 +47,7 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
   const [quota, setQuota] = useState(null);
   const abortRef = useRef(null);
   const endRef = useRef(null);
-  const scopes = user?.assistant?.scopes || DEFAULT_SCOPES;
+  const scopes = savedScopes(user);
 
   const send = async (question) => {
     const q = (question ?? draft).trim();

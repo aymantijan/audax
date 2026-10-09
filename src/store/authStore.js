@@ -78,7 +78,7 @@ export const useAuthStore = create(
           user: {
             name: profile.name,
             email: profile.email || '',
-            primaryDomain: profile.primaryDomain || 'metiersVentures',
+            primaryDomain: profile.primaryDomain || 'learning',
             careerGoal: profile.careerGoal || 'Hybrid',
             occupation: profile.occupation || '',
             // Gender is required at signup going forward (Welcome.jsx/

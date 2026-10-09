@@ -8,10 +8,9 @@ test('every URL lands in the right section', () => {
   assert.equal(poleOfPath('/goals').key, 'today');
   assert.equal(poleOfPath('/learning/course/abc').key, 'etudes');
   assert.equal(poleOfPath('/learning/readings/library').key, 'etudes');
-  assert.equal(poleOfPath('/trading/account/1').key, 'patrimoine');
-  assert.equal(poleOfPath('/deals/9').key, 'patrimoine');
-  assert.equal(poleOfPath('/businesses/x').key, 'carriere');
-  assert.equal(poleOfPath('/patrimoine').key, 'patrimoine');
+  assert.equal(poleOfPath('/finance').key, 'patrimoine');
+  assert.equal(poleOfPath('/trading/account/1'), null); // removed module
+  assert.equal(poleOfPath('/businesses/x'), null); // removed module
   assert.equal(poleOfPath('/health').key, 'sante');
   assert.equal(poleOfPath('/settings'), null);
 });
@@ -22,12 +21,12 @@ test('the longest route wins for the current page', () => {
   assert.equal(moduleOfPath('/learning/course/1'), 'learning');
 });
 
-test('module switches: defaults, grouped flags, toggling', () => {
-  assert.equal(isModuleEnabled({}, 'trading'), true); // older accounts: on
-  assert.equal(isModuleEnabled({}, 'freelance'), false);
-  assert.equal(isModuleEnabled({ enabledModules: { networking: true } }, 'career'), true);
-  const em = withModule({ enabledModules: { trading: true } }, 'career', true);
-  assert.deepEqual(em, { trading: true, career: true, networking: true, content: true });
+test('module switches: defaults, removed modules, toggling', () => {
+  assert.equal(isModuleEnabled({}, 'focus'), false);
+  assert.equal(isModuleEnabled({ enabledModules: { creative: true } }, 'creative'), true);
+  assert.equal(isModuleEnabled({ enabledModules: { trading: true } }, 'trading'), false); // removed module
+  const em = withModule({ enabledModules: { trading: true } }, 'focus', true);
+  assert.deepEqual(em, { trading: true, focus: true }); // old flags are kept, just ignored
   assert.equal(isModuleEnabled({}, 'health'), true); // no flag: always on
 });
 

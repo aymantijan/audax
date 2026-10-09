@@ -1,4 +1,4 @@
-// Section coaches (Trading, Santé, Ingénierie): same contract as before
+// Section coach (Santé): same contract as before
 // ({ mode, context, question } → { text, model }), now on Gemini's free tier
 // with the shared auth + daily quota. The browser falls back to its local
 // rule-based coach whenever this answers an error (e.g. no key configured).

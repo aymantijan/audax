@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { ASSISTANT_SCOPES, DEFAULT_SCOPES } from '../../utils/assistant-context';
+import { ASSISTANT_SCOPES, savedScopes } from '../../utils/assistant-context';
 import { openAssistant } from '../../services/assistant';
 import { Card, Button, Field, Textarea } from '../common/ui';
 import { toast } from '../../store/uiStore';
@@ -13,7 +13,7 @@ import AiKeysSection from './AiKeysSection';
 export default function AssistantCard() {
   const { user, updateProfile } = useAuthStore();
   const ref = useRef(null);
-  const scopes = user?.assistant?.scopes || DEFAULT_SCOPES;
+  const scopes = savedScopes(user);
   const [facts, setFacts] = useState((user?.assistant?.facts || []).join('\n'));
 
   useEffect(() => {

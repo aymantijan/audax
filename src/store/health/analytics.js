@@ -4,8 +4,6 @@ import { todayKey } from '../../utils/formatters';
 import { foodQualityScore } from '../../utils/nutrition-db';
 import { computeReadiness, computeWeightPrediction, checkOvertrainingTriggers, generateCoachRecommendation, pearsonCorrelation, estimate1RM, bodyFatYMCA, bodyFatDeurenberg, estimateFFMI, estimateLeanMassKg, smoothedTrend } from '../../utils/health-science';
 import { useHabitStore } from '../habitStore';
-import { useTradingStore } from '../tradingStore';
-import { detectTiltSequences, detectRevengeTrades } from '../../utils/trading-psychology';
 import { useAccountingStore } from '../accountingStore';
 import { predictStrengthTrajectory, detectPlateau, checkAggressiveDeficit, checkTrendingOvertrainingRisk, explainPlateau } from '../../utils/health-predictions';
 import { computeFastingWindows, computeHydrationGaps, computeMealTimingConsistency, computeSleepConsistency, computeNapImpact, deriveChronoAlerts } from '../../utils/health-chrono';
@@ -90,21 +88,6 @@ export const analyticsSlice = (set, get) => ({
         const weekAgo = Date.now() - 7 * dayMs;
         const workoutsThisWeek = get().workouts.filter((w) => new Date(w.date).getTime() >= weekAgo).length;
 
-        // Cross-domain (Phase 7): feed the active trading account's discipline
-        // signals into the SAME coach that already sees sleep/energy/stress, so
-        // it can connect e.g. "low energy + tilt detected" instead of treating
-        // trading and health as unrelated. Read-only — never written back here.
-        const tradingStore = useTradingStore.getState();
-        const activeTradingAccountId = tradingStore.activeAccountId;
-        const activeAccountTrades = activeTradingAccountId ? tradingStore.getAccountTrades(activeTradingAccountId) : [];
-        const tradingSignals = activeTradingAccountId
-          ? {
-              maxDrawdownPct: r1(tradingStore.getMaxDrawdown(activeTradingAccountId)),
-              tiltDetectedToday: detectTiltSequences(activeAccountTrades).some((s) => s.nextTrade.date === today),
-              revengeDetectedToday: detectRevengeTrades(activeAccountTrades).some((f) => f.trade.date === today),
-            }
-          : null;
-
         return {
           readinessScore: readiness.score,
           readinessBreakdown: readiness.breakdown,
@@ -118,7 +101,6 @@ export const analyticsSlice = (set, get) => ({
           overtrainingAlerts: alerts.map((a) => a.message),
           goals: get().getGoalsWithProgress().map((g) => ({ label: g.label, percent: g.percent })),
           weeklyDigest: get().getWeeklyDigest(),
-          tradingSignals,
         };
       },
 
@@ -284,7 +266,7 @@ export const analyticsSlice = (set, get) => ({
         return { fastingWindows, hydrationGaps, mealConsistency, sleepConsistency, napFlags, alerts };
       },
 
-      // ─────────── Cross-domain correlations (spec: sleep↔strength, stress↔spending, energy↔trading accuracy).
+      // ─────────── Cross-domain correlations (sleep↔strength, stress↔spending).
       getCorrelations: () => {
         const energyLogs = useHabitStore.getState().energyLogs;
         const byDate = (arr, keyFn) => Object.fromEntries(arr.map((x) => [x.date, keyFn(x)]));
@@ -313,39 +295,6 @@ export const analyticsSlice = (set, get) => ({
           Object.keys(spendByDate).map((d) => [stressByDate[d] ?? null, spendByDate[d]]).filter(([x]) => x !== null)
         );
 
-        // Energy vs. same-day trading win rate.
-        const trades = useTradingStore.getState().trades;
-        const tradesByDate = {};
-        for (const t of trades) {
-          const d = String(t.date).slice(0, 10);
-          (tradesByDate[d] ||= []).push(t);
-        }
-        const winRateByDate = Object.fromEntries(
-          Object.entries(tradesByDate).map(([d, ts]) => [d, ts.filter((t) => t.pnl > 0).length / ts.length])
-        );
-        const energyVsTradingAccuracy = pearsonCorrelation(
-          Object.keys(winRateByDate).map((d) => [energyByDate[d] ?? null, winRateByDate[d]]).filter(([x]) => x !== null)
-        );
-
-        // Sleep quality vs. same-day trading win rate.
-        const sleepVsTradingAccuracy = pearsonCorrelation(
-          Object.keys(winRateByDate).map((d) => [sleepByDate[d] ?? null, winRateByDate[d]]).filter(([x]) => x !== null)
-        );
-
-        // Sleep/energy vs. tilt-or-revenge-flagged trading days (Phase 9): reuses
-        // Phase-4's detectors. Every day WITH trades gets a 0/1 flag (not just the
-        // flagged days) so Pearson sees real variance instead of a degenerate
-        // all-1s series.
-        const riskDayFlag = Object.fromEntries(Object.keys(tradesByDate).map((d) => [d, 0]));
-        for (const s of detectTiltSequences(trades)) riskDayFlag[s.nextTrade.date] = 1;
-        for (const f of detectRevengeTrades(trades)) riskDayFlag[f.trade.date] = 1;
-        const energyVsTiltRisk = pearsonCorrelation(
-          Object.keys(riskDayFlag).map((d) => [energyByDate[d] ?? null, riskDayFlag[d]]).filter(([x]) => x !== null)
-        );
-        const sleepVsTiltRisk = pearsonCorrelation(
-          Object.keys(riskDayFlag).map((d) => [sleepByDate[d] ?? null, riskDayFlag[d]]).filter(([x]) => x !== null)
-        );
-
-        return { sleepVsStrength, stressVsSpending, energyVsTradingAccuracy, sleepVsTradingAccuracy, energyVsTiltRisk, sleepVsTiltRisk };
+        return { sleepVsStrength, stressVsSpending };
       },
 });

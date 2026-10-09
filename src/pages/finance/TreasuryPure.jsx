@@ -33,10 +33,8 @@ export default function TreasuryPure() {
   const [editingSub, setEditingSub] = useState(null);
   const [subForm, setSubForm] = useState(blankSubForm('511'));
   const [horizonDays, setHorizonDays] = useState(90);
-  const [includeTradingPayout, setIncludeTradingPayout] = useState(false);
   const [method, setMethod] = useState('sma');
-  const forecastV2 = store.getTreasuryForecastV2(horizonDays, { includeTradingPayout, method });
-  const tradingPayoutEstimate = store.getTradingPayoutEstimate();
+  const forecastV2 = store.getTreasuryForecastV2(horizonDays, { method });
 
   // Chaque compte collectif de classe 5 (511, 512, 514...) affiche son solde
   // propre + celui de tous ses comptes auxiliaires réunis — un compte
@@ -202,11 +200,6 @@ export default function TreasuryPure() {
         <p className="text-[11px] text-mute mb-3">
           Combine le solde actuel, une base mensuelle sur les comptes non couverts par une échéance active — {method === 'sma' ? 'moyenne mobile simple sur 3 mois' : method === 'ema' ? 'moyenne mobile exponentielle sur 3 mois (pondère les mois récents)' : 'tes objectifs de l\'onglet Budget, pas l\'historique réel'} — et les échéances programmées à leur date exacte.
         </p>
-        <label className="flex items-center gap-2 text-xs text-mute mb-3 cursor-pointer w-fit">
-          <input type="checkbox" checked={includeTradingPayout} onChange={(e) => setIncludeTradingPayout(e.target.checked)} />
-          Inclure une estimation de payout trading ({fmtMAD(tradingPayoutEstimate)}/mois, 80% du P&L réalisé sur 30j des comptes Broker/Prop Firm)
-        </label>
-
         {forecastV2.alerts.length > 0 && (
           <div className="flex items-center gap-2 text-sm border border-bad/50 bg-bad/10 text-bad rounded-lg px-4 py-2.5 mb-3">
             <AlertTriangle size={15} className="shrink-0" />

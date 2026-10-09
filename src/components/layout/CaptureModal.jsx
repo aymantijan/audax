@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Loader2, Sparkles, TrendingUp, Wallet, Dumbbell, CalendarDays, Check, Pencil, X } from 'lucide-react';
+import { Camera, Loader2, Sparkles, Wallet, Dumbbell, CalendarDays, Check, Pencil, X } from 'lucide-react';
 import { Button, Field, Input, Modal } from '../common/ui';
 import AccountSelect from '../common/AccountSelect';
-import { useAuthStore } from '../../store/authStore';
 import { useAccountingStore } from '../../store/accountingStore';
-import { isModuleEnabled } from '../../utils/navigation';
 import { parseCapture, normalizeDraft, describeDraft, CAPTURE_KINDS, CAPTURE_FIELDS } from '../../utils/quick-capture';
 import { captureContext, moneyAccounts, saveDraft } from '../../services/capture';
 import { extractCapture, extractReceipt, EXTRACT_ERRORS } from '../../services/extract';
@@ -21,7 +19,6 @@ const errorText = (err) => EXTRACT_ERRORS[err?.code] || ASSISTANT_ERRORS[err?.co
 // → Enregistrer / Modifier / Annuler. Nothing is saved before "Enregistrer".
 export default function CaptureModal({ open, onClose, onQuickEntry }) {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
   const baseCurrency = useAccountingStore((s) => s.baseCurrency);
   const [text, setText] = useState('');
   const [draft, setDraft] = useState(null);
@@ -41,7 +38,7 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
 
   const show = (d) => {
     setDraft(d); setEditing(false); setNote('');
-    setAccounts(d && (d.kind === 'expense' || d.kind === 'income') ? moneyAccounts(d) : { category: null, cash: d?.kind === 'freelance' ? '511' : null });
+    setAccounts(d && (d.kind === 'expense' || d.kind === 'income') ? moneyAccounts(d) : { category: null, cash: null });
   };
 
   const understand = async () => {
@@ -88,11 +85,10 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
   const money = (a, c) => formatMoney(a, c || baseCurrency);
   const K = draft ? CAPTURE_KINDS[draft.kind] : null;
   const shortcuts = [
-    isModuleEnabled(user, 'trading') && { label: 'Trade', icon: TrendingUp, go: () => { onClose(); navigate('/trading?quickadd=trade'); } },
     { label: 'Dépense détaillée', icon: Wallet, go: () => { onClose(); onQuickEntry(); } },
     { label: 'Séance détaillée', icon: Dumbbell, go: () => { onClose(); navigate('/health?quickadd=workout'); } },
     { label: 'Emploi du temps (photo)', icon: CalendarDays, go: () => { onClose(); navigate('/learning?tab=timetable'); } },
-  ].filter(Boolean);
+  ];
 
   return (
     <Modal open={open} onClose={onClose} title="Noter quelque chose">
@@ -141,9 +137,6 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
                 <Field label={draft.kind === 'expense' ? 'Catégorie' : 'Source'}><AccountSelect simple classes={[draft.kind === 'expense' ? 6 : 7]} value={accounts.category} onChange={(e) => setAccounts((a) => ({ ...a, category: e.target.value }))} /></Field>
                 <Field label={draft.kind === 'expense' ? 'Payé avec' : 'Reçu sur'}><AccountSelect simple classes={[5]} value={accounts.cash} onChange={(e) => setAccounts((a) => ({ ...a, cash: e.target.value }))} /></Field>
               </div>
-            )}
-            {draft.kind === 'freelance' && (
-              <Field label="Arrivé sur le compte"><AccountSelect simple classes={[5]} value={accounts.cash} onChange={(e) => setAccounts((a) => ({ ...a, cash: e.target.value }))} /></Field>
             )}
 
             <div className="flex flex-wrap gap-2 justify-end">

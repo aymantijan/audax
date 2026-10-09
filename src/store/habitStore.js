@@ -8,7 +8,7 @@ import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calen
 import { evaluateBadges } from '../utils/badges';
 import { HABIT_CATEGORIES } from '../utils/constants';
 
-// Same shape/mechanism as healthStore's/engineeringStore's BADGE_DEFS —
+// Same shape/mechanism as healthStore's BADGE_DEFS —
 // `check` receives this store's state, `awardedBadges` persists which ones
 // already fired so re-checking on every toggle never re-toasts one.
 const BADGE_DEFS = [

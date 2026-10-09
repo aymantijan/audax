@@ -8,14 +8,6 @@ import { useSkillStore } from '../store/skillStore';
 import { computeFamilyStates } from '../utils/skill-families';
 import { useCreativeStore } from '../store/creativeStore';
 import { useAccountingStore } from '../store/accountingStore';
-import { useTradingStore } from '../store/tradingStore';
-import { useRealEstateStore } from '../store/realEstateStore';
-import { useDealsStore } from '../store/dealsStore';
-import { useFundraisingStore } from '../store/fundraisingStore';
-import { useCareerStore } from '../store/careerStore';
-import { useFreelanceStore } from '../store/freelanceStore';
-import { useBusinessStore } from '../store/businessStore';
-import { useEngineeringStore } from '../store/engineeringStore';
 import { fmtMAD, todayKey } from '../utils/formatters';
 import { MODULES, isModuleEnabled, poleByKey, withModule } from '../utils/navigation';
 import { toast } from '../store/uiStore';
@@ -52,40 +44,6 @@ const SUMMARIES = {
     const net = useAccountingStore((s) => { try { return s.getNetWorth().ancc; } catch { return null; } });
     return { main: net == null ? '—' : fmtMAD(net), sub: 'patrimoine net', figure: true };
   },
-  trading: function TradingSummary() {
-    const accounts = useTradingStore((s) => s.accounts.length);
-    const trades = useTradingStore((s) => s.trades.filter((t) => (t.date || '').startsWith(month())).length);
-    return { main: plural(trades, 'trade ce mois', 'trades ce mois'), sub: plural(accounts, 'compte', 'comptes') };
-  },
-  realEstate: function RealEstateSummary() {
-    const n = useRealEstateStore((s) => s.properties.length);
-    return { main: plural(n, 'bien', 'biens') };
-  },
-  pe: function DealsSummary() {
-    const ongoing = useDealsStore((s) => s.deals.filter((d) => d.status === 'ongoing').length);
-    return { main: plural(ongoing, 'deal en cours', 'deals en cours') };
-  },
-  fundraising: function FundraisingSummary() {
-    const n = useFundraisingStore((s) => s.investors.length);
-    return { main: plural(n, 'investisseur suivi', 'investisseurs suivis') };
-  },
-  career: function CareerSummary() {
-    const open = useCareerStore((s) => s.applications.filter((a) => !['Rejected', 'Withdrawn', 'Accepted'].includes(a.stage)).length);
-    return { main: plural(open, 'candidature ouverte', 'candidatures ouvertes') };
-  },
-  freelance: function FreelanceSummary() {
-    const unpaid = useFreelanceStore((s) => s.engagements.reduce((a, e) => a + Math.max(0, (e.invoicedTotal || 0) - (e.paidTotal || 0)), 0));
-    const active = useFreelanceStore((s) => s.engagements.filter((e) => e.status !== 'Terminé').length);
-    return { main: plural(active, 'client actif', 'clients actifs'), sub: unpaid > 0 ? `${fmtMAD(unpaid)} à encaisser` : 'rien à encaisser' };
-  },
-  business: function BusinessSummary() {
-    const n = useBusinessStore((s) => s.businesses.filter((b) => b.status !== 'closed' && b.status !== 'Clôturé').length);
-    return { main: plural(n, 'projet actif', 'projets actifs') };
-  },
-  engineering: function EngineeringSummary() {
-    const n = useEngineeringStore((s) => s.projects.length);
-    return { main: plural(n, 'projet', 'projets') };
-  },
 };
 
 function ModuleTile({ moduleKey }) {
@@ -109,7 +67,7 @@ function ModuleTile({ moduleKey }) {
   );
 }
 
-// Home page of a section (/etudes, /patrimoine, /carriere): its pages with a
+// Home page of a section (/etudes): its pages with a
 // key figure each, then the modules this person has not switched on yet.
 export default function PoleHome({ poleKey }) {
   const pole = poleByKey(poleKey);

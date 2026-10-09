@@ -6,7 +6,6 @@ import { classOf, ACCOUNT_MAP } from '../../utils/chart-of-accounts';
 import { getLabelsForAccount, suggestLabels, findClosestLabel, computeLabelRatiosAfter } from '../../utils/label-analysis';
 import { budgetSeverity } from '../../utils/goals';
 import { useSkillStore } from '../skillStore';
-import { useTradingStore } from '../tradingStore';
 import { toast } from '../uiStore';
 import { stamp } from './helpers';
 
@@ -33,28 +32,6 @@ export const journalSlice = (set, get) => ({
         award('double-entry-lv1', 2, `journal: ${clean.label}`);
         award('journal-keeper-lv1', 1, `journal: ${clean.label}`);
         if (clean.lines.length > 2) award('double-entry-lv2', 2, `multi-line entry: ${clean.label}`);
-        // F — pont cross-domaine : un trading payout gagné mais jamais
-        // réellement comptabilisé n'existe que dans tradingStore, séparé de
-        // la vraie trésorerie qu'on suit ici. Auto-détecte une écriture qui
-        // correspond à un payout non encore relié (même montant, ±7 jours)
-        // et le marque comme comptabilisé — récompense le fait de VRAIMENT
-        // faire remonter les gains de trading dans la compta, pas juste de
-        // les logger côté Trading et de s'arrêter là.
-        const incoming = clean.lines.reduce((a, l) => a + (classOf(l.account) === 5 ? Number(l.debit) || 0 : 0), 0);
-        if (incoming > 0) {
-          const entryTime = new Date(`${clean.date}T00:00:00`).getTime();
-          const match = useTradingStore.getState().getAllPayoutsFlat().find((p) => {
-            if (p.bookkept || Math.abs(p.amount - incoming) > 0.01) return false;
-            const payoutTime = new Date(`${p.date}T00:00:00`).getTime();
-            return Math.abs(entryTime - payoutTime) <= 7 * 86400000;
-          });
-          if (match) {
-            useTradingStore.getState().markPayoutBookkept(match.accountId, match.id);
-            set({ linkedPayoutsCount: (get().linkedPayoutsCount || 0) + 1 });
-            award('treasury-planning-lv1', 8, `payout trading comptabilisé : ${match.accountName}`);
-            toast(`💰 Payout "${match.accountName}" relié à cette écriture · +8 XP`, 'success');
-          }
-        }
         toast(`Écriture enregistrée : ${clean.label}`, 'success');
         get().checkBadges();
         return { ok: true, id: clean.id };

@@ -6,7 +6,6 @@ const ctx = {
   today: '2026-09-27',
   habits: [{ id: 'h1', name: 'Méditation' }, { id: 'h2', name: 'Pages lues', kind: 'quantity', target: 20 }],
   courses: [{ id: 'c1', name: 'IFRS' }, { id: 'c2', name: 'Contrôle de gestion' }],
-  clients: [{ id: 'e1', name: 'Atlas Distribution' }],
   weightUnit: 'kg',
 };
 const p = (s) => parseCapture(s, ctx);
@@ -40,12 +39,13 @@ test('health: weight (kg, lb), sleep, water', () => {
   assert.equal(p('2 verres d’eau').ml, 500);
 });
 
-test('study, habits and a client payment use the person’s own names', () => {
+test('study and habits use the person’s own names; a client payment is plain income', () => {
   assert.deepEqual(p('révisé IFRS 45 min'), { kind: 'study', minutes: 45, courseId: 'c1', course: 'IFRS', label: '', date: '2026-09-27' });
   assert.equal(p('travaillé 2 h sur le mémoire').courseId, null);
   assert.deepEqual(p('méditation faite'), { kind: 'habit', habitId: 'h1', habit: 'Méditation', value: null, date: '2026-09-27' });
   assert.equal(p('pages lues 35').value, 35);
-  assert.deepEqual(p('reçu 7340 atlas distribution ventes de septembre'), { kind: 'freelance', clientId: 'e1', client: 'Atlas Distribution', amount: 7340, label: 'Ventes de septembre', date: '2026-09-27' });
+  const paid = p('reçu 7340 atlas distribution ventes de septembre');
+  assert.deepEqual([paid.kind, paid.amount], ['income', 7340]);
 });
 
 test('drafts from the AI are checked like the others', () => {
@@ -55,7 +55,7 @@ test('drafts from the AI are checked like the others', () => {
   assert.equal(normalizeDraft({ kind: 'weight', weightKg: 900 }, ctx), null);
   assert.equal(normalizeDraft({ kind: 'expense', amount: '12,5', label: 'Pain', date: '2030-01-01' }, ctx).date, '2026-09-27', 'no future dates');
   assert.equal(normalizeDraft({ kind: 'study', minutes: 30, course: 'controle de gestion' }, ctx).courseId, 'c2');
-  assert.equal(normalizeDraft({ kind: 'freelance', client: 'atlas', amount: 100 }, ctx).clientId, 'e1');
+  assert.equal(normalizeDraft({ kind: 'freelance', client: 'atlas', amount: 100 }, ctx), null, 'Freelance was removed');
 });
 
 test('one readable line per draft', () => {

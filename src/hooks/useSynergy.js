@@ -1,19 +1,10 @@
 import { useMemo, useEffect } from 'react';
-import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHabitStore } from '../store/habitStore';
 import { useHealthStore } from '../store/healthStore';
-import { useEngineeringStore } from '../store/engineeringStore';
-import { useBusinessStore } from '../store/businessStore';
-import { useNetworkingStore } from '../store/networkingStore';
-import { useCareerStore } from '../store/careerStore';
-import { useContentStore } from '../store/contentStore';
 import { useFocusStore } from '../store/focusStore';
-import { useFundraisingStore } from '../store/fundraisingStore';
-import { useFreelanceStore } from '../store/freelanceStore';
 import { useCreativeStore } from '../store/creativeStore';
-import { useRealEstateStore } from '../store/realEstateStore';
 import { useSkillStore } from '../store/skillStore';
 import { useAuthStore } from '../store/authStore';
 import { calculateSynergies } from '../utils/synergy';
@@ -33,7 +24,6 @@ function loadHistory() {
 }
 
 export function useSynergy() {
-  const trades = useTradingStore((s) => s.trades);
   const courses = useLearningStore((s) => s.courses);
   // Raw slices from the double-entry accounting store (not a getter — see the
   // useSyncExternalStore infinite-loop note in project memory) — feeds the
@@ -46,32 +36,12 @@ export function useSynergy() {
   const habitLogs = useHabitStore((s) => s.logs);
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const skills = useSkillStore((s) => s.skills);
-  const primaryDomain = useAuthStore((s) => s.user?.primaryDomain || 'trading');
-  const engineeringEnabled = useAuthStore((s) => s.user?.enabledModules?.engineering ?? false);
-  const tradingEnabled = useAuthStore((s) => s.user?.enabledModules?.trading ?? true);
-  const labEntries = useEngineeringStore((s) => s.labEntries);
-  const engineeringProjects = useEngineeringStore((s) => s.projects);
-  const businesses = useBusinessStore((s) => s.businesses);
-  // Deals (PE) is deliberately excluded from the synergy score (2026-08-27,
-  // user request) — only Business Projects activity feeds it.
-  const businessEnabled = useAuthStore((s) => s.user?.enabledModules?.business ?? s.user?.enabledModules?.deals ?? true);
-  const contacts = useNetworkingStore((s) => s.contacts);
-  const applications = useCareerStore((s) => s.applications);
-  const posts = useContentStore((s) => s.posts);
-  const networkingEnabled = useAuthStore((s) => s.user?.enabledModules?.networking ?? false);
-  const careerEnabled = useAuthStore((s) => s.user?.enabledModules?.career ?? false);
-  const contentEnabled = useAuthStore((s) => s.user?.enabledModules?.content ?? false);
+  const primaryDomain = useAuthStore((s) => s.user?.primaryDomain || 'learning');
   const focusSessions = useFocusStore((s) => s.sessions);
   const focusEnabled = useAuthStore((s) => s.user?.enabledModules?.focus ?? false);
-  const investors = useFundraisingStore((s) => s.investors);
-  const engagements = useFreelanceStore((s) => s.engagements);
   const creativeWorks = useCreativeStore((s) => s.works);
   const creativeShowcases = useCreativeStore((s) => s.showcases);
-  const properties = useRealEstateStore((s) => s.properties);
-  const fundraisingEnabled = useAuthStore((s) => s.user?.enabledModules?.fundraising ?? false);
-  const freelanceEnabled = useAuthStore((s) => s.user?.enabledModules?.freelance ?? false);
   const creativeEnabled = useAuthStore((s) => s.user?.enabledModules?.creative ?? false);
-  const realEstateEnabled = useAuthStore((s) => s.user?.enabledModules?.realEstate ?? false);
 
   // Raw slices only (never a store getter returning a fresh object) — see the
   // useSyncExternalStore infinite-loop note in project memory. Derived values
@@ -104,7 +74,6 @@ export function useSynergy() {
   const result = useMemo(
     () =>
       calculateSynergies({
-        trades,
         courses,
         journal,
         accountingBudgets,
@@ -117,37 +86,18 @@ export function useSynergy() {
         primaryDomain,
         today: todayKey(),
         healthExtras,
-        labEntries,
-        engineeringProjects,
-        engineeringEnabled,
-        tradingEnabled,
-        businesses,
-        businessEnabled,
-        contacts,
-        applications,
-        posts,
-        networkingEnabled,
-        careerEnabled,
-        contentEnabled,
+        // Removed modules (2026-10-09) no longer feed the score.
+        tradingEnabled: false,
+        businessEnabled: false,
         focusSessions,
         focusEnabled,
-        investors,
-        engagements,
         creativeWorks,
         creativeShowcases,
-        properties,
-        fundraisingEnabled,
-        freelanceEnabled,
         creativeEnabled,
-        realEstateEnabled,
       }),
     [
-      trades, courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
-      labEntries, engineeringProjects, engineeringEnabled, tradingEnabled, businesses, businessEnabled,
-      contacts, applications, posts, networkingEnabled, careerEnabled, contentEnabled,
-      focusSessions, focusEnabled,
-      investors, engagements, creativeWorks, creativeShowcases, properties,
-      fundraisingEnabled, freelanceEnabled, creativeEnabled, realEstateEnabled,
+      courses, journal, accountingBudgets, corrections, echeances, energyLogs, habits, habitLogs, skills, primaryDomain, healthExtras,
+      focusSessions, focusEnabled, creativeWorks, creativeShowcases, creativeEnabled,
     ]
   );
 

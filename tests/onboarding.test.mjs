@@ -24,14 +24,12 @@ test('the dirham is only proposed in Morocco', () => {
 });
 
 test('answers switch on the matching modules only', () => {
-  const p = buildOnboardingPlan({ aims: ['job', 'trading'], situation: 'freelancer' });
-  assert.equal(p.modules.career, true);
-  assert.equal(p.modules.networking, true);
-  assert.equal(p.modules.trading, true);
-  assert.equal(p.modules.freelance, true);
-  assert.equal(p.modules.pe, false);
-  assert.equal(p.modules.engineering, false);
-  assert.ok(p.goals.includes('job'));
+  const p = buildOnboardingPlan({ aims: ['create', 'sport'], situation: 'student' });
+  assert.deepEqual(p.modules, { focus: true, creative: true });
+  assert.ok(p.goals.includes('workouts'));
+  // Removed modules (Trading, Carrière…) are never switched on, whatever the answers.
+  const old = buildOnboardingPlan({ aims: ['job', 'trading', 'business'], situation: 'freelancer' });
+  assert.deepEqual(old.modules, { focus: false, creative: false });
 });
 
 test('nobody starts empty, and nobody gets more than 6 habits or 3 goals', () => {

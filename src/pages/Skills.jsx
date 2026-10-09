@@ -3,7 +3,6 @@ import { Search, Boxes, List, Layers, Globe2, RotateCcw } from 'lucide-react';
 import { useSkillStore } from '../store/skillStore';
 import { useLearningStore } from '../store/learningStore';
 import { useHabitStore } from '../store/habitStore';
-import { useCareerStore } from '../store/careerStore';
 import {
   computeFamilyStates, visibleFamilyIds, familyIdOf, FAMILY_MAP, MODELS, DEFAULT_MODELS,
 } from '../utils/skill-families';
@@ -61,7 +60,6 @@ export default function Skills() {
   const lifetime = useSkillStore((s) => s.getLifetimeXP());
   const courses = useLearningStore((s) => s.courses);
   const habits = useHabitStore((s) => s.habits);
-  const plans = useCareerStore((s) => s.plans);
 
   const goals = useAllGoals();
   const wide = useWide();
@@ -78,9 +76,8 @@ export default function Skills() {
     const ids = new Set();
     for (const c of courses || []) for (const id of c.linkedSkills || []) ids.add(familyIdOf(id));
     for (const h of habits || []) if (h.linkedSkill) ids.add(familyIdOf(h.linkedSkill));
-    for (const p of plans || []) for (const s of p.skills || []) if (s.skillId) ids.add(familyIdOf(s.skillId));
     return ids;
-  }, [courses, habits, plans]);
+  }, [courses, habits]);
 
   const visibleKey = visibleFamilyIds(states, activeModels, linked).join('|');
   const visibleIds = useMemo(() => (visibleKey ? visibleKey.split('|') : []), [visibleKey]);

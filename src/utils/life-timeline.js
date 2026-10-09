@@ -3,8 +3,8 @@
 // Pure: tests/life-timeline.test.mjs. The page gathers the data from the
 // stores (services/life-timeline.js) and passes it in.
 //
-// data = { journal, trades, workouts, bodyComp, energyLogs, habits, habitLogs,
-//          sessions, courses, attendance, payments: [{date, amount, client, currency}] }
+// data = { journal, workouts, bodyComp, energyLogs, habits, habitLogs,
+//          sessions, courses, attendance }
 import { classOf } from './chart-of-accounts.js';
 import { sleepHoursOf } from './life-review.js';
 import { ATTENDANCE_STATUS } from './attendance.js';
@@ -13,7 +13,6 @@ export const DOMAINS = {
   etudes: { label: 'Études' },
   sante: { label: 'Santé' },
   argent: { label: 'Argent' },
-  trading: { label: 'Trading' },
   habitudes: { label: 'Habitudes' },
 };
 
@@ -31,13 +30,6 @@ export function buildEvents(data, { money = (n) => String(n) } = {}) {
     const earned = e.lines.filter((l) => classOf(l.account) === 7).reduce((s, l) => s + (Number(l.credit) || 0) - (Number(l.debit) || 0), 0);
     if (spent > 0) push({ id: `j-${e.id}`, date: e.date, domain: 'argent', kind: 'expense', title: e.label || 'Dépense', detail: `− ${money(spent)}`, amount: -spent, to: '/finance?tab=journal' });
     else if (earned > 0) push({ id: `j-${e.id}`, date: e.date, domain: 'argent', kind: 'income', title: e.label || 'Revenu', detail: `+ ${money(earned)}`, amount: earned, to: '/finance?tab=journal' });
-  }
-  for (const p of data.payments || []) {
-    push({ id: `p-${p.id}`, date: p.date, domain: 'argent', kind: 'payment', title: `Encaissement · ${p.client}`, detail: `+ ${money(p.amount, p.currency)}`, to: '/freelance' });
-  }
-  for (const t of data.trades || []) {
-    const pnl = Number(t.pnl) || 0;
-    push({ id: `t-${t.id}`, date: t.date, domain: 'trading', kind: 'trade', title: `Trade · ${t.instrument || '—'}`, detail: `${pnl >= 0 ? '+' : '−'} ${money(Math.abs(pnl), t.currency)}`, amount: pnl, to: '/trading' });
   }
   for (const w of data.workouts || []) {
     const bits = [w.cardio?.distance ? `${String(w.cardio.distance).replace('.', ',')} km` : null, w.durationMin ? `${w.durationMin} min` : null].filter(Boolean);
@@ -70,7 +62,7 @@ export function buildEvents(data, { money = (n) => String(n) } = {}) {
 // ── Daily values ──
 const addDays = (key, n) => { const d = new Date(`${key}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
-// { date → { sleep, sportMin, sport, study, onTime, spend, pnl, energy, habits: Set } }
+// { date → { sleep, sportMin, sport, study, onTime, spend, energy, habits: Set } }
 // A value is only present when that section was really used that day (or
 // since the person started using it, for sums like spending and study).
 export function dailyValues(data) {
@@ -85,7 +77,6 @@ export function dailyValues(data) {
   }
   for (const w of data.workouts || []) { const d = day(w.date); d.sportMin = (d.sportMin || 0) + (Number(w.durationMin) || 0); d.sport = true; }
   for (const s of data.sessions || []) { const d = day(s.date); d.study = (d.study || 0) + (Number(s.durationMinutes) || 0); }
-  for (const t of data.trades || []) { const d = day(t.date); d.pnl = (d.pnl || 0) + (Number(t.pnl) || 0); }
   for (const e of data.journal || []) {
     const spent = e.lines.filter((l) => classOf(l.account) === 6).reduce((s, l) => s + (Number(l.debit) || 0) - (Number(l.credit) || 0), 0);
     if (spent > 0) { const d = day(e.date); d.spend = (d.spend || 0) + spent; }
@@ -121,7 +112,6 @@ export const MIN_RELATIVE = 0.1; // and at least 10 % apart: 16 vs 17 is not a f
 // What changes on a day…
 const OUTCOMES = {
   study: { label: 'de travail / révision', unit: 'min', fmt: (v) => `${Math.round(v)} min` },
-  pnl: { label: 'de résultat de trading', fmt: (v, money) => money(Math.round(v)) },
   onTime: { label: 'des cours à l’heure', fmt: (v) => `${Math.round(v)} %` },
   spend: { label: 'de dépenses', fmt: (v, money) => money(Math.round(v)) },
   energy: { label: 'd’énergie au réveil', fmt: (v) => `${r1(v).toString().replace('.', ',')}/10` },
@@ -131,9 +121,9 @@ const OUTCOMES = {
 // …depending on a condition. lag = the outcome is read that many days later.
 function conditions(data) {
   const list = [
-    { key: 'sleep', lag: 0, test: (d) => (d.sleep == null ? null : d.sleep >= 7 ? true : d.sleep < 6.5 ? false : null), with: 'après une nuit de 7 h ou plus', without: 'après une nuit de moins de 6 h 30', outcomes: ['study', 'pnl', 'onTime', 'spend', 'energy'] },
+    { key: 'sleep', lag: 0, test: (d) => (d.sleep == null ? null : d.sleep >= 7 ? true : d.sleep < 6.5 ? false : null), with: 'après une nuit de 7 h ou plus', without: 'après une nuit de moins de 6 h 30', outcomes: ['study', 'onTime', 'spend', 'energy'] },
     { key: 'sport', lag: 0, test: (d) => d.sport ?? null, with: 'les jours avec sport', without: 'les jours sans sport', outcomes: ['study', 'spend'] },
-    { key: 'sport-next', lag: 1, test: (d) => d.sport ?? null, with: 'le lendemain d’un jour avec sport', without: 'le lendemain d’un jour sans sport', outcomes: ['study', 'pnl', 'onTime', 'energy', 'sleep'] },
+    { key: 'sport-next', lag: 1, test: (d) => d.sport ?? null, with: 'le lendemain d’un jour avec sport', without: 'le lendemain d’un jour sans sport', outcomes: ['study', 'onTime', 'energy', 'sleep'] },
   ];
   for (const h of (data.habits || []).filter((x) => !x.archived && x.kind !== 'quit')) {
     const since = (data.habitLogs || []).filter((l) => l.habitId === h.id).map((l) => l.date).sort()[0];
@@ -141,7 +131,7 @@ function conditions(data) {
     list.push({
       key: `habit-${h.id}`, lag: 0, habit: h.name,
       test: (d, date) => (date < since ? null : d.habits.has(h.id)),
-      with: `les jours où « ${h.name} » est faite`, without: 'les autres jours', outcomes: ['study', 'pnl', 'spend', 'energy'],
+      with: `les jours où « ${h.name} » est faite`, without: 'les autres jours', outcomes: ['study', 'spend', 'energy'],
     });
   }
   return list;

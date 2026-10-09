@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Compass, Zap, TrendingUp, Wallet, Flame, BookOpen, Library, Handshake, Rocket, GitBranch, FlaskConical, Users, Briefcase, Megaphone, FolderKanban } from 'lucide-react';
+import { Search, X, Compass, Zap, Wallet, Flame, BookOpen, Library, GitBranch, Palette } from 'lucide-react';
 import { buildSearchIndex, buildNavItems, searchIndex } from '../../utils/global-search';
 import { useAuthStore } from '../../store/authStore';
 import { openAssistant } from '../../services/assistant';
 
 const DOMAIN_ICON = {
-  Trading: TrendingUp, Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library, Deals: Handshake, Business: Rocket,
-  Page: Compass, Action: Zap, Skills: GitBranch, Engineering: FlaskConical, Networking: Users, Career: Briefcase, Content: Megaphone, Projects: FolderKanban,
+  Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library,
+  Page: Compass, Action: Zap, Skills: GitBranch, Creative: Palette,
 };
 
 // Global command-palette search — Ctrl/Cmd+K anywhere, or the search icon in
@@ -16,9 +16,8 @@ const DOMAIN_ICON = {
 // open rather than kept live — see global-search.js for why that's safe).
 // Display names (the English keys stay as-is: they also index DOMAIN_ICON).
 const DOMAIN_FR = {
-  Page: 'Page', Action: 'Action', Trading: 'Trading', Finance: 'Finances', Habits: 'Habitudes', Learning: 'Apprentissage', Reading: 'Lecture', Deals: 'Private equity',
-  Projects: 'Projets', Business: 'Business', Engineering: 'Ingénierie', Networking: 'Réseau', Career: 'Carrière', Content: 'Contenu',
-  Fundraising: 'Levée de fonds', Freelance: 'Freelance', Creative: 'Création', 'Real Estate': 'Immobilier', Skills: 'Compétences',
+  Page: 'Page', Action: 'Action', Finance: 'Finances', Habits: 'Habitudes', Learning: 'Apprentissage', Reading: 'Lecture',
+  Creative: 'Création', Skills: 'Compétences',
 };
 
 export default function GlobalSearch() {

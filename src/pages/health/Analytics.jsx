@@ -9,11 +9,7 @@ import { tooltipStyle } from '../../components/common/chart-theme';
 
 const CORRELATIONS = [
   { key: 'sleepVsStrength', label: 'Qualité du sommeil ↔ volume de force', desc: 'Un meilleur sommeil va-t-il de pair avec des séances plus lourdes ?' },
-  { key: 'sleepVsTradingAccuracy', label: 'Qualité du sommeil ↔ taux de réussite trading', desc: 'Transversal : un meilleur sommeil va-t-il avec un meilleur taux de réussite ? (Trading)' },
   { key: 'stressVsSpending', label: 'Stress ↔ dépenses', desc: 'Transversal : le stress est-il lié aux dépenses discrétionnaires ? (Finance)' },
-  { key: 'energyVsTradingAccuracy', label: 'Énergie ↔ taux de réussite trading', desc: 'Transversal : ton niveau d’énergie suit-il ton taux de réussite ? (Trading)' },
-  { key: 'sleepVsTiltRisk', label: 'Qualité du sommeil ↔ jours de tilt / revenge', desc: 'Transversal : un mauvais sommeil coïncide-t-il avec les jours de tilt ou de revenge trading ? (Trading)' },
-  { key: 'energyVsTiltRisk', label: 'Énergie ↔ jours de tilt / revenge', desc: 'Transversal : une énergie basse coïncide-t-elle avec les jours de tilt ou de revenge trading ? (Trading)' },
 ];
 
 export default function Analytics() {

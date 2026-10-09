@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check, Globe, UserRound } from 'lucide-react';
+import { Search, Crosshair, Trophy, ChevronLeft, ChevronRight, Star, Flame, Map, Users, Lock, Check, Globe } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSkillStore } from '../store/skillStore';
-import { useNetworkingStore } from '../store/networkingStore';
 import { useSynergy } from '../hooks/useSynergy';
-import { LEADERBOARD, PERSONALITIES, PERSONALITY_DOMAINS, PERSONALITY_COUNTRIES } from '../utils/personalities';
 import { gradeFor, gradeForXpOnly, GRADES_LADDER, GRADE_ERAS } from '../utils/grades';
 import { preview, CONSISTENCY_CONFIG } from '../utils/momentum';
 import { XP_DOMAINS, XP_DOMAIN_LABELS, domainXpBreakdown } from '../utils/xp-domains';
@@ -68,7 +65,8 @@ function DomainBalanceCard({ domainXP }) {
         <EmptyState>Gagne un peu d’XP pour voir ta répartition par domaine.</EmptyState>
       ) : (
         <div className="space-y-2.5">
-          {XP_DOMAINS.map((d) => {
+          {/* Trading XP earned before the module was removed (2026-10-09) still shows; never an empty Trading row. */}
+          {XP_DOMAINS.filter((d) => d !== 'trading' || domainXP[d] > 0).map((d) => {
             const xp = domainXP[d];
             const pct = total > 0 ? Math.round((xp / total) * 100) : 0;
             return (
@@ -92,57 +90,16 @@ function DomainBalanceCard({ domainXP }) {
   );
 }
 
-// Networking cross-link (2026-08-27): a networkingStore contact can carry a
-// `linkedPersonalityName` tag — this surfaces the aggregate ("who do my
-// real-world contacts remind me of") as motivation, and lets each ranking
-// row that has ≥1 linked contact jump straight to them filtered on Networking.
-function RealWorldNetworkCard({ contacts }) {
-  // Plain computation, not useMemo — this is cheap (contacts lists are small)
-  // and an early return below would otherwise violate the rules of hooks by
-  // making a hook call conditional.
-  const linked = contacts.filter((c) => c.linkedPersonalityName);
-  if (!linked.length) return null;
-  const counts = {};
-  for (const c of linked) {
-    const p = PERSONALITIES.find((p) => p.name === c.linkedPersonalityName);
-    const domain = p?.domain || 'Autre';
-    counts[domain] = (counts[domain] || 0) + 1;
-  }
-  const byDomain = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-
-  return (
-    <Card title="Ton réseau réel">
-      <p className="text-xs text-mute mb-3">Tes contacts du module Réseau liés à des figures du classement, par domaine.</p>
-      <div className="flex flex-wrap gap-2">
-        {byDomain.map(([domain, count]) => (
-          <span key={domain} className="text-xs bg-surface border border-line rounded-full px-3 py-1.5 flex items-center gap-1.5">
-            <UserRound size={12} className="text-accent" /> {count} lié{count > 1 ? 's' : ''} · {domain}
-          </span>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
+// Users only (2026-10-09): the famous personalities are gone. You, plus the
+// other VAUDAX users from the public leaderboard_profiles table (see
+// services/cloud-sync.js) — empty when Supabase isn't configured or this
+// account isn't cloud-synced (local-only accounts never appear on it).
 function RankingView() {
   const user = useAuthStore((s) => s.user);
   const lifetimeXP = useSkillStore((s) => s.getLifetimeXP());
-  const navigate = useNavigate();
-  const contacts = useNetworkingStore((s) => s.contacts);
-  const linkedCounts = useMemo(() => {
-    const counts = {};
-    for (const c of contacts) if (c.linkedPersonalityName) counts[c.linkedPersonalityName] = (counts[c.linkedPersonalityName] || 0) + 1;
-    return counts;
-  }, [contacts]);
 
   const [search, setSearch] = useState('');
-  const [domain, setDomain] = useState('all');
-  const [country, setCountry] = useState('all');
   const [page, setPage] = useState(0);
-  // Other real AUDAX users, pulled from the public leaderboard_profiles table
-  // (see services/cloud-sync.js) — empty until fetched, or forever empty if
-  // Supabase isn't configured / this account isn't cloud-synced (local-only
-  // accounts never appear on, or see, the shared leaderboard).
   const [realUsers, setRealUsers] = useState([]);
   const [cloudStatus, setCloudStatus] = useState(isSupabaseConfigured ? 'loading' : 'unconfigured');
 
@@ -159,29 +116,20 @@ function RankingView() {
       if (cancelled) return;
       setRealUsers(
         profiles
-          .filter((p) => p.user_id !== session.user.id) // exclude self — the "You" row below already covers that, from live local state
-          .map((p) => ({
-            name: p.display_name || 'VAUDAX user',
-            domain: p.career_goal || 'VAUDAX',
-            country: '—',
-            xp: p.lifetime_xp || 0,
-            note: 'VAUDAX user',
-            isYou: false,
-            isRealUser: true,
-          }))
+          .filter((p) => p.user_id !== session.user.id) // the "toi" row below comes from live local state
+          .map((p) => ({ name: p.display_name || 'Utilisateur VAUDAX', occupation: p.career_goal || '', xp: p.lifetime_xp || 0, isYou: false }))
       );
       setCloudStatus(ok ? 'ready' : 'error');
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const youName = `${user?.name || 'Toi'}`;
+  const youName = user?.name || 'Toi';
 
   const ranked = useMemo(() => {
     const rows = [
-      ...LEADERBOARD.map((p) => ({ ...p, isYou: false })),
       ...realUsers,
-      { name: youName, domain: 'Toi', country: user?.occupation || '—', xp: lifetimeXP, note: 'C’est toi : grimpe dans le classement.', isYou: true },
+      { name: youName, occupation: user?.occupation || '', xp: lifetimeXP, isYou: true },
     ].sort((a, b) => b.xp - a.xp || (a.isYou ? 1 : 0));
     return rows.map((r, i) => ({ ...r, rank: i + 1, grade: gradeForXpOnly(r.xp) }));
   }, [lifetimeXP, youName, user?.occupation, realUsers]);
@@ -191,13 +139,8 @@ function RankingView() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return ranked.filter((r) => {
-      if (domain !== 'all' && r.domain !== domain && !r.isYou) return false;
-      if (country !== 'all' && r.country !== country && !r.isYou) return false;
-      if (q && !r.name.toLowerCase().includes(q) && !(r.note || '').toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [ranked, search, domain, country]);
+    return q ? ranked.filter((r) => r.isYou || r.name.toLowerCase().includes(q)) : ranked;
+  }, [ranked, search]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const clampedPage = Math.min(page, pageCount - 1);
@@ -205,8 +148,6 @@ function RankingView() {
 
   const jumpToMe = () => {
     setSearch('');
-    setDomain('all');
-    setCountry('all');
     const idx = ranked.findIndex((r) => r.isYou);
     setPage(Math.floor(idx / PAGE_SIZE));
   };
@@ -218,40 +159,30 @@ function RankingView() {
       {cloudStatus !== 'ready' && (
         <div className="text-xs text-mute bg-surface border border-line rounded-lg px-3 py-2 flex items-center gap-2">
           <Globe size={13} className="shrink-0" />
-          {cloudStatus === 'unconfigured' && 'La synchronisation n’est pas configurée sur ce site : le classement partagé avec les autres utilisateurs de VAUDAX en a besoin.'}
-          {cloudStatus === 'signed-out' && 'Connecte-toi (Paramètres → Synchronisation) pour voir le classement des autres utilisateurs de VAUDAX et y apparaître.'}
+          {cloudStatus === 'unconfigured' && 'La synchronisation n’est pas configurée sur ce site : le classement avec les autres utilisateurs de VAUDAX en a besoin.'}
+          {cloudStatus === 'signed-out' && 'Connecte-toi (Paramètres → Synchronisation) pour voir les autres utilisateurs de VAUDAX et apparaître dans le classement.'}
           {cloudStatus === 'loading' && 'Chargement des autres utilisateurs…'}
-          {cloudStatus === 'error' && 'Impossible de charger les autres utilisateurs pour l’instant : seuls les personnalités et ton rang sont affichés.'}
+          {cloudStatus === 'error' && 'Impossible de charger les autres utilisateurs pour l’instant : seul ton rang est affiché.'}
         </div>
-      )}
-      {cloudStatus === 'ready' && realUsers.length > 0 && (
-        <p className="text-[11px] text-mute flex items-center gap-1.5">
-          <Globe size={12} className="text-good shrink-0" /> {realUsers.length} other real VAUDAX user{realUsers.length > 1 ? 's' : ''} shown alongside the personalities below.
-        </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-56">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
-          <input
-            className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent"
-            placeholder="Chercher un nom…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          />
+      {total > 1 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-56">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
+            <input
+              className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent"
+              placeholder="Chercher un nom…"
+              aria-label="Chercher un nom"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            />
+          </div>
+          <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
+            <Crosshair size={14} /> Ma position
+          </button>
         </div>
-        <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={domain} onChange={(e) => { setDomain(e.target.value); setPage(0); }}>
-          <option value="all">Tous les domaines</option>
-          {PERSONALITY_DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={country} onChange={(e) => { setCountry(e.target.value); setPage(0); }}>
-          <option value="all">Tous les pays</option>
-          {PERSONALITY_COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <button onClick={jumpToMe} className="flex items-center gap-1.5 text-sm text-on-accent bg-accent rounded-lg px-3 py-2 cursor-pointer font-semibold hover:opacity-90">
-          <Crosshair size={14} /> Ma position
-        </button>
-      </div>
+      )}
 
       <Card className="!p-0 overflow-hidden">
         {pageRows.length ? (
@@ -261,9 +192,7 @@ function RankingView() {
                 <tr className="text-left text-xs text-mute border-b border-line bg-surface/50">
                   <th className="py-2.5 px-4 w-16">Rang</th>
                   <th className="py-2.5 px-4">Nom</th>
-                  <th className="py-2.5 px-4 hidden sm:table-cell">Domaine</th>
-                  <th className="py-2.5 px-4 hidden md:table-cell">Pays</th>
-                  <th className="py-2.5 px-4 hidden lg:table-cell">Grade</th>
+                  <th className="py-2.5 px-4 hidden md:table-cell">Grade</th>
                   <th className="py-2.5 px-4 text-right">XP</th>
                 </tr>
               </thead>
@@ -275,55 +204,44 @@ function RankingView() {
                     style={r.isYou ? { background: 'color-mix(in srgb, var(--accent-primary) 14%, transparent)' } : undefined}
                   >
                     <td className="py-2.5 px-4 font-semibold" style={r.isYou ? { color: 'var(--accent-primary)' } : r.rank <= 3 ? { color: 'var(--warning)' } : undefined}>
-                      {r.rank <= 3 && !r.isYou ? ['🥇', '🥈', '🥉'][r.rank - 1] : `#${r.rank}`}
+                      #{r.rank}
                     </td>
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         {r.isYou && <Star size={13} className="text-accent shrink-0" fill="currentColor" />}
-                        {r.isRealUser && <Globe size={12} className="text-good shrink-0" title="Utilisateur de VAUDAX" />}
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
-                        {!r.isYou && !r.isRealUser && linkedCounts[r.name] > 0 && (
-                          <button
-                            className="flex items-center gap-1 text-[10px] text-accent bg-accent/10 rounded-full px-1.5 py-0.5 cursor-pointer shrink-0"
-                            title={`${linkedCounts[r.name]} contact(s) Networking lié(s)`}
-                            onClick={() => navigate(`/networking?personality=${encodeURIComponent(r.name)}`)}
-                          >
-                            <UserRound size={10} /> {linkedCounts[r.name]}
-                          </button>
-                        )}
+                        {r.isYou && <span className="text-xs text-mute">(toi)</span>}
                       </div>
-                      {r.note && <div className="text-[11px] text-mute mt-0.5 max-w-md truncate">{r.note}</div>}
+                      {r.occupation && <div className="text-[11px] text-mute mt-0.5 max-w-md truncate">{r.occupation}</div>}
                     </td>
-                    <td className="py-2.5 px-4 hidden sm:table-cell">
-                      <Badge color={r.isYou ? 'var(--accent-primary)' : 'var(--accent-secondary)'}>{r.domain}</Badge>
-                    </td>
-                    <td className="py-2.5 px-4 hidden md:table-cell text-mute">{r.country}</td>
-                    <td className="py-2.5 px-4 hidden lg:table-cell text-mute text-xs">{r.grade.name}</td>
-                    <td className="py-2.5 px-4 text-right font-semibold tabular-nums">{r.xp.toLocaleString()}</td>
+                    <td className="py-2.5 px-4 hidden md:table-cell text-mute text-xs">{r.grade.name}</td>
+                    <td className="py-2.5 px-4 text-right font-semibold tabular-nums">{r.xp.toLocaleString('fr-FR')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="p-8"><EmptyState>Personne ne correspond à ces filtres.</EmptyState></div>
+          <div className="p-8"><EmptyState>Personne ne correspond à cette recherche.</EmptyState></div>
         )}
       </Card>
 
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-mute">
-          Showing {filtered.length ? clampedPage * PAGE_SIZE + 1 : 0}–{Math.min(filtered.length, (clampedPage + 1) * PAGE_SIZE)} of {filtered.length}
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-mute">
+            {clampedPage * PAGE_SIZE + 1}–{Math.min(filtered.length, (clampedPage + 1) * PAGE_SIZE)} sur {filtered.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
+              <ChevronLeft size={14} /> Précédent
+            </button>
+            <span className="text-sm text-mute">Page {clampedPage + 1} / {pageCount}</span>
+            <button onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={clampedPage >= pageCount - 1} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
+              Suivant <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
-            <ChevronLeft size={14} /> Prev
-          </button>
-          <span className="text-sm text-mute">Page {clampedPage + 1} / {pageCount}</span>
-          <button onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={clampedPage >= pageCount - 1} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
-            Next <ChevronRight size={14} />
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -460,7 +378,6 @@ export default function Leaderboard() {
   const consistencyRaw = useSkillStore((s) => s.consistency);
   const consistency = useMemo(() => preview(consistencyRaw, todayKey(), CONSISTENCY_CONFIG), [consistencyRaw]);
   const synergy = useSynergy();
-  const contacts = useNetworkingStore((s) => s.contacts);
   const [tab, setTab] = useState('ranking');
 
   const grade = gradeFor(lifetimeXP, synergy.weighted);
@@ -470,7 +387,7 @@ export default function Leaderboard() {
       <div>
         <h1 className="text-2xl font-bold">Classement</h1>
         <p className="text-mute text-sm mt-1">
-          Ton XP totale comparée à {LEADERBOARD.length} grandes figures de la finance, des marchés, des affaires, des mathématiques et de l’informatique.
+          Ton XP totale comparée à celle des autres utilisateurs de VAUDAX.
         </p>
       </div>
 
@@ -480,7 +397,6 @@ export default function Leaderboard() {
       </div>
 
       <DomainBalanceCard domainXP={domainXP} />
-      <RealWorldNetworkCard contacts={contacts} />
 
       <div className="flex gap-1 border-b border-line">
         <button

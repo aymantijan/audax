@@ -6,18 +6,8 @@ import { useHabitStore } from '../../store/habitStore';
 import { useAccountingStore } from '../../store/accountingStore';
 import { useHealthStore } from '../../store/healthStore';
 import { useReadingsStore } from '../../store/readingsStore';
-import { useTradingStore } from '../../store/tradingStore';
-import { useCareerStore } from '../../store/careerStore';
-import { useNetworkingStore } from '../../store/networkingStore';
-import { useContentStore } from '../../store/contentStore';
 import { useFocusStore } from '../../store/focusStore';
-import { useFreelanceStore } from '../../store/freelanceStore';
-import { useDealsStore } from '../../store/dealsStore';
-import { useBusinessStore } from '../../store/businessStore';
-import { useEngineeringStore } from '../../store/engineeringStore';
-import { useFundraisingStore } from '../../store/fundraisingStore';
 import { useCreativeStore } from '../../store/creativeStore';
-import { useRealEstateStore } from '../../store/realEstateStore';
 import { moduleNudges } from '../../utils/module-nudges';
 import { MODULES, withModule } from '../../utils/navigation';
 import { toast } from '../../store/uiStore';
@@ -32,19 +22,8 @@ export default function NudgeCard() {
     journal: useAccountingStore((s) => s.journal.length),
     workouts: useHealthStore((s) => s.workouts.length),
     library: useReadingsStore((s) => s.progress.length),
-    trades: useTradingStore((s) => s.trades.length),
-    applications: useCareerStore((s) => s.applications.filter((a) => a.stage !== 'Target').length),
-    contacts: useNetworkingStore((s) => s.contacts.length),
-    posts: useContentStore((s) => s.posts.length),
     sessions: useFocusStore((s) => s.sessions.length),
-    engagements: useFreelanceStore((s) => s.engagements.length),
-    deals: useDealsStore((s) => s.deals.length),
-    businesses: useBusinessStore((s) => s.businesses.length),
-    engProjects: useEngineeringStore((s) => s.projects.length),
-    labEntries: useEngineeringStore((s) => s.labEntries.length),
-    investors: useFundraisingStore((s) => s.investors.length),
     works: useCreativeStore((s) => s.works.length),
-    properties: useRealEstateStore((s) => s.properties.length),
   };
   const key = JSON.stringify(counts);
   const nudge = useMemo(

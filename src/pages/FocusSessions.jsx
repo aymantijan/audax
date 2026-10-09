@@ -33,7 +33,7 @@ export default function FocusSessions() {
   }, [sessions]);
   const totalHours = Math.round((sessions.reduce((a, s) => a + s.durationMinutes, 0) / 60) * 10) / 10;
   const byDomain = useMemo(
-    () => FOCUS_DOMAINS.map((d) => ({ key: d, name: domainLabel(d), minutes: sessions.filter((s) => s.domain === d).reduce((a, s) => a + s.durationMinutes, 0) })).filter((d) => d.minutes > 0),
+    () => [...new Set([...FOCUS_DOMAINS, ...sessions.map((s) => s.domain)])].filter(Boolean).map((d) => ({ key: d, name: domainLabel(d), minutes: sessions.filter((s) => s.domain === d).reduce((a, s) => a + s.durationMinutes, 0) })).filter((d) => d.minutes > 0),
     [sessions]
   );
 

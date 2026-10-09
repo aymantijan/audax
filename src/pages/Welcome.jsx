@@ -55,8 +55,6 @@ export default function Welcome() {
                   { value: 'learning', label: 'Études et apprentissage' },
                   { value: 'finance', label: 'Argent et finances' },
                   { value: 'health', label: 'Santé et forme' },
-                  { value: 'careerDevelopment', label: 'Carrière et réseau' },
-                  { value: 'metiersVentures', label: 'Métier, entreprise et trading' },
                   { value: 'growthOutput', label: 'Progression et création' },
                 ]}
               />

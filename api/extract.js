@@ -30,7 +30,6 @@ const CAPTURE = [
   'Tu ranges UNE phrase qu’une personne note dans son application de vie personnelle.',
   'Réponds par un objet JSON avec un champ "kind" parmi :',
   'expense {amount, currency, label, date} (dépense) ; income {amount, currency, label, date} (revenu) ;',
-  'freelance {client, amount, label, date} (un de SES clients lui a payé une somme ; client = nom exact de la liste) ;',
   'workout {type: "cardio"|"strength"|"sport", exercise, durationMin, distanceKm, date} ; weight {weightKg, date} ;',
   'sleep {hours, date} ; water {ml, date} ; study {minutes, course, label, date} (course = nom exact de la liste ou null) ;',
   'habit {habit, value, date} (habit = nom exact de la liste ; value seulement pour une quantité) ;',
@@ -76,7 +75,6 @@ export default async function handler(req, res) {
       `Devise habituelle : ${/^[A-Z]{3}$/.test(c.currency || '') ? c.currency : 'inconnue'}.`,
       `Habitudes : ${names(c.habits).join(' | ') || 'aucune'}.`,
       `Matières / cours : ${names(c.courses).join(' | ') || 'aucun'}.`,
-      `Clients : ${names(c.clients).join(' | ') || 'aucun'}.`,
     ].join('\n');
     try {
       const out = await aiText({ system: CAPTURE, contents: [{ role: 'user', parts: [{ text: `${context}\n\nPhrase : ${text}` }] }], maxTokens: 300, temperature: 0.1, json: true }, { userKey: guard.userKey });

@@ -4,15 +4,14 @@
 // parseCapture(text, ctx) reads the common phrasings with plain rules (free,
 // instant, offline). When it returns null, the caller may ask the AI, whose
 // JSON goes through normalizeDraft too — so every draft, whoever wrote it, is
-// checked the same way. Drafts name habits/courses/clients; normalizeDraft
+// checked the same way. Drafts name habits/courses; normalizeDraft
 // resolves those names to ids from ctx.
 //
 // ctx: { today: 'YYYY-MM-DD', habits: [{id,name,kind?,target?}], courses: [{id,name}],
-//        clients: [{id,name}], weightUnit: 'kg'|'lb' }
+//        weightUnit: 'kg'|'lb' }
 //
 // Draft kinds:
 //   expense | income  { amount, currency|null, label, date }
-//   freelance         { clientId, client, amount, label, date }
 //   workout           { type: cardio|strength|sport, exercise, durationMin, distanceKm|null, date }
 //   weight            { weightKg, date }
 //   sleep             { hours, date }
@@ -23,7 +22,6 @@
 export const CAPTURE_KINDS = {
   expense: { label: 'Dépense', where: 'Finances' },
   income: { label: 'Revenu', where: 'Finances' },
-  freelance: { label: 'Encaissement client', where: 'Freelance → Finances' },
   workout: { label: 'Séance de sport', where: 'Santé' },
   weight: { label: 'Poids', where: 'Santé' },
   sleep: { label: 'Sommeil', where: 'Santé' },
@@ -36,7 +34,6 @@ export const CAPTURE_KINDS = {
 export const CAPTURE_FIELDS = {
   expense: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
   income: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
-  freelance: [['amount', 'Montant', 'number'], ['label', 'Libellé', 'text']],
   workout: [['exercise', 'Activité', 'text'], ['durationMin', 'Durée (min)', 'number'], ['distanceKm', 'Distance (km)', 'number']],
   weight: [['weightKg', 'Poids (kg)', 'number']],
   sleep: [['hours', 'Heures de sommeil', 'number']],
@@ -191,12 +188,6 @@ export function parseCapture(text, ctx = {}) {
 
   const amount = readAmount(t);
 
-  // A client paid me: a known client's name + an amount + "reçu/encaissé/payé par".
-  const client = findByName(t, ctx.clients);
-  if (client && amount && (INCOME_VERBS.test(t) || /\bpaye par\b/.test(t))) {
-    const label = cleanLabel(t.replace(amount.text, ' ').replace(new RegExp(fold(client.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), ' ').replace(INCOME_VERBS, ' ').replace(/\b(client|paye par|par)\b/g, ' '));
-    return normalizeDraft({ kind: 'freelance', client: client.name, amount: amount.amount, label, date }, ctx);
-  }
 
   // Habit: its name, alone or with "fait", or a value for a measured habit.
   const habit = findByName(t, ctx.habits);
@@ -237,12 +228,6 @@ export function normalizeDraft(d, ctx = {}) {
       if (!(amount > 0)) return null;
       const currency = /^[A-Z]{3}$/.test(d.currency || '') ? d.currency : null;
       return { kind: d.kind, amount, currency, label: text(d.label) || (d.kind === 'expense' ? 'Dépense' : 'Revenu'), date };
-    }
-    case 'freelance': {
-      const c = ctx.clients?.find((x) => x.id === d.clientId) || byName(ctx.clients, d.client);
-      const amount = r2(n(d.amount));
-      if (!c || !(amount > 0)) return null;
-      return { kind: 'freelance', clientId: c.id, client: c.name, amount, label: text(d.label), date };
     }
     case 'workout': {
       const type = ['cardio', 'strength', 'sport'].includes(d.type) ? d.type : 'sport';
@@ -289,7 +274,6 @@ export function describeDraft(d, fmtMoney = (a, c) => `${a}${c ? ` ${c}` : ''}`)
   const min = (m) => (m >= 60 ? h(m / 60) : `${m} min`);
   switch (d.kind) {
     case 'expense': case 'income': return `${d.label} · ${fmtMoney(d.amount, d.currency)}`;
-    case 'freelance': return `${d.client}${d.label ? ` · ${d.label}` : ''} · ${fmtMoney(d.amount, null)}`;
     case 'workout': return [d.exercise, d.distanceKm ? `${String(d.distanceKm).replace('.', ',')} km` : null, d.durationMin ? min(d.durationMin) : null].filter(Boolean).join(' · ');
     case 'weight': return `${String(d.weightKg).replace('.', ',')} kg`;
     case 'sleep': return h(d.hours);

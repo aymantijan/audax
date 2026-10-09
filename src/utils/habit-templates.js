@@ -1,6 +1,6 @@
-// 89 habit templates (French): to tick, measurable (often auto-tracked) and to quit. Picking one prefills the add-habit form; everything stays editable.
+// 64 habit templates (French): to tick, measurable (often auto-tracked) and to quit. Picking one prefills the add-habit form; everything stays editable.
 // Moment of the day each template naturally belongs to (groups the checklist).
-const MOMENTS = { "Journal de trading quotidien": "evening", "Revoir toutes les positions ouvertes": "morning", "Consulter le calendrier économique": "morning", "Repérer les setups du jour": "morning", "Noter la thèse macro": "morning", "Respecter la perte max journalière": "day", "Pas de revenge trading": "day", "Prendre les profits à l’objectif": "day", "Revoir le P&L du jour": "evening", "Revue hebdomadaire des trades": "any", "Revue mensuelle de performance": "any", "Backtest hebdomadaire du système": "any", "Adapter la taille de position à la volatilité": "day", "Vérifier les règles prop firm avant de trader": "morning", "Pause après 2 pertes": "day", "Noter honnêtement l’émotion de chaque trade": "day", "Lecture quotidienne (30 min)": "evening", "Réviser un concept par jour": "any", "Bilan d’apprentissage hebdomadaire": "any", "Faire les devoirs du cours": "day", "Aller en cours": "day", "Séance de groupe de travail": "day", "Lire un article de recherche par semaine": "any", "Écouter un podcast éco": "day", "Regarder une vidéo finance": "any", "Tenir un journal d’apprentissage": "evening", "Relier les concepts à l’arbre de compétences": "any", "S’auto-interroger chaque semaine": "any", "Noter ses dépenses du jour": "evening", "Vérifier son budget chaque semaine": "any", "Mettre à jour son patrimoine chaque mois": "any", "Vérifier ses relevés de carte": "any", "Payer ses factures à temps": "any", "Vérifier son taux d’épargne": "any", "Revoir le rendement de ses placements": "any", "Rééquilibrer son portefeuille": "any", "Revoir ses objectifs financiers": "any", "Sport le matin": "morning", "Cardio zone 2": "day", "Musculation": "day", "Marche du soir": "evening", "Méditation (10 min)": "morning", "Exposition au froid": "morning", "Au lit avant 23 h": "evening", "8 h de sommeil ou plus": "evening", "Objectif de protéines": "day", "Hydratation (8 verres)": "day", "Repas sain fait maison": "day", "Réduire la caféine": "day", "Pas d’écran après 21 h": "evening", "Moment social": "evening", "Loisir sans écran": "evening", "Étirements / mobilité": "evening", "Journal du stress": "evening", "Intention du matin": "morning", "Journal quotidien": "evening", "Réflexion du soir": "evening", "Revue de la semaine (dimanche)": "any", "Bilan de vie mensuel": "any", "Journal des décisions": "evening", "Journal de gratitude": "evening", "Point sur ses objectifs": "any", "Calibrer sa confiance": "any", "Relire ses notes de cours": "evening", "Aller en TP": "day", "Avancer une tâche de projet": "day", "Revue de projet hebdomadaire": "any", "Pratiquer un simulateur (Aspen/HYSYS)": "any", "Revoir les déviations HAZOP": "any", "Noter l’expérience du jour": "evening" };
+const MOMENTS = { "Lecture quotidienne (30 min)": "evening", "Réviser un concept par jour": "any", "Bilan d’apprentissage hebdomadaire": "any", "Faire les devoirs du cours": "day", "Aller en cours": "day", "Séance de groupe de travail": "day", "Lire un article de recherche par semaine": "any", "Écouter un podcast éco": "day", "Regarder une vidéo finance": "any", "Tenir un journal d’apprentissage": "evening", "Relier les concepts à l’arbre de compétences": "any", "S’auto-interroger chaque semaine": "any", "Noter ses dépenses du jour": "evening", "Vérifier son budget chaque semaine": "any", "Mettre à jour son patrimoine chaque mois": "any", "Vérifier ses relevés de carte": "any", "Payer ses factures à temps": "any", "Vérifier son taux d’épargne": "any", "Revoir le rendement de ses placements": "any", "Rééquilibrer son portefeuille": "any", "Revoir ses objectifs financiers": "any", "Sport le matin": "morning", "Cardio zone 2": "day", "Musculation": "day", "Marche du soir": "evening", "Méditation (10 min)": "morning", "Exposition au froid": "morning", "Au lit avant 23 h": "evening", "8 h de sommeil ou plus": "evening", "Objectif de protéines": "day", "Hydratation (8 verres)": "day", "Repas sain fait maison": "day", "Réduire la caféine": "day", "Pas d’écran après 21 h": "evening", "Moment social": "evening", "Loisir sans écran": "evening", "Étirements / mobilité": "evening", "Journal du stress": "evening", "Intention du matin": "morning", "Journal quotidien": "evening", "Réflexion du soir": "evening", "Revue de la semaine (dimanche)": "any", "Bilan de vie mensuel": "any", "Journal des décisions": "evening", "Journal de gratitude": "evening", "Point sur ses objectifs": "any", "Calibrer sa confiance": "any" };
 const h = (name, category, xpReward, linkedSkill = '', extra = {}) => ({
   name, category, xpReward, linkedSkill, moment: MOMENTS[name] || 'any',
   frequency: 'daily', duration: 15, mandatory: false, targetStreak: 30,
@@ -8,27 +8,6 @@ const h = (name, category, xpReward, linkedSkill = '', extra = {}) => ({
 });
 
 export const HABIT_TEMPLATES = [
-  {
-    group: 'Trading',
-    items: [
-      h('Journal de trading quotidien', 'trading', 8, 'trading-discipline-lv1', { mandatory: true, duration: 15 }),
-      h('Revoir toutes les positions ouvertes', 'trading', 5, 'portfolio-risk-lv1', { duration: 10 }),
-      h('Consulter le calendrier économique', 'trading', 4, 'central-bank-policy-lv1', { duration: 5 }),
-      h('Repérer les setups du jour', 'trading', 6, 'technical-analysis-lv1', { duration: 20 }),
-      h('Noter la thèse macro', 'trading', 6, 'macro-theory-lv1', { duration: 10 }),
-      h('Respecter la perte max journalière', 'trading', 8, 'portfolio-risk-lv1'),
-      h('Pas de revenge trading', 'trading', 8, 'emotional-regulation-lv1'),
-      h('Prendre les profits à l’objectif', 'trading', 6, 'discipline-execution-lv1'),
-      h('Revoir le P&L du jour', 'trading', 4, 'win-loss-processing-lv1', { duration: 5 }),
-      h('Revue hebdomadaire des trades', 'trading', 12, 'trading-discipline-lv2', { frequency: 'weekly', duration: 45 }),
-      h('Revue mensuelle de performance', 'trading', 15, 'trading-discipline-lv2', { frequency: 'weekly', duration: 60 }),
-      h('Backtest hebdomadaire du système', 'trading', 12, 'statistical-modeling-lv1', { frequency: 'weekly', duration: 60 }),
-      h('Adapter la taille de position à la volatilité', 'trading', 6, 'volatility-adjustment-lv1'),
-      h('Vérifier les règles prop firm avant de trader', 'trading', 6, 'portfolio-risk-lv1', { duration: 5 }),
-      h('Pause après 2 pertes', 'trading', 8, 'emotional-regulation-lv1', { duration: 10 }),
-      h('Noter honnêtement l’émotion de chaque trade', 'trading', 4, 'emotional-regulation-lv1', { duration: 2 }),
-    ],
-  },
   {
     group: 'Apprentissage',
     items: [
@@ -97,18 +76,6 @@ export const HABIT_TEMPLATES = [
     ],
   },
   {
-    group: 'Ingénierie',
-    items: [
-      h('Noter l’expérience du jour', 'engineering', 6, 'engineering-discipline-lv1', { mandatory: true, duration: 10 }),
-      h('Relire ses notes de cours', 'engineering', 5, 'engineering-discipline-lv2', { duration: 20 }),
-      h('Aller en TP', 'engineering', 6, 'engineering-discipline-lv1', { duration: 120 }),
-      h('Avancer une tâche de projet', 'engineering', 8, 'engineering-discipline-lv2', { duration: 30 }),
-      h('Revue de projet hebdomadaire', 'engineering', 12, 'engineering-discipline-lv2', { frequency: 'weekly', duration: 30 }),
-      h('Pratiquer un simulateur (Aspen/HYSYS)', 'engineering', 8, 'process-simulation-lv1', { frequency: 'weekly', duration: 45 }),
-      h('Revoir les déviations HAZOP', 'engineering', 10, 'process-safety-lv1', { frequency: 'weekly', duration: 20 }),
-    ],
-  },
-  {
     group: 'Mesurables (automatiques)',
     items: [
       h('Boire 8 verres d’eau', 'health', 4, '', { kind: 'quantity', target: 8, unit: 'verres', direction: 'atLeast', source: 'water_glasses', moment: 'day', duration: 1 }),
@@ -119,12 +86,6 @@ export const HABIT_TEMPLATES = [
       h('Protéines : 120 g', 'health', 5, '', { kind: 'quantity', target: 120, unit: 'g', direction: 'atLeast', source: 'protein_g', moment: 'day', duration: 1 }),
       h('Dormir 7 h', 'recovery', 5, '', { kind: 'quantity', target: 7, unit: 'h', direction: 'atLeast', source: 'sleep_hours', moment: 'morning', duration: 1 }),
       h('Une séance de sport', 'health', 8, '', { kind: 'quantity', target: 1, unit: 'séance', direction: 'atLeast', source: 'workouts', moment: 'day', duration: 60 }),
-      h('Journaliser ses trades', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'trade', direction: 'atLeast', source: 'trades_journaled', moment: 'evening', duration: 10 }),
-      h('Écrire son plan de séance (trading)', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'plan', direction: 'atLeast', source: 'trading_plan', moment: 'morning', duration: 5 }),
-      h('Revue de fin de journée (trading)', 'trading', 6, '', { kind: 'quantity', target: 1, unit: 'revue', direction: 'atLeast', source: 'trading_review', moment: 'evening', duration: 10 }),
-      h('Envoyer des candidatures', 'career', 6, 'written-communication-lv1', { kind: 'quantity', target: 1, unit: 'candidature', direction: 'atLeast', source: 'career_applications', frequency: 'weekly', timesPerWeek: 3, duration: 30 }),
-      h('Relancer / échanger avec un contact', 'career', 5, 'client-relationship-lv1', { kind: 'quantity', target: 1, unit: 'échange', direction: 'atLeast', source: 'career_touches', frequency: 'weekly', timesPerWeek: 3, duration: 15 }),
-      h('Publier sur LinkedIn', 'career', 5, '', { kind: 'quantity', target: 1, unit: 'publication', direction: 'atLeast', source: 'career_posts', frequency: 'weekly', timesPerWeek: 1, duration: 30 }),
       h('Noter ses dépenses', 'finance', 3, '', { kind: 'quantity', target: 1, unit: 'opération', direction: 'atLeast', source: 'expenses_logged', moment: 'evening', duration: 2 }),
       h('10 000 pas', 'health', 5, '', { kind: 'quantity', target: 10000, unit: 'pas', direction: 'atLeast', moment: 'day', duration: 1 }),
       h('Maximum 2 cafés', 'health', 3, '', { kind: 'quantity', target: 2, unit: 'cafés', direction: 'atMost', moment: 'day', duration: 1 }),
@@ -137,7 +98,6 @@ export const HABIT_TEMPLATES = [
       h('Pas de cigarette', 'health', 0, '', { kind: 'quit' }),
       h('Pas de réseaux sociaux avant midi', 'reflection', 0, '', { kind: 'quit' }),
       h('Pas de sucre ajouté', 'health', 0, '', { kind: 'quit' }),
-      h('Pas de revenge trading', 'trading', 0, '', { kind: 'quit' }),
       h('Pas d’achat impulsif', 'finance', 0, '', { kind: 'quit' }),
       h('Pas de grignotage le soir', 'health', 0, '', { kind: 'quit' }),
     ],

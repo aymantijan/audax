@@ -231,7 +231,7 @@ export function HabitFormModal({ open, onClose, habit }) {
         )}
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Catégorie"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={HABIT_CATEGORIES.map((c) => ({ value: c, label: catLabel(c) }))} /></Field>
+          <Field label="Catégorie"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={[...new Set([...HABIT_CATEGORIES, f.category].filter(Boolean))].map((c) => ({ value: c, label: catLabel(c) }))} /></Field>
           {f.kind !== 'quit' && <Field label="Fréquence"><Select value={f.frequency} onChange={(e) => setF({ ...f, frequency: e.target.value })} options={HABIT_FREQUENCIES} /></Field>}
         </div>
         {f.kind !== 'quit' && f.frequency === 'custom' && (
@@ -256,8 +256,8 @@ export function HabitFormModal({ open, onClose, habit }) {
         <label className="flex items-start gap-2 text-sm cursor-pointer rounded-lg border border-line p-3">
           <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={!!f.mandatory} onChange={(e) => setF({ ...f, mandatory: e.target.checked })} />
           <span>
-            <span className="text-ink">Obligatoire avant de trader</span>
-            <span className="block text-[11px] text-mute">Tant qu’elle n’est pas faite, une alerte s’affiche en haut de la page Trading.</span>
+            <span className="text-ink">Prioritaire</span>
+            <span className="block text-[11px] text-mute">Tant qu’elle n’est pas faite, un rappel s’affiche en haut de la page Habitudes.</span>
           </span>
         </label>
         {error && <p className="text-bad text-sm">{error}</p>}

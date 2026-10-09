@@ -6,7 +6,6 @@ const ctx = {
   today: '2026-09-27',
   habits: [{ id: 'h1', name: 'Lecture' }],
   courses: [{ id: 'c1', name: 'IFRS' }, { id: 'c2', name: 'Contrôle de gestion' }],
-  clients: [{ id: 'e1', name: 'Atlas Distribution' }],
   accounts: [{ code: '621', name: 'Alimentation & courses', cls: 6 }, { code: '721', name: 'Revenus freelance', cls: 7 }],
 };
 
@@ -27,7 +26,7 @@ test('actions are checked against the person’s own data', () => {
   assert.equal(normalizeAction({ type: 'study', course: 'IFRS', date: '2026-09-01', minutes: 45 }, ctx).date, '2026-09-27', 'never in the past');
   assert.equal(normalizeAction({ type: 'budget', category: 'alimentation & courses', amount: '1500', period: 'monthly' }, ctx).account, '621');
   assert.equal(normalizeAction({ type: 'budget', category: 'Revenus freelance', amount: 100 }, ctx), null, 'a budget is on an expense category');
-  assert.equal(normalizeAction({ type: 'invoice', client: 'atlas' }, ctx).clientId, 'e1');
+  assert.equal(normalizeAction({ type: 'invoice', client: 'atlas' }, ctx), null, 'invoices left with Freelance');
   assert.equal(normalizeAction({ type: 'habit_mini', habit: 'Sport' }, ctx), null);
   assert.equal(normalizeAction({ type: 'delete_all' }, ctx), null);
   assert.equal(normalizeAction({ type: 'capture', draft: { kind: 'expense', amount: 50, label: 'Taxi' } }, ctx).draft.amount, 50);

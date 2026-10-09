@@ -4,7 +4,6 @@ import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, 
 import { sourceMeta } from '../utils/habit-sources';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
-import { useTradingStore } from '../store/tradingStore';
 import { habitStreak, habitCompliance, isHabitShownOn, weeklyProgress, streakUnit, quitBest } from '../utils/calculations';
 import { checkBurnoutTriggers } from '../utils/burnout';
 import { HABIT_CATEGORIES, HABIT_MOMENTS, WEEKDAYS } from '../utils/constants';
@@ -22,7 +21,6 @@ export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
   const [pauseOpen, setPauseOpen] = useState(false);
   const [relapsing, setRelapsing] = useState(null);
-  const trades = useTradingStore((s) => s.trades);
   const today = todayKey();
   const [date, setDate] = useState(today);
   const isPast = date !== today;
@@ -59,7 +57,7 @@ export default function Habits() {
   const doneCount = countable.filter((h) => isDone(h, date)).length;
   const pct = countable.length ? Math.round((doneCount / countable.length) * 100) : 0;
   const compliance = habitCompliance(active, logs, 7, today);
-  const burnout = useMemo(() => checkBurnoutTriggers({ energyLogs, compliance, trades }), [energyLogs, compliance, trades]);
+  const burnout = useMemo(() => checkBurnoutTriggers({ energyLogs, compliance }), [energyLogs, compliance]);
   const bestStreak = useMemo(() => active.map((h) => ({ h, s: habitStreak(h.id, logs, today, h) })).sort((a, b) => b.s - a.s)[0], [active, logs, today]);
   const dayLog = energyLogs.find((l) => l.date === date);
   const missedMandatory = !isPast ? dayList.filter((h) => h.mandatory && !isDone(h, today)) : [];
@@ -70,7 +68,7 @@ export default function Habits() {
     const c = habitCompliance([h], logs, 30, today);
     return c.total ? Math.round(c.rate * 100) : null;
   };
-  const categoryCompliance = useMemo(() => HABIT_CATEGORIES.map((cat) => {
+  const categoryCompliance = useMemo(() => [...new Set([...HABIT_CATEGORIES, ...active.map((h) => h.category)])].map((cat) => {
     const hs = active.filter((h) => h.category === cat && h.frequency !== 'weekly');
     if (!hs.length) return null;
     return { category: cat, rate: habitCompliance(hs, logs, 30, today).rate * 100, n: hs.length };
@@ -152,7 +150,7 @@ export default function Habits() {
       {missedMandatory.length > 0 && (
         <div className="rounded-xl border px-4 py-3 text-sm flex items-start gap-2" style={{ borderColor: tint('var(--warning)', 45), background: tint('var(--warning)', 8) }}>
           <ShieldAlert size={16} className="text-warning shrink-0 mt-0.5" />
-          <span className="text-mute">Obligatoire avant de trader : <b className="text-ink">{missedMandatory.map((h) => h.name).join(', ')}</b>. Une alerte reste affichée dans Trading tant que ce n’est pas fait.</span>
+          <span className="text-mute">Prioritaire, pas encore fait aujourd’hui : <b className="text-ink">{missedMandatory.map((h) => h.name).join(', ')}</b>.</span>
         </div>
       )}
 
@@ -198,7 +196,7 @@ export default function Habits() {
                               {h.duration ? <span>· {h.duration} min</span> : null}
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
                               <span>· +{h.xpReward} XP{h.linkedSkill ? ` → ${skillLabel(h.linkedSkill)}` : ''}</span>
-                              {h.mandatory && <span className="text-warning">· obligatoire</span>}
+                              {h.mandatory && <span className="text-warning">· prioritaire</span>}
                               {h.mini && <span className="text-accent">· version mini</span>}
                               {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}
                               {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {h.reminderTime}</span>}

@@ -17,7 +17,6 @@
 //   budget     { category, amount, period: monthly|weekly|yearly }
 //   echeance   { label, amount, date, kind: expense|income, recurrence: once|monthly|weekly|yearly }
 //   message    { to, text }                     a text to copy (reminder…): never sent
-//   invoice    { client }                       invoice with what is still to bill
 import { normalizeDraft, fold } from './quick-capture.js';
 
 export const ACTIONS_START = '<<<ACTIONS';
@@ -33,7 +32,6 @@ export const ACTION_LABELS = {
   budget: 'Budget',
   echeance: 'Échéance',
   message: 'Message à envoyer',
-  invoice: 'Facture',
 };
 
 // { text, actions: raw objects } — the text never shows the block, even half-streamed.
@@ -119,10 +117,6 @@ export function normalizeAction(a, ctx = {}) {
       const text = str(a.text, 2000);
       return text ? { type: 'message', to: str(a.to, 80), text } : null;
     }
-    case 'invoice': {
-      const c = byName(ctx.clients, a.client);
-      return c ? { type: 'invoice', clientId: c.id, client: c.name } : null;
-    }
     default:
       return null;
   }
@@ -132,7 +126,7 @@ export const normalizeActions = (list, ctx) => (list || []).map((a) => normalize
 
 // The instructions the model receives (server side, appended to its system prompt).
 export const ACTIONS_PROMPT = [
-  'Tu peux aussi PRÉPARER des actions que la personne validera elle-même, quand sa demande s’y prête (« prépare mes révisions », « fais-moi des fiches », « relance le client X », « note que… », « aide-moi sur mon budget »).',
+  'Tu peux aussi PRÉPARER des actions que la personne validera elle-même, quand sa demande s’y prête (« prépare mes révisions », « fais-moi des fiches », « écris un rappel à X », « note que… », « aide-moi sur mon budget »).',
   `Dans ce cas, termine ta réponse par un bloc exactement de cette forme, sur des lignes séparées : ${ACTIONS_START} puis un tableau JSON puis ${ACTIONS_END}.`,
   `Au plus ${MAX_ACTIONS} actions. Types possibles :`,
   '{"type":"study","course":nom exact d’une matière,"date":"AAAA-MM-JJ","minutes":nombre,"focus":quoi travailler} ;',
@@ -141,7 +135,6 @@ export const ACTIONS_PROMPT = [
   '{"type":"budget","category":nom exact d’une catégorie de dépense,"amount":nombre,"period":"monthly"|"weekly"|"yearly"} ;',
   '{"type":"echeance","label":…,"amount":nombre,"date":"AAAA-MM-JJ","kind":"expense"|"income","recurrence":"once"|"monthly"|"weekly"|"yearly"} ;',
   '{"type":"message","to":destinataire,"text":message complet prêt à envoyer} (jamais envoyé par l’application : la personne le copie) ;',
-  '{"type":"invoice","client":nom exact d’un client} ;',
-  '{"type":"capture","draft":{"kind":"expense"|"income"|"workout"|"weight"|"sleep"|"water"|"study"|"habit"|"freelance",…}} pour noter un fait qu’elle te dit.',
+  '{"type":"capture","draft":{"kind":"expense"|"income"|"workout"|"weight"|"sleep"|"water"|"study"|"habit",…}} pour noter un fait qu’elle te dit.',
   'N’utilise que des noms présents dans ses données. Aucune action pour une simple question. Ne parle pas du bloc dans ton texte : dis seulement « je t’ai préparé … à valider ».',
 ].join(' ');

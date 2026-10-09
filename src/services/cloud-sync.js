@@ -1,63 +1,47 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { toast } from '../store/uiStore';
 import { useAuthStore } from '../store/authStore';
-import { useTradingStore } from '../store/tradingStore';
 import { useFinanceStore } from '../store/financeStore';
-import { useDealsStore } from '../store/dealsStore';
 import { useLearningStore } from '../store/learningStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
-import { useBusinessStore } from '../store/businessStore';
 import { useFocusStore } from '../store/focusStore';
 import { useFlashcardStore } from '../store/flashcardStore';
 import { fillDefaults } from '../utils/fill-defaults.js';
 import { createStoreSync } from '../utils/sync-engine.js';
 import { baseStoreFor, backupOnce } from './sync-base-store';
 import { makeTransport, SYNC_TABLE } from './sync-transport.js';
-import { useCareerStore } from '../store/careerStore';
-import { useNetworkingStore } from '../store/networkingStore';
-import { useContentStore } from '../store/contentStore';
-import { useFreelanceStore } from '../store/freelanceStore';
-import { useFundraisingStore } from '../store/fundraisingStore';
 import { useCreativeStore } from '../store/creativeStore';
-import { useRealEstateStore } from '../store/realEstateStore';
-import { useEngineeringStore } from '../store/engineeringStore';
 
 const TABLE = SYNC_TABLE;
 
 // Registry of every Zustand store that should sync to the cloud. `auth` maps
 // to the local profile store (name/careerGoal/accounts/activeAccount) — that's
 // the one piece of "auth" data that lives outside Supabase's own session.
+//
+// Removed modules (2026-10-09: trading, deals, business, career, networking,
+// content, freelance, fundraising, realestate, engineering) are simply absent:
+// their app_state rows stay untouched on the account, dormant.
 const REGISTRY = [
   { name: 'auth', store: useAuthStore },
-  { name: 'trading', store: useTradingStore },
   { name: 'finance', store: useFinanceStore },
-  { name: 'deals', store: useDealsStore },
   { name: 'learning', store: useLearningStore },
   { name: 'habits', store: useHabitStore },
   { name: 'skills', store: useSkillStore },
   { name: 'readings', store: useReadingsStore },
   { name: 'accounting', store: useAccountingStore },
   { name: 'health', store: useHealthStore },
-  { name: 'business', store: useBusinessStore },
   // Focus/study sessions (+ the running timer) — was local-only before the
   // Apprentissage study timer; synced so study time follows the user.
   { name: 'focus', store: useFocusStore },
   { name: 'flashcards', store: useFlashcardStore },
-  // Added 2026-09-27 — were local-only. Each device may already hold its own
-  // data for them, so their FIRST sync on a device merges instead of letting
+  // Added 2026-09-27 — was local-only. Each device may already hold its own
+  // data for it, so its FIRST sync on a device merges instead of letting
   // the cloud copy win (see mergeFirstSync).
-  { name: 'career', store: useCareerStore, mergeOnFirstSync: true },
-  { name: 'networking', store: useNetworkingStore, mergeOnFirstSync: true },
-  { name: 'content', store: useContentStore, mergeOnFirstSync: true },
-  { name: 'freelance', store: useFreelanceStore, mergeOnFirstSync: true },
-  { name: 'fundraising', store: useFundraisingStore, mergeOnFirstSync: true },
   { name: 'creative', store: useCreativeStore, mergeOnFirstSync: true },
-  { name: 'realestate', store: useRealEstateStore, mergeOnFirstSync: true },
-  { name: 'engineering', store: useEngineeringStore, mergeOnFirstSync: true },
 ];
 
 // ── Per-device bookkeeping (localStorage; lost storage = safe defaults) ──

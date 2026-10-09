@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { History, Link2, GraduationCap, HeartPulse, Wallet, TrendingUp, Flame, Info } from 'lucide-react';
+import { History, Link2, GraduationCap, HeartPulse, Wallet, Flame, Info } from 'lucide-react';
 import { useAccountingStore } from '../store/accountingStore';
 import { buildEvents, DOMAINS, MIN_DAYS } from '../utils/life-timeline';
 import { useTimelineData, useLifeLinks, LinksList } from '../components/today/LifeLinks';
@@ -8,7 +8,7 @@ import { formatMoney } from '../utils/currency';
 import { fmtDateShort, todayKey } from '../utils/formatters';
 import { Card, EmptyState } from '../components/common/ui';
 
-const ICONS = { etudes: GraduationCap, sante: HeartPulse, argent: Wallet, trading: TrendingUp, habitudes: Flame };
+const ICONS = { etudes: GraduationCap, sante: HeartPulse, argent: Wallet, habitudes: Flame };
 const PERIODS = [{ key: 7, label: '7 jours' }, { key: 30, label: '30 jours' }, { key: 90, label: '3 mois' }, { key: 0, label: 'Tout' }];
 const PAGE = 150;
 

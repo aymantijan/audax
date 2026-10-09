@@ -5,7 +5,6 @@ import { useAuthStore } from '../store/authStore';
 import { useHabitStore } from '../store/habitStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
-import { useCareerStore } from '../store/careerStore';
 import { HABIT_TEMPLATES } from '../utils/habit-templates';
 import { CURRENCIES } from '../utils/currency';
 import { AIMS, SITUATIONS, COUNTRIES, GOAL_TEMPLATES, buildOnboardingPlan, guessCountry } from '../utils/onboarding-plan';
@@ -95,8 +94,6 @@ export default function Onboarding() {
         useHealthStore.getState().addGoal({ title: GOAL_TEMPLATES.workouts.label, metric: { key: 'workout_frequency' }, target: 3, direction: 'higher', silent: true });
       } else if (g === 'sleep') {
         useHealthStore.getState().addGoal({ title: GOAL_TEMPLATES.sleep.label, metric: { key: 'sleep_hours' }, target: 7.5, direction: 'higher', silent: true });
-      } else if (g === 'job' || g === 'launch') {
-        useCareerStore.getState().addPlan({ title: GOAL_TEMPLATES[g].label, domain: user?.occupation || 'Général' });
       }
     }
     completeOnboarding();

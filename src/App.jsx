@@ -1,7 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { useTradingStore } from './store/tradingStore';
 import { useHealthStore } from './store/healthStore';
 import { isSupabaseConfigured } from './services/supabase';
 import { getSession, onAuthChange } from './services/auth-supabase';
@@ -9,11 +8,9 @@ import { startCloudSync, stopCloudSync } from './services/cloud-sync';
 import { preloadGoogleCalendar } from './services/google-calendar';
 import { toast } from './store/uiStore';
 import { useHealthReminders } from './hooks/useHealthReminders';
-import { useTradingAlerts } from './hooks/useTradingAlerts';
 import { useEcheanceAlerts } from './hooks/useEcheanceAlerts';
 import { useHabitReminders } from './hooks/useHabitReminders';
 import { useClassReminders } from './hooks/useClassReminders';
-import { useMt5AutoSync } from './hooks/useMt5Sync';
 import { useBudgetAlerts } from './hooks/useBudgetAlerts';
 import MainLayout from './components/layout/MainLayout';
 import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
@@ -27,8 +24,6 @@ import { PageLoader } from './components/common/ui';
 // 404 — one automatic reload fetches the current build instead of crashing.
 const Onboarding = lazy(lazyWithRetry(() => import('./pages/Onboarding'), 'Onboarding'));
 const Today = lazy(lazyWithRetry(() => import('./pages/Today'), 'Today'));
-const Trading = lazy(lazyWithRetry(() => import('./pages/Trading'), 'Trading'));
-const TradingAccountDetail = lazy(lazyWithRetry(() => import('./pages/TradingAccountDetail'), 'TradingAccountDetail'));
 const Learning = lazy(lazyWithRetry(() => import('./pages/Learning'), 'Learning'));
 const Finance = lazy(lazyWithRetry(() => import('./pages/Finance'), 'Finance'));
 const Habits = lazy(lazyWithRetry(() => import('./pages/Habits'), 'Habits'));
@@ -36,18 +31,8 @@ const Health = lazy(lazyWithRetry(() => import('./pages/Health'), 'Health'));
 const Skills = lazy(lazyWithRetry(() => import('./pages/Skills'), 'Skills'));
 const GoalsHub = lazy(lazyWithRetry(() => import('./pages/GoalsHub'), 'GoalsHub'));
 const Leaderboard = lazy(lazyWithRetry(() => import('./pages/Leaderboard'), 'Leaderboard'));
-const Deals = lazy(lazyWithRetry(() => import('./pages/Deals'), 'Deals'));
-const DealDetail = lazy(lazyWithRetry(() => import('./pages/DealDetail'), 'DealDetail'));
-const Businesses = lazy(lazyWithRetry(() => import('./pages/Businesses'), 'Businesses'));
-const BusinessDetail = lazy(lazyWithRetry(() => import('./pages/BusinessDetail'), 'BusinessDetail'));
-const Engineering = lazy(lazyWithRetry(() => import('./pages/Engineering'), 'Engineering'));
-const EngineeringProjectDetail = lazy(lazyWithRetry(() => import('./pages/EngineeringProjectDetail'), 'EngineeringProjectDetail'));
-const Career = lazy(lazyWithRetry(() => import('./pages/Career'), 'Career'));
 const FocusSessions = lazy(lazyWithRetry(() => import('./pages/FocusSessions'), 'FocusSessions'));
-const Fundraising = lazy(lazyWithRetry(() => import('./pages/Fundraising'), 'Fundraising'));
-const Freelance = lazy(lazyWithRetry(() => import('./pages/Freelance'), 'Freelance'));
 const Creative = lazy(lazyWithRetry(() => import('./pages/Creative'), 'Creative'));
-const RealEstate = lazy(lazyWithRetry(() => import('./pages/RealEstate'), 'RealEstate'));
 const CoursePage = lazy(lazyWithRetry(() => import('./pages/CoursePage'), 'CoursePage'));
 const Readings = lazy(lazyWithRetry(() => import('./pages/Readings'), 'Readings'));
 const Library = lazy(lazyWithRetry(() => import('./pages/Library'), 'Library'));
@@ -68,26 +53,13 @@ function AuthGuard({ children }) {
   return children;
 }
 
-// Réseau and Contenu are spaces of the Carrière hub (Carrière n°1); old links
-// (/networking?contact=…, /content) keep working, query string included.
-function CareerRedirect({ tab }) {
-  const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  params.set('tab', tab);
-  return <Navigate to={`/career?${params}`} replace />;
-}
 
 export default function App() {
   const user = useAuthStore((s) => s.user);
-  const ensureAccounts = useTradingStore((s) => s.ensureAccounts);
 
   useEffect(() => {
     document.documentElement.dataset.theme = user?.theme || 'dark';
   }, [user?.theme]);
-
-  useEffect(() => {
-    if (user) ensureAccounts(); // one-time migration/bootstrap of tradingStore.accounts[]
-  }, [user, ensureAccounts]);
 
   // One-time migration: sex/dobYear/heightCm used to live on healthStore's
   // healthProfile (Health-scoped) — now they live on the global profile
@@ -116,11 +88,9 @@ export default function App() {
   }, []);
 
   useHealthReminders(); // local-only browser-notification reminders (see hook for scope/limits)
-  useTradingAlerts(); // local-only browser-notification alerts for rule breaches/tilt/deadlines
   useEcheanceAlerts(); // local-only browser-notification alerts for overdue échéances
   useHabitReminders(); // habit reminders at their chosen time (local only)
   useClassReminders(); // class heads-up + check-in nudge (attendance)
-  useMt5AutoSync(); // imports positions sent by the AUDAX_Sync MT5 Expert Advisor
   useBudgetAlerts(); // local-only browser-notification alerts for budget overruns
 
   // Cloud sync: only active when Supabase is configured AND the user has a
@@ -174,9 +144,6 @@ export default function App() {
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<Today />} />
         <Route path="/dashboard" element={<Navigate to="/today" replace />} />
-        <Route path="/trading" element={<Trading />} />
-        <Route path="/trading/accounts" element={<Navigate to="/trading?tab=accounts" replace />} />
-        <Route path="/trading/account/:id" element={<TradingAccountDetail />} />
         <Route path="/learning" element={<Learning />} />
         <Route path="/learning/course/:courseId" element={<CoursePage />} />
         <Route path="/learning/readings" element={<Readings />} />
@@ -184,23 +151,8 @@ export default function App() {
         <Route path="/finance" element={<Finance />} />
         <Route path="/habits" element={<Habits />} />
         <Route path="/health" element={<Health />} />
-        <Route path="/deals" element={<Deals />} />
-        <Route path="/deals/:id" element={<DealDetail />} />
-        <Route path="/businesses" element={<Businesses />} />
-        <Route path="/businesses/:id" element={<BusinessDetail />} />
-        <Route path="/engineering" element={<Engineering />} />
-        <Route path="/engineering/:id" element={<EngineeringProjectDetail />} />
-        <Route path="/networking" element={<CareerRedirect tab="reseau" />} />
-        <Route path="/career" element={<Career />} />
-        <Route path="/content" element={<CareerRedirect tab="visibilite" />} />
-        {/* Projects merged into Business Projects (2026-09-01) — same store, tier: 'leger' */}
-        <Route path="/projects" element={<Navigate to="/businesses" replace />} />
-        <Route path="/projects/:id" element={<Navigate to="/businesses" replace />} />
         <Route path="/focus" element={<FocusSessions />} />
-        <Route path="/fundraising" element={<Fundraising />} />
-        <Route path="/freelance" element={<Freelance />} />
         <Route path="/creative" element={<Creative />} />
-        <Route path="/real-estate" element={<RealEstate />} />
         <Route path="/skills" element={<Skills />} />
         <Route path="/goals" element={<GoalsHub />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
@@ -208,10 +160,9 @@ export default function App() {
         <Route path="/design" element={<DesignReference />} />
         <Route path="/defis" element={<Challenges />} />
         <Route path="/chronologie" element={<Timeline />} />
-        {/* Section home pages (étape 3) + French aliases for the other two sections */}
+        {/* Section home page (étape 3); Santé and Patrimoine have a single page each */}
         <Route path="/etudes" element={<PoleHome key="etudes" poleKey="etudes" />} />
-        <Route path="/patrimoine" element={<PoleHome key="patrimoine" poleKey="patrimoine" />} />
-        <Route path="/carriere" element={<PoleHome key="carriere" poleKey="carriere" />} />
+        <Route path="/patrimoine" element={<Navigate to="/finance" replace />} />
         <Route path="/sante" element={<Navigate to="/health" replace />} />
         <Route path="/aujourdhui" element={<Navigate to="/today" replace />} />
       </Route>

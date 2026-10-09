@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Trophy, AlertTriangle, CheckCircle2, Clock, Plus, HeartPulse, Wallet, GraduationCap, Megaphone, ChevronRight, Repeat, Flame, Briefcase } from 'lucide-react';
+import { Target, Trophy, AlertTriangle, CheckCircle2, Clock, Plus, HeartPulse, Wallet, GraduationCap, ChevronRight, Repeat, Flame } from 'lucide-react';
 import { useAllGoals, GOAL_DOMAINS } from '../hooks/useAllGoals';
 import { todayKey } from '../utils/formatters';
 import { Card, ProgressBar } from '../components/common/ui';
 import { SegmentedTabs, tint, countdownLabel } from '../components/learning/design';
 import YearPlan from '../components/goals/YearPlan';
 
-const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, content: Megaphone, habits: Flame, career: Briefcase };
+const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, habits: Flame };
 const STATUS = {
   achieved: { label: 'Atteint', color: 'var(--success)', Icon: CheckCircle2 },
   ontrack: { label: 'En bonne voie', color: 'var(--success)', Icon: CheckCircle2 },
@@ -114,9 +114,7 @@ export default function GoalsHub() {
             ['health', 'Poids, force, sommeil, cardio…', '/health?tab=goals'],
             ['finance', 'Épargne, fonds d’urgence, patrimoine', '/finance?tab=goals'],
             ['learning', 'Note visée par matière, niveau de langue', '/learning?tab=cursus'],
-            ['content', 'Publications par mois', '/content'],
             ['habits', 'Série visée sur une habitude', '/habits'],
-            ['career', 'Poste visé, stage, date', '/career?tab=plan'],
           ].map(([k, desc, to]) => {
             const Icon = DOMAIN_ICONS[k];
             return (

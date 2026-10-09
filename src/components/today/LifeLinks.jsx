@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
-import { useTradingStore } from '../../store/tradingStore';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { useFocusStore } from '../../store/focusStore';
 import { useLearningStore } from '../../store/learningStore';
-import { useFreelanceStore } from '../../store/freelanceStore';
 import { timelineData } from '../../services/life-timeline';
 import { lifeLinks } from '../../utils/life-timeline';
 import { formatMoney } from '../../utils/currency';
@@ -17,9 +15,9 @@ import { fmtDateShort, todayKey } from '../../utils/formatters';
 // Re-read the stores whenever one of them changes.
 export function useTimelineData() {
   const deps = [
-    useAccountingStore((s) => s.journal), useTradingStore((s) => s.trades), useHealthStore((s) => s.workouts),
+    useAccountingStore((s) => s.journal), useHealthStore((s) => s.workouts),
     useHealthStore((s) => s.bodyComp), useHabitStore((s) => s.energyLogs), useHabitStore((s) => s.logs),
-    useFocusStore((s) => s.sessions), useLearningStore((s) => s.attendance), useFreelanceStore((s) => s.engagements),
+    useFocusStore((s) => s.sessions), useLearningStore((s) => s.attendance),
   ];
   return useMemo(() => timelineData(), deps); // eslint-disable-line react-hooks/exhaustive-deps
 }

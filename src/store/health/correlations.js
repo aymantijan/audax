@@ -3,7 +3,6 @@
 import { todayKey } from '../../utils/formatters';
 import { pearsonCorrelation, bestSleepWindow, getSleepLoadTarget, estimate1RM } from '../../utils/health-science';
 import { useHabitStore } from '../habitStore';
-import { useTradingStore } from '../tradingStore';
 import { useAccountingStore } from '../accountingStore';
 import { dayMs, r1 } from './helpers';
 
@@ -17,8 +16,6 @@ export const correlationsSlice = (set, get) => ({
         { value: 'cardioMinutes', label: 'Minutes de cardio' },
         { value: 'workoutQuality', label: 'Qualité de la séance' },
         { value: 'spending', label: 'Dépenses' },
-        { value: 'tradingWinRate', label: 'Taux de réussite (trading)' },
-        { value: 'tradingPnl', label: 'Résultat trading' },
         { value: 'waterMl', label: 'Eau bue (ml)' },
         { value: 'weightKg', label: 'Poids (kg)' },
         { value: 'proteinG', label: 'Protéines (g)' },
@@ -59,21 +56,6 @@ export const correlationsSlice = (set, get) => ({
             for (const e of journal) {
               const spend = (e.lines || []).filter((l) => String(l.account).startsWith('6')).reduce((a, l) => a + (Number(l.debit) || 0), 0);
               if (spend > 0) m[e.date] = (m[e.date] || 0) + spend;
-            }
-            return m;
-          }
-          case 'tradingWinRate': {
-            const trades = useTradingStore.getState().trades;
-            const byDate = {};
-            for (const t of trades) (byDate[String(t.date).slice(0, 10)] ||= []).push(t);
-            return Object.fromEntries(Object.entries(byDate).map(([d, ts]) => [d, ts.filter((t) => t.pnl > 0).length / ts.length]));
-          }
-          case 'tradingPnl': {
-            const trades = useTradingStore.getState().trades;
-            const m = {};
-            for (const t of trades) {
-              const d = String(t.date).slice(0, 10);
-              m[d] = (m[d] || 0) + (Number(t.pnl) || 0);
             }
             return m;
           }

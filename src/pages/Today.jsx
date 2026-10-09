@@ -1,33 +1,21 @@
 import { Fragment, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, Circle, Sunrise, TrendingUp, TrendingDown, Wallet, HeartPulse,
-  BookOpen, ArrowRight, AlertTriangle, Flame, Sparkles, Receipt, ChevronRight, FlaskConical,
-  Handshake, Rocket, Users, Briefcase, Megaphone, Timer, Palette, Building2,
+  CheckCircle2, Circle, Sunrise, HeartPulse,
+  BookOpen, Flame, Sparkles, Receipt, ChevronRight, Timer, Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { HABIT_CATEGORY_LABELS } from '../utils/constants';
 import { useHabitStore } from '../store/habitStore';
-import { useTradingStore } from '../store/tradingStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
-import { useEngineeringStore } from '../store/engineeringStore';
-import { useDealsStore } from '../store/dealsStore';
-import { useBusinessStore } from '../store/businessStore';
-import { useNetworkingStore } from '../store/networkingStore';
-import { useCareerStore } from '../store/careerStore';
-import { useContentStore } from '../store/contentStore';
 import { useFocusStore } from '../store/focusStore';
-import { useFundraisingStore } from '../store/fundraisingStore';
-import { useFreelanceStore } from '../store/freelanceStore';
 import { useCreativeStore } from '../store/creativeStore';
-import { useRealEstateStore } from '../store/realEstateStore';
 import { useLearningStore } from '../store/learningStore';
 import { useReadingsStore } from '../store/readingsStore';
-import { isHabitDueOn, habitStreak, isHabitShownOn, streakUnit } from '../utils/calculations';
-import { ENGINEERING_PROJECT_STAGES } from '../utils/constants';
+import { habitStreak, isHabitShownOn, streakUnit } from '../utils/calculations';
 import { calculateCourseProgress } from '../utils/course-progress';
-import { todayKey, fmtDate, fmtMoney, fmtSignedMoney, fmtMAD } from '../utils/formatters';
+import { todayKey, fmtDate, fmtMAD } from '../utils/formatters';
 import { Card, Button, Badge, EmptyState, playSeal } from '../components/common/ui';
 import { NextClassBanner } from '../components/learning/Attendance';
 import BriefingCard from '../components/today/BriefingCard';
@@ -52,21 +40,6 @@ export default function Today() {
   const doneToday = dueToday.filter((h) => logs.some((l) => l.habitId === h.id && l.date === today && l.completed));
   const todayEnergyLog = energyLogs.find((l) => l.date === today);
 
-  // ---- Trading ----
-  const tradingStore = useTradingStore();
-  const activeAccountId = tradingStore.activeAccountId;
-  const activeAccount = tradingStore.getAccount(activeAccountId);
-  const acctTrades = tradingStore.getAccountTrades(activeAccountId);
-  const tradesToday = acctTrades.filter((t) => t.date === today);
-  const currency = activeAccount?.currency || 'USD';
-  const accountValue = tradingStore.accountValue(activeAccountId);
-  const monthStats = tradingStore.getMonthStats(activeAccountId);
-  const unjournaledToday = tradesToday.filter((t) => !t.journal?.reasoning).length;
-  const riskBreaches =
-    activeAccount?.type === 'propfirm'
-      ? tradingStore.getPropFirmProgress(activeAccountId)?.breaches?.length || 0
-      : tradingStore.getRiskLimitBreaches(activeAccountId)?.length || 0;
-
   // ---- Finance: échéances due/overdue ----
   const accountingStore = useAccountingStore();
   const overdueEcheances = accountingStore.getOverdueEcheances();
@@ -79,47 +52,11 @@ export default function Today() {
   const workedOutToday = workouts.some((w) => w.date === today);
   const loggedMealToday = nutritionLogs.some((n) => n.date === today);
 
-  // ---- Engineering ----
-  const { labEntries, projects: engProjects, getDeadlineAlerts } = useEngineeringStore();
-  const loggedLabToday = labEntries.some((e) => e.date === today);
-  const activeEngProjects = engProjects.filter((p) => !(p.stageIndex === ENGINEERING_PROJECT_STAGES.length - 1 && p.stageStatus === 'done'));
-  // getDeadlineAlerts() allocates a fresh array — only ever called inside this
-  // useMemo (keyed on the raw `engProjects` slice), never as a bare store
-  // selector (see the useSyncExternalStore infinite-loop note in project memory).
-  const deadlineAlerts = useMemo(() => getDeadlineAlerts(14, today), [engProjects, today]);
-
-  // ---- Deals & Business ---- (added 2026-08-26, same session as the
-  // Deals/Business Projects page split — Today.jsx had a card for every other
-  // gate-able domain except this one).
-  const deals = useDealsStore((s) => s.deals);
-  const businesses = useBusinessStore((s) => s.businesses);
-  const ongoingDeals = deals.filter((d) => d.status === 'ongoing');
-  const openDealTasks = ongoingDeals.reduce((a, d) => a + (d.tasks || []).filter((t) => t.status !== 'done').length, 0);
-  const activeBusinesses = businesses.filter((b) => b.status === 'active');
-
-  // ---- Networking / Career / Content / Projects ---- (added 2026-08-27) —
-  // one combined card, same reasoning as Deals & Business above: four small
-  // domains, not worth a full card each on the daily view.
-  const networkingStore = useNetworkingStore();
-  const contacts = networkingStore.contacts;
-  const followUpAlerts = useMemo(() => networkingStore.getFollowUpAlerts(3, today), [contacts, today]);
-  const applications = useCareerStore((s) => s.applications);
-  const openApplications = applications.filter((a) => ['Applied', 'Screening', 'Interview', 'Offer'].includes(a.stage));
-  const contentPosts = useContentStore((s) => s.posts);
+  // ---- Concentration + création ----
   const focusStore = useFocusStore();
   const todayFocusMinutes = useMemo(() => focusStore.getTodayMinutes(today), [focusStore.sessions, today]);
-
-  // ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) —
-  // same combined-card reasoning as Networking/Career/Content/Projects above.
-  const investors = useFundraisingStore((s) => s.investors);
-  const openInvestors = investors.filter((i) => !['Closed', 'Passed'].includes(i.stage));
-  const engagements = useFreelanceStore((s) => s.engagements);
-  const activeEngagements = engagements.filter((e) => e.status === 'Actif');
-  const creativeStore = useCreativeStore();
-  const creativeWorks = creativeStore.works;
+  const creativeWorks = useCreativeStore((s) => s.works);
   const inProgressWorks = creativeWorks.filter((w) => w.status === 'En cours');
-  const properties = useRealEstateStore((s) => s.properties);
-  const ownedProperties = properties.filter((p) => p.status === 'Acquis' || p.status === 'Loué');
 
   // ---- Learning + reading ----
   const courses = useLearningStore((s) => s.courses);
@@ -188,7 +125,7 @@ export default function Today() {
                       <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
                       <div className="text-[11px] text-mute">
                         {HABIT_CATEGORY_LABELS[h.category] || h.category}
-                        {h.mandatory ? ' · obligatoire' : ''}
+                        {h.mandatory ? ' · prioritaire' : ''}
                         {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
                         {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
                       </div>
@@ -239,54 +176,6 @@ export default function Today() {
             </div>
           )}
         </Card>
-      </>
-    ) },
-    { id: 'trading', label: 'Trading', node: (
-      <>
-        {/* ---- Trading ---- */}
-        {/* BUGFIX (2026-08-26): same module-gating bug already fixed on Dashboard.jsx
-            and Navbar/MobileTabBar — this card rendered unconditionally, showing the
-            account/P&L/risk banners to a user who explicitly turned Trading off in
-            Settings/Onboarding. Today.jsx already gates its Engineering section this
-            way (see below); Trading never had the equivalent check. */}
-        {(user?.enabledModules?.trading ?? true) && (
-        <Card
-          title="Trading"
-          action={
-            <Link to="/trading" className="text-xs text-accent hover:underline flex items-center gap-1">
-              Ouvrir <ChevronRight size={12} />
-            </Link>
-          }
-        >
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-sm">
-              <Wallet size={16} className="text-mute" />
-              <span className="text-ink font-medium">{activeAccount?.name || 'Aucun compte'}</span>
-              <span className="text-mute">{fmtMoney(accountValue, 0, currency)}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-sm">
-              {monthStats.totalPnl >= 0 ? <TrendingUp size={15} className="text-good" /> : <TrendingDown size={15} className="text-bad" />}
-              <span className={monthStats.totalPnl >= 0 ? 'text-good' : 'text-bad'}>{fmtSignedMoney(monthStats.totalPnl, currency)}</span>
-              <span className="text-mute text-xs">ce mois</span>
-            </div>
-            <div className="text-sm text-mute">{tradesToday.length} trade{tradesToday.length !== 1 ? 's' : ''} aujourd'hui</div>
-          </div>
-          {(unjournaledToday > 0 || riskBreaches > 0) && (
-            <div className="mt-3 space-y-1.5">
-              {riskBreaches > 0 && (
-                <div className="flex items-center gap-2 text-xs text-bad">
-                  <AlertTriangle size={13} /> {riskBreaches} règle{riskBreaches !== 1 ? 's' : ''} de risque en dépassement — vérifie ton compte.
-                </div>
-              )}
-              {unjournaledToday > 0 && (
-                <div className="flex items-center gap-2 text-xs text-warn">
-                  <AlertTriangle size={13} /> {unjournaledToday} trade{unjournaledToday !== 1 ? 's' : ''} du jour sans journal.
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-        )}
       </>
     ) },
     { id: 'echeances', label: 'Échéances', node: (
@@ -347,166 +236,28 @@ export default function Today() {
         </Card>
       </>
     ) },
-    { id: 'engineering', label: 'Ingénierie', node: (
+    { id: 'focus', label: 'Concentration et création', node: (
       <>
-        {/* ---- Engineering ---- */}
-        {(user?.enabledModules?.engineering ?? false) && (
-          <Card
-            title="Ingénierie"
-            action={
-              <Link to="/engineering" className="text-xs text-accent hover:underline flex items-center gap-1">
-                Ouvrir <ChevronRight size={12} />
-              </Link>
-            }
-          >
-            <div className="flex items-center gap-6 text-sm flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <FlaskConical size={15} className={loggedLabToday ? 'text-good' : 'text-mute'} />
-                <span className={loggedLabToday ? 'text-ink' : 'text-mute'}>{loggedLabToday ? 'Expérience enregistrée' : 'Aucune expérience enregistrée'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-mute">{activeEngProjects.length} projet{activeEngProjects.length !== 1 ? 's' : ''} en cours</span>
-              </div>
-            </div>
-            {activeEngProjects.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
-                {activeEngProjects.slice(0, 3).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                    <Link to={`/engineering/${p.id}`} className="hover:text-accent">{p.name}</Link>
-                    <span className="text-xs text-mute">{ENGINEERING_PROJECT_STAGES[p.stageIndex]}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {deadlineAlerts.length > 0 && (
-              <div className="mt-3 space-y-1.5">
-                {deadlineAlerts.map(({ project, overdue }) => (
-                  <div key={project.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
-                    <AlertTriangle size={13} />
-                    <Link to={`/engineering/${project.id}`} className="hover:underline">{project.name}</Link>
-                    {overdue ? ` — échéance dépassée (${fmtDate(project.deadline)})` : ` — échéance le ${fmtDate(project.deadline)}`}
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        )}
-      </>
-    ) },
-    { id: 'business', label: 'Private equity et projets', node: (
-      <>
-        {/* ---- Deals & Business ---- */}
-        {((user?.enabledModules?.pe ?? true) || (user?.enabledModules?.business ?? true)) && (ongoingDeals.length > 0 || businesses.length > 0) && (
-          <Card title="Private equity & business">
-            <div className="flex items-center gap-6 text-sm flex-wrap">
-              {(user?.enabledModules?.pe ?? true) && (
-                <Link to="/deals" className="flex items-center gap-1.5 hover:text-accent">
-                  <Handshake size={15} className="text-mute" />
-                  <span>{ongoingDeals.length} deal{ongoingDeals.length !== 1 ? 's' : ''} en cours{openDealTasks > 0 ? ` · ${openDealTasks} tâche${openDealTasks !== 1 ? 's' : ''} ouverte${openDealTasks !== 1 ? 's' : ''}` : ''}</span>
-                </Link>
-              )}
-              {(user?.enabledModules?.business ?? true) && (
-                <Link to="/businesses" className="flex items-center gap-1.5 hover:text-accent">
-                  <Rocket size={15} className="text-mute" />
-                  <span>{activeBusinesses.length} business actif{activeBusinesses.length !== 1 ? 's' : ''} ({businesses.length} suivi{businesses.length !== 1 ? 's' : ''})</span>
-                </Link>
-              )}
-            </div>
-          </Card>
-        )}
-      </>
-    ) },
-    { id: 'career', label: 'Réseau, carrière et concentration', node: (
-      <>
-        {/* ---- Networking / Career / Content / Focus ---- */}
+        {/* ---- Focus / Creative ---- */}
         {(() => {
-          const netOn = user?.enabledModules?.networking ?? false;
-          const careerOn = user?.enabledModules?.career ?? false;
-          const contentOn = user?.enabledModules?.content ?? false;
           const focusOn = user?.enabledModules?.focus ?? false;
-          const anyOn = netOn || careerOn || contentOn || focusOn;
-          const anyData = contacts.length > 0 || applications.length > 0 || contentPosts.length > 0 || focusStore.sessions.length > 0;
-          if (!anyOn || !anyData) return null;
+          const creativeOn = user?.enabledModules?.creative ?? false;
+          const showFocus = focusOn && focusStore.sessions.length > 0;
+          const showCreative = creativeOn && creativeWorks.length > 0;
+          if (!showFocus && !showCreative) return null;
           return (
-            <Card title="Réseau, carrière, contenu & concentration">
+            <Card title="Concentration et création">
               <div className="flex items-center gap-6 text-sm flex-wrap">
-                {netOn && contacts.length > 0 && (
-                  <Link to="/networking" className="flex items-center gap-1.5 hover:text-accent">
-                    <Users size={15} className="text-mute" />
-                    <span>{contacts.length} contact{contacts.length !== 1 ? 's' : ''}{followUpAlerts.length > 0 ? ` · ${followUpAlerts.length} relance${followUpAlerts.length !== 1 ? 's' : ''}` : ''}</span>
-                  </Link>
-                )}
-                {careerOn && applications.length > 0 && (
-                  <Link to="/career" className="flex items-center gap-1.5 hover:text-accent">
-                    <Briefcase size={15} className="text-mute" />
-                    <span>{openApplications.length} candidature{openApplications.length !== 1 ? 's' : ''} en cours</span>
-                  </Link>
-                )}
-                {contentOn && contentPosts.length > 0 && (
-                  <Link to="/content" className="flex items-center gap-1.5 hover:text-accent">
-                    <Megaphone size={15} className="text-mute" />
-                    <span>{contentPosts.length} publication{contentPosts.length !== 1 ? 's' : ''}</span>
-                  </Link>
-                )}
-                {focusOn && focusStore.sessions.length > 0 && (
+                {showFocus && (
                   <Link to="/focus" className="flex items-center gap-1.5 hover:text-accent">
                     <Timer size={15} className="text-mute" />
                     <span>{todayFocusMinutes > 0 ? `${todayFocusMinutes} min aujourd'hui` : 'Aucune session aujourd\'hui'}</span>
                   </Link>
                 )}
-              </div>
-              {followUpAlerts.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  {followUpAlerts.map(({ contact, overdue }) => (
-                    <div key={contact.id} className={`flex items-center gap-2 text-xs ${overdue ? 'text-bad' : 'text-warn'}`}>
-                      <AlertTriangle size={13} />
-                      <Link to="/networking" className="hover:underline">{contact.name}</Link>
-                      {overdue ? ' — relance en retard' : ' — relance à venir'}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          );
-        })()}
-      </>
-    ) },
-    { id: 'other', label: 'Levée de fonds, freelance, création, immobilier', node: (
-      <>
-        {/* ---- Fundraising / Freelance / Creative / Real Estate ---- (2026-08-27) */}
-        {(() => {
-          const fundraisingOn = user?.enabledModules?.fundraising ?? false;
-          const freelanceOn = user?.enabledModules?.freelance ?? false;
-          const creativeOn = user?.enabledModules?.creative ?? false;
-          const realEstateOn = user?.enabledModules?.realEstate ?? false;
-          const anyOn = fundraisingOn || freelanceOn || creativeOn || realEstateOn;
-          const anyData = investors.length > 0 || engagements.length > 0 || creativeWorks.length > 0 || properties.length > 0;
-          if (!anyOn || !anyData) return null;
-          return (
-            <Card title="Levée de fonds, freelance, création & immobilier">
-              <div className="flex items-center gap-6 text-sm flex-wrap">
-                {fundraisingOn && investors.length > 0 && (
-                  <Link to="/fundraising" className="flex items-center gap-1.5 hover:text-accent">
-                    <Rocket size={15} className="text-mute" />
-                    <span>{openInvestors.length} investisseur{openInvestors.length !== 1 ? 's' : ''} en cours</span>
-                  </Link>
-                )}
-                {freelanceOn && engagements.length > 0 && (
-                  <Link to="/freelance" className="flex items-center gap-1.5 hover:text-accent">
-                    <Briefcase size={15} className="text-mute" />
-                    <span>{activeEngagements.length} client{activeEngagements.length !== 1 ? 's' : ''} actif{activeEngagements.length !== 1 ? 's' : ''}</span>
-                  </Link>
-                )}
-                {creativeOn && creativeWorks.length > 0 && (
+                {showCreative && (
                   <Link to="/creative" className="flex items-center gap-1.5 hover:text-accent">
                     <Palette size={15} className="text-mute" />
                     <span>{inProgressWorks.length} œuvre{inProgressWorks.length !== 1 ? 's' : ''} en cours</span>
-                  </Link>
-                )}
-                {realEstateOn && properties.length > 0 && (
-                  <Link to="/real-estate" className="flex items-center gap-1.5 hover:text-accent">
-                    <Building2 size={15} className="text-mute" />
-                    <span>{ownedProperties.length} bien{ownedProperties.length !== 1 ? 's' : ''} possédé{ownedProperties.length !== 1 ? 's' : ''}</span>
                   </Link>
                 )}
               </div>

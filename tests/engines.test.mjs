@@ -1,10 +1,8 @@
-// F5 · guards on the money, habits and prop-firm engines before any refactor (F3).
+// F5 · guards on the money and habits engines before any refactor (F3).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateEntry, balanceSheet, cpc, treasuryBalance, accountBalances } from '../src/utils/accounting-engine.js';
 import { isHabitDueOn, habitStreak, weeklyProgress, quitStreak, habitDayStatus } from '../src/utils/calculations.js';
-import { computeRulesProgress, nextPhase } from '../src/utils/prop-firm-analytics.js';
-import { computePositionSize } from '../src/utils/risk-management.js';
 
 // ── Accounting (double entry) ──
 const e = (date, label, lines) => ({ date, label, lines });
@@ -64,39 +62,4 @@ test('habits: weekly quota and "days without" streak', () => {
   assert.equal(weeklyProgress(weekly, done('w', [28, 29, 30]), day(30)).met, true);
   assert.equal(weeklyProgress(weekly, done('w', [27]), day(30)).done, 0); // Sunday 27 belongs to the previous week
   assert.equal(quitStreak({ startDate: day(1), relapses: [day(20)] }, day(28)), 8);
-});
-
-// ── Prop firm rules ──
-const trade = (date, pnl) => ({ date, pnl });
-const phaseStart = new Date('2026-09-01T10:00:00').getTime();
-
-test('prop firm: daily loss limit breached on the day it happens', () => {
-  const p = computeRulesProgress({ maxDailyLossPct: 2 }, phaseStart, 10000, [trade('2026-09-01', 500), trade('2026-09-02', -300)], '2026-09-02');
-  assert.equal(p.dailyLossPct, 3);
-  assert.ok(p.breaches.some((b) => b.rule === 'dailyLoss' && b.level === 'danger'));
-  assert.equal(p.readyToAdvance, false);
-});
-
-test('prop firm: trailing vs static drawdown', () => {
-  const trades = [trade('2026-09-01', 1000), trade('2026-09-02', -1500)];
-  assert.equal(computeRulesProgress({}, phaseStart, 10000, trades, '2026-09-03').maxDrawdownPct, 13.64); // 1500 / 11000 peak
-  assert.equal(computeRulesProgress({ maxTotalDrawdownType: 'static' }, phaseStart, 10000, trades, '2026-09-03').maxDrawdownPct, 5); // 9500 vs 10000
-});
-
-test('prop firm: consistency rule, target reached, trades before the phase ignored', () => {
-  const trades = [trade('2026-08-20', 5000), trade('2026-09-01', 900), trade('2026-09-02', 100)];
-  const p = computeRulesProgress({ profitTargetPct: 8, minTradingDays: 2, consistencyRulePct: 40 }, phaseStart, 10000, trades, '2026-09-03');
-  assert.equal(p.totalProfit, 1000); // the August trade is before the phase
-  assert.equal(p.consistencyPct, 90);
-  assert.ok(p.breaches.some((b) => b.rule === 'consistency' && b.level === 'warning'));
-  assert.equal(p.profitTargetMet, true);
-  assert.equal(p.readyToAdvance, true); // warnings don't block, only hard breaches do
-  assert.equal(nextPhase('phase1'), 'phase2');
-  assert.equal(nextPhase('funded'), null);
-});
-
-test('risk: position size from risk % and stop distance', () => {
-  const s = computePositionSize({ accountValue: 10000, riskPct: 1, stopDistancePips: 20, pipValuePerLot: 10 });
-  const lots = typeof s === 'number' ? s : s.lots;
-  assert.equal(lots, 0.5); // 100 risked / (20 pips × 10 per lot)
 });

@@ -12,7 +12,7 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
 
 ## Décisions prises (27 sept 2026) — ne pas rediscuter
 1. Nom : **VAUDAX** partout (fait). Les clés techniques `audax-*` (localStorage, sauvegardes) ne changent JAMAIS.
-2. Interface en **tutoiement** partout, en français. **Exception : le Trading reste en anglais.**
+2. Interface en **tutoiement** partout, en français.
 3. IA : **chaque utilisateur peut apporter sa propre clé** (Gemini, Claude, ChatGPT, OpenRouter — Paramètres → Assistant).
    Connecté : la clé est enregistrée **sur son compte**, chiffrée par le serveur (`api/_lib/key-vault.js`, table `ai_keys`
    migration 009, aucun accès navigateur) → elle marche sur tous ses appareils ; seuls les 4 derniers caractères reviennent.
@@ -21,7 +21,11 @@ Phase 1 « Restructuration » (oct → déc 2026), étapes 0 → 5. Travaille UN
    dépense du projet, jamais (pas de store payant, pas d'offre Vercel/Supabase payante). Ne JAMAIS redemander un budget.
 4. **Cercle privé** d'abord (pas d'ouverture publique : loi 09-08 / CNDP non traitée).
 5. Mode de notation « classique » : une matière sous la note éliminatoire bloque le semestre.
-6. Modules secondaires (Ingénierie, Immobilier, Levée de fonds, Création) **masqués** pour les nouveaux utilisateurs, activables.
+6. Modules secondaires (Minuteur, Création) **masqués** pour les nouveaux utilisateurs, activables.
+7. **Supprimés le 9 oct 2026** : Trading (l'utilisateur a un site à part), Private equity, Levée de fonds, Immobilier,
+   tout le pôle Carrière & entreprise (Carrière, Freelance, Projets, Ingénierie), les personnalités du classement.
+   Leurs données restent **en sommeil** sur le compte (lignes `app_state` et clés `audax-*` jamais effacées, gardées
+   dans les sauvegardes). Ne pas les réintroduire sans demande. Audit complet et plan : https://claude.ai/artifact/GENHQd8NZ7MK1CqXTmfgt8
 
 ## Principe clé : pour tous les profils
 Site multi-utilisateurs (chaque personne sur ses appareils, son compte). Aucune fonction, aucun texte,
@@ -31,13 +35,13 @@ particuliers = des modèles configurables parmi d'autres.
 ## Stack
 React 18 + Vite 6 + Tailwind 4, Zustand (persist localStorage), PWA (vite-plugin-pwa, `public/sw-push.js`),
 Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store), API Vercel dans `api/`.
-- Synchro cloud : `src/services/cloud-sync.js` (REGISTRY = les 21 stores ; `fillDefaults` / `mergeFirstSync`
+- Synchro cloud : `src/services/cloud-sync.js` (REGISTRY = les 11 stores actifs ; `fillDefaults` / `mergeFirstSync`
   dans `src/utils/fill-defaults.js` ; propriétaire des données locales par compte).
 - `financeStore.js` est l'ancienne compta (morte) ; la vraie est `accountingStore.js`.
 - Rappels push : `api/class-reminders.js` (cours + Santé), appelé toutes les 5 min par pg_cron Supabase
   (`supabase/migrations/005_class_reminders_cron.sql`, authentification par nonce, aucun secret dans le SQL).
 - IA (étape 4, fait) : `api/_lib/llm.js` parle aux 4 fournisseurs (clé personnelle) ; sinon `api/_lib/gemini.js`
-  avec la clé du site `GEMINI_API_KEY` (projet Google SANS facturation). Vercel Hobby : 12 fonctions maximum dans `api/` (12/12 utilisées depuis `api/ai-keys.js`). Assistant unique `api/assistant.js` (réponse en flux) + coachs Trading/Santé/Ingénierie
+  avec la clé du site `GEMINI_API_KEY` (projet Google SANS facturation). Vercel Hobby : 12 fonctions maximum dans `api/` (9/12 utilisées). Assistant unique `api/assistant.js` (réponse en flux) + coach Santé
   (`api/_lib/coach.js`). Garde commune `api/_lib/ai-guard.js` : utilisateur connecté + 30 questions/jour/personne
   (table `ai_usage`, migration 008 appliquée). Le navigateur construit le résumé des données : `src/utils/assistant-context.js`.
 - Navigation (étape 3, fait) : source unique `src/utils/navigation.js` (modules, pôles, activation). Accueil : `src/utils/onboarding-plan.js`.

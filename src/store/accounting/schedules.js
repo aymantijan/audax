@@ -3,7 +3,6 @@
 import { uid } from '../../utils/formatters';
 import { echeanceOccurrences, treasuryForecastV2, netWorthForecastV2, resolveEcheanceLines } from '../../utils/accounting-engine';
 import { useSkillStore } from '../skillStore';
-import { useTradingStore } from '../tradingStore';
 import { toast } from '../uiStore';
 import { stamp, localDateKey } from './helpers';
 
@@ -148,48 +147,24 @@ export const schedulesSlice = (set, get) => ({
       },
 
       // ─────────── Rappels navigateur pour échéances en retard ───────────
-      // Même mécanisme que tradingStore.alerts / healthStore.reminders : local
+      // Même mécanisme que healthStore.reminders : local
       // uniquement (pas de push serveur), ne se déclenche que si l'onglet AUDAX
       // est ouvert — voir hooks/useEcheanceAlerts.js.
       setEcheanceAlertsEnabled: (enabled) => set({ echeanceAlerts: { ...get().echeanceAlerts, enabled } }),
       markEcheanceAlertShown: (key, dateKey) =>
         set({ echeanceAlerts: { ...get().echeanceAlerts, lastShown: { ...get().echeanceAlerts.lastShown, [key]: dateKey } } }),
 
-      // Estimation des payouts trading à venir : Σ P&L des 30 derniers jours des
-      // comptes Broker/Prop Firm (le compte Demo ne génère jamais de vrai retrait),
-      // × payoutPct (défaut 80%, taux de reversement typique des prop firms), en
-      // ne comptant qu'un P&L positif. Simplification assumée : tout est ramené en
-      // DH via le taux USD→DH fixe de l'app pour les comptes non-DH (la plupart des
-      // prop firms/brokers sont libellés en USD) — un compte déjà en 'MAD' passe
-      // tel quel, un autre devise non gérée est ignoré plutôt que mal converti.
-      getTradingPayoutEstimate: (payoutPct = 0.8) => {
-        const { accounts, getAccountTrades } = useTradingStore.getState();
-        const cutoff = Date.now() - 30 * 86400000;
-        let pnlMad = 0;
-        for (const acct of accounts.filter((a) => a.type === 'broker' || a.type === 'propfirm')) {
-          const currency = acct.currency || 'USD';
-          const pnl = getAccountTrades(acct.id)
-            .filter((t) => new Date(t.date).getTime() >= cutoff)
-            .reduce((a, t) => a + (Number(t.pnl) || 0), 0);
-          // Converted to the user's base currency at their own rate table.
-          pnlMad += get().toBase(pnl, currency);
-        }
-        return Math.round(Math.max(0, pnlMad) * payoutPct);
-      },
-
       // Prévision v2 jour par jour — voir treasuryForecastV2 (accounting-engine.js)
-      // pour la logique (habitudes + échéances + payout trading en option).
+      // pour la logique (habitudes + échéances).
       // `method`: 'sma' (défaut) | 'ema' | 'budget' — voir accounting-engine.js.
-      getTreasuryForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8, method = 'sma' } = {}) => {
-        const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
-        return treasuryForecastV2(get().journal, get().echeances, { days, tradingMonthlyPayout, method, budgets: get().budgets });
+      getTreasuryForecastV2: (days = 90, { method = 'sma' } = {}) => {
+        return treasuryForecastV2(get().journal, get().echeances, { days, method, budgets: get().budgets });
       },
 
       // Prévision de patrimoine (ANCC) jour par jour — voir netWorthForecastV2
       // (accounting-engine.js) : réutilise la trajectoire de trésorerie v2 et
       // gèle le reste du bilan (immobilisé, créances, dettes, corrections).
-      getNetWorthForecastV2: (days = 90, { includeTradingPayout = false, payoutPct = 0.8, method = 'sma' } = {}) => {
-        const tradingMonthlyPayout = includeTradingPayout ? get().getTradingPayoutEstimate(payoutPct) : 0;
-        return netWorthForecastV2(get().journal, get().corrections, get().echeances, { days, tradingMonthlyPayout, method, budgets: get().budgets });
+      getNetWorthForecastV2: (days = 90, { method = 'sma' } = {}) => {
+        return netWorthForecastV2(get().journal, get().corrections, get().echeances, { days, method, budgets: get().budgets });
       },
 });

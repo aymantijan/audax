@@ -18,7 +18,6 @@ test('one timeline, newest first, every section', () => {
       { id: 'j2', date: '2026-09-25', label: 'Salaire', lines: [{ account: '511', debit: 3000, credit: 0 }, { account: '711', debit: 0, credit: 3000 }] },
       { id: 'j3', date: '2026-09-25', label: 'Virement épargne', lines: [{ account: '512', debit: 500, credit: 0 }, { account: '511', debit: 0, credit: 500 }] },
     ],
-    trades: [{ id: 't1', date: '2026-09-22', instrument: 'EURUSD', pnl: -40 }],
     workouts: [{ id: 'w1', date: '2026-09-26', exercise: 'Course à pied', durationMin: 28, cardio: { distance: 5 } }],
     energyLogs: [{ date: '2026-09-27', sleepData: { sleepHours: 7.5 } }],
     habits: [{ id: 'h1', name: 'Méditation' }],
@@ -27,7 +26,7 @@ test('one timeline, newest first, every section', () => {
     sessions: [{ id: 's1', date: '2026-09-21', durationMinutes: 45, courseId: 'c1' }],
     attendance: { 'c1|sl1|2026-09-21': { status: 'on_time' } },
   });
-  assert.deepEqual(ev.map((e) => e.kind), ['sleep', 'workout', 'income', 'habit', 'trade', 'study', 'class', 'expense']);
+  assert.deepEqual(ev.map((e) => e.kind), ['sleep', 'workout', 'income', 'habit', 'study', 'class', 'expense']);
   assert.equal(ev.find((e) => e.kind === 'workout').detail, '5 km · 28 min');
   assert.equal(ev.find((e) => e.kind === 'class').title, 'Cours · IFRS');
   assert.ok(!ev.some((e) => e.title === 'Virement épargne'), 'a transfer is neither spent nor earned');
@@ -76,5 +75,5 @@ test('links: nothing below the minimum, and no finding from noise', () => {
 test('daily values only exist where the section is used', () => {
   const d = dailyValues({ sessions: [{ date: '2026-09-01', durationMinutes: 30 }, { date: '2026-09-03', durationMinutes: 10 }] });
   assert.equal(d['2026-09-02'].study, 0, 'a day without study counts as 0 once studying started');
-  assert.equal(d['2026-09-02'].pnl, undefined, 'no trading data → no trading value');
+  assert.equal(d['2026-09-02'].spend, undefined, 'no spending data → no spending value');
 });

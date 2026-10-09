@@ -4,24 +4,18 @@ import { useHabitStore } from '../store/habitStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useLearningStore } from '../store/learningStore';
 import { useFocusStore } from '../store/focusStore';
-import { useContentStore } from '../store/contentStore';
 import { DEFAULT_ACADEMIC_SETTINGS, isAcademic, subjectResult, requiredGrade, fmtGrade, normGrade } from '../utils/academic';
 import { calculateCourseProgress } from '../utils/course-progress';
 import { minutesBetween, weekStart, fmtMinutes, studySessions } from '../utils/study';
 import { levelLabel } from '../utils/tracks';
 import { fmtMAD, todayKey } from '../utils/formatters';
 import { habitStreak, habitBestStreak, streakUnit } from '../utils/calculations';
-import { useCareerStore } from '../store/careerStore';
-import { useSkillStore } from '../store/skillStore';
-import { planProgress } from '../utils/career-plan';
 
 export const GOAL_DOMAINS = {
   health: { label: 'Santé', color: '#ef4444', link: '/health?tab=goals' },
   finance: { label: 'Finances', color: '#10b981', link: '/finance?tab=goals' },
   learning: { label: 'Apprentissage', color: '#6366f1', link: '/learning' },
-  content: { label: 'Contenu', color: '#f59e0b', link: '/content' },
   habits: { label: 'Habitudes', color: '#f97316', link: '/habits' },
-  career: { label: 'Carrière', color: '#0ea5e9', link: '/career?tab=plan' },
 };
 
 const nf = (v) => Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -32,7 +26,7 @@ const daysTo = (date, today) => Math.round((new Date(`${date}T12:00:00`) - new D
  * editor and engine (health metric engine, finance envelopes, academic
  * grades…), this is the read side:
  * { key, domain, title, progress, valueText, detail, targetDate, status, link, skills? }
- * skills: linked skill-tree node ids (courses, career plans)
+ * skills: linked skill-tree node ids (courses)
  * status: 'achieved' | 'ontrack' | 'behind' | 'active'
  */
 export function useAllGoals() {
@@ -42,17 +36,11 @@ export function useAllGoals() {
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
-  const careerPlans = useCareerStore((s) => s.plans);
-  const skillLevels = useSkillStore((s) => s.skills);
-  const skillProofs = useSkillStore((s) => s.proofs);
-  const skillMastery = useSkillStore((s) => s.mastery);
   const journal = useAccountingStore((s) => s.journal);
   const financeGoals = useAccountingStore((s) => s.goals);
   const courses = useLearningStore((s) => s.courses);
   const academicSettings = useLearningStore((s) => s.academic?.settings);
   const sessions = useFocusStore((s) => s.sessions);
-  const contentGoal = useContentStore((s) => s.monthlyGoal);
-  const posts = useContentStore((s) => s.posts);
 
   return useMemo(() => {
     const today = todayKey();
@@ -128,29 +116,6 @@ export function useAllGoals() {
       });
     }
 
-    // ── Contenu ──
-    if (contentGoal > 0) {
-      const p = useContentStore.getState().getGoalProgress(today);
-      out.push({
-        key: 'c-monthly', domain: 'content', title: `${contentGoal} publication(s) ce mois-ci`,
-        progress: p.pct ?? 0, valueText: `${p.count} / ${p.goal}`, detail: 'objectif mensuel récurrent',
-        targetDate: null, status: p.count >= p.goal ? 'achieved' : 'active', recurring: true, link: GOAL_DOMAINS.content.link,
-      });
-    }
-    // ── Carrière (objectifs datés) ──
-    for (const p of careerPlans || []) {
-      if (p.status === 'dropped') continue;
-      const pr = planProgress(p, { skills: skillLevels, proofs: skillProofs, mastery: skillMastery }, today);
-      out.push({
-        key: `cr-${p.id}`, domain: 'career', title: p.title,
-        progress: p.status === 'achieved' ? 100 : pr.pct,
-        valueText: `préparation ${pr.pct}%${pr.skillsLeft ? ` · ${pr.skillsLeft} compétence${pr.skillsLeft > 1 ? 's' : ''} à acquérir` : ''}`,
-        detail: pr.overdueMilestones.length ? `${pr.overdueMilestones.length} étape(s) en retard` : p.type || null,
-        targetDate: p.targetDate || null, status: pr.status, link: GOAL_DOMAINS.career.link,
-        skills: (p.skills || []).map((x) => x.skillId).filter(Boolean),
-      });
-    }
-
     // ── Habitudes (série visée) ──
     for (const h of habits) {
       const target = Number(h.targetStreak) || 0;
@@ -166,5 +131,5 @@ export function useAllGoals() {
       });
     }
     return out;
-  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, careerPlans, skillLevels, skillProofs, skillMastery, journal, financeGoals, courses, academicSettings, sessions, contentGoal, posts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [healthGoals, workouts, bodyComp, energyLogs, habits, habitLogs, journal, financeGoals, courses, academicSettings, sessions]); // eslint-disable-line react-hooks/exhaustive-deps
 }

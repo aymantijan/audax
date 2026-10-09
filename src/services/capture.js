@@ -2,7 +2,6 @@
 // the person's own data, and saves a CONFIRMED draft in the store that owns it.
 // Parsing lives in utils/quick-capture.js; nothing here guesses.
 import { useAccountingStore } from '../store/accountingStore';
-import { useFreelanceStore } from '../store/freelanceStore';
 import { useHealthStore } from '../store/healthStore';
 import { useHabitStore } from '../store/habitStore';
 import { useLearningStore } from '../store/learningStore';
@@ -20,12 +19,9 @@ export function captureContext() {
   const courses = useLearningStore.getState().courses
     .filter((c) => c.status !== 'dropped' && c.name)
     .map((c) => ({ id: c.id, name: c.name }));
-  const clients = useFreelanceStore.getState().engagements
-    .filter((e) => e.status !== 'Terminé' && e.clientName)
-    .map((e) => ({ id: e.id, name: e.clientName }));
   return {
     today: todayKey(),
-    habits, courses, clients,
+    habits, courses,
     weightUnit: useHealthStore.getState().weightUnit || 'kg',
     currency: useAccountingStore.getState().baseCurrency,
   };
@@ -58,9 +54,6 @@ export function saveDraft(d, extra = {}) {
       toast(`${d.kind === 'expense' ? 'Dépense' : 'Revenu'} enregistré : ${d.label} · ${formatMoney(amt, base)}`, 'success');
       return { ok: true, to: '/finance?tab=journal' };
     }
-    case 'freelance':
-      useFreelanceStore.getState().logPayment(d.clientId, { date: d.date, amount: d.amount, note: d.label, account: extra.cash || '511' });
-      return { ok: true, to: '/freelance' };
     case 'workout':
       useHealthStore.getState().logWorkout({
         date: d.date, type: d.type, category: d.type, exercise: d.exercise, durationMin: d.durationMin,

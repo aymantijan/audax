@@ -8,25 +8,15 @@ import { getApiKeyStatus, createOrRotateApiKey, revokeApiKey } from '../services
 import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
 import { useGoogleCalendarStatus } from '../hooks/useGoogleCalendarStatus';
 import { useAuthStore } from '../store/authStore';
-import { useTradingStore } from '../store/tradingStore';
 import { useLearningStore } from '../store/learningStore';
 import { useFinanceStore } from '../store/financeStore';
 import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
-import { useDealsStore } from '../store/dealsStore';
-import { useEngineeringStore } from '../store/engineeringStore';
 import { useReadingsStore } from '../store/readingsStore';
 import { useAccountingStore } from '../store/accountingStore';
 import { useHealthStore } from '../store/healthStore';
-import { useBusinessStore } from '../store/businessStore';
-import { useNetworkingStore } from '../store/networkingStore';
-import { useCareerStore } from '../store/careerStore';
-import { useContentStore } from '../store/contentStore';
 import { useFocusStore } from '../store/focusStore';
-import { useFundraisingStore } from '../store/fundraisingStore';
-import { useFreelanceStore } from '../store/freelanceStore';
 import { useCreativeStore } from '../store/creativeStore';
-import { useRealEstateStore } from '../store/realEstateStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
@@ -35,6 +25,9 @@ import FoodsCard from '../components/settings/FoodsCard';
 import AssistantCard from '../components/settings/AssistantCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 
+// Backups keep the keys of removed modules (trading, deals, engineering, business,
+// networking, career, content, fundraising, freelance, realestate — 2026-10-09):
+// their data stays dormant on this device and must not be lost on export.
 const STORE_KEYS = ['audax-auth', 'audax-trading', 'audax-learning', 'audax-finance', 'audax-accounting', 'audax-habits', 'audax-skills', 'audax-deals', 'audax-engineering', 'audax-readings', 'audax-health', 'audax-business', 'audax-networking', 'audax-career', 'audax-content', 'audax-focus', 'audax-flashcards', 'audax-fundraising', 'audax-freelance', 'audax-creative', 'audax-realestate', 'audax-synergy-history'];
 
 // Sports programme data lives only in Supabase tables (programStore is not
@@ -45,7 +38,7 @@ const PROGRAM_TABLES = ['programs', 'program_phases', 'program_sessions', 'progr
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const [form, setForm] = useState({
-    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'metiersVentures', occupation: user?.occupation || '',
+    name: user?.name || '', email: user?.email || '', primaryDomain: user?.primaryDomain || 'learning', occupation: user?.occupation || '',
     gender: user?.gender || '', dobYear: user?.dobYear || '', heightCm: user?.heightCm || '',
   });
 
@@ -220,26 +213,16 @@ export default function SettingsPage() {
   };
 
   const resetAll = () => {
-    if (!confirm('Cela supprime définitivement TOUTES les données de cet appareil (trades, cours, habitudes, compétences, finances). Télécharge une sauvegarde avant. Continuer ?')) return;
-    useTradingStore.getState().resetAll();
+    if (!confirm('Cela supprime définitivement TOUTES les données de cet appareil (cours, habitudes, santé, compétences, finances). Télécharge une sauvegarde avant. Continuer ?')) return;
     useLearningStore.getState().resetAll();
     useFinanceStore.getState().resetAll();
     useHabitStore.getState().resetAll();
     useSkillStore.getState().resetAll();
-    useDealsStore.getState().resetAll();
-    useEngineeringStore.getState().resetAll();
     useReadingsStore.getState().resetAll();
     useAccountingStore.getState().resetAll();
     useHealthStore.getState().resetAll();
-    useBusinessStore.getState().resetAll();
-    useNetworkingStore.getState().resetAll();
-    useCareerStore.getState().resetAll();
-    useContentStore.getState().resetAll();
     useFocusStore.getState().resetAll();
-    useFundraisingStore.getState().resetAll();
-    useFreelanceStore.getState().resetAll();
     useCreativeStore.getState().resetAll();
-    useRealEstateStore.getState().resetAll();
     localStorage.removeItem('audax-synergy-history');
     toast('Toutes les données ont été effacées', 'warning');
   };
@@ -267,8 +250,6 @@ export default function SettingsPage() {
                 { value: 'learning', label: 'Études et apprentissage' },
                 { value: 'finance', label: 'Argent et finances' },
                 { value: 'health', label: 'Santé et forme' },
-                { value: 'metiersVentures', label: 'Métier, entreprise et trading' },
-                { value: 'careerDevelopment', label: 'Carrière et réseau' },
                 { value: 'growthOutput', label: 'Progression et création' },
               ]}
             />
@@ -377,7 +358,7 @@ export default function SettingsPage() {
                 Crée une clé personnelle pour donner accès à tes données à un outil externe (par exemple une IA, avec l’une de ces adresses). La clé ne donne accès qu’à ton compte, en lecture seule, et se révoque à tout moment.
               </p>
               <ul className="text-xs text-mute mt-2 space-y-1">
-                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/account-data?key=TA_CLE</code> : tout (trading, finances, santé, habitudes, deals, études, compétences…)</li>
+                <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/account-data?key=TA_CLE</code> : tout (finances, santé, habitudes, études, compétences…)</li>
                 <li><code className="bg-surface px-1 py-0.5 rounded">{window.location.origin}/api/finance-data?key=TA_CLE</code> : finances uniquement</li>
               </ul>
 

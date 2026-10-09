@@ -23,7 +23,7 @@ export const monthBefore = (mk) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
-// Same shape/mechanism as healthStore's/engineeringStore's BADGE_DEFS —
+// Same shape/mechanism as healthStore's BADGE_DEFS —
 // `check` receives the FULL store instance (get()), not just raw data, so
 // it can call any getter (s.getNetWorth(), etc.) same as healthStore's
 // badges already call s.getPRs(). `awardedBadges` persists which ones
@@ -92,7 +92,6 @@ export const BADGE_DEFS = [
   // ── Comptes distincts utilisés — largeur de la comptabilité, pas juste son volume (4) ──
   ...countTierBadges('accounts-used', 'Comptes Utilisés', [5, 10, 20, 30], (s) => new Set(s.journal.flatMap((e) => e.lines.map((l) => l.account))).size),
   // ── Payouts trading reliés à une écriture réelle — voir addEntry (4) ──
-  ...countTierBadges('payouts-linked', 'Payouts Reliés', [1, 5, 10, 25], (s) => s.linkedPayoutsCount || 0),
   // ── Patrimoine (ANCC) — du plus modeste au plus riche (15) ──
   ...moneyTierBadges('net-worth', 'Patrimoine', [1000, 2500, 5000, 10000, 25000, 50000, 100000, 200000, 300000, 500000, 750000, 1000000, 2000000, 5000000, 10000000], (s) => s.getNetWorth().ancc),
   // ── Trésorerie disponible (10) ──
