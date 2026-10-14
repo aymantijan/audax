@@ -9,7 +9,8 @@ import { isAcademic } from '../utils/academic';
 import { Card, Button, ProgressBar, Modal, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
 import { SectionHeader, BigStat, tint } from '../components/learning/design';
-import { tooltipStyle } from '../components/common/chart-theme';
+import { tooltipStyle } from '../components/common/chart-theme';
+import { deleteWithUndo } from '../services/undo';
 
 const PIE_COLORS = ['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#7aa2ff'];
 const fr = (n) => (n ?? 0).toLocaleString('fr-FR');
@@ -186,7 +187,7 @@ export default function Readings({ embedded = false }) {
         <p className="text-sm text-mute">« {removing?.book?.title} » reste dans la bibliothèque ; seule ta progression de lecture est supprimée.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setRemoving(null)}>Annuler</Button>
-          <Button variant="danger" onClick={() => { removeFromReading(removing.id); setRemoving(null); }}>Retirer</Button>
+          <Button variant="danger" onClick={() => { deleteWithUndo(null, () => removeFromReading(removing.id)); setRemoving(null); }}>Retirer</Button>
         </div>
       </Modal>
     </div>

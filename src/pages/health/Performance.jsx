@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, HeartPulse, Gauge, Activity } from 'lucide-react';
+import { Trash2, HeartPulse, Gauge, Activity, Pencil } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { todayKey } from '../../utils/formatters';
@@ -7,6 +7,8 @@ import { Card, Button, Field, Input, Stat, EmptyState } from '../../components/c
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../../components/common/EntityFormModal';
 // Performance & Recovery — the men's-track expansion. Deliberately scoped to
 // lifestyle/performance metrics that are directly measurable from what the
 // user logs (strength PRs, training volume, resting HR, self-reported
@@ -14,6 +16,8 @@ import { tooltipStyle } from '../../components/common/chart-theme';
 // informational fitness tracking, not diagnostic.
 export default function Performance() {
   const { performanceLogs, logPerformance, deletePerformance, getVO2maxEstimate, getPerformanceTrend, getEstimated1RMs, getWorkoutVolumeSeries, getReadiness } = useHealthStore();
+  const editPerformance = useHealthStore((st) => st.editPerformance);
+  const [editing, setEditing] = useState(null); // « rien n'est définitif »: any entry can be corrected
   const today = todayKey();
   const todayLog = performanceLogs.find((p) => p.date === today);
 
@@ -112,12 +116,30 @@ export default function Performance() {
             {[...performanceLogs].sort((a, b) => (a.date < b.date ? 1 : -1)).map((p) => (
               <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span className="flex items-center gap-2"><HeartPulse size={13} className="text-mute" /> {p.date} · FC {p.restingHr ?? '—'} · Vitalité {p.vitality ?? '—'}/10 · Mobilité {p.mobility ?? '—'}/10</span>
-                <button onClick={() => deletePerformance(p.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditing(p)} aria-label={`Modifier ${`performance du ${p.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deletePerformance(p.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </span>
               </li>
             ))}
           </ul>
         </Card>
       )}
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={`Modifier la performance du ${editing?.date || ''}`}
+        initial={editing}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'restingHr', label: 'Fréquence cardiaque au repos', type: 'number' },
+          { name: 'vitality', label: 'Vitalité (1 à 10)', type: 'number', min: 1, max: 10 },
+          { name: 'mobility', label: 'Mobilité (1 à 10)', type: 'number', min: 1, max: 10 },
+          { name: 'notes', label: 'Notes', type: 'textarea' },
+        ]}
+        onSave={(v) => editPerformance(editing.id, { date: v.date, restingHr: v.restingHr, vitality: v.vitality, mobility: v.mobility, notes: v.notes || '' })}
+        onDelete={() => deletePerformance(editing.id)}
+      />
     </div>
   );
 }

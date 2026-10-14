@@ -15,7 +15,8 @@ import { tooltipStyle } from '../components/common/chart-theme';
 import { tint, MOMENT_ICON, catLabel } from '../components/habits/habit-ui';
 import { CheckinModal, HabitFormModal, PauseModal, HabitDetailModal } from '../components/habits/HabitModals';
 import { QuantityControl, QuitCard, orderChains, enableReminders, CoachCard } from '../components/habits/HabitCards';
-import { skillLabel } from '../utils/skill-families';
+import { skillLabel } from '../utils/skill-families';
+import { deleteWithUndo } from '../services/undo';
 
 export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
@@ -282,7 +283,7 @@ export default function Habits() {
                   <div key={h.id} className="flex items-center gap-2 text-sm text-mute">
                     <span className="flex-1 truncate">{h.name}</span>
                     <button className="p-1 hover:text-accent cursor-pointer" onClick={() => unarchiveHabit(h.id)} title="Réactiver"><ArchiveRestore size={13} /></button>
-                    <button className="p-1 hover:text-bad cursor-pointer" onClick={() => setDeleting(h)} title="Supprimer définitivement"><Trash2 size={13} /></button>
+                    <button className="p-1 hover:text-bad cursor-pointer" onClick={() => setDeleting(h)} title="Supprimer"><Trash2 size={13} /></button>
                   </div>
                 ))}
               </div>
@@ -335,11 +336,11 @@ export default function Habits() {
           <Button onClick={() => { logRelapse(relapsing.id, today); setRelapsing(null); }}>Noter</Button>
         </div>
       </Modal>
-      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Supprimer définitivement ?">
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Supprimer cette habitude ?">
         <p className="text-sm text-mute">« {deleting?.name} » et tout son historique seront supprimés. Pour garder l’historique, laisse-la archivée.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
-          <Button variant="danger" onClick={() => { deleteHabit(deleting.id); setDeleting(null); }}>Supprimer</Button>
+          <Button variant="danger" onClick={() => { deleteWithUndo(null, () => deleteHabit(deleting.id)); setDeleting(null); }}>Supprimer</Button>
         </div>
       </Modal>
       <ScheduleEventModal

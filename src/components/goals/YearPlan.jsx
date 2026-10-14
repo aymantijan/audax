@@ -5,6 +5,7 @@ import { HORIZONS, periodOf, periodLabel, objectiveProgress } from '../../utils/
 import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Modal, ProgressBar, EmptyState, IconButton, playSeal } from '../common/ui';
 
+import { deleteWithUndo } from '../../services/undo';
 const childOf = (h) => HORIZONS.find((x) => x.key === h)?.child;
 const labelOf = (h) => HORIZONS.find((x) => x.key === h)?.label;
 
@@ -67,7 +68,7 @@ function ObjectiveRow({ o, all, ctx, depth, onAdd, onEdit }) {
         <div className="flex items-center shrink-0">
           {child && <IconButton label={`Ajouter un objectif ${labelOf(child).toLowerCase()}`} onClick={() => onAdd({ horizon: child, period: childPeriod, parentId: o.id })}><Plus size={14} /></IconButton>}
           <IconButton label="Modifier" onClick={() => onEdit(o)}><Pencil size={13} /></IconButton>
-          <IconButton label="Supprimer" tone="danger" onClick={() => { if (confirm(`Supprimer « ${o.title} »${children.length ? ' et ses sous-objectifs' : ''} ?`)) deleteObjective(o.id); }}><Trash2 size={13} /></IconButton>
+          <IconButton label="Supprimer" tone="danger" onClick={() => { deleteWithUndo(null, () => deleteObjective(o.id)); }}><Trash2 size={13} /></IconButton>
         </div>
       </div>
       {children.length > 0 && (

@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Moon, Zap, Scale, Droplet, Utensils, AlertTriangle, Info } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
 import { useHabitStore } from '../../store/habitStore';
 import { todayKey } from '../../utils/formatters';
-import { Card, Button, Field, Input, Select } from '../../components/common/ui';
+import { Card, Button, Field, Input, Select, DayPicker } from '../../components/common/ui';
 
 const nowHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
@@ -14,9 +14,12 @@ export default function QuickCheckin() {
   const { energyLogs, saveEnergyLog, logNap } = useHabitStore();
   const [open, setOpen] = useState(false);
 
-  const today = todayKey();
+  // The day being filled in: today by default, or a forgotten earlier day.
+  const [today, setDay] = useState(todayKey());
+  const isToday = today === todayKey();
   const latestBodyComp = [...bodyComp].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
   const todayEnergyLog = energyLogs.find((l) => l.date === today);
+  const waterToday = useHealthStore((st) => st.recoveryLogs.find((r) => r.date === today)?.waterMl || 0);
 
   const [weightKg, setWeightKg] = useState(latestBodyComp?.weightKg || '');
   const [weightTime, setWeightTime] = useState(nowHHMM());
@@ -32,11 +35,21 @@ export default function QuickCheckin() {
   const [mealTemplateId, setMealTemplateId] = useState('');
   const [mealTime, setMealTime] = useState(nowHHMM());
 
+  // Switching day shows what is already noted for it.
+  useEffect(() => {
+    const log = energyLogs.find((l) => l.date === today);
+    setSleepHours(log?.sleepData?.sleepHours || 7.5);
+    setSleepQuality(log?.sleepData?.sleepQualityScore || 7);
+    setBedTime(log?.sleepData?.sleepStartTime || '23:00');
+    setWakeTime(log?.sleepData?.wakeTime || '07:00');
+    if (!isToday) { setWeightTime('08:00'); setMealTime('12:30'); }
+  }, [today]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const chrono = useMemo(() => getChronoSummary(today), [getChronoSummary, today, bodyComp, mealTemplateId]);
 
   const saveWeight = () => {
     if (!weightKg) return;
-    logBodyComp({ ...latestBodyComp, weightKg, time: weightTime, sex: latestBodyComp?.sex || gender || 'male' });
+    logBodyComp({ ...(bodyComp.find((b) => b.date === today) || latestBodyComp), weightKg, time: weightTime, date: today, sex: latestBodyComp?.sex || gender || 'male' });
   };
   const saveSleep = () => {
     saveEnergyLog({ date: today, sleepData: { sleepHours: Number(sleepHours), sleepQualityScore: Number(sleepQuality), sleepStartTime: bedTime, wakeTime }, energyStartLevel: todayEnergyLog?.energyStartLevel ?? energy, stressLevel: todayEnergyLog?.stressLevel ?? stress });
@@ -65,6 +78,10 @@ export default function QuickCheckin() {
         </button>
       ) : (
         <div className="space-y-5">
+          <div>
+            <DayPicker value={today} onChange={setDay} label="Jour du check-in" />
+            {!isToday && <p className="text-[11px] text-mute mt-1.5">Tu remplis le {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}.</p>}
+          </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="border border-line rounded-lg p-3">
               <div className="text-xs font-semibold flex items-center gap-1.5 mb-2"><Moon size={13} /> Sommeil</div>
@@ -105,8 +122,10 @@ export default function QuickCheckin() {
                 {[250, 500, 750].map((ml) => (
                   <Button key={ml} variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => logWater(ml, today)}>+{ml}ml</Button>
                 ))}
+                <Button variant="ghost" className="!px-2.5 !py-1 text-xs" disabled={!waterToday} onClick={() => logWater(-250, today)} aria-label="Retirer 250 ml">−250ml</Button>
               </div>
-              {chrono.hydrationGaps.lastIntakeHoursAgo != null && (
+              <div className="text-[11px] text-mute mb-1">Total {isToday ? 'aujourd’hui' : 'ce jour-là'} : {waterToday} ml</div>
+              {isToday && chrono.hydrationGaps.lastIntakeHoursAgo != null && (
                 <div className="text-[11px] text-mute">Dernière eau il y a {chrono.hydrationGaps.lastIntakeHoursAgo}h</div>
               )}
             </div>
@@ -121,8 +140,8 @@ export default function QuickCheckin() {
               </Select>
               <Button onClick={saveMeal} disabled={!mealTemplateId}>Logger</Button>
             </div>
-            {chrono.fastingWindows.currentFastHours != null && (
-              <div className="text-[11px] text-mute mt-1">Aucun repas aujourd'hui — jeûne en cours: {chrono.fastingWindows.currentFastHours}h</div>
+            {isToday && chrono.fastingWindows.currentFastHours != null && (
+              <div className="text-[11px] text-mute mt-1">Aucun repas aujourd’hui — jeûne en cours: {chrono.fastingWindows.currentFastHours}h</div>
             )}
           </div>
 

@@ -13,7 +13,8 @@ import { todayKey } from '../../utils/formatters';
 import { Button, Card, Field, Input, Modal, Select, Textarea } from '../common/ui';
 import { SectionHeader, BigStat, tint } from './design';
 import { courseColor } from './TimetableView';
-import ReviewSession from './ReviewSession';
+import ReviewSession from './ReviewSession';
+import { deleteWithUndo } from '../../services/undo';
 
 const STATE_LABEL = { new: 'Nouvelle', learning: 'Apprentissage', relearning: 'Réapprentissage', review: 'Révision' };
 
@@ -49,7 +50,7 @@ export function DeckModal({ open, onClose, deck, onCreated }) {
         <div className="flex items-center gap-2 pt-1">
           {deck && (confirmDel ? (
             <span className="flex items-center gap-2 text-xs"><span className="text-bad">Supprimer le paquet et ses fiches ?</span>
-              <Button type="button" variant="danger" onClick={() => { deleteDeck(deck.id); onClose(); }}>Oui</Button>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteDeck(deck.id)); onClose(); }}>Oui</Button>
               <Button type="button" variant="ghost" onClick={() => setConfirmDel(false)}>Non</Button></span>
           ) : <Button type="button" variant="ghost" onClick={() => setConfirmDel(true)}>Supprimer</Button>)}
           <div className="ml-auto flex gap-2">
@@ -209,7 +210,7 @@ function DeckDetail({ deck, onBack, onReview }) {
                 {c.state !== 'new' && <span>{c.due <= now ? 'à revoir' : `dans ${fmtInterval(c.due - now)}`}</span>}
                 <button className="p-1 hover:text-accent cursor-pointer" title="Modifier" onClick={() => setCardModal({ card: c })}><Pencil size={12} /></button>
                 <button className="p-1 hover:text-accent cursor-pointer" title="Réapprendre depuis zéro" onClick={() => resetCard(c.id)}><RotateCcw size={12} /></button>
-                <button className="p-1 hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteCard(c.id)}><Trash2 size={12} /></button>
+                <button className="p-1 hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCard(c.id))}><Trash2 size={12} /></button>
               </div>
             </div>
           ))}

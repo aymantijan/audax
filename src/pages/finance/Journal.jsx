@@ -11,7 +11,8 @@ import { ENTRY_TEMPLATES, accountLabel, classOf } from '../../utils/chart-of-acc
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Button, Field, Input, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
-import { toast } from '../../store/uiStore';
+import { toast } from '../../store/uiStore';
+import { deleteWithUndo } from '../../services/undo';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -387,7 +388,7 @@ export default function Journal() {
         <p className="text-sm text-mute">« {deleting?.label} » sera supprimée, ainsi que son effet sur tes soldes, budgets et états.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
-          <Button variant="danger" onClick={() => { deleteEntry(deleting.id); setDeleting(null); }}>Supprimer</Button>
+          <Button variant="danger" onClick={() => { deleteWithUndo(null, () => deleteEntry(deleting.id)); setDeleting(null); }}>Supprimer</Button>
         </div>
       </Modal>
       <Modal open={modal === 'expert'} onClose={() => { setModal(null); setEditing(null); }} title={editing ? `Modifier ${editing.ref}` : 'Saisie experte (multi-lignes)'} wide>

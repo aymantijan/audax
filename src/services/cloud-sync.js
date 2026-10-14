@@ -1,48 +1,20 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { toast } from '../store/uiStore';
 import { useAuthStore } from '../store/authStore';
-import { useFinanceStore } from '../store/financeStore';
-import { useLearningStore } from '../store/learningStore';
-import { useHabitStore } from '../store/habitStore';
 import { useSkillStore } from '../store/skillStore';
-import { useReadingsStore } from '../store/readingsStore';
-import { useAccountingStore } from '../store/accountingStore';
-import { useHealthStore } from '../store/healthStore';
-import { useFocusStore } from '../store/focusStore';
-import { useFlashcardStore } from '../store/flashcardStore';
 import { fillDefaults } from '../utils/fill-defaults.js';
 import { createStoreSync } from '../utils/sync-engine.js';
 import { baseStoreFor, backupOnce } from './sync-base-store';
 import { makeTransport, SYNC_TABLE } from './sync-transport.js';
-import { useCreativeStore } from '../store/creativeStore';
+import { DATA_STORES } from '../store/registry';
 
 const TABLE = SYNC_TABLE;
 
-// Registry of every Zustand store that should sync to the cloud. `auth` maps
-// to the local profile store (name/careerGoal/accounts/activeAccount) — that's
-// the one piece of "auth" data that lives outside Supabase's own session.
-//
-// Removed modules (2026-10-09: trading, deals, business, career, networking,
-// content, freelance, fundraising, realestate, engineering) are simply absent:
-// their app_state rows stay untouched on the account, dormant.
-const REGISTRY = [
-  { name: 'auth', store: useAuthStore },
-  { name: 'finance', store: useFinanceStore },
-  { name: 'learning', store: useLearningStore },
-  { name: 'habits', store: useHabitStore },
-  { name: 'skills', store: useSkillStore },
-  { name: 'readings', store: useReadingsStore },
-  { name: 'accounting', store: useAccountingStore },
-  { name: 'health', store: useHealthStore },
-  // Focus/study sessions (+ the running timer) — was local-only before the
-  // Apprentissage study timer; synced so study time follows the user.
-  { name: 'focus', store: useFocusStore },
-  { name: 'flashcards', store: useFlashcardStore },
-  // Added 2026-09-27 — was local-only. Each device may already hold its own
-  // data for it, so its FIRST sync on a device merges instead of letting
-  // the cloud copy win (see mergeFirstSync).
-  { name: 'creative', store: useCreativeStore, mergeOnFirstSync: true },
-];
+// Registry of every Zustand store that should sync to the cloud — the shared
+// list in store/registry.js. `auth` maps to the local profile store
+// (name/modules/settings), the one piece of "auth" data that lives outside
+// Supabase's own session.
+const REGISTRY = DATA_STORES;
 
 // ── Per-device bookkeeping (localStorage; lost storage = safe defaults) ──
 // OWNER: the account the local data belongs to. Local data survives logout,

@@ -29,7 +29,8 @@ import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tin
 import { courseColor } from '../components/learning/TimetableView';
 import { CourseEndControl, CourseAttendanceSummary, ClassNotesCard } from '../components/learning/Attendance';
 import { ForecastCard } from '../components/learning/Forecast';
-import { skillLabel } from '../utils/skill-families';
+import { skillLabel } from '../utils/skill-families';
+import { deleteWithUndo } from '../services/undo';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
 const parseNum = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
@@ -69,7 +70,7 @@ function EvaluationsCard({ course, settings }) {
                   <span className="text-mute text-xs">/</span>
                   <input className={`${cellCls} !w-14 !px-1.5 text-center`} type="number" min="1" value={e.outOf ?? settings.scale} onChange={(ev) => ed(e.id, { outOf: parseNum(ev.target.value) })} title="Noté sur" />
                 </div>
-                <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteEvaluation(course.id, e.id)}><Trash2 size={13} /></button>
+                <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteEvaluation(course.id, e.id))}><Trash2 size={13} /></button>
               </div>
             );
           })}
@@ -161,7 +162,7 @@ function SlotsCard({ course }) {
                 {SLOT_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
               <input className={`${cellCls} col-span-1`} value={s.room || ''} placeholder="Salle" onChange={(e) => editSlot(course.id, s.id, { room: e.target.value })} />
-              <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => deleteSlot(course.id, s.id)} title="Supprimer"><Trash2 size={13} /></button>
+              <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => deleteWithUndo(null, () => deleteSlot(course.id, s.id))} title="Supprimer"><Trash2 size={13} /></button>
             </div>
           ))}
         </div>
@@ -231,7 +232,7 @@ function ProgrammeCard({ course }) {
                   <span className="text-[11px] text-mute whitespace-nowrap">{done}/{items.length} · ×{ch.coefficient}</span>
                   <span className="text-xs font-semibold w-10 text-right tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : undefined }}>{pct}%</span>
                   <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setChapterModal({ data: ch, isAdd: false })} title="Modifier"><Pencil size={12} /></button>
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => setConfirm({ label: `Supprimer le chapitre « ${ch.title} » et ses tâches ?`, run: () => deleteChapter(ch.id) })} title="Supprimer"><Trash2 size={12} /></button>
+                  <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => setConfirm({ label: `Supprimer le chapitre « ${ch.title} » et ses tâches ?`, run: () => deleteWithUndo(null, () => deleteChapter(ch.id)) })} title="Supprimer"><Trash2 size={12} /></button>
                 </div>
                 {isOpen && (
                   <div className="border-t border-line/50 px-3 py-1.5">
@@ -241,7 +242,7 @@ function ProgrammeCard({ course }) {
                         <span className={`flex-1 min-w-0 ${it.completed ? 'line-through text-mute' : ''}`}>{it.title}</span>
                         <span className="text-[10px] text-mute">×{it.coefficient}</span>
                         <button className="p-1 text-mute hover:text-accent cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => setItemModal({ chapterId: ch.id, data: it, isAdd: false })}><Pencil size={11} /></button>
-                        <button className="p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteItem(ch.id, it.id)}><Trash2 size={11} /></button>
+                        <button className="p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteWithUndo(null, () => deleteItem(ch.id, it.id))}><Trash2 size={11} /></button>
                       </div>
                     ))}
                     <button onClick={() => setItemModal({ chapterId: ch.id, data: {}, isAdd: true })} className="my-1.5 text-xs text-accent cursor-pointer flex items-center gap-1"><Plus size={11} /> Tâche</button>
@@ -515,10 +516,10 @@ export default function CoursePage() {
       </Modal>
 
       <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Supprimer ce cours ?">
-        <p className="text-sm text-mute">« {course.name} », ses notes, chapitres et créneaux seront supprimés définitivement.</p>
+        <p className="text-sm text-mute">« {course.name} », ses notes, chapitres et créneaux seront supprimés. Tu pourras annuler juste après, ou les retrouver 30 jours dans la corbeille (Paramètres).</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleteOpen(false)}>Annuler</Button>
-          <Button variant="danger" onClick={() => { deleteCourse(course.id); navigate(backTo); }}>Supprimer</Button>
+          <Button variant="danger" onClick={() => { deleteWithUndo(null, () => deleteCourse(course.id)); navigate(backTo); }}>Supprimer</Button>
         </div>
       </Modal>
 

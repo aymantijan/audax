@@ -72,6 +72,27 @@ export const useFocusStore = create(
         get().checkBadges();
         return { ok: true, id: session.id };
       },
+      // Corrects a session (day, length, domain, note). XP follows: the old
+      // amount is taken back and the new one given, nothing more.
+      editSession: (id, patch) => {
+        const old = get().sessions.find((s) => s.id === id);
+        if (!old) return { ok: false, error: 'Session introuvable.' };
+        const minutes = patch.durationMinutes != null ? Math.round(Number(patch.durationMinutes)) || 0 : old.durationMinutes;
+        if (minutes <= 0) return { ok: false, error: 'La durée doit être positive.' };
+        const next = { ...old, ...patch, durationMinutes: minutes, updatedAt: Date.now() };
+        set({ sessions: get().sessions.map((s) => (s.id === id ? next : s)) });
+        const oldSkill = FOCUS_DOMAIN_SKILL[old.domain] || 'deep-focus-lv1';
+        const newSkill = FOCUS_DOMAIN_SKILL[next.domain] || 'deep-focus-lv1';
+        const oldXp = XP_PER_SESSION(old.durationMinutes);
+        const newXp = XP_PER_SESSION(minutes);
+        const skills = useSkillStore.getState();
+        if (oldSkill !== newSkill) { skills.removeXP(oldSkill, oldXp, 'session modifiée'); skills.awardXP(newSkill, newXp, 'session modifiée'); }
+        else if (newXp < oldXp) skills.removeXP(oldSkill, oldXp - newXp, 'session modifiée');
+        else if (newXp > oldXp) skills.awardXP(oldSkill, newXp - oldXp, 'session modifiée');
+        toast('Session modifiée', 'success');
+        return { ok: true };
+      },
+
       deleteSession: (id) => {
         const session = get().sessions.find((s) => s.id === id);
         set({ sessions: get().sessions.filter((s) => s.id !== id) });

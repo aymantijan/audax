@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle, Pencil } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useAuthStore } from '../../store/authStore';
 import { FOOD_DB, getServingOptions, estimateMacros } from '../../utils/nutrition-db';
@@ -7,10 +7,12 @@ import { getFoodMicros } from '../../utils/food-micronutrients';
 import { todayKey } from '../../utils/formatters';
 import { MICRONUTRIENT_LABELS, getMicronutrientRDA, convertMicroValue } from '../../utils/micronutrients';
 import { Card, Button, Field, Input, Select, ProgressBar, EmptyState, Badge, Wizard } from '../../components/common/ui';
+import EntityFormModal from '../../components/common/EntityFormModal';
 import BarcodeScanner from '../../components/health/BarcodeScanner';
 import IronTracking from '../../components/health/IronTracking';
 import { NUTRITION_STEPS } from './nutrition-wizard-steps';
 
+import { deleteWithUndo } from '../../services/undo';
 // Scales a per-100g micros map to an actual logged portion.
 function scaleMicros(micros, grams) {
   if (!micros) return null;
@@ -73,6 +75,11 @@ export default function NutritionTracker({ pendingPrompt }) {
   const [microsFor, setMicrosFor] = useState(null); // { mealSlot, itemIndex } | null — which item's micro breakdown is expanded
 
   const { entries, totals, quality } = getTodayNutrition();
+  const editMeal = useHealthStore((st) => st.editMeal);
+  const [editingMeal, setEditingMeal] = useState(null);
+  // The list follows the day chosen in the form: a forgotten day can be checked and corrected.
+  const isLogToday = logDate === todayKey();
+  const dayEntries = isLogToday ? entries : nutritionLogs.filter((n) => n.date === logDate);
   const activePlan = getActiveNutritionPlan();
   const planDirty = activePlan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > activePlan.generatedAt;
   const microRDA = useMemo(() => getMicronutrientRDA(gender, healthProfile.lifeStage, !!healthProfile.breastfeeding), [gender, healthProfile.lifeStage, healthProfile.breastfeeding]);
@@ -126,7 +133,6 @@ export default function NutritionTracker({ pendingPrompt }) {
     setName('');
     setAmount(100);
     setUnit('g');
-    setLogDate(todayKey());
   };
 
   const saveTemplate = () => {
@@ -198,10 +204,10 @@ export default function NutritionTracker({ pendingPrompt }) {
               {FOOD_DB.map((f) => <option key={f.name} value={f.name} />)}
             </datalist>
           </Field>
-          <Field label="Amount">
+          <Field label="Quantité">
             <Input type="number" min="0.1" step="any" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-24" />
           </Field>
-          <Field label="Unit">
+          <Field label="Unité">
             <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={servingOptions.map((o) => ({ value: o.label, label: o.label }))} className="w-32" />
           </Field>
           <Field label="Date" hint="Antidater un repas oublié">
@@ -289,7 +295,7 @@ export default function NutritionTracker({ pendingPrompt }) {
           <div className="flex items-center gap-2">
             <Badge>{activePlan.targetKcal} kcal/j</Badge>
             <button title="Régénérer" onClick={() => setWizardOpen(true)} className="text-mute hover:text-accent cursor-pointer"><RefreshCw size={13} /></button>
-            <button title="Supprimer le plan" onClick={() => deleteNutritionPlan(activePlan.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+            <button title="Supprimer le plan" onClick={() => deleteWithUndo(null, () => deleteNutritionPlan(activePlan.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
           </div>
         }>
           <div className="space-y-2">
@@ -405,21 +411,22 @@ export default function NutritionTracker({ pendingPrompt }) {
         </div>
       </Card>
 
-      <Card title="Enregistré aujourd’hui">
-        {entries.length ? (
+      <Card title={isLogToday ? 'Enregistré aujourd’hui' : `Enregistré le ${new Date(logDate + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`}>
+        {dayEntries.length ? (
           <ul className="space-y-1.5">
-            {entries.map((en) => (
+            {dayEntries.map((en) => (
               <li key={en.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{en.name} <span className="text-mute text-xs">({en.amount ?? en.grams}{en.unit && en.unit !== 'g' ? ` ${en.unit}${en.amount > 1 ? 's' : ''}` : 'g'}{en.unit && en.unit !== 'g' ? ` · ${en.grams}g` : ''})</span></span>
                 <span className="flex items-center gap-3">
-                  <span className="text-mute text-xs">{en.kcal} kcal · {en.protein}g P {!en.matched && '· unrecognized'}</span>
-                  <button onClick={() => deleteMeal(en.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <span className="text-mute text-xs">{en.kcal} kcal · {en.protein}g P {!en.matched && '· non reconnu'}</span>
+                  <button onClick={() => setEditingMeal(en)} aria-label={`Modifier ${en.name}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteMeal(en.id))} aria-label={`Supprimer ${en.name}`} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <EmptyState>Aucun repas enregistré aujourd’hui.</EmptyState>
+          <EmptyState>{isLogToday ? 'Aucun repas enregistré aujourd’hui.' : 'Aucun repas enregistré ce jour-là.'}</EmptyState>
         )}
         {entries.length > 0 && (
           <div className="flex gap-2 mt-3">
@@ -437,13 +444,26 @@ export default function NutritionTracker({ pendingPrompt }) {
                 <span>{t.name} <span className="text-mute text-xs">({t.items.length} items)</span></span>
                 <span className="flex items-center gap-3">
                   <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id, logDate)}>Ajouter</Button>
-                  <button onClick={() => deleteMealTemplate(t.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteMealTemplate(t.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}
           </ul>
         </Card>
       )}
+      <EntityFormModal
+        open={!!editingMeal}
+        onClose={() => setEditingMeal(null)}
+        title={`Modifier « ${editingMeal?.name || ''} »`}
+        initial={editingMeal}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'time', label: 'Heure', type: 'time' },
+          { name: 'amount', label: `Quantité (${editingMeal?.unit || 'g'})`, type: 'number', step: 'any', min: 0.1, hint: 'Les calories et les protéines suivent la quantité.' },
+        ]}
+        onSave={(v) => editMeal(editingMeal.id, { date: v.date, time: v.time, amount: Number(v.amount) })}
+        onDelete={() => deleteMeal(editingMeal.id)}
+      />
     </div>
   );
 }

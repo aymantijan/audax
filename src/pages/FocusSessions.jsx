@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Timer, Plus, Trash2 } from 'lucide-react';
+import { Timer, Plus, Trash2, Pencil } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { useFocusStore } from '../store/focusStore';
 import { FOCUS_DOMAINS } from '../utils/constants';
@@ -11,6 +11,8 @@ import { StudyTimerCard, domainLabel } from '../components/learning/StudyTimer';
 import { useLearningStore } from '../store/learningStore';
 import { tooltipStyle } from '../components/common/chart-theme';
 
+import { deleteWithUndo } from '../services/undo';
+import EntityFormModal from '../components/common/EntityFormModal';
 const DOMAIN_COLOR = {
   Trading: 'var(--success)', PE: 'var(--accent-secondary)', Engineering: 'var(--warning)', Business: 'var(--accent-secondary)',
   Learning: '#66ccff', Health: 'var(--error)', Networking: '#0a66c2', Career: 'var(--accent-primary)', Content: '#ff9f43', Projects: 'var(--accent-primary)', General: 'var(--text-secondary)',
@@ -20,6 +22,8 @@ const blank = () => ({ domain: 'General', durationMinutes: '', date: todayKey(),
 
 export default function FocusSessions() {
   const { sessions, logSession, deleteSession, getBadges } = useFocusStore();
+  const editSession = useFocusStore((st) => st.editSession);
+  const [editingSession, setEditingSession] = useState(null);
   const courses = useLearningStore((s) => s.courses);
   const courseName = (id) => courses.find((c) => c.id === id)?.name;
   const [modal, setModal] = useState(false);
@@ -89,7 +93,8 @@ export default function FocusSessions() {
                 <span className="font-medium">{s.durationMinutes} min</span>
                 <span className="text-mute text-xs">{new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                 {(courseName(s.courseId) || s.notes) && <span className="text-mute text-xs flex-1 truncate">{[courseName(s.courseId), s.notes].filter(Boolean).join(' · ')}</span>}
-                <button className="text-mute hover:text-bad cursor-pointer ml-auto" onClick={() => deleteSession(s.id)}><Trash2 size={13} /></button>
+                <button className="text-mute hover:text-ink cursor-pointer ml-auto" aria-label="Modifier la session" onClick={() => setEditingSession(s)}><Pencil size={13} /></button>
+                <button className="text-mute hover:text-bad cursor-pointer" aria-label="Supprimer la session" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={13} /></button>
               </li>
             ))}
           </ul>
@@ -114,6 +119,20 @@ export default function FocusSessions() {
           </div>
         </form>
       </Modal>
+      <EntityFormModal
+        open={!!editingSession}
+        onClose={() => setEditingSession(null)}
+        title="Modifier la session"
+        initial={editingSession}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'durationMinutes', label: 'Durée (min)', type: 'number', min: 1 },
+          { name: 'domain', label: 'Domaine', type: 'select', options: [...new Set([...FOCUS_DOMAINS, editingSession?.domain].filter(Boolean))].map((d) => ({ value: d, label: domainLabel(d) })) },
+          { name: 'notes', label: 'Note', type: 'textarea' },
+        ]}
+        onSave={(v) => { const r = editSession(editingSession.id, { date: v.date, durationMinutes: v.durationMinutes, notes: v.notes || '', domain: v.domain }); if (!r.ok) toast(r.error, 'error'); }}
+        onDelete={() => deleteSession(editingSession.id)}
+      />
     </div>
   );
 }

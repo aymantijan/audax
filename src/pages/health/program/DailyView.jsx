@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Clock, MapPin, ChevronLeft, ChevronRight, AlertTriangle, Play, Timer, CheckCircle2, Pencil, Moon } from 'lucide-react';
-import { Button, Badge } from '../../../components/common/ui';
+import { useState, useMemo, useEffect } from 'react';
+import { Clock, MapPin, ChevronLeft, ChevronRight, AlertTriangle, Play, Timer, CheckCircle2, Pencil, Moon, RotateCcw } from 'lucide-react';
+import { Button, Badge, Modal } from '../../../components/common/ui';
+import { useHealthStore } from '../../../store/healthStore';
+import { toast } from '../../../store/uiStore';
 import { useProgramStore } from '../../../store/programStore';
 import { getCardioConfig } from '../../../utils/exercise-library';
 import { typeMeta, tint, TypeBadge } from './shared/design';
@@ -19,6 +21,37 @@ export default function DailyView() {
   const [selectedDate, setSelectedDate] = useState(localToday());
   const [loggingEvent, setLoggingEvent] = useState(null);
   const [overrideEvent, setOverrideEvent] = useState(null);
+  const [resetting, setResetting] = useState(null); // event whose status is being cleared
+  const [busy, setBusy] = useState(false);
+
+  // Going back weeks: load that week's statuses so a past session shows the truth.
+  useEffect(() => {
+    if (activeProgram) store.ensureWeekLoaded(activeProgram.id, selectedDate);
+  }, [activeProgram?.id, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // « Rien n'est définitif »: a cancelled or moved session can be put back,
+  // and a logged one (done, partial, skipped) can go back to « à faire ».
+  const restore = async (evt) => {
+    setBusy(true);
+    try {
+      await store.undoOverride(activeProgram.id, evt.override);
+      toast(`${evt.session.label} : remise comme prévu.`, 'success');
+    } catch (err) {
+      toast(`Impossible pour l’instant : ${err.message}`, 'error');
+    } finally { setBusy(false); }
+  };
+  const clearStatus = async () => {
+    const evt = resetting;
+    setBusy(true);
+    try {
+      await store.removeSessionLog(evt.logged.id, selectedDate);
+      useHealthStore.getState().deleteSession(evt.logged.id); // its copy in the workout history
+      toast(`${evt.session.label} : de nouveau « à faire ».`, 'success');
+      setResetting(null);
+    } catch (err) {
+      toast(`Impossible pour l’instant : ${err.message}`, 'error');
+    } finally { setBusy(false); }
+  };
 
   const goDay = (offset) => {
     const d = new Date(selectedDate + 'T12:00:00');
@@ -121,9 +154,17 @@ export default function DailyView() {
                             </Button>
                           </>
                         )}
-                        {(done || partial) && (
-                          <Button variant="secondary" onClick={() => setLoggingEvent(evt)} className="!px-2.5 !py-1.5 text-xs">
-                            <span className="flex items-center gap-1">{done ? <CheckCircle2 size={12} className="text-good" /> : <Pencil size={12} />} Voir / éditer</span>
+                        {(done || partial || skipped) && !cancelled && (
+                          <>
+                            <Button variant="secondary" onClick={() => setLoggingEvent(evt)} className="!px-2.5 !py-1.5 text-xs">
+                              <span className="flex items-center gap-1">{done ? <CheckCircle2 size={12} className="text-good" /> : <Pencil size={12} />} {done ? 'Voir / modifier' : 'Modifier'}</span>
+                            </Button>
+                            <Button variant="ghost" onClick={() => setResetting(evt)} className="!px-2.5 !py-1.5 text-xs">Annuler le statut</Button>
+                          </>
+                        )}
+                        {(cancelled || moved) && override && (
+                          <Button variant="secondary" disabled={busy} onClick={() => restore(evt)} className="!px-2.5 !py-1.5 text-xs">
+                            <span className="flex items-center gap-1"><RotateCcw size={12} /> Rétablir</span>
                           </Button>
                         )}
                       </div>
@@ -138,6 +179,13 @@ export default function DailyView() {
 
       {loggingEvent && <SessionLogger event={loggingEvent} date={selectedDate} onClose={() => setLoggingEvent(null)} />}
       {overrideEvent && <OverrideModal event={overrideEvent} date={selectedDate} onClose={() => setOverrideEvent(null)} />}
+      <Modal open={!!resetting} onClose={() => setResetting(null)} title="Remettre « à faire » ?">
+        <p className="text-sm text-mute">« {resetting?.session.label} » redevient une séance à faire. Ce que tu avais noté pour cette séance (séries, durée, ressenti) sera effacé.</p>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="secondary" onClick={() => setResetting(null)}>Garder</Button>
+          <Button variant="danger" disabled={busy} onClick={clearStatus}>Remettre à faire</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

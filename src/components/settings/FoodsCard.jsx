@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Pencil } from 'lucide-react';
 import { FOOD_DB, getServingOptions, lookupFood } from '../../utils/nutrition-db';
 import { MOROCCO_FOOD_COST_TIERS } from '../../utils/morocco-food-budget';
 import { useHealthStore } from '../../store/healthStore';
 import { toast } from '../../store/uiStore';
 import { Card, Button, Field, Input, Select } from '../common/ui';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../common/EntityFormModal';
 const FOOD_CATEGORIES = [
   { value: 'protein', label: 'Protéines' }, { value: 'carb', label: 'Glucides' }, { value: 'fat', label: 'Lipides' },
   { value: 'veg', label: 'Légumes' }, { value: 'fruit', label: 'Fruits' }, { value: 'dairy', label: 'Laitier' },
@@ -25,6 +27,8 @@ function getDiscreteUnit(foodName) {
 
 // Your own foods, prices and corrections: used by the nutrition plan generator.
 export default function FoodsCard() {
+  const editCustomFood = useHealthStore((st) => st.editCustomFood);
+  const [editingFood, setEditingFood] = useState(null);
   const { customFoods, addCustomFood, deleteCustomFood, foodPrices, setFoodPrice, deleteFoodPrice, foodOverrides, setFoodOverride, deleteFoodOverride } = useHealthStore();
   const [newFood, setNewFood] = useState({ name: '', category: 'protein', protein: '', carbs: '', fat: '', kcal: '', pricePerGram: '', isUnit: false, unitLabel: '', unitGrams: '', unitPrice: '' });
   // priceMode: 'weight' (Dh/100g, always available) or 'unit' — every food
@@ -161,7 +165,10 @@ export default function FoodsCard() {
             {customFoods.map((f) => (
               <li key={f.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${f.servings?.[0] ? `${(f.pricePerGram * f.servings[0].grams).toFixed(2)}Dh/${f.servings[0].label}` : `${(f.pricePerGram * 100).toFixed(1)}Dh/100g`}` : ''})</span></span>
-                <button onClick={() => deleteCustomFood(f.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditingFood(f)} aria-label={`Modifier ${f.name}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteCustomFood(f.id))} aria-label={`Supprimer ${f.name}`} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </span>
               </li>
             ))}
           </ul>
@@ -212,7 +219,7 @@ export default function FoodsCard() {
             return (
               <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{name} <span className="text-mute text-xs">{unit ? `${(pricePerGram * unit.grams).toFixed(2)}Dh/${unit.label}` : `${(pricePerGram * 100).toFixed(1)}Dh/100g`}</span></span>
-                <button onClick={() => deleteFoodPrice(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <button onClick={() => deleteWithUndo(null, () => deleteFoodPrice(name))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>
             );
           })}
@@ -265,11 +272,27 @@ export default function FoodsCard() {
                   ].filter(Boolean).join(' · ')})
                 </span>
               </span>
-              <button onClick={() => deleteFoodOverride(name)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+              <button onClick={() => deleteWithUndo(null, () => deleteFoodOverride(name))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
             </li>
           ))}
         </ul>
       )}
+      <EntityFormModal
+        open={!!editingFood}
+        onClose={() => setEditingFood(null)}
+        title={`Modifier « ${editingFood?.name || ''} »`}
+        initial={editingFood}
+        fields={[
+          { name: 'name', label: 'Nom', type: 'text' },
+          { name: 'category', label: 'Catégorie', type: 'select', options: FOOD_CATEGORIES },
+          { name: 'kcal', label: 'Calories (pour 100 g)', type: 'number', step: 'any' },
+          { name: 'protein', label: 'Protéines (g pour 100 g)', type: 'number', step: 'any' },
+          { name: 'carbs', label: 'Glucides (g pour 100 g)', type: 'number', step: 'any' },
+          { name: 'fat', label: 'Lipides (g pour 100 g)', type: 'number', step: 'any' },
+        ]}
+        onSave={(v) => editCustomFood(editingFood.id, { name: (v.name || editingFood.name).trim(), category: v.category, kcal: v.kcal, protein: v.protein, carbs: v.carbs, fat: v.fat })}
+        onDelete={() => deleteCustomFood(editingFood.id)}
+      />
     </Card>
   );
 }

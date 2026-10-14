@@ -62,6 +62,60 @@ export const editorSlice = (set, get) => ({
     }
   },
 
+  // An archived programme comes back as the active one (« rien n'est définitif »).
+  reactivateProgram: async (id) => {
+    if (get().activeProgram) throw new Error('Archive d’abord le programme en cours : un seul programme peut être actif.');
+    set({ loading: true, error: null });
+    try {
+      const program = await api.updateProgram(id, { status: 'active', archived_at: null });
+      set({ activeProgram: program, archivedPrograms: get().archivedPrograms.filter((p) => p.id !== id), loading: false });
+      await get().loadProgramDetails(id);
+      return program;
+    } catch (err) {
+      set({ loading: false });
+      throw err;
+    }
+  },
+
+  // A new cycle from an existing programme: same phases, sessions, exercises
+  // and week, as a draft whose first phase starts on `startDate` (phase lengths
+  // and gaps kept). Logs, goals and history are not copied.
+  duplicateProgram: async (id, startDate) => {
+    if (get().draftProgram) throw new Error('Tu as déjà un brouillon : termine-le ou supprime-le d’abord.');
+    const source = [get().activeProgram, ...get().archivedPrograms].find((p) => p?.id === id);
+    const phases = [...(await api.fetchPhases(id))].sort((a, b) => a.phase_order - b.phase_order);
+    if (!phases.length) throw new Error('Ce programme n’a aucune phase à copier.');
+    const day = 86400000;
+    const shift = new Date(startDate + 'T12:00:00') - new Date(phases[0].start_date + 'T12:00:00');
+    const moved = (d) => new Date(new Date(d + 'T12:00:00').getTime() + Math.round(shift / day) * day).toISOString().slice(0, 10);
+    set({ loading: true, error: null });
+    try {
+      const program = await api.createProgram(`${source?.name || 'Programme'} (nouveau cycle)`);
+      for (const ph of phases) {
+        const newPhase = await api.createPhase(program.id, { name: ph.name, phase_order: ph.phase_order, start_date: moved(ph.start_date), end_date: moved(ph.end_date), objective: ph.objective });
+        const sessionIds = {};
+        for (const sess of await api.fetchSessions(ph.id)) {
+          const copy = await api.createSession(newPhase.id, { session_key: sess.session_key, label: sess.label, type: sess.type, estimated_duration_min: sess.estimated_duration_min, notes: sess.notes, config: sess.config });
+          sessionIds[sess.id] = copy.id;
+          for (const ex of await api.fetchExercises(sess.id)) {
+            const { id: _id, session_id: _s, user_id: _u, created_at: _c, updated_at: _up, ...fields } = ex;
+            await api.upsertExercise(copy.id, fields);
+          }
+        }
+        for (const plan of await api.fetchWeeklyStructure(ph.id)) {
+          const slots = Object.fromEntries(Object.entries(plan.session_slots || {}).filter(([k]) => sessionIds[k]).map(([k, v]) => [sessionIds[k], v]));
+          await api.upsertDayPlan(newPhase.id, plan.day_of_week, { ...plan, session_ids: (plan.session_ids || []).map((x) => sessionIds[x]).filter(Boolean), session_slots: slots });
+        }
+      }
+      set({ draftProgram: program, loading: false });
+      await get().loadProgramDetails(program.id);
+      return program;
+    } catch (err) {
+      set({ loading: false });
+      throw err;
+    }
+  },
+
   archiveProgram: async (id) => {
     set({ loading: true, error: null });
     try {

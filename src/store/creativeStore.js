@@ -110,6 +110,12 @@ export const useCreativeStore = create(
         get().checkBadges();
         return { ok: true, id: showcase.id };
       },
+      editShowcase: (id, patch) => {
+        if (patch.title != null && !patch.title.trim()) return { ok: false, error: 'Le titre est requis.' };
+        set({ showcases: get().showcases.map((s) => (s.id === id ? { ...s, ...patch, title: (patch.title ?? s.title).trim(), updatedAt: Date.now() } : s)) });
+        return { ok: true };
+      },
+
       deleteShowcase: (id) => {
         const showcase = get().showcases.find((s) => s.id === id);
         set({ showcases: get().showcases.filter((s) => s.id !== id) });

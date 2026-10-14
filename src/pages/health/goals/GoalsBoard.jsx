@@ -12,6 +12,7 @@ import { useHabitStore } from '../../../store/habitStore';
 import { GOAL_METRICS, METRIC_CATEGORIES, metricInfo, buildMetricSource, evaluateMetric } from '../../../utils/metric-engine';
 import { EXERCISE_LIBRARY } from '../../../utils/exercise-library';
 
+import { deleteWithUndo } from '../../../services/undo';
 const PRIORITIES = [
   { value: 'low', label: 'Basse', color: 'var(--text-secondary)' },
   { value: 'medium', label: 'Moyenne', color: 'var(--accent-primary)' },
@@ -288,7 +289,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
         <ul className="grid gap-3 md:grid-cols-2">
           {active.map((g) => (
             <GoalCard key={g.id} g={g} phases={phases} showProgram={!programId}
-              onEdit={() => setEditingId(g.id)} onDelete={() => deleteGoal(g.id)} onLog={(v) => logGoalValue(g.id, v)} />
+              onEdit={() => setEditingId(g.id)} onDelete={() => deleteWithUndo(null, () => deleteGoal(g.id))} onLog={(v) => logGoalValue(g.id, v)} />
           ))}
         </ul>
       ) : (
@@ -308,7 +309,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
                   <Check size={14} className="text-good" />
                   <span className="flex-1 text-ink">{g.label}</span>
                   <span className="text-xs text-mute">{g.achievedAt ? new Date(g.achievedAt).toLocaleDateString('fr-FR') : ''}</span>
-                  <button onClick={() => deleteGoal(g.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteGoal(g.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </li>
               ))}
             </ul>

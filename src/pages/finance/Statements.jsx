@@ -6,7 +6,8 @@ import { CORRECTION_TYPES, LIQUIDITY_TIERS, ACCOUNT_MAP, assetClassLabel } from 
 import { fmtMAD, fmtPct, baseCurrencyShort } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
-import { tooltipStyle } from '../../components/common/chart-theme';
+import { tooltipStyle } from '../../components/common/chart-theme';
+import { deleteWithUndo } from '../../services/undo';
 
 
 const PERIODS = [
@@ -195,7 +196,7 @@ export default function Statements() {
                     <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingCorr(cr); setCorrForm({ ...cr, account: cr.account || '' }); setCorrModal(true); }} title="Modifier">
                       <Pencil size={13} />
                     </button>
-                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer "${cr.label}" ?`)) deleteCorrection(cr.id); }} title="Supprimer">
+                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteCorrection(cr.id)); }} title="Supprimer">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -236,7 +237,7 @@ export default function Statements() {
                 <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingAsset(as); setAssetForm({ ...blankAsset(), ...as, quantity: as.quantity ?? '', unit: as.unit ?? '', unitCost: as.unitCost ?? '', totalCost: as.totalCost ?? '', marketIdentifier: as.marketIdentifier ?? '', currentEstimate: as.currentEstimate ?? '', acquisitionDate: as.acquisitionDate ?? '', valuationSource: as.valuationSource ?? '' }); setAssetModal(true); }} title="Modifier">
                   <Pencil size={13} />
                 </button>
-                <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer l'avoir "${as.label}" ?`)) deleteAsset(as.id); }} title="Supprimer">
+                <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteAsset(as.id)); }} title="Supprimer">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -317,7 +318,7 @@ export default function Statements() {
           </Field>
           <div className="flex justify-between gap-3 pt-2 border-t border-line">
             {editingCorr ? (
-              <Button type="button" variant="danger" onClick={() => { deleteCorrection(editingCorr.id); setCorrModal(false); setEditingCorr(null); }}>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteCorrection(editingCorr.id)); setCorrModal(false); setEditingCorr(null); }}>
                 <span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span>
               </Button>
             ) : <span />}
@@ -369,7 +370,7 @@ export default function Statements() {
           )}
           <div className="flex justify-between gap-3 pt-2 border-t border-line">
             {editingAsset ? (
-              <Button type="button" variant="danger" onClick={() => { deleteAsset(editingAsset.id); setAssetModal(false); setEditingAsset(null); }}>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteAsset(editingAsset.id)); setAssetModal(false); setEditingAsset(null); }}>
                 <span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span>
               </Button>
             ) : <span />}

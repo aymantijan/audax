@@ -11,6 +11,7 @@ import { toast } from '../../store/uiStore';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 
+import { deleteWithUndo } from '../../services/undo';
 const blankSubForm = (parentCode) => ({ parentCode, name: '', bank: '', currency: '' });
 
 // Trois méthodes pour la base mensuelle des comptes non couverts par une
@@ -70,8 +71,7 @@ export default function TreasuryPure() {
   };
 
   const removeSub = (a) => {
-    if (!confirm(`Supprimer le compte "${a.name}" ?`)) return;
-    const res = deleteTreasuryAccount(a.id);
+    const res = deleteWithUndo(null, () => deleteTreasuryAccount(a.id));
     if (!res.ok) toast(res.error, 'error');
   };
 

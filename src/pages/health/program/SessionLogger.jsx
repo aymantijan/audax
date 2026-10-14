@@ -208,6 +208,8 @@ export default function SessionLogger({ event, date, onClose }) {
       try {
         const health = useHealthStore.getState();
         const logId = savedLog?.id || logged?.id;
+        // Changed to « passée » after being done: its workout copy goes too.
+        if (logId && status === 'skipped' && isEdit) health.deleteSession(logId);
         if (logId && status !== 'skipped') {
           const isDrillSession = session.type === 'agility' || session.type === 'mobility';
           const hasStrength = session.type === 'strength' && exerciseRows.some(

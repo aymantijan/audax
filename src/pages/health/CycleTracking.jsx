@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Plus, X, Sparkles, Dumbbell } from 'lucide-react';
+import { Trash2, Plus, X, Sparkles, Dumbbell, Pencil } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
@@ -8,6 +8,8 @@ import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, Badge, EmptyState } from '../../components/common/ui';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../../components/common/EntityFormModal';
 // Stored values stay in English (saved entries); the labels are French.
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
 // Shown on top of the usual list at perimenopause and menopause.
@@ -41,6 +43,8 @@ function phaseForDate(dateStr, cycleStartDates, cycleLen) {
 
 export default function CycleTracking() {
   const { cycleLogs, logCycleStart, deleteCycleLog, markPeriodEnd, getCyclePhase, getCyclePhaseCoaching, getCycleHealthFlag, customCycleSymptoms, addCustomSymptom, removeCustomSymptom, workouts, performanceLogs, healthProfile, setHealthProfile, isCyclePhaseHormonallyReliable, getPregnancyInfo, getPostpartumInfo } = useHealthStore();
+  const editCycleLog = useHealthStore((st) => st.editCycleLog);
+  const [editing, setEditing] = useState(null); // « rien n'est définitif »: any entry can be corrected
   const lifeStage = healthProfile.lifeStage || 'none';
   const pregnancyInfo = getPregnancyInfo();
   const postpartumInfo = getPostpartumInfo();
@@ -419,7 +423,10 @@ export default function CycleTracking() {
                 <span>
                   {c.date}{c.endDate ? ` → ${c.endDate}` : ''} · {FLOW_LABEL[c.flow] || c.flow}{c.symptoms.length ? ` · ${c.symptoms.map(symptomLabel).join(', ')}` : ''}
                 </span>
-                <button onClick={() => deleteCycleLog(c.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditing(c)} aria-label={`Modifier ${`cycle du ${c.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCycleLog(c.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </span>
               </li>
             ))}
           </ul>
@@ -429,6 +436,20 @@ export default function CycleTracking() {
       </Card>
         </>
       )}
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={'Modifier ce cycle'}
+        initial={editing}
+        fields={[
+          { name: 'date', label: 'Début des règles', type: 'date', max: todayKey() },
+          { name: 'endDate', label: 'Fin des règles (facultatif)', type: 'date', max: todayKey() },
+          { name: 'flow', label: 'Flux', type: 'select', options: Object.entries(FLOW_LABEL).map(([value, label]) => ({ value, label })) },
+          { name: 'notes', label: 'Notes', type: 'textarea' },
+        ]}
+        onSave={(v) => editCycleLog(editing.id, { date: v.date, endDate: v.endDate || null, flow: v.flow, notes: v.notes || '' })}
+        onDelete={() => deleteCycleLog(editing.id)}
+      />
     </div>
   );
 }

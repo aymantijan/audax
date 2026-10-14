@@ -35,6 +35,11 @@ export const useHealthStore = create(
         toast('Aliment ajouté à tes aliments', 'success');
         return entry;
       },
+      editCustomFood: (id, patch) => {
+        const num = (v) => (v === '' || v == null ? null : Number(v));
+        set({ customFoods: get().customFoods.map((f) => (f.id === id ? { ...f, ...patch, protein: num(patch.protein ?? f.protein), carbs: num(patch.carbs ?? f.carbs), fat: num(patch.fat ?? f.fat), kcal: num(patch.kcal ?? f.kcal), updatedAt: Date.now() } : f)) });
+        toast('Aliment modifié', 'success');
+      },
       deleteCustomFood: (id) => set({ customFoods: get().customFoods.filter((f) => f.id !== id) }),
       // { [foodName]: pricePerGram } — the user's own real local price for
       // ANY food (curated Morocco list, FOOD_DB, or a custom food), in

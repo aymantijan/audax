@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Trash2, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Key, Copy, History } from 'lucide-react';
+import { Download, Upload, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Key, Copy, History } from 'lucide-react';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { listBackups } from '../services/sync-base-store';
@@ -8,21 +8,13 @@ import { getApiKeyStatus, createOrRotateApiKey, revokeApiKey } from '../services
 import { isGoogleCalendarConfigured, connectGoogleCalendar, disconnectGoogleCalendar } from '../services/google-calendar';
 import { useGoogleCalendarStatus } from '../hooks/useGoogleCalendarStatus';
 import { useAuthStore } from '../store/authStore';
-import { useLearningStore } from '../store/learningStore';
-import { useFinanceStore } from '../store/financeStore';
-import { useHabitStore } from '../store/habitStore';
-import { useSkillStore } from '../store/skillStore';
-import { useReadingsStore } from '../store/readingsStore';
-import { useAccountingStore } from '../store/accountingStore';
-import { useHealthStore } from '../store/healthStore';
-import { useFocusStore } from '../store/focusStore';
-import { useCreativeStore } from '../store/creativeStore';
 import { toast } from '../store/uiStore';
 import { markDataSeeded } from '../services/storage';
 import { OCCUPATION_SUGGESTIONS } from '../utils/occupations';
 import { Card, Button, Field, Input, Select } from '../components/common/ui';
 import FoodsCard from '../components/settings/FoodsCard';
 import AssistantCard from '../components/settings/AssistantCard';
+import { TrashCard, EraseCard } from '../components/settings/DataCards';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 
 // Backups keep the keys of removed modules (trading, deals, engineering, business,
@@ -210,21 +202,6 @@ export default function SettingsPage() {
     };
     reader.readAsText(file);
     e.target.value = '';
-  };
-
-  const resetAll = () => {
-    if (!confirm('Cela supprime définitivement TOUTES les données de cet appareil (cours, habitudes, santé, compétences, finances). Télécharge une sauvegarde avant. Continuer ?')) return;
-    useLearningStore.getState().resetAll();
-    useFinanceStore.getState().resetAll();
-    useHabitStore.getState().resetAll();
-    useSkillStore.getState().resetAll();
-    useReadingsStore.getState().resetAll();
-    useAccountingStore.getState().resetAll();
-    useHealthStore.getState().resetAll();
-    useFocusStore.getState().resetAll();
-    useCreativeStore.getState().resetAll();
-    localStorage.removeItem('audax-synergy-history');
-    toast('Toutes les données ont été effacées', 'warning');
   };
 
   return (
@@ -497,11 +474,8 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card title="Zone sensible">
-        <Button variant="danger" onClick={resetAll}>
-          <span className="flex items-center gap-2"><Trash2 size={15} /> Effacer toutes les données de cet appareil</span>
-        </Button>
-      </Card>
+      <TrashCard />
+      <EraseCard synced={cloudStatus === 'active'} onExport={exportJSON} />
     </div>
   );
 }

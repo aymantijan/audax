@@ -22,6 +22,9 @@ import { WeeklyReviewCard } from './WeeklyReview';
 import { classesOn } from '../../utils/attendance';
 import ExamDayCard from './ExamDayCard';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../common/EntityFormModal';
+import { toast } from '../../store/uiStore';
 const DAY_LETTER = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
 function WeekCard({ sessions, today, settings }) {
@@ -124,6 +127,8 @@ export default function TodayView() {
   const allSessions = useFocusStore((s) => s.sessions);
   const activeTimer = useFocusStore((s) => s.activeTimer);
   const { startTimer, deleteSession } = useFocusStore();
+  const editSession = useFocusStore((st) => st.editSession);
+  const [editingSession, setEditingSession] = useState(null);
   const settings = useAcademicSettings();
   const today = todayKey();
   const [manualOpen, setManualOpen] = useState(false);
@@ -280,7 +285,8 @@ export default function TodayView() {
                     {s.notes && <span className="text-[11px] text-mute truncate block">{s.notes}</span>}
                   </span>
                   <span className="text-sm tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteSession(s.id)}><Trash2 size={12} /></button>
+                  <button className="p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>
+                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={12} /></button>
                 </div>
               ))}
             </div>
@@ -292,6 +298,20 @@ export default function TodayView() {
 
       <ManualSessionModal open={manualOpen} onClose={() => setManualOpen(false)} />
       {reviewing && <ReviewSession title="Révisions du jour" onClose={() => setReviewing(false)} />}
+      <EntityFormModal
+        open={!!editingSession}
+        onClose={() => setEditingSession(null)}
+        title="Modifier la session"
+        initial={editingSession}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'durationMinutes', label: 'Durée (min)', type: 'number', min: 1 },
+          
+          { name: 'notes', label: 'Note', type: 'textarea' },
+        ]}
+        onSave={(v) => { const r = editSession(editingSession.id, { date: v.date, durationMinutes: v.durationMinutes, notes: v.notes || '' }); if (!r.ok) toast(r.error, 'error'); }}
+        onDelete={() => deleteSession(editingSession.id)}
+      />
     </div>
   );
 }

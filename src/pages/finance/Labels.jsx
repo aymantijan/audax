@@ -6,6 +6,7 @@ import { fmtMAD } from '../../utils/formatters';
 import { Card, Button, Field, Input, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
 
+import { deleteWithUndo } from '../../services/undo';
 const blankLimit = { account: '622', label: '', maxRatioToIncomePct: '', maxRatioToAccountSpendPct: '' };
 
 export default function Labels() {
@@ -100,7 +101,7 @@ export default function Labels() {
                   </span>
                   <div className="flex items-center gap-2">
                     {l.breached && <Badge color="var(--error)">Franchie</Badge>}
-                    <button onClick={() => deleteLabelLimit(l.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                    <button onClick={() => deleteWithUndo(null, () => deleteLabelLimit(l.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-mute">

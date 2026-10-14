@@ -8,6 +8,7 @@ import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 import CyclePhaseHint from '../../components/health/CyclePhaseHint';
 import CardioTrend from './program/visualizations/CardioTrend';
 
+import { deleteWithUndo } from '../../services/undo';
 // Same cardio library as the Programme logger, so a manual session and a
 // programme session on the Stairmaster are the same thing in every chart.
 
@@ -184,7 +185,7 @@ export default function CardioLogging({ pendingPrompt }) {
 
       <Card title="Aujourd’hui" action={<Badge>{todayItems.length} séance{todayItems.length !== 1 ? 's' : ''}</Badge>}>
         {todayItems.length ? (
-          <ul className="space-y-2">{todayItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} onEdit={() => startEdit(w)} />)}</ul>
+          <ul className="space-y-2">{todayItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWithUndo(null, () => deleteWorkout(w.id))} onEdit={() => startEdit(w)} />)}</ul>
         ) : <EmptyState>Rien d’enregistré aujourd’hui.</EmptyState>}
       </Card>
 
@@ -192,7 +193,7 @@ export default function CardioLogging({ pendingPrompt }) {
 
       <Card title="Historique">
         {historyItems.length ? (
-          <ul className="space-y-2">{historyItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} onEdit={() => startEdit(w)} showDate />)}</ul>
+          <ul className="space-y-2">{historyItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWithUndo(null, () => deleteWorkout(w.id))} onEdit={() => startEdit(w)} showDate />)}</ul>
         ) : <EmptyState>Aucun cardio enregistré pour l’instant.</EmptyState>}
       </Card>
 

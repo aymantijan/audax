@@ -6,7 +6,8 @@ import { fmtMAD, fmtDate, todayKey, baseCurrencyShort } from '../../utils/format
 import { Card, Button, Field, Input, Select, Modal, Badge, EmptyState } from '../../components/common/ui';
 import { useFinanceMode, SIMPLE_TEMPLATES } from '../../components/finance/financeMode';
 import { toast } from '../../store/uiStore';
-import AccountSelect from '../../components/common/AccountSelect';
+import AccountSelect from '../../components/common/AccountSelect';
+import { deleteWithUndo } from '../../services/undo';
 
 // Seuls les modèles pertinents pour un mouvement RÉCURRENT/PROGRAMMÉ (pas les
 // soldes d'ouverture, ponctuels par nature). transfer (virement interne, ex :
@@ -188,7 +189,7 @@ export default function Echeances() {
                     {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
                   </button>
                   <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEdit(e)} title="Modifier"><Pencil size={13} /></button>
-                  <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer l'échéance "${e.label}" ?`)) deleteEcheance(e.id); }} title="Supprimer"><Trash2 size={13} /></button>
+                  <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteEcheance(e.id)); }} title="Supprimer"><Trash2 size={13} /></button>
                 </li>
               );
             })}
@@ -256,7 +257,7 @@ export default function Echeances() {
           </label>
           <div className="flex justify-between gap-3 pt-2 border-t border-line">
             {editing ? (
-              <Button type="button" variant="danger" onClick={() => { deleteEcheance(editing.id); setModal(false); setEditing(null); }}>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteEcheance(editing.id)); setModal(false); setEditing(null); }}>
                 <span className="flex items-center gap-2"><Trash2 size={14} /> Supprimer</span>
               </Button>
             ) : <span />}

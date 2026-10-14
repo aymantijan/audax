@@ -16,6 +16,7 @@ import CourseCsvTools from './CourseCsvTools';
 import { TrackFormModal } from './TrackModals';
 import { SectionHeader, SegmentedTabs, useAcademicSettings, GradePill, BigStat, tint } from './design';
 import { courseColor } from './TimetableView';
+import { deleteWithUndo } from '../../services/undo';
 
 const progressOf = (c) => (c.status === 'completed' ? 100 : calculateCourseProgress(c));
 
@@ -179,11 +180,11 @@ export default function CoursesView() {
 
       <TrackFormModal open={newOpen} onClose={() => setNewOpen(false)} />
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title={deleting?.length > 1 ? `Supprimer ${deleting.length} cours ?` : 'Supprimer ce cours ?'}>
-        <p className="text-sm text-mute">Le cours, ses chapitres, ses notes et sa progression seront supprimés définitivement.</p>
+        <p className="text-sm text-mute">Le cours, ses chapitres, ses notes et sa progression seront supprimés. Tu pourras annuler juste après, ou les retrouver 30 jours dans la corbeille (Paramètres).</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
           <Button variant="danger" onClick={() => {
-            deleting.forEach((id) => deleteCourse(id));
+            deleteWithUndo(deleting.length > 1 ? `${deleting.length} cours` : null, () => deleting.forEach((id) => deleteCourse(id)));
             setSelected((s) => { const n = new Set(s); deleting.forEach((id) => n.delete(id)); return n; });
             setDeleting(null);
           }}>Supprimer</Button>

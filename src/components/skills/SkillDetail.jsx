@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Award, Trash2, Sparkles, Clock } from 'lucide-react';
+import { Lock, Award, Trash2, Sparkles, Clock, Pencil } from 'lucide-react';
 import { useSkillStore } from '../../store/skillStore';
 import {
   FAMILY_MAP, MODEL_MAP, LEVELS, LEVEL_LABELS, PROOF_KINDS, UNLOCK_LEVEL, SOURCE_KINDS, VARIETY_STEP, nextRequirementText,
@@ -7,6 +7,8 @@ import {
 import { fmtDate, todayKey } from '../../utils/formatters';
 import { Badge, Button, Field, Input, Select, ProgressBar, IconButton } from '../common/ui';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../common/EntityFormModal';
 const STATUS_TEXT = { locked: 'À découvrir', available: 'Disponible', active: 'En progression', mastered: 'Maîtrisée' };
 const STATUS_COLOR = { locked: 'var(--text-secondary)', available: 'var(--accent-secondary)', active: 'var(--success)', mastered: 'var(--accent-primary)' };
 
@@ -29,6 +31,8 @@ function Requirement({ label, have, need }) {
 // Everything about one compétence: level, what the next level needs, proofs,
 // prerequisites, what it opens, and the latest activity that fed it.
 export default function SkillDetail({ familyId, states, onNavigate }) {
+  const editProof = useSkillStore((st) => st.editProof);
+  const [editingProof, setEditingProof] = useState(null);
   const addProof = useSkillStore((s) => s.addProof);
   const removeProof = useSkillStore((s) => s.removeProof);
   const proofs = useSkillStore((s) => s.proofs?.[familyId] || NO_PROOFS);
@@ -144,7 +148,8 @@ export default function SkillDetail({ familyId, states, onNavigate }) {
                 <Award size={13} className="text-accent shrink-0" />
                 <span className="truncate">{p.title}</span>
                 <span className="text-xs text-mute shrink-0">{PROOF_KINDS.find((k) => k.id === p.kind)?.label} · {fmtDate(p.date)}</span>
-                <IconButton label="Retirer la preuve" tone="danger" className="ml-auto" onClick={() => removeProof(familyId, p.id)}><Trash2 size={13} /></IconButton>
+                <IconButton label="Modifier la preuve" className="ml-auto" onClick={() => setEditingProof(p)}><Pencil size={13} /></IconButton>
+                <IconButton label="Retirer la preuve" tone="danger" onClick={() => deleteWithUndo(null, () => removeProof(familyId, p.id))}><Trash2 size={13} /></IconButton>
               </li>
             ))}
           </ul>
@@ -187,6 +192,20 @@ export default function SkillDetail({ familyId, states, onNavigate }) {
           <p className="text-xs text-mute">Rien pour l’instant. Relie-la à un cours, une habitude ou une lecture : chaque séance la fera grandir.</p>
         )}
       </div>
+      <EntityFormModal
+        open={!!editingProof}
+        onClose={() => setEditingProof(null)}
+        title="Modifier la preuve"
+        initial={editingProof}
+        fields={[
+          { name: 'title', label: 'Intitulé', type: 'text' },
+          { name: 'kind', label: 'Type', type: 'select', options: PROOF_KINDS.map((k) => ({ value: k.id, label: k.label })) },
+          { name: 'date', label: 'Date', type: 'date', max: todayKey() },
+          { name: 'note', label: 'Note', type: 'textarea' },
+        ]}
+        onSave={(v) => editProof(familyId, editingProof.id, { title: v.title || '', kind: v.kind, date: v.date, note: v.note || '' })}
+        onDelete={() => removeProof(familyId, editingProof.id)}
+      />
     </div>
   );
 }

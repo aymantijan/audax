@@ -12,6 +12,7 @@ import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 import CyclePhaseHint from '../../components/health/CyclePhaseHint';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
+import { deleteWithUndo } from '../../services/undo';
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function GymLogging({ pendingPrompt }) {
@@ -322,7 +323,7 @@ export default function GymLogging({ pendingPrompt }) {
         {todayItems.length ? (
           <ul className="space-y-2">
             {todayItems.map((item) => (
-              <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} onEdit={() => startEditSession(item)} />
+              <SessionRow key={item.sessionId} item={item} onDelete={() => deleteWithUndo(null, () => deleteSession(item.sessionId))} onEdit={() => startEditSession(item)} />
             ))}
           </ul>
         ) : (
@@ -421,7 +422,7 @@ export default function GymLogging({ pendingPrompt }) {
         {historyItems.length ? (
           <ul className="space-y-2">
             {historyItems.map((item) => (
-              <SessionRow key={item.sessionId} item={item} onDelete={() => deleteSession(item.sessionId)} onEdit={() => startEditSession(item)} showDate />
+              <SessionRow key={item.sessionId} item={item} onDelete={() => deleteWithUndo(null, () => deleteSession(item.sessionId))} onEdit={() => startEditSession(item)} showDate />
             ))}
           </ul>
         ) : (

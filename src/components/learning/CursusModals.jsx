@@ -4,7 +4,8 @@ import { useLearningStore } from '../../store/learningStore';
 import { GRADING_PRESETS, EVALUATION_PRESETS, parseSubjectLines } from '../../utils/academic';
 import { Button, Field, Input, Select, Modal, Textarea } from '../common/ui';
 import { useAcademicSettings, tint } from './design';
-import { numOrNull } from './cursus-utils';
+import { numOrNull } from './cursus-utils';
+import { deleteWithUndo } from '../../services/undo';
 
 function Toggle({ checked, onChange, label, hint }) {
   return (
@@ -52,7 +53,7 @@ export function TermModal({ open, onClose, term }) {
           {term && (confirmDel ? (
             <span className="flex items-center gap-2 text-xs">
               <span className="text-bad">Supprimer ? Les matières sont conservées.</span>
-              <Button type="button" variant="danger" onClick={() => { deleteTerm(term.id); onClose(); }}>Oui</Button>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteTerm(term.id)); onClose(); }}>Oui</Button>
               <Button type="button" variant="ghost" onClick={() => setConfirmDel(false)}>Non</Button>
             </span>
           ) : (
@@ -140,7 +141,7 @@ export function ModuleModal({ open, onClose, termId, module }) {
           {module && (confirmDel ? (
             <span className="flex items-center gap-2 text-xs">
               <span className="text-bad">Supprimer ? Ses matières restent dans le semestre.</span>
-              <Button type="button" variant="danger" onClick={() => { deleteModule(module.id); onClose(); }}>Oui</Button>
+              <Button type="button" variant="danger" onClick={() => { deleteWithUndo(null, () => deleteModule(module.id)); onClose(); }}>Oui</Button>
               <Button type="button" variant="ghost" onClick={() => setConfirmDel(false)}>Non</Button>
             </span>
           ) : (

@@ -2,6 +2,8 @@
 // section text moved verbatim, composed back in ../programStore.js.
 import * as api from '../../services/program-api';
 
+const loadedWeeks = new Set(); // `${programId}|${monday}` already fetched by ensureWeekLoaded
+
 export const dailySlice = (set, get) => ({
   // Wave 2 — Daily usage, overrides, session logs, nutrition, habits
   // =====================================================================
@@ -155,9 +157,10 @@ export const dailySlice = (set, get) => ({
         for (const evt of scheduled) {
           if (evt.cancelled || evt.moved) continue;
           // Shift this session +1 day
+          // Never out of the week: a Sunday session stays where it is (the old
+          // check compared a day number that wraps to Monday, so it never fired).
+          if (dow + dayOffset >= 6) continue;
           const newDate = new Date(checkDate.getTime() + 86400000);
-          const newDow = newDate.getDay() === 0 ? 6 : newDate.getDay() - 1;
-          if (newDow > 6) continue; // would exceed Sunday — skip
           const newDateStr = newDate.toISOString().slice(0, 10);
 
           await get().createOverride(programId, {
@@ -174,6 +177,45 @@ export const dailySlice = (set, get) => ({
       }
     } catch (err) {
       throw err; // surfaced by the calling form — not the page-level error screen
+    }
+  },
+
+  /**
+   * Puts a cancelled / moved session back as planned. A cancellation that
+   * shifted the rest of the week (cascade) gives those sessions back their day too.
+   */
+  undoOverride: async (programId, override) => {
+    const dateStr = override.target_date;
+    if (override.action === 'cancel' && override.cascade_applied) {
+      const d = new Date(dateStr + 'T12:00:00');
+      const end = new Date(d.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+      await get().loadOverrides(programId, dateStr, end);
+      const note = `Décalé suite à l'annulation du ${dateStr}`;
+      for (const [day, list] of Object.entries(get().overridesByDate)) {
+        for (const o of list) {
+          if (o.reason_code === 'cascade' && o.reason_note === note) await get().removeOverride(o.id, day);
+        }
+      }
+    }
+    await get().removeOverride(override.id, dateStr);
+  },
+
+  /**
+   * The daily view can go back (or forward) any number of weeks: load that
+   * week's overrides and logs once, so a past session shows its real status.
+   */
+  ensureWeekLoaded: async (programId, dateStr) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7; // 0 = Monday
+    const monday = new Date(d.getTime() - dow * 86400000).toISOString().slice(0, 10);
+    const key = `${programId}|${monday}`;
+    if (loadedWeeks.has(key)) return;
+    loadedWeeks.add(key);
+    const sunday = new Date(new Date(monday + 'T12:00:00').getTime() + 6 * 86400000).toISOString().slice(0, 10);
+    try {
+      await Promise.all([get().loadOverrides(programId, monday, sunday), get().loadSessionLogs(programId, monday, sunday)]);
+    } catch {
+      loadedWeeks.delete(key); // try again next time
     }
   },
 

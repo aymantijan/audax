@@ -6,7 +6,8 @@ import { fmtMAD, baseCurrencyShort } from '../../utils/formatters';
 
 import { Card, Button, Field, Input, Modal, ProgressBar, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
-import { toast } from '../../store/uiStore';
+import { toast } from '../../store/uiStore';
+import { deleteWithUndo } from '../../services/undo';
 
 const fmtDate = (d) => (d ? new Date(typeof d === 'string' && d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -218,7 +219,7 @@ export default function Goals() {
         <p className="text-sm text-mute">« {deleting?.name} » sera supprimé. L'argent mis de côté redevient libre.</p>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="secondary" onClick={() => setDeleting(null)}>Annuler</Button>
-          <Button variant="danger" onClick={() => { deleteGoal(deleting.id); setDeleting(null); }}>Supprimer</Button>
+          <Button variant="danger" onClick={() => { deleteWithUndo(null, () => deleteGoal(deleting.id)); setDeleting(null); }}>Supprimer</Button>
         </div>
       </Modal>
     </div>

@@ -12,6 +12,7 @@ import { Button, Card, Field, Input, Modal, Select, ProgressBar } from '../commo
 import SkillPicker from '../common/SkillPicker';
 import { SectionHeader, tint } from './design';
 
+import { deleteWithUndo } from '../../services/undo';
 // Skill ids suggested per track type.
 const SUGGESTED_SKILLS = {
   trading: ['trading-discipline-lv1', 'risk-management-lv1', 'technical-analysis-lv1'],
@@ -267,7 +268,7 @@ export function ResourcesCard({ course }) {
                     <div className="text-[10px] text-mute">{resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
                   </div>
                   {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="p-1 text-mute hover:text-accent" title="Ouvrir"><ExternalLink size={13} /></a>}
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteResource(course.id, r.id)}><Trash2 size={12} /></button>
+                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteWithUndo(null, () => deleteResource(course.id, r.id))}><Trash2 size={12} /></button>
                 </div>
                 {prog && (
                   <div className="mt-2 pl-6">

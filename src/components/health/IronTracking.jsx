@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { ScanText, Trash2 } from 'lucide-react';
+import { ScanText, Trash2, Pencil } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { fmtDateShort, todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Badge } from '../common/ui';
 import BloodTestScanner from './BloodTestScanner';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../common/EntityFormModal';
 const FLAG_COPY = {
   hemoglobin_low: "Hémoglobine sous le seuil OMS d'anémie",
   ferritin_low: "Ferritine sous le seuil OMS de carence en fer",
@@ -20,6 +22,8 @@ const FLAG_COPY = {
 //    would be fabricated, see the dietary section's framing).
 export default function IronTracking() {
   const { getIronStatus, bloodTests, logBloodTest, deleteBloodTest } = useHealthStore();
+  const editBloodTest = useHealthStore((st) => st.editBloodTest);
+  const [editing, setEditing] = useState(null); // « rien n'est définitif »: any entry can be corrected
   const status = getIronStatus();
   const [scannerOpen, setScannerOpen] = useState(false);
   const [form, setForm] = useState({ date: todayKey(), ferritinNgMl: '', hemoglobinGDl: '' });
@@ -84,7 +88,10 @@ export default function IronTracking() {
           {[...bloodTests].reverse().map((b) => (
             <li key={b.id} className="flex items-center justify-between text-xs bg-surface border border-line rounded px-2.5 py-1.5">
               <span>{fmtDateShort(b.date)} — {b.ferritinNgMl != null ? `Ferritine ${b.ferritinNgMl}ng/mL` : ''}{b.ferritinNgMl != null && b.hemoglobinGDl != null ? ' · ' : ''}{b.hemoglobinGDl != null ? `Hb ${b.hemoglobinGDl}g/dL` : ''}</span>
-              <button onClick={() => deleteBloodTest(b.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={12} /></button>
+              <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`analyse du ${b.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBloodTest(b.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={12} /></button>
+                </span>
             </li>
           ))}
         </ul>
@@ -98,6 +105,20 @@ export default function IronTracking() {
           setShowForm(true);
           setScannerOpen(false);
         }}
+      />
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={'Modifier l’analyse'}
+        initial={editing}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'ferritinNgMl', label: 'Ferritine (ng/mL)', type: 'number', step: '0.1' },
+          { name: 'hemoglobinGDl', label: 'Hémoglobine (g/dL)', type: 'number', step: '0.1' },
+          { name: 'notes', label: 'Notes', type: 'textarea' },
+        ]}
+        onSave={(v) => editBloodTest(editing.id, { date: v.date, ferritinNgMl: v.ferritinNgMl, hemoglobinGDl: v.hemoglobinGDl, notes: v.notes || '' })}
+        onDelete={() => deleteBloodTest(editing.id)}
       />
     </Card>
   );

@@ -19,6 +19,11 @@ export const labsSlice = (set, get) => ({
         toast('Analyse enregistrée', 'success');
       },
       deleteBloodTest: (id) => set({ bloodTests: get().bloodTests.filter((b) => b.id !== id) }),
+      editBloodTest: (id, patch) => {
+        const num = (v) => (v === '' || v == null ? null : Number(v));
+        set({ bloodTests: get().bloodTests.map((b) => (b.id === id ? { ...b, ...patch, ferritinNgMl: num(patch.ferritinNgMl ?? b.ferritinNgMl), hemoglobinGDl: num(patch.hemoglobinGDl ?? b.hemoglobinGDl), updatedAt: Date.now() } : b)).sort((a, b) => (a.date < b.date ? -1 : 1)) });
+        toast('Analyse modifiée', 'success');
+      },
 
       // Two independent signals, surfaced together but never merged into one
       // fabricated "risk score":
@@ -120,6 +125,12 @@ export const labsSlice = (set, get) => ({
       // ─────────── Performance & Recovery (open to every account — lifestyle/
       // performance framing, explicitly non-medical: no hormonal/biomarker claims) ───────────
       performanceLogs: [], // [{id, date, restingHr, vitality, mobility, notes}]
+      // Corrects a performance check-in (its day included), without new XP.
+      editPerformance: (id, patch) => {
+        const num = (v) => (v === '' || v == null ? null : Number(v));
+        set({ performanceLogs: get().performanceLogs.map((p) => (p.id === id ? { ...p, ...patch, restingHr: num(patch.restingHr ?? p.restingHr), vitality: num(patch.vitality ?? p.vitality), mobility: num(patch.mobility ?? p.mobility), updatedAt: Date.now() } : p)) });
+        toast('Performance modifiée', 'success');
+      },
       logPerformance: (data, date) => {
         const target = date || todayKey();
         const existing = get().performanceLogs.find((p) => p.date === target);

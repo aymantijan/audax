@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, FileDown, Camera } from 'lucide-react';
+import { Trash2, FileDown, Camera, Pencil } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHealthStore } from '../../store/healthStore';
 import { computeBMR, computeTDEE, ACTIVITY_MULTIPLIERS, bodyFatNavyMale, bodyFatNavyFemale } from '../../utils/health-science';
@@ -7,6 +7,8 @@ import { todayKey } from '../../utils/formatters';
 import { Card, Button, Field, Input, Select, EmptyState } from '../../components/common/ui';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
+import { deleteWithUndo } from '../../services/undo';
+import EntityFormModal from '../../components/common/EntityFormModal';
 const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
 const CALORIE_GOALS = [
   { key: 'cut20', label: 'Aggressive cut', pct: -0.2 },
@@ -110,6 +112,8 @@ async function exportMonthlyReportPDF(bodyComp, prediction, extra = {}) {
 
 export default function BodyComposition() {
   const { bodyComp, logBodyComp, deleteBodyComp, getWeightPrediction, getBodyCompPrecision, getSmoothedBodyCompTrend, getActiveNutritionPlan, getCyclePhaseCoaching, isCyclePhaseHormonallyReliable, setManualNutritionTarget } = useHealthStore();
+  const editBodyComp = useHealthStore((st) => st.editBodyComp);
+  const [editing, setEditing] = useState(null); // « rien n'est définitif »: any entry can be corrected
   const activePlan = getActiveNutritionPlan();
   const cycleCoaching = getCyclePhaseCoaching();
   // Progesterone peaks mid-luteal and promotes fluid retention — a well-
@@ -477,12 +481,30 @@ export default function BodyComposition() {
                   <span className="text-mute text-xs">{b.date}</span>
                 </span>
                 <span>{b.weightKg ?? '—'}kg · BF {b.bodyFatPct ?? '—'}%</span>
-                <button onClick={() => deleteBodyComp(b.id)} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`mesures du ${b.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBodyComp(b.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                </span>
               </li>
             ))}
           </ul>
         </Card>
       )}
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={`Modifier les mesures du ${editing?.date || ''}`}
+        initial={editing}
+        fields={[
+          { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
+          { name: 'weightKg', label: 'Poids (kg)', type: 'number', step: '0.1' },
+          { name: 'waistCm', label: 'Tour de taille (cm)', type: 'number', step: '0.1' },
+          { name: 'neckCm', label: 'Tour de cou (cm)', type: 'number', step: '0.1' },
+          ...(editing?.sex === 'female' ? [{ name: 'hipCm', label: 'Tour de hanches (cm)', type: 'number', step: '0.1' }] : []),
+        ]}
+        onSave={(v) => editBodyComp(editing.id, { date: v.date, weightKg: v.weightKg, waistCm: v.waistCm, neckCm: v.neckCm, hipCm: v.hipCm })}
+        onDelete={() => deleteBodyComp(editing.id)}
+      />
     </div>
   );
 }

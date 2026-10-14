@@ -9,6 +9,8 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, Empty
 import EntityFormModal from '../components/common/EntityFormModal';
 import BadgeList from '../components/common/BadgeList';
 
+import { deleteWithUndo } from '../services/undo';
+import { toast } from '../store/uiStore';
 const STATUS_COLOR = { 'Idée': 'var(--text-secondary)', 'En cours': 'var(--warning)', 'Terminé': 'var(--success)' };
 const MEDIUM_COLOR = { Peinture: '#e05e5e', Musique: '#0a66c2', Écriture: 'var(--success)', Photographie: 'var(--accent-secondary)', Sculpture: 'var(--warning)', Design: '#66ccff', Autre: 'var(--text-secondary)' };
 
@@ -23,7 +25,8 @@ const workFields = [
 const blankShowcase = (works) => ({ workId: works[0]?.id || '', title: '', venue: '', type: 'Exposition', date: todayKey(), url: '', notes: '' });
 
 export default function Creative() {
-  const { works, showcases, addWork, editWork, deleteWork, addShowcase, deleteShowcase, getBadges } = useCreativeStore();
+  const { works, showcases, addWork, editWork, deleteWork, addShowcase, editShowcase, deleteShowcase, getBadges } = useCreativeStore();
+  const [editingShowcase, setEditingShowcase] = useState(null);
   // Practice hours aren't re-implemented here — read live from focusStore's
   // sessions tagged domain === 'Creative' (see /focus to log a session).
   const focusSessions = useFocusStore((s) => s.sessions);
@@ -60,7 +63,7 @@ export default function Creative() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Creative</h1>
+          <h1 className="text-2xl font-bold">Création</h1>
           <p className="text-mute text-sm mt-1">Œuvres, pratique et showcases — le travail créatif du début à la scène.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -127,7 +130,7 @@ export default function Creative() {
         </Card>
       )}
 
-      <Card title={`Showcases (${showcases.length})`}>
+      <Card title={`Expositions et publications (${showcases.length})`}>
         {showcases.length ? (
           <ul className="space-y-2">
             {[...showcases].sort((a, b) => (a.date < b.date ? 1 : -1)).map((s) => (
@@ -139,12 +142,15 @@ export default function Creative() {
                   </div>
                   <div className="text-xs text-mute">{s.type}{s.venue ? ` · ${s.venue}` : ''} · {fmtDateShort(s.date)}{s.workId && workName(s.workId) ? ` · ${workName(s.workId)}` : ''}</div>
                 </div>
-                <button className="text-mute hover:text-bad cursor-pointer shrink-0" onClick={() => { if (confirm(`Supprimer "${s.title}" ?`)) deleteShowcase(s.id); }}><Trash2 size={14} /></button>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button className="text-mute hover:text-ink cursor-pointer" aria-label={`Modifier ${s.title}`} onClick={() => setEditingShowcase(s)}><Pencil size={14} /></button>
+                  <button className="text-mute hover:text-bad cursor-pointer" aria-label={`Supprimer ${s.title}`} onClick={() => { deleteWithUndo(null, () => deleteShowcase(s.id)); }}><Trash2 size={14} /></button>
+                </span>
               </li>
             ))}
           </ul>
         ) : (
-          <EmptyState><Palette className="mx-auto mb-2 text-mute" size={26} />Aucun showcase pour l'instant.</EmptyState>
+          <EmptyState><Palette className="mx-auto mb-2 text-mute" size={26} />Aucune exposition ni publication pour l’instant.</EmptyState>
         )}
       </Card>
 
@@ -195,6 +201,21 @@ export default function Creative() {
           onDelete={() => deleteWork(editing.id)}
         />
       )}
+      <EntityFormModal
+        open={!!editingShowcase}
+        onClose={() => setEditingShowcase(null)}
+        title="Modifier"
+        initial={editingShowcase}
+        fields={[
+          { name: 'title', label: 'Titre', type: 'text' },
+          { name: 'type', label: 'Type', type: 'select', options: [...new Set([...SHOWCASE_TYPES, editingShowcase?.type].filter(Boolean))] },
+          { name: 'venue', label: 'Lieu', type: 'text' },
+          { name: 'date', label: 'Date', type: 'date' },
+          { name: 'url', label: 'Lien', type: 'text' },
+        ]}
+        onSave={(v) => { const r = editShowcase(editingShowcase.id, { title: v.title || '', type: v.type, venue: v.venue || '', date: v.date, url: v.url || '' }); if (!r.ok) toast(r.error, 'error'); }}
+        onDelete={() => deleteShowcase(editingShowcase.id)}
+      />
     </div>
   );
 }

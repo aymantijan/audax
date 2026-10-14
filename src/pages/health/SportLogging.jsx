@@ -6,6 +6,7 @@ import { SPORT_TYPES, labelFor } from '../../utils/workout-types';
 import { Card, Button, Field, Input, Select, EmptyState, Badge } from '../../components/common/ui';
 import ScheduleEventModal from '../../components/common/ScheduleEventModal';
 
+import { deleteWithUndo } from '../../services/undo';
 // Always free-form — no curated program prescribes generic sport activity
 // (only training/cardio blocks exist in the program data model), so there's
 // no "prescribed vs autonomous" split here like Cardio/Gym.
@@ -95,7 +96,7 @@ export default function SportLogging() {
       <Card title="Aujourd'hui" action={<Badge>{todayItems.length} loggée{todayItems.length !== 1 ? 's' : ''}</Badge>}>
         {todayItems.length ? (
           <ul className="space-y-2">
-            {todayItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} onEdit={() => startEdit(w)} />)}
+            {todayItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWithUndo(null, () => deleteWorkout(w.id))} onEdit={() => startEdit(w)} />)}
           </ul>
         ) : (
           <EmptyState>Rien loggé aujourd'hui.</EmptyState>
@@ -105,7 +106,7 @@ export default function SportLogging() {
       <Card title="Historique">
         {historyItems.length ? (
           <ul className="space-y-2">
-            {historyItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWorkout(w.id)} onEdit={() => startEdit(w)} showDate />)}
+            {historyItems.map((w) => <Row key={w.id} w={w} onDelete={() => deleteWithUndo(null, () => deleteWorkout(w.id))} onEdit={() => startEdit(w)} showDate />)}
           </ul>
         ) : (
           <EmptyState>Aucun sport loggé pour l'instant.</EmptyState>

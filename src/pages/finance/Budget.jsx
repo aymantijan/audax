@@ -10,6 +10,7 @@ import AccountSelect from '../../components/common/AccountSelect';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 
+import { deleteWithUndo } from '../../services/undo';
 const CALENDAR_PRESETS = [
   { value: 1, label: 'Mensuel' },
   { value: 2, label: 'Bimensuel (2 mois)' },
@@ -307,7 +308,7 @@ export default function Budget() {
                       ) : '—'}
                     </td>
                     <td className="py-2 text-right">
-                      <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer le budget ${v.label} ?`)) deleteBudget(v.id); }}>
+                      <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBudget(v.id)); }}>
                         <Trash2 size={13} />
                       </button>
                     </td>

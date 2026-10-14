@@ -8,6 +8,7 @@ import { Card, Stat, Button, Field, Input, Select, Textarea, Badge, EmptyState }
 import EntityFormModal from '../components/common/EntityFormModal';
 import SkillPicker from '../components/common/SkillPicker';
 
+import { deleteWithUndo } from '../services/undo';
 const blank = () => ({
   title: '', author: '', genre: GENRE_GROUPS[0].items[0], pages: '', words: '', description: '', year: new Date().getFullYear(), popularity: 50, linkedSkills: [],
 });
@@ -131,7 +132,7 @@ export default function Library() {
                     <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setEditing(b)} title="Modifier">
                       <Pencil size={13} />
                     </button>
-                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { if (confirm(`Supprimer « ${b.title} » de la bibliothèque ?`)) deleteBook(b.id); }} title="Supprimer">
+                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBook(b.id)); }} title="Supprimer">
                       <Trash2 size={13} />
                     </button>
                   </div>

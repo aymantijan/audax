@@ -3,7 +3,7 @@ import {
   BookOpen, Play, Archive, Trash2, AlertCircle, WifiOff, ChevronRight, Sun, LineChart,
   Salad, Link2, Target, BarChart3, Layers, Pencil, ArrowLeft, AlertTriangle,
 } from 'lucide-react';
-import { Card, Button, Badge, EmptyState, Modal } from '../../../components/common/ui';
+import { Card, Button, Badge, EmptyState, Modal, Field, Input } from '../../../components/common/ui';
 import { useProgramStore } from '../../../store/programStore';
 import { toast } from '../../../store/uiStore';
 import CreateProgramWizard from './creation/CreateProgramWizard';
@@ -22,6 +22,13 @@ import AlertsBanner from './AlertsBanner';
 import AnalyticsView from './AnalyticsView';
 import { ProgramHero, SegmentedTabs, SectionHeader } from './shared/design';
 
+// Monday after today, the natural start of a new training cycle.
+const nextMonday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export default function ProgramTab() {
   const store = useProgramStore();
   const { available, initialized, loading, error, activeProgram, draftProgram, archivedPrograms, phases, canActivate, kpis = [] } = store;
@@ -30,6 +37,7 @@ export default function ProgramTab() {
   useEffect(() => { store.initialize(); }, []);
 
   const [view, setView] = useState('main'); // 'main' | 'create' | 'edit' | 'archives'
+  const [duplicating, setDuplicating] = useState(null); // { id, name, start }
   const [mainTab, setMainTab] = useState('today');
   const [editTab, setEditTab] = useState('structure');
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -191,10 +199,26 @@ export default function ProgramTab() {
                 <div className="flex items-center gap-2"><span className="font-semibold">{p.name}</span><Badge color="var(--text-secondary)">Archivé</Badge></div>
                 <div className="mt-1 text-xs text-mute">{p.start_date} → {p.end_date} · archivé le {new Date(p.archived_at).toLocaleDateString('fr-FR')}</div>
               </div>
-              <Button variant="secondary" onClick={async () => { await store.loadProgramDetails(p.id); setView('edit'); }}>Consulter</Button>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button variant="secondary" onClick={async () => { await store.loadProgramDetails(p.id); setView('edit'); }}>Consulter</Button>
+                <Button variant="secondary" onClick={() => setDuplicating({ id: p.id, name: p.name, start: nextMonday() })}>Dupliquer</Button>
+                <Button onClick={() => run(async () => { await store.reactivateProgram(p.id); setView('main'); }, 'Programme réactivé')}>Réactiver</Button>
+              </div>
             </div>
           </Card>
         )) : <EmptyState>Aucun programme archivé.</EmptyState>}
+        <Modal open={!!duplicating} onClose={() => setDuplicating(null)} title="Nouveau cycle">
+          <p className="text-sm text-mute mb-3">Une copie de « {duplicating?.name} » (phases, séances, exercices, semaine type) est créée en brouillon. Ton historique n’est pas copié.</p>
+          <Field label="Début de la première phase">
+            <Input type="date" value={duplicating?.start || ''} onChange={(e) => setDuplicating((d) => ({ ...d, start: e.target.value }))} />
+          </Field>
+          <div className="flex justify-end gap-2 mt-5">
+            <Button variant="secondary" onClick={() => setDuplicating(null)}>Annuler</Button>
+            <Button disabled={!duplicating?.start || store.loading} onClick={() => run(async () => { await store.duplicateProgram(duplicating.id, duplicating.start); setDuplicating(null); setView('main'); }, 'Copie créée en brouillon')}>
+              {store.loading ? 'Copie en cours…' : 'Créer la copie'}
+            </Button>
+          </div>
+        </Modal>
       </div>
     );
   }

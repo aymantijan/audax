@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button, Field, Input, Select, Textarea, Modal, WeekdayPicker } from './ui';
+import { deleteWithUndo } from '../../services/undo';
 
 // Generic add/edit modal driven by a fields config. Same modal, same UX for every
 // entity type (spec Q1: consistent modal popups). If `initial.id` is set → edit
@@ -39,9 +40,8 @@ export default function EntityFormModal({
   };
 
   const handleDelete = () => {
-    const label = initial?.name || initial?.description || initial?.title || initial?.category || 'this item';
-    if (!confirm(`Supprimer « ${label} » ? C’est définitif.`)) return;
-    onDelete();
+    const label = initial?.name || initial?.description || initial?.title || initial?.category || null;
+    deleteWithUndo(label, onDelete); // « Supprimé · Annuler », then 30 days in the trash
     onClose();
   };
 
@@ -49,7 +49,7 @@ export default function EntityFormModal({
   const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   return (
-    <Modal open={open} onClose={onClose} title={title || (isEdit ? 'Edit' : 'Add')} wide={wide}>
+    <Modal open={open} onClose={onClose} title={title || (isEdit ? 'Modifier' : 'Ajouter')} wide={wide}>
       <form onSubmit={submit} className="space-y-3">
         <div className={`grid ${wide ? 'md:grid-cols-2' : 'grid-cols-1'} gap-3`}>
           {resolvedFields.map((f) => {
@@ -87,7 +87,7 @@ export default function EntityFormModal({
 
         {isEdit && initial.updatedAt && (
           <div className="text-[11px] text-mute pt-1">
-            Last modified {new Date(initial.updatedAt).toLocaleString()}
+            Modifié le {new Date(initial.updatedAt).toLocaleString('fr-FR')}
           </div>
         )}
 
@@ -95,7 +95,7 @@ export default function EntityFormModal({
           <div>
             {isEdit && onDelete && (
               <Button type="button" variant="danger" onClick={handleDelete}>
-                <span className="flex items-center gap-2"><Trash2 size={14} /> {deleteLabel || 'Delete'}</span>
+                <span className="flex items-center gap-2"><Trash2 size={14} /> {deleteLabel || 'Supprimer'}</span>
               </Button>
             )}
           </div>

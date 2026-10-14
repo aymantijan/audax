@@ -157,6 +157,11 @@ export const useSkillStore = create(
       },
 
       // A level already reached stays (mastery); removing a proof only affects what comes next.
+      editProof: (familyId, proofId, patch) => {
+        const list = (get().proofs?.[familyId] || []).map((p) => (p.id === proofId ? { ...p, ...patch, title: (patch.title ?? p.title).trim() || p.title, updatedAt: Date.now() } : p));
+        set({ proofs: { ...get().proofs, [familyId]: list } });
+      },
+
       removeProof: (familyId, proofId) => {
         const list = (get().proofs?.[familyId] || []).filter((p) => p.id !== proofId);
         set({ proofs: { ...get().proofs, [familyId]: list } });

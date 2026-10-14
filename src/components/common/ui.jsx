@@ -67,6 +67,33 @@ export function Input({ className = '', ...props }) {
   return <input className={`${inputCls} ${className}`} {...props} />;
 }
 
+// « Aujourd'hui · Hier · Autre date » — every daily entry can be filled in
+// late (chantier 2). value/onChange use 'YYYY-MM-DD'; future days are refused.
+const dayKey = (offset = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+export function DayPicker({ value, onChange, label = 'Jour', className = '' }) {
+  const today = dayKey(0);
+  const yesterday = dayKey(-1);
+  const chip = (active) => `ui-btn rounded-full border px-3 py-1.5 text-xs font-medium cursor-pointer ${active ? 'border-accent bg-accent/10 text-accent' : 'border-line text-mute hover:text-ink'}`;
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${className}`} role="group" aria-label={label}>
+      <button type="button" className={chip(value === today)} aria-pressed={value === today} onClick={() => onChange(today)}>Aujourd’hui</button>
+      <button type="button" className={chip(value === yesterday)} aria-pressed={value === yesterday} onClick={() => onChange(yesterday)}>Hier</button>
+      <input
+        type="date"
+        aria-label="Autre date"
+        max={today}
+        value={value}
+        onChange={(e) => e.target.value && onChange(e.target.value > today ? today : e.target.value)}
+        className={`${inputCls} !w-auto !py-1.5 text-xs`}
+      />
+    </div>
+  );
+}
+
 export function Textarea({ className = '', ...props }) {
   return <textarea rows={2} className={`${inputCls} ${className}`} {...props} />;
 }
@@ -334,15 +361,24 @@ export function ToastContainer() {
   const { toasts, removeToast } = useUiStore();
   const colors = { success: 'var(--success)', error: 'var(--error)', warning: 'var(--warning)', info: 'var(--accent-primary)' };
   return (
-    <div className="fixed top-4 right-4 z-[100] space-y-2 w-80">
+    <div className="fixed top-4 right-4 left-4 sm:left-auto z-[100] space-y-2 sm:w-80" role="status" aria-live="polite">
       {toasts.map((t) => (
         <div
           key={t.id}
           className="toast-enter bg-card border rounded-lg px-4 py-3 text-sm shadow-xl flex items-start justify-between gap-3"
           style={{ borderColor: colors[t.type] || colors.info }}
         >
-          <span>{t.message}</span>
-          <button onClick={() => removeToast(t.id)} className="text-mute hover:text-ink shrink-0 cursor-pointer">
+          <span className="flex-1 min-w-0">{t.message}</span>
+          {t.action && (
+            <button
+              type="button"
+              onClick={() => { removeToast(t.id); t.action.onClick(); }}
+              className="shrink-0 font-semibold text-accent hover:underline cursor-pointer"
+            >
+              {t.action.label}
+            </button>
+          )}
+          <button type="button" aria-label="Fermer" onClick={() => removeToast(t.id)} className="text-mute hover:text-ink shrink-0 cursor-pointer">
             <X size={14} />
           </button>
         </div>

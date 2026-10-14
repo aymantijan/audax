@@ -8,6 +8,10 @@ import { useHabitStore } from '../habitStore';
 import { toast } from '../uiStore';
 import { dayMs, nowHHMM } from './helpers';
 
+const navyBodyFat = (d) => (d.sex === 'female'
+  ? bodyFatNavyFemale({ waistCm: d.waistCm, hipCm: d.hipCm, neckCm: d.neckCm, heightCm: d.heightCm })
+  : bodyFatNavyMale({ waistCm: d.waistCm, neckCm: d.neckCm, heightCm: d.heightCm }));
+
 export const dailySlice = (set, get) => ({
       // ─────────── Nutrition ───────────
       // `amount`/`unit`: unit is 'g' (amount = grams) or one of that food's
@@ -59,6 +63,24 @@ export const dailySlice = (set, get) => ({
       // `item.grams` (no unit/amount) is the legacy template shape from
       // before unit-based logging existed — treat it as a plain-grams entry
       // so old saved templates keep working unchanged.
+      // Corrects a meal: day, time, quantity (macros follow the quantity).
+      editMeal: (id, patch) => {
+        set({
+          nutritionLogs: get().nutritionLogs.map((n) => {
+            if (n.id !== id) return n;
+            const next = { ...n, ...patch, updatedAt: Date.now() };
+            const amount = Number(patch.amount);
+            if (patch.amount != null && amount > 0 && Number(n.amount) > 0 && amount !== Number(n.amount)) {
+              const k = amount / Number(n.amount);
+              next.amount = amount;
+              for (const f of ['protein', 'carbs', 'fat', 'kcal']) next[f] = Math.round((Number(n[f]) || 0) * k * 10) / 10;
+              if (n.grams) next.grams = Math.round(n.grams * k);
+            } else if ('amount' in patch) next.amount = n.amount;
+            return next;
+          }),
+        });
+        toast('Repas modifié', 'success');
+      },
       logMealTemplate: (templateId, date) => {
         const tpl = get().mealTemplates.find((t) => t.id === templateId);
         if (!tpl) return;
@@ -67,10 +89,7 @@ export const dailySlice = (set, get) => ({
 
       // ─────────── Body composition ───────────
       logBodyComp: (data) => {
-        const bodyFatPct =
-          data.sex === 'female'
-            ? bodyFatNavyFemale({ waistCm: data.waistCm, hipCm: data.hipCm, neckCm: data.neckCm, heightCm: data.heightCm })
-            : bodyFatNavyMale({ waistCm: data.waistCm, neckCm: data.neckCm, heightCm: data.heightCm });
+        const bodyFatPct = navyBodyFat(data);
         const entryDate = data.date || todayKey();
         const entry = {
           id: uid(),
@@ -98,6 +117,21 @@ export const dailySlice = (set, get) => ({
         toast(`Mesures enregistrées${entryDate === todayKey() ? '' : ` pour le ${entryDate}`}`, 'success');
       },
       deleteBodyComp: (id) => set({ bodyComp: get().bodyComp.filter((b) => b.id !== id) }),
+      // Corrects a measurement (date included); body fat is recomputed, no XP again.
+      editBodyComp: (id, data) => {
+        const num = (v) => (v === '' || v == null ? null : Number(v));
+        set({
+          bodyComp: get().bodyComp.map((b) => {
+            if (b.id !== id) return b;
+            const next = { ...b, ...data, updatedAt: Date.now() };
+            for (const k of ['weightKg', 'waistCm', 'neckCm', 'hipCm', 'heightCm', 'chestCm', 'armCm', 'thighCm', 'calfCm']) if (k in data) next[k] = num(data[k]);
+            const bf = navyBodyFat(next);
+            if (bf != null) { next.bodyFatPct = bf; next.bodyFatMethod = 'navy'; }
+            return next;
+          }),
+        });
+        toast('Mesures modifiées', 'success');
+      },
 
       // ─────────── Recovery activities ───────────
       customRecoveryActivities: [], // [{key, label}] — user-added, beyond the 5 built into RecoveryTracker.jsx
@@ -177,6 +211,10 @@ export const dailySlice = (set, get) => ({
       markPeriodEnd: (id, endDate) =>
         set({ cycleLogs: get().cycleLogs.map((c) => (c.id === id ? { ...c, endDate: endDate || todayKey() } : c)) }),
       deleteCycleLog: (id) => set({ cycleLogs: get().cycleLogs.filter((c) => c.id !== id) }),
+      editCycleLog: (id, patch) => {
+        set({ cycleLogs: get().cycleLogs.map((c) => (c.id === id ? { ...c, ...patch, endDate: patch.endDate || null, updatedAt: Date.now() } : c)).sort((a, b) => (a.date < b.date ? -1 : 1)) });
+        toast('Cycle modifié', 'success');
+      },
       // No cycle phase during pregnancy (no menstrual cycle) or menopause
       // (periods have stopped) — a calendar estimate would be meaningless,
       // not just unreliable. Perimenopause/postpartum still cycle (often
