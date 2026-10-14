@@ -10,6 +10,9 @@ export const AIMS = [
   { key: 'calm', label: 'Moins de stress, plus d’énergie', habits: ['Méditation (10 min)', 'Journal de gratitude'] },
   { key: 'read', label: 'Lire plus', habits: ['Lecture quotidienne (30 min)'] },
   { key: 'create', label: 'Créer (art, musique, écriture…)', modules: ['creative'] },
+  { key: 'meds', label: 'Penser à mes médicaments', habits: ['Prendre mes médicaments'] },
+  { key: 'fit60', label: 'Rester en forme en vieillissant', habits: ['Marcher 20 minutes', 'Exercices d’équilibre (5 min)'] },
+  { key: 'people', label: 'Garder le lien avec mes proches', habits: ['Appeler un proche'] },
 ];
 
 export const SITUATIONS = [
@@ -19,6 +22,9 @@ export const SITUATIONS = [
   { key: 'founder', label: 'Entrepreneur·e', modules: [] },
   { key: 'jobseeker', label: 'En recherche d’emploi', modules: [] },
   { key: 'parent', label: 'Parent au foyer', modules: [] },
+  { key: 'training', label: 'En formation', modules: ['focus'] },
+  { key: 'retired', label: 'Retraité·e', modules: [] },
+  { key: 'carer', label: 'Aidant·e d’un proche', modules: [] },
   { key: 'none', label: 'Sans activité pour l’instant', modules: [] },
 ];
 

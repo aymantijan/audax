@@ -6,6 +6,7 @@
 import { Field } from '../../components/common/ui';
 import { ACTIVITY_MULTIPLIERS } from '../../utils/health-science';
 import { MOROCCO_BUDGET_TIERS, MOROCCO_FOOD_COST_TIERS } from '../../utils/morocco-food-budget';
+import { getBaseCurrency } from '../../utils/formatters';
 
 const CATEGORY_LABEL = { protein: 'Protéines', carb: 'Glucides', fat: 'Lipides', veg: 'Légumes', fruit: 'Fruits', dairy: 'Laitier' };
 
@@ -53,11 +54,11 @@ export const NUTRITION_STEPS = [
     ),
   },
   {
-    key: 'budget', title: 'Ton budget (Maroc)',
+    key: 'budget', title: 'Ton budget',
     validate: (d) => (!d.budgetTier ? 'Choisis un budget.' : null),
     render: (d, set) => (
       <Field label="Budget alimentaire quotidien indicatif">
-        <Chips multi={false} value={d.budgetTier} onChange={(v) => set({ budgetTier: v })} options={Object.entries(MOROCCO_BUDGET_TIERS).map(([k, v]) => ({ value: k, label: `${v.label} (~${v.dailyFoodBudgetDH[0]}-${v.dailyFoodBudgetDH[1]} DH/j)` }))} />
+        <Chips multi={false} value={d.budgetTier} onChange={(v) => set({ budgetTier: v })} options={Object.entries(MOROCCO_BUDGET_TIERS).map(([k, v]) => ({ value: k, label: getBaseCurrency() === 'MAD' ? `${v.label} (~${v.dailyFoodBudgetDH[0]}-${v.dailyFoodBudgetDH[1]} DH/j)` : v.label }))} />
       </Field>
     ),
   },

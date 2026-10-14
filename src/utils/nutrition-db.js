@@ -1,3 +1,4 @@
+import { frenchToFood } from './food-names.js';
 // A hardcoded food DB (macros per 100g) for quick meal logging without a
 // network call. Not a full USDA-scale database, but covers common whole-food
 // staples, produce, dairy, and processed items across categories so the
@@ -188,7 +189,9 @@ export function lookupFood(name) {
   if (!q) return null;
   const all = [...CUSTOM_FOODS, ...FOOD_DB];
   const exact = all.find((f) => norm(f.name) === q);
-  const found = exact || all.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
+  // French names (« riz », « poulet ») lead to the same foods (chantier 6).
+  const fr = !exact && frenchToFood(q);
+  const found = exact || (fr && all.find((f) => f.name === fr)) || all.find((f) => norm(f.name).includes(q) || q.includes(norm(f.name))) || null;
   if (!found) return null;
   const override = FOOD_OVERRIDES[found.name];
   if (!override) return found;

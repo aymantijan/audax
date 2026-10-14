@@ -1,4 +1,4 @@
-// 64 habit templates (French): to tick, measurable (often auto-tracked) and to quit. Picking one prefills the add-habit form; everything stays editable.
+// 70 habit templates (French): to tick, measurable (often auto-tracked) and to quit. Picking one prefills the add-habit form; everything stays editable.
 // Moment of the day each template naturally belongs to (groups the checklist).
 const MOMENTS = { "Lecture quotidienne (30 min)": "evening", "Réviser un concept par jour": "any", "Bilan d’apprentissage hebdomadaire": "any", "Faire les devoirs du cours": "day", "Aller en cours": "day", "Séance de groupe de travail": "day", "Lire un article de recherche par semaine": "any", "Écouter un podcast éco": "day", "Regarder une vidéo finance": "any", "Tenir un journal d’apprentissage": "evening", "Relier les concepts à l’arbre de compétences": "any", "S’auto-interroger chaque semaine": "any", "Noter ses dépenses du jour": "evening", "Vérifier son budget chaque semaine": "any", "Mettre à jour son patrimoine chaque mois": "any", "Vérifier ses relevés de carte": "any", "Payer ses factures à temps": "any", "Vérifier son taux d’épargne": "any", "Revoir le rendement de ses placements": "any", "Rééquilibrer son portefeuille": "any", "Revoir ses objectifs financiers": "any", "Sport le matin": "morning", "Cardio zone 2": "day", "Musculation": "day", "Marche du soir": "evening", "Méditation (10 min)": "morning", "Exposition au froid": "morning", "Au lit avant 23 h": "evening", "8 h de sommeil ou plus": "evening", "Objectif de protéines": "day", "Hydratation (8 verres)": "day", "Repas sain fait maison": "day", "Réduire la caféine": "day", "Pas d’écran après 21 h": "evening", "Moment social": "evening", "Loisir sans écran": "evening", "Étirements / mobilité": "evening", "Journal du stress": "evening", "Intention du matin": "morning", "Journal quotidien": "evening", "Réflexion du soir": "evening", "Revue de la semaine (dimanche)": "any", "Bilan de vie mensuel": "any", "Journal des décisions": "evening", "Journal de gratitude": "evening", "Point sur ses objectifs": "any", "Calibrer sa confiance": "any" };
 const h = (name, category, xpReward, linkedSkill = '', extra = {}) => ({
@@ -59,6 +59,17 @@ export const HABIT_TEMPLATES = [
       h('Loisir sans écran', 'recovery', 4, 'stress-management-lv1', { duration: 30 }),
       h('Étirements / mobilité', 'recovery', 5, 'health-discipline-lv2', { frequency: 'weekly', duration: 30, healthLink: 'recovery' }),
       h('Journal du stress', 'recovery', 5, 'stress-management-lv1', { duration: 10 }),
+    ],
+  },
+  {
+    group: 'Vie quotidienne',
+    items: [
+      h('Prendre mes médicaments', 'health', 3, '', { moment: 'morning', duration: 1 }),
+      h('Marcher 20 minutes', 'health', 4, 'health-discipline-lv1', { moment: 'day', duration: 20 }),
+      h('Exercices d’équilibre (5 min)', 'health', 4, 'health-discipline-lv1', { moment: 'morning', duration: 5 }),
+      h('Appeler un proche', 'recovery', 4, 'networking-lv1', { moment: 'evening', duration: 15 }),
+      h('Sortir prendre l’air', 'recovery', 3, '', { moment: 'day', duration: 20 }),
+      h('Un moment pour moi', 'recovery', 3, 'stress-management-lv1', { moment: 'evening', duration: 20 }),
     ],
   },
   {

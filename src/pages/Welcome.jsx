@@ -21,7 +21,6 @@ export default function Welcome() {
   const submit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return setError('Indique ton prénom pour continuer.');
-    if (!form.gender) return setError('Choisis une option pour « Sexe » pour continuer.');
     register(form); // takes the reading comfort chosen above (authStore → readLocalDisplay)
   };
 
@@ -66,11 +65,11 @@ export default function Welcome() {
                 ]}
               />
             </Field>
-            <Field label="Sexe" hint="Sert aux calculs de la partie Santé (besoins caloriques, cycle).">
+            <Field label="Sexe (facultatif)" hint="Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.">
               <Select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                options={[{ value: '', label: 'Choisir…' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+                options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
               />
             </Field>
             {error && <p className="text-bad text-sm">{error}</p>}

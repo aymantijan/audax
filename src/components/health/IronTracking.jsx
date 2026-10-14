@@ -47,7 +47,7 @@ export default function IronTracking() {
           Apport moyen sur 14j : <span className="font-medium">{status.dietaryIron.avgMgPerDay}mg/j</span> vs {status.dietaryIron.rdaMg}mg recommandés ({status.dietaryIron.daysWithData} jour{status.dietaryIron.daysWithData > 1 ? 's' : ''} avec données) — apport alimentaire uniquement, pas une mesure clinique.
         </p>
       ) : (
-        <p className="text-xs text-mute">Pas encore assez de repas avec données micronutritionnelles loggés pour estimer ton apport en fer (aliments scannés ou de la liste Maroc curée).</p>
+        <p className="text-xs text-mute">Pas encore assez de repas avec données micronutritionnelles loggés pour estimer ton apport en fer (aliments scannés ou de la liste intégrée).</p>
       )}
 
       {status.labStatus && (

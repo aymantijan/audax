@@ -34,7 +34,7 @@ export default function Learning() {
   // (a language, an instrument, the driving code…), readings and reviews; the
   // school tabs move to the end.
   const situation = useAuthStore((st) => st.user?.situation);
-  const student = situation === 'student' || courses.some(isAcademic);
+  const student = situation === 'student' || situation === 'training' || courses.some(isAcademic);
   const ordered = student ? TABS : [...TABS.filter((t) => ['tracks', 'readings', 'review'].includes(t.key)), ...TABS.filter((t) => !['tracks', 'readings', 'review'].includes(t.key))];
   const tab = ordered.find((t) => t.key === params.get('tab')) || ordered[0];
   const Active = tab.Component;

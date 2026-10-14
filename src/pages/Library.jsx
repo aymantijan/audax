@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, BookMarked, Pencil, Trash2 } from 'lucide-react';
 import { useReadingsStore } from '../store/readingsStore';
-import { GENRE_GROUPS } from '../utils/reading-genres';
+import { GENRE_GROUPS, genreLabel } from '../utils/reading-genres';
 import { scoreStyle } from '../utils/score-colors';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Badge, EmptyState } from '../components/common/ui';
 import EntityFormModal from '../components/common/EntityFormModal';
@@ -58,7 +58,7 @@ export default function Library() {
   const editFields = [
     { name: 'title', label: 'Titre', type: 'text' },
     { name: 'author', label: 'Auteur', type: 'text' },
-    { name: 'genre', label: 'Genre', type: 'select', options: GENRE_GROUPS.flatMap((g) => g.items) },
+    { name: 'genre', label: 'Genre', type: 'select', options: GENRE_GROUPS.flatMap((g) => g.items).map((i) => ({ value: i, label: genreLabel(i) })) },
     { name: 'year', label: 'Année de parution', type: 'number' },
     { name: 'pages', label: 'Pages', type: 'number', min: 1 },
     { name: 'words', label: 'Mots', type: 'number', min: 1, hint: 'Laisser tel quel pour garder l’estimation de ~250 mots/page' },
@@ -105,8 +105,8 @@ export default function Library() {
         <select className="bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)}>
           <option value="all">Tous les genres</option>
           {GENRE_GROUPS.map((g) => (
-            <optgroup key={g.group} label={g.group}>
-              {g.items.map((i) => <option key={i} value={i}>{i}</option>)}
+            <optgroup key={g.group} label={genreLabel(g.group)}>
+              {g.items.map((i) => <option key={i} value={i}>{genreLabel(i)}</option>)}
             </optgroup>
           ))}
         </select>
@@ -146,7 +146,7 @@ export default function Library() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  <Badge color="var(--accent-secondary)">{b.genre}</Badge>
+                  <Badge color="var(--accent-secondary)">{genreLabel(b.genre)}</Badge>
                   <Badge color={reading ? 'var(--success)' : 'var(--text-secondary)'}>{reading ? 'En lecture' : 'Pas commencé'}</Badge>
                 </div>
 
@@ -184,8 +184,8 @@ export default function Library() {
                 <Field label="Genre">
                   <Select value={form.genre} onChange={(e) => setForm({ ...form, genre: e.target.value })}>
                     {GENRE_GROUPS.map((g) => (
-                      <optgroup key={g.group} label={g.group}>
-                        {g.items.map((i) => <option key={i} value={i}>{i}</option>)}
+                      <optgroup key={g.group} label={genreLabel(g.group)}>
+                        {g.items.map((i) => <option key={i} value={i}>{genreLabel(i)}</option>)}
                       </optgroup>
                     ))}
                   </Select>

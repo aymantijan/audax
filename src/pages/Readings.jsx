@@ -1,3 +1,4 @@
+import { genreLabel } from '../utils/reading-genres';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Library, Plus, Minus, Trash2, Pencil, Flame, BookOpen, CheckCircle2, GraduationCap, Compass } from 'lucide-react';
@@ -52,7 +53,7 @@ export default function Readings({ embedded = false }) {
 
   const byGenre = useMemo(() => {
     const map = {};
-    for (const r of rows) if (r.book) map[r.book.genre] = (map[r.book.genre] || 0) + 1;
+    for (const r of rows) if (r.book) map[genreLabel(r.book.genre)] = (map[genreLabel(r.book.genre)] || 0) + 1;
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [rows]);
 
@@ -68,7 +69,7 @@ export default function Readings({ embedded = false }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-ink truncate">{r.book.title}</div>
-            <div className="text-xs text-mute">{r.book.author} · {r.book.genre}</div>
+            <div className="text-xs text-mute">{r.book.author} · {genreLabel(r.book.genre)}</div>
             {links.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {links.map((c) => (

@@ -28,9 +28,9 @@ export const MOROCCO_FOOD_COST_TIERS = [
   // Sourced from Herreman et al. 2020 (comprehensive DIAAS review) and
   // FAO/WHO reference values — see the buildProteinItems comment below for
   // how this is used (sorts the pool, doesn't exclude anything).
-  { name: 'Eggs', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 113, costNote: 'protéine complète la moins chère au Maroc' },
-  { name: 'Chicken thigh', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 108, costNote: 'avec os/peau — une des viandes les moins chères au Maroc' },
-  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 100, costNote: 'oméga-3 bon marché, très courant au Maroc' },
+  { name: 'Eggs', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 113, costNote: 'une des protéines complètes les moins chères' },
+  { name: 'Chicken thigh', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 108, costNote: 'avec os/peau — une des viandes les moins chères' },
+  { name: 'Sardines (canned)', category: 'protein', tier: 'tight', fromType: 'animal', proteinQuality: 100, costNote: 'oméga-3 bon marché' },
   { name: 'Lentils (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 63, costNote: 'légumineuse — protéine + glucides en un seul aliment' },
   { name: 'Chickpeas (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 70 },
   { name: 'Black beans (cooked)', category: 'protein', tier: 'tight', fromType: 'legume', proteinQuality: 60 },
@@ -41,7 +41,7 @@ export const MOROCCO_FOOD_COST_TIERS = [
   { name: 'Whey protein (scoop, 30g)', category: 'protein', tier: 'moderate', fromType: 'animal', proteinQuality: 109, costNote: 'pratique mais plus cher au kg de protéine que les sources entières' },
   { name: 'Beef (ground, 90/10)', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 111 },
   { name: 'Beef (lean)', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 111 },
-  { name: 'Salmon', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 100, costNote: 'importé, cher au Maroc' },
+  { name: 'Salmon', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 100, costNote: 'souvent cher' },
   { name: 'Shrimp', category: 'protein', tier: 'comfortable', fromType: 'animal', proteinQuality: 90 },
 
   // ── Glucides ── (couscous délibérément absent : plat traditionnel du
@@ -58,7 +58,7 @@ export const MOROCCO_FOOD_COST_TIERS = [
   { name: 'Quinoa (cooked)', category: 'carb', tier: 'comfortable', costNote: 'importé' },
 
   // ── Lipides ──
-  { name: 'Olive oil', category: 'fat', tier: 'tight', costNote: 'produit localement, référence marocaine' },
+  { name: 'Olive oil', category: 'fat', tier: 'tight', costNote: 'bonne graisse de base' },
   { name: 'Peanuts', category: 'fat', tier: 'tight' },
   { name: 'Peanut butter', category: 'fat', tier: 'moderate' },
   { name: 'Almonds', category: 'fat', tier: 'moderate' },

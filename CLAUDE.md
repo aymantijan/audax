@@ -63,7 +63,7 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 ## Vérifier dans l'application sans toucher aux vraies données
 1. Créer `.env.uitest.local` avec `VITE_SUPABASE_URL=` et `VITE_SUPABASE_ANON_KEY=` vides.
 2. Ajouter temporairement à `.claude/launch.json` : `{"name":"uitest","runtimeExecutable":"npx","runtimeArgs":["vite","--mode","uitest","--port","5199"],"port":5199}`.
-3. preview_start `uitest`, profil local (nom + genre obligatoires).
+3. preview_start `uitest`, profil local (seul le prénom est obligatoire).
 4. APRÈS : supprimer `.env.uitest.local` et remettre `launch.json` (`git checkout -- .claude/launch.json`).
 
 ## Définition de « terminé »

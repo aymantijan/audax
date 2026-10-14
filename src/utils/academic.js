@@ -31,6 +31,10 @@ export const GRADING_PRESETS = [
   { key: 'iscae', label: 'ISCAE — matière 7 · module 8 · semestre 10', settings: { scale: 20, passMark: 10, subjectPassMark: 7, modulePassMark: 8, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'capped' } },
   { key: 'ma', label: 'Maroc — grande école (/20)', settings: { scale: 20, passMark: 10, ...NO_LEVELS, eliminatoryMark: 5, subjectCompensation: true, moduleCompensation: true, retakeRule: 'capped' } },
   { key: 'fr', label: 'France — LMD (/20)', settings: { scale: 20, passMark: 10, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'max' } },
+  { key: 'be', label: 'Belgique / Afrique francophone (/20, réussite à 10)', settings: { scale: 20, passMark: 10, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: true, retakeRule: 'replace' } },
+  { key: 'ch', label: 'Suisse (/6, réussite à 4)', settings: { scale: 6, passMark: 4, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'replace' } },
+  { key: 'na', label: 'Canada / États-Unis (%, réussite à 60)', settings: { scale: 100, passMark: 60, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'replace' } },
+  { key: 'uk', label: 'Royaume-Uni (%, réussite à 40)', settings: { scale: 100, passMark: 40, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'capped' } },
   { key: 'pct', label: 'Pourcentage (/100)', settings: { scale: 100, passMark: 50, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
   { key: 'ten', label: 'Sur 10', settings: { scale: 10, passMark: 5, ...NO_LEVELS, eliminatoryMark: null, subjectCompensation: true, moduleCompensation: false, retakeRule: 'max' } },
 ];

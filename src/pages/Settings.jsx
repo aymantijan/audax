@@ -238,11 +238,11 @@ export default function SettingsPage() {
             <Input list="occupation-suggestions" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ex. étudiant·e, infirmier·e, développeur·se…" />
             <datalist id="occupation-suggestions">{OCCUPATION_SUGGESTIONS.map((o) => <option key={o} value={o} />)}</datalist>
           </Field>
-          <Field label="Sexe" hint="Adapte la partie Santé (onglet Cycle ou Performance, besoins caloriques).">
+          <Field label="Sexe (facultatif)" hint="Adapte la partie Santé (onglet Cycle, besoins caloriques).">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Choisir…' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+              options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
             />
           </Field>
           <Field label="Année de naissance" hint="Sert aux calculs de la partie Santé (métabolisme, besoins caloriques).">
@@ -255,7 +255,6 @@ export default function SettingsPage() {
         <Button
           className="mt-4"
           onClick={() => {
-            if (!form.gender) return toast('Choisis une option pour « Sexe » avant d’enregistrer.', 'warning');
             updateProfile({
               ...form,
               dobYear: form.dobYear ? Number(form.dobYear) : null,

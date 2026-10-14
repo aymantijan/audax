@@ -5,6 +5,7 @@ import { MOROCCO_FOOD_COST_TIERS } from '../../utils/morocco-food-budget';
 import { useHealthStore } from '../../store/healthStore';
 import { toast } from '../../store/uiStore';
 import { Card, Button, Field, Input, Select } from '../common/ui';
+import { baseCurrencyShort } from '../../utils/formatters';
 
 import { deleteWithUndo } from '../../services/undo';
 import EntityFormModal from '../common/EntityFormModal';
@@ -132,12 +133,12 @@ export default function FoodsCard() {
               <Field label="Poids d'une unité (g)">
                 <Input type="number" min="1" value={newFood.unitGrams} onChange={(e) => setNewFood({ ...newFood, unitGrams: e.target.value })} placeholder="ex. 50" />
               </Field>
-              <Field label={`Prix par ${newFood.unitLabel.trim() || 'unité'} (Dh)`}>
+              <Field label={`Prix par ${newFood.unitLabel.trim() || 'unité'} (${baseCurrencyShort()})`}>
                 <Input type="number" min="0" step="0.1" value={newFood.unitPrice} onChange={(e) => setNewFood({ ...newFood, unitPrice: e.target.value })} />
               </Field>
             </>
           ) : (
-            <Field label="Prix / 100g (Dh)">
+            <Field label={`Prix / 100g (${baseCurrencyShort()})`}>
               <Input type="number" min="0" step="0.1" value={newFood.pricePerGram} onChange={(e) => setNewFood({ ...newFood, pricePerGram: e.target.value })} />
             </Field>
           )}
@@ -164,7 +165,7 @@ export default function FoodsCard() {
           <ul className="space-y-1.5">
             {customFoods.map((f) => (
               <li key={f.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${f.servings?.[0] ? `${(f.pricePerGram * f.servings[0].grams).toFixed(2)}Dh/${f.servings[0].label}` : `${(f.pricePerGram * 100).toFixed(1)}Dh/100g`}` : ''})</span></span>
+                <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${f.servings?.[0] ? `${(f.pricePerGram * f.servings[0].grams).toFixed(2)}${baseCurrencyShort()}/${f.servings[0].label}` : `${(f.pricePerGram * 100).toFixed(1)}${baseCurrencyShort()}/100g`}` : ''})</span></span>
                 <span className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setEditingFood(f)} aria-label={`Modifier ${f.name}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
                   <button onClick={() => deleteWithUndo(null, () => deleteCustomFood(f.id))} aria-label={`Supprimer ${f.name}`} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
@@ -178,7 +179,7 @@ export default function FoodsCard() {
       <div className="mb-2">
         <div className="text-xs text-mute uppercase tracking-wide mb-2">Prix d'un aliment existant</div>
         <p className="text-xs text-mute mb-2">
-          Par défaut, tout se prix au poids (100g) — sauf les œufs et quelques aliments avec une unité connue (boîte, cuisse…). Comme dans MyFitnessPal, tu peux choisir de prix n'importe quel aliment par unité à la place (ex. "1 barquette de poulet = 45Dh"), même s'il n'en avait pas une au départ.
+          Par défaut, le prix se donne au poids (100g) — sauf les œufs et quelques aliments avec une unité connue (boîte, cuisse…). Tu peux aussi donner le prix de n'importe quel aliment par unité (ex. « 1 barquette de poulet = 45 »), même s'il n'en avait pas une au départ.
         </p>
         <form onSubmit={submitPrice} className="flex flex-wrap gap-2 items-end">
           <Field label="Aliment">
@@ -204,7 +205,7 @@ export default function FoodsCard() {
               </Field>
             </>
           )}
-          <Field label={priceEntry.priceMode === 'unit' ? `Prix par ${priceEntryUnit?.label || priceEntry.unitLabel.trim() || 'unité'} (Dh)` : 'Prix / 100g (Dh)'}>
+          <Field label={priceEntry.priceMode === 'unit' ? `Prix par ${priceEntryUnit?.label || priceEntry.unitLabel.trim() || 'unité'} (${baseCurrencyShort()})` : `Prix / 100g (${baseCurrencyShort()})`}>
             <Input type="number" min="0" step="0.1" value={priceEntry.price} onChange={(e) => setPriceEntry({ ...priceEntry, price: e.target.value })} className="w-32" />
           </Field>
           <Button type="submit" variant="secondary">Enregistrer le prix</Button>
@@ -218,7 +219,7 @@ export default function FoodsCard() {
             const unit = getDiscreteUnit(name);
             return (
               <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
-                <span>{name} <span className="text-mute text-xs">{unit ? `${(pricePerGram * unit.grams).toFixed(2)}Dh/${unit.label}` : `${(pricePerGram * 100).toFixed(1)}Dh/100g`}</span></span>
+                <span>{name} <span className="text-mute text-xs">{unit ? `${(pricePerGram * unit.grams).toFixed(2)}${baseCurrencyShort()}/${unit.label}` : `${(pricePerGram * 100).toFixed(1)}${baseCurrencyShort()}/100g`}</span></span>
                 <button onClick={() => deleteWithUndo(null, () => deleteFoodPrice(name))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>
             );

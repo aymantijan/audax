@@ -22,7 +22,6 @@ export default function CloudAuthPanel() {
   const submit = async (e) => {
     e.preventDefault();
     setErr(null); setMsg(null);
-    if (mode === 'register' && !form.gender) return setErr('Choisis une option pour « Sexe » pour continuer.');
     setBusy(true);
     try {
       if (mode === 'register') {
@@ -62,11 +61,11 @@ export default function CloudAuthPanel() {
           <Field label="Prénom et nom">
             <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </Field>
-          <Field label="Sexe" hint="Sert aux calculs de la partie Santé (besoins caloriques, cycle).">
+          <Field label="Sexe (facultatif)" hint="Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.">
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Choisir…' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+              options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
             />
           </Field>
         </>

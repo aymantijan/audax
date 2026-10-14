@@ -4,7 +4,7 @@ import { useLearningStore } from '../../store/learningStore';
 import { GRADING_PRESETS, EVALUATION_PRESETS, parseSubjectLines } from '../../utils/academic';
 import { Button, Field, Input, Select, Modal, Textarea } from '../common/ui';
 import { useAcademicSettings, tint } from './design';
-import { numOrNull } from './cursus-utils';
+import { numOrNull } from './cursus-utils';
 import { deleteWithUndo } from '../../services/undo';
 
 function Toggle({ checked, onChange, label, hint }) {
@@ -290,8 +290,8 @@ export function GradingSettingsModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Établissement & règles de notation" wide>
       <form onSubmit={save} className="space-y-5">
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Établissement"><Input value={f.institution || ''} onChange={(e) => setF({ ...f, institution: e.target.value })} placeholder="ISCAE, Sorbonne, MIT…" /></Field>
-          <Field label="Programme / filière"><Input value={f.program || ''} onChange={(e) => setF({ ...f, program: e.target.value })} placeholder="Programme Grande École — 1re année" /></Field>
+          <Field label="Établissement"><Input value={f.institution || ''} onChange={(e) => setF({ ...f, institution: e.target.value })} placeholder="Nom de ton école ou université" /></Field>
+          <Field label="Programme / filière"><Input value={f.program || ''} onChange={(e) => setF({ ...f, program: e.target.value })} placeholder="ex. Licence 1re année" /></Field>
         </div>
 
         <div>
@@ -312,10 +312,10 @@ export function GradingSettingsModal({ open, onClose }) {
           <Field label="Note éliminatoire" hint="Vide = aucune"><Input type="number" step="0.25" value={f.eliminatoryMark ?? ''} onChange={(e) => setF({ ...f, eliminatoryMark: e.target.value })} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Validation d’une matière" hint="Vide = même note que le semestre. ISCAE : 7">
+          <Field label="Validation d’une matière" hint="Vide = même note que le semestre. Ex. 7">
             <Input type="number" step="0.25" value={f.subjectPassMark ?? ''} onChange={(e) => setF({ ...f, subjectPassMark: e.target.value })} />
           </Field>
-          <Field label="Validation d’un module" hint="Vide = même note que le semestre. ISCAE : 8">
+          <Field label="Validation d’un module" hint="Vide = même note que le semestre. Ex. 8">
             <Input type="number" step="0.25" value={f.modulePassMark ?? ''} onChange={(e) => setF({ ...f, modulePassMark: e.target.value })} />
           </Field>
         </div>
