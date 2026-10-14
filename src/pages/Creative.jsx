@@ -79,7 +79,7 @@ export default function Creative() {
         <Stat
           label="Heures de pratique"
           value={`${(practiceMinutes / 60).toFixed(1)}h`}
-          sub={<Link to="/focus" className="text-accent hover:underline">logger via Deep Work</Link>}
+          sub={<Link to="/focus" className="text-accent hover:underline">noter avec le Minuteur</Link>}
         />
       </div>
 

@@ -23,10 +23,9 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-base text-ink">
       <Navbar />
-      {/* pb-20: clears the fixed mobile bottom tab bar so page content (and the
-          QuickAdd FAB) never sits underneath it — desktop has no bottom bar,
-          hence md:pb-0. */}
-      <main className="pt-16 pb-20 md:pb-0">
+      {/* Bottom space: the last card can scroll clear of the phone tab bar AND of
+          the floating + button above it (pb-36), and of the + alone on desktop (J2). */}
+      <main className="pt-16 pb-36 md:pb-24">
         <PoleSubNav />
         <SampleBanner />
         <div className="max-w-7xl mx-auto px-4 py-6">

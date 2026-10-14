@@ -15,7 +15,7 @@ import { Card, Button, Modal, ProgressBar } from '../common/ui';
 import CourseCsvTools from './CourseCsvTools';
 import { TrackFormModal } from './TrackModals';
 import { SectionHeader, SegmentedTabs, useAcademicSettings, GradePill, BigStat, tint } from './design';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 import { deleteWithUndo } from '../../services/undo';
 
 const progressOf = (c) => (c.status === 'completed' ? 100 : calculateCourseProgress(c));

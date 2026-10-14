@@ -26,7 +26,7 @@ import EntityFormModal from '../components/common/EntityFormModal';
 import ScheduleEventModal from '../components/common/ScheduleEventModal';
 import { CourseFormModal } from '../components/learning/CursusModals';
 import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tint, gradeColor } from '../components/learning/design';
-import { courseColor } from '../components/learning/TimetableView';
+import { courseColor } from '../components/learning/course-color';
 import { CourseEndControl, CourseAttendanceSummary, ClassNotesCard } from '../components/learning/Attendance';
 import { ForecastCard } from '../components/learning/Forecast';
 import { skillLabel } from '../utils/skill-families';

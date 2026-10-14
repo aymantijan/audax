@@ -9,7 +9,7 @@ import { fmtMinutes } from '../../utils/study';
 import { todayKey } from '../../utils/formatters';
 import { Button, Card } from '../common/ui';
 import { SectionHeader, tint } from './design';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 import { useForecastContext } from './Forecast';
 
 function usePlan(horizonDays) {

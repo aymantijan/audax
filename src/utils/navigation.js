@@ -16,7 +16,7 @@ export const MODULES = {
   habits: { label: 'Habitudes', to: '/habits', icon: Flame },
   challenges: { label: 'Défis', to: '/defis', icon: Swords },
   timeline: { label: 'Chronologie', to: '/chronologie', icon: History },
-  focus: { label: 'Minuteur', to: '/focus', icon: Timer, flag: 'focus', def: false, desc: 'Sessions de concentration (Deep Work, étude) et leur historique.' },
+  focus: { label: 'Minuteur', to: '/focus', icon: Timer, flag: 'focus', def: false, desc: 'Sessions de concentration et d’étude, et leur historique.' },
 
   learning: { label: 'Études', to: '/learning', icon: GraduationCap, prefixes: ['/learning/course'] },
   readings: { label: 'Lectures', to: '/learning/readings', icon: Library },

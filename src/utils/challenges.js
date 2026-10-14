@@ -7,7 +7,7 @@ import { dayAttendance } from './attendance.js';
 export const CHALLENGE_METRICS = [
   { key: 'attendance', label: 'Cours à l’heure', unit: '%', hint: 'Part des cours où tu es arrivé·e à l’heure.' },
   { key: 'habits', label: 'Habitudes tenues', unit: '%', hint: 'Part de tes habitudes du jour cochées.' },
-  { key: 'focus', label: 'Minutes de concentration', unit: 'min', hint: 'Temps total au minuteur (étude, deep work).' },
+  { key: 'focus', label: 'Minutes de concentration', unit: 'min', hint: 'Temps total au minuteur (étude, concentration).' },
   { key: 'reading', label: 'Jours de lecture', unit: 'j', hint: 'Nombre de jours où tu as lu.' },
   { key: 'workouts', label: 'Séances de sport', unit: '', hint: 'Nombre de séances enregistrées.' },
 ];

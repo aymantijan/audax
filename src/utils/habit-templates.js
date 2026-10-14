@@ -82,7 +82,7 @@ export const HABIT_TEMPLATES = [
       h('Lire 20 pages', 'learning', 6, '', { kind: 'quantity', target: 20, unit: 'pages', direction: 'atLeast', source: 'reading_pages', moment: 'evening', duration: 30 }),
       h('Étudier 2 h', 'learning', 10, '', { kind: 'quantity', target: 120, unit: 'min', direction: 'atLeast', source: 'study_minutes', moment: 'day', duration: 120 }),
       h('Réviser 20 fiches', 'learning', 5, '', { kind: 'quantity', target: 20, unit: 'fiches', direction: 'atLeast', source: 'flashcards', moment: 'morning', duration: 10 }),
-      h('2 h de deep work', 'reflection', 8, '', { kind: 'quantity', target: 120, unit: 'min', direction: 'atLeast', source: 'focus_minutes', moment: 'day', duration: 120 }),
+      h('2 h de concentration', 'reflection', 8, '', { kind: 'quantity', target: 120, unit: 'min', direction: 'atLeast', source: 'focus_minutes', moment: 'day', duration: 120 }),
       h('Protéines : 120 g', 'health', 5, '', { kind: 'quantity', target: 120, unit: 'g', direction: 'atLeast', source: 'protein_g', moment: 'day', duration: 1 }),
       h('Dormir 7 h', 'recovery', 5, '', { kind: 'quantity', target: 7, unit: 'h', direction: 'atLeast', source: 'sleep_hours', moment: 'morning', duration: 1 }),
       h('Une séance de sport', 'health', 8, '', { kind: 'quantity', target: 1, unit: 'séance', direction: 'atLeast', source: 'workouts', moment: 'day', duration: 60 }),

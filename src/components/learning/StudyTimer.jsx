@@ -8,13 +8,13 @@ import { todayKey } from '../../utils/formatters';
 import { FOCUS_DOMAINS } from '../../utils/constants';
 import { Button, Field, Input, Modal, Select } from '../common/ui';
 import { tint, useAcademicSettings } from './design';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 
 export const TIMER_MODES = [
   { key: 'free', label: 'Libre', targetMin: null },
   { key: 'p25', label: 'Pomodoro 25 min', targetMin: 25 },
   { key: 'p50', label: 'Session 50 min', targetMin: 50 },
-  { key: 'p90', label: 'Deep work 90 min', targetMin: 90 },
+  { key: 'p90', label: 'Concentration 90 min', targetMin: 90 },
 ];
 
 export function timerElapsedMs(t, now = Date.now()) {
@@ -211,7 +211,7 @@ export function StudyTimerDock() {
   const location = useLocation();
   useTargetChime(timer, ms);
   if (!timer) return null;
-  // The Aujourd'hui view and the Deep Work page already show the full timer.
+  // The Aujourd'hui view and the Minuteur page already show the full timer.
   if (location.pathname === '/focus') return null;
   if (location.pathname === '/learning' && !location.search.includes('tab=')) return null;
   const color = timer.courseId ? courseColor(timer.courseId) : 'var(--accent-primary)';

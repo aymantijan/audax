@@ -1,10 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { uid, todayKey } from '../utils/formatters';
-import { BOOK_CATALOG } from '../utils/book-catalog';
-import { BOOK_CATALOG_V2 } from '../utils/book-catalog-2';
-import { BOOK_CATALOG_V3 } from '../utils/book-catalog-3';
-import { BOOK_CATALOG_V4 } from '../utils/book-catalog-4';
 import { GENRE_TO_READER_SKILL } from '../utils/life-skills';
 import { skillsForBook } from '../utils/book-skills';
 import { useSkillStore } from './skillStore';
@@ -31,9 +27,10 @@ export const useReadingsStore = create(
       // Merge the built-in catalogs into the library. Idempotent AND versionable:
       // a book is added only if it's neither in the library nor in seededKeys,
       // so user deletions stick while new catalog editions still merge in.
-      seedCatalog: () => {
+      // The catalogs are downloaded only here (dynamic import), not at startup.
+      seedCatalog: async () => {
+        const { ALL_BOOKS: catalog } = await import('../utils/book-catalogs');
         const key = (b) => `${b.title}|${b.author}`.toLowerCase();
-        const catalog = [...BOOK_CATALOG, ...BOOK_CATALOG_V2, ...BOOK_CATALOG_V3, ...BOOK_CATALOG_V4];
         // Migration from the v1 boolean flag: books already in the library count as seen.
         let seen = new Set(get().seededKeys ?? (get().catalogSeeded ? get().library.map(key) : []));
         const have = new Set(get().library.map(key));

@@ -20,14 +20,14 @@ import { evaluateBadges } from '../utils/badges';
 const XP_PER_SESSION = (minutes) => Math.max(1, Math.min(15, Math.round(minutes / 8)));
 
 const BADGE_DEFS = [
-  { id: 'first-session', name: 'First Session', tier: 'bronze', check: (s) => s.sessions.length >= 1 },
-  { id: 'focused', name: 'Focused', tier: 'silver', check: (s) => s.sessions.length >= 20 },
-  { id: 'deep-worker', name: 'Deep Worker', tier: 'gold', check: (s) => s.sessions.reduce((a, x) => a + x.durationMinutes, 0) >= 20 * 60 },
-  { id: 'marathon-session', name: 'Marathon Session', tier: 'silver', check: (s) => s.sessions.some((x) => x.durationMinutes >= 120) },
-  { id: 'domain-diverse', name: 'Well-Rounded Focus', tier: 'silver', check: (s) => new Set(s.sessions.map((x) => x.domain)).size >= 5 },
+  { id: 'first-session', name: 'Première session', tier: 'bronze', check: (s) => s.sessions.length >= 1 },
+  { id: 'focused', name: 'Concentré', tier: 'silver', check: (s) => s.sessions.length >= 20 },
+  { id: 'deep-worker', name: 'Grand concentré', tier: 'gold', check: (s) => s.sessions.reduce((a, x) => a + x.durationMinutes, 0) >= 20 * 60 },
+  { id: 'marathon-session', name: 'Session marathon', tier: 'silver', check: (s) => s.sessions.some((x) => x.durationMinutes >= 120) },
+  { id: 'domain-diverse', name: 'Concentration variée', tier: 'silver', check: (s) => new Set(s.sessions.map((x) => x.domain)).size >= 5 },
   {
     id: 'consistent-week',
-    name: 'Consistent Week',
+    name: 'Semaine régulière',
     tier: 'gold',
     check: (s) => new Set(s.sessions.filter((x) => x.date >= new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)).map((x) => x.date)).size >= 5,
   },

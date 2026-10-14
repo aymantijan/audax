@@ -12,7 +12,7 @@ import { isAcademic } from '../../utils/academic';
 import { todayKey } from '../../utils/formatters';
 import { Button, Card, Field, Input, Modal, Select, Textarea } from '../common/ui';
 import { SectionHeader, BigStat, tint } from './design';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 import ReviewSession from './ReviewSession';
 import { deleteWithUndo } from '../../services/undo';
 

@@ -14,7 +14,7 @@ import {
 import { todayKey } from '../../utils/formatters';
 import { Card, Button } from '../common/ui';
 import { SectionHeader, useAcademicSettings, tint, gradeColor, countdownLabel } from './design';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 import { StudyTimerCard, ManualSessionModal } from './StudyTimer';
 import { ClassesTodayCard } from './Attendance';
 import { TodayRevisionCard } from './RevisionPlan';

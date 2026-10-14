@@ -42,11 +42,17 @@ export default function Dashboard({ goTo }) {
   const badges = getBadges();
   const todayWorkouts = workouts.filter((w) => w.date === today);
 
-  // Tries to upgrade the instant local heuristic to a real AI recommendation —
-  // no-ops silently if the OpenRouter proxy isn't configured/reachable.
-  useEffect(() => {
-    refreshAICoach();
-  }, [refreshAICoach]);
+  // The AI is asked only on a tap (S13): opening Santé used to call it on its
+  // own, using up the daily questions — and retried on every visit if it failed.
+  const [coachAsking, setCoachAsking] = useState(false);
+  const [coachError, setCoachError] = useState(false);
+  const askCoach = async () => {
+    setCoachAsking(true);
+    setCoachError(false);
+    const ok = await refreshAICoach();
+    setCoachAsking(false);
+    if (!ok) setCoachError(true);
+  };
 
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState(null);
@@ -146,6 +152,12 @@ export default function Dashboard({ goTo }) {
                 {coach.source === 'ai' && <span className="flex items-center gap-1 text-[10px] text-accent"><Sparkles size={10} /> IA</span>}
               </div>
               <div className="text-sm">{coach.text}</div>
+              {coach.source !== 'ai' && (
+                <button type="button" onClick={askCoach} disabled={coachAsking} className="mt-2 flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer disabled:opacity-60">
+                  <Sparkles size={12} /> {coachAsking ? 'L’IA réfléchit…' : 'Demander un conseil à l’IA'}
+                </button>
+              )}
+              {coachError && <div className="mt-1 text-xs text-mute">L’IA n’est pas disponible pour le moment. Le conseil ci-dessus reste valable.</div>}
             </div>
           </div>
 

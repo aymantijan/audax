@@ -42,6 +42,11 @@ export default function Library() {
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [library, search, authorFilter, genreFilter, minPages, maxPages]);
 
+  // 1 000+ books at once made a phone crawl (L2): show them 30 at a time.
+  const PAGE = 30;
+  const [shown, setShown] = useState(PAGE);
+  useEffect(() => { setShown(PAGE); }, [search, authorFilter, genreFilter, minPages, maxPages]);
+
   const submit = (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.author.trim() || !Number(form.pages)) return;
@@ -117,12 +122,14 @@ export default function Library() {
           </EmptyState>
         </Card>
       ) : (
+        <>
+        <p className="text-xs text-mute">{filtered.length.toLocaleString('fr-FR')} livre{filtered.length > 1 ? 's' : ''}{filtered.length > shown ? ` · ${shown} affichés` : ''}</p>
         <div className="grid md:grid-cols-2 gap-4">
-          {filtered.map((b) => {
+          {filtered.slice(0, shown).map((b) => {
             const pop = scoreStyle(b.popularity);
             const reading = isReading(b.id);
             return (
-              <Card key={b.id}>
+              <Card key={b.id} className="min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0">
                     <h3 className="font-semibold truncate">{b.title}</h3>
@@ -157,6 +164,12 @@ export default function Library() {
             );
           })}
         </div>
+        {filtered.length > shown && (
+          <div className="flex justify-center">
+            <Button variant="secondary" onClick={() => setShown((n) => n + PAGE)}>Voir plus ({(filtered.length - shown).toLocaleString('fr-FR')} restants)</Button>
+          </div>
+        )}
+        </>
       )}
 
       {/* Custom add form (needs a description textarea + skill picker alongside the fields) */}

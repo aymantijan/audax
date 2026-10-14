@@ -71,7 +71,9 @@ export const analyticsSlice = (set, get) => ({
           workoutsThisWeek,
         });
         const cached = { date: today, source: 'local', lang: 'fr', sig, ...rec };
-        set({ coachCache: cached });
+        // Saved just after the render that asked for it: writing to the store
+        // while a screen renders made React warn (and re-render other cards).
+        queueMicrotask(() => { if (get().coachCache?.sig !== sig || get().coachCache?.date !== today) set({ coachCache: cached }); });
         return cached;
       },
 
@@ -110,13 +112,14 @@ export const analyticsSlice = (set, get) => ({
       // from getCoachRecommendation() above stays displayed either way.
       refreshAICoach: async () => {
         const today = todayKey();
-        if (get().coachCache?.date === today && get().coachCache?.source === 'ai') return;
+        if (get().coachCache?.date === today && get().coachCache?.source === 'ai') return true;
         try {
           const { getAIDailyRecommendation } = await import('../../services/health-coach-ai');
           const text = await getAIDailyRecommendation(get().buildCoachContext());
           set({ coachCache: { date: today, text, tone: 'info', source: 'ai', lang: 'fr' } });
+          return true;
         } catch {
-          // AI unavailable — local heuristic (already cached) remains shown.
+          return false; // AI unavailable — the local advice stays shown
         }
       },
 

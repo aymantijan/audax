@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Plus } from 'lucide-react';
-import QuickEntryModal from '../finance/QuickEntryModal';
-import CaptureModal from './CaptureModal';
+
+// Downloaded on the first tap only (G9): they are not needed to show a page.
+const CaptureModal = lazy(() => import('./CaptureModal'));
+const QuickEntryModal = lazy(() => import('../finance/QuickEntryModal'));
 
 // Floating + button, visible on every authenticated page. It opens the
 // universal capture window (one sentence or a receipt photo → a draft to
 // confirm, see CaptureModal / utils/quick-capture.js), which also keeps the
-// detailed shortcuts (trade, detailed expense, workout, timetable photo) that
+// detailed shortcuts (detailed expense, workout, timetable photo) that
 // deep-link with `?quickadd=` to the page owning the full form.
 export default function QuickAdd() {
   const [open, setOpen] = useState(false);
@@ -24,8 +26,10 @@ export default function QuickAdd() {
           <Plus size={22} className="text-on-accent" />
         </button>
       </div>
-      <CaptureModal open={open} onClose={() => setOpen(false)} onQuickEntry={() => setQuickOpen(true)} />
-      <QuickEntryModal open={quickOpen} onClose={() => setQuickOpen(false)} />
+      <Suspense fallback={null}>
+        {open && <CaptureModal open={open} onClose={() => setOpen(false)} onQuickEntry={() => setQuickOpen(true)} />}
+        {quickOpen && <QuickEntryModal open={quickOpen} onClose={() => setQuickOpen(false)} />}
+      </Suspense>
     </>
   );
 }

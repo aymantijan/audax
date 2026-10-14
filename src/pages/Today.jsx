@@ -24,6 +24,7 @@ import { OrganizeButton } from '../components/today/TodayLayoutControls';
 import ExamDayCard from '../components/learning/ExamDayCard';
 import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
+import YesterdayCard from '../components/today/YesterdayCard';
 
 export default function Today() {
   const user = useAuthStore((s) => s.user);
@@ -106,6 +107,7 @@ export default function Today() {
     ) },
     { id: 'habits', label: 'Habitudes du jour', node: (
       <>
+        <YesterdayCard />
         {/* ---- Habits: the primary daily checklist ---- */}
         <Card
           title="Habitudes du jour"

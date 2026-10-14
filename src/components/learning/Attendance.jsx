@@ -13,7 +13,7 @@ import { Button, Card, Modal, Textarea, Field } from '../common/ui';
 import { SectionHeader, tint, useAcademicSettings } from './design';
 import { isPushSupported, getPushSubscription, subscribeToPush } from '../../services/push';
 import { toast } from '../../store/uiStore';
-import { courseColor } from './TimetableView';
+import { courseColor } from './course-color';
 
 export const ATTENDANCE_SOURCE = 'class_attendance';
 
