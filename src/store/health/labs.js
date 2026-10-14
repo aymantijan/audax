@@ -215,6 +215,11 @@ export const labsSlice = (set, get) => ({
         }),
       }),
 
+      // Corrects a manual goal's history (O2): a value logged by mistake goes.
+      deleteGoalValue: (id, date) => set({
+        goals: get().goals.map((g) => (g.id === id ? { ...g, manualValues: (g.manualValues || []).filter((v) => v.date !== date) } : g)),
+      }),
+
       // One-shot import of Programme goals (previously a separate Supabase
       // system) — deduped by sourceProgramGoalId, the Supabase rows are left
       // untouched.

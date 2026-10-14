@@ -11,6 +11,14 @@ export const HELP = {
       '« Organiser » change l’ordre des cartes ou en masque.',
     ],
   },
+  week: {
+    title: 'Ma semaine',
+    lines: [
+      'Toute ta semaine, jour par jour : cours, habitudes, évaluations, échéances, sport.',
+      'Touche une habitude pour la cocher, même pour un jour passé.',
+      'Les flèches changent de semaine.',
+    ],
+  },
   goals: {
     title: 'Objectifs',
     lines: [

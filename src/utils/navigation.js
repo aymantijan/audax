@@ -4,7 +4,7 @@
 // The desktop bar, the phone tabs, the section home pages, the section
 // sub-menu and the global search all read from here.
 import {
-  Sun, Target, Flame, Timer, Swords, History, GraduationCap, Library, GitBranch, Palette, HeartPulse,
+  Sun, Target, Flame, Timer, Swords, History, CalendarRange, GraduationCap, Library, GitBranch, Palette, HeartPulse,
   Wallet,
 } from 'lucide-react';
 
@@ -15,6 +15,7 @@ import {
 export const MODULES = {
   today: { label: 'Aujourd’hui', to: '/today', icon: Sun, end: true },
   goals: { label: 'Objectifs', to: '/goals', icon: Target },
+  week: { label: 'Ma semaine', to: '/semaine', icon: CalendarRange },
   habits: { label: 'Habitudes', to: '/habits', icon: Flame },
   challenges: { label: 'Défis', to: '/defis', icon: Swords, expert: true },
   timeline: { label: 'Chronologie', to: '/chronologie', icon: History, expert: true },
@@ -33,7 +34,7 @@ export const MODULES = {
 export const POLES = [
   { key: 'etudes', label: 'Études & savoir', short: 'Études', home: '/etudes', icon: GraduationCap, blurb: 'Apprendre et créer', modules: ['learning', 'readings', 'skills', 'creative'] },
   { key: 'sante', label: 'Santé', short: 'Santé', home: '/health', icon: HeartPulse, blurb: 'Corps et énergie', modules: ['health'] },
-  { key: 'today', label: 'Aujourd’hui', short: 'Aujourd’hui', home: '/today', icon: Sun, blurb: 'Le centre de pilotage', modules: ['today', 'goals', 'habits', 'focus', 'timeline', 'challenges'] },
+  { key: 'today', label: 'Aujourd’hui', short: 'Aujourd’hui', home: '/today', icon: Sun, blurb: 'Le centre de pilotage', modules: ['today', 'week', 'goals', 'habits', 'focus', 'timeline', 'challenges'] },
   { key: 'patrimoine', label: 'Patrimoine', short: 'Patrimoine', home: '/finance', icon: Wallet, blurb: 'Argent et investissements', modules: ['finance'] },
 ];
 

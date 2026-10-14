@@ -74,7 +74,7 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
     <Modal open={open} onClose={onClose} title={course ? 'Modifier le parcours' : 'Nouveau parcours'} wide>
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {TRACK_TYPES.map((t) => {
+          {TRACK_TYPES.filter((t) => !t.legacy || t.value === type).map((t) => {
             const Icon = t.icon;
             const active = type === t.value;
             return (

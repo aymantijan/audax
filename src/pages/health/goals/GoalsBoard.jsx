@@ -146,8 +146,11 @@ function GoalForm({ initial = blank, programId, phases, onSubmit, onCancel, subm
   );
 }
 
-function GoalCard({ g, phases, onEdit, onDelete, onLog, showProgram }) {
+function GoalCard({ g, phases, onEdit, onDelete, onLog, onDeleteValue, showProgram }) {
   const [val, setVal] = useState('');
+  const [day, setDay] = useState(todayStr());
+  const [showHistory, setShowHistory] = useState(false);
+  const history = [...(g.manualValues || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
   const color = g.reached ? 'var(--success)' : g.percent >= 50 ? 'var(--accent-primary)' : 'var(--warning)';
   const overdue = g.targetDate && !g.reached && g.targetDate < todayStr();
   const phase = phases?.find((p) => p.id === g.phaseId);
@@ -200,11 +203,33 @@ function GoalCard({ g, phases, onEdit, onDelete, onLog, showProgram }) {
       </div>
 
       {g.metric?.key === 'manual' && (
-        <div className="mt-3 flex items-center gap-2">
-          <Input type="number" step="any" value={val} onChange={(e) => setVal(e.target.value)} placeholder={`Valeur du jour${g.unit ? ` (${g.unit})` : ''}`} />
-          <Button className="shrink-0 !px-3" disabled={val === ''} onClick={() => { onLog(Number(val)); setVal(''); }}>
-            <span className="flex items-center gap-1"><Plus size={13} /> Noter</span>
-          </Button>
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input type="number" step="any" className="!w-32" value={val} onChange={(e) => setVal(e.target.value)} placeholder={`Valeur${g.unit ? ` (${g.unit})` : ''}`} aria-label="Valeur" />
+            <Input type="date" className="!w-auto" max={todayStr()} value={day} onChange={(e) => e.target.value && setDay(e.target.value)} aria-label="Jour de la mesure" />
+            <Button className="shrink-0 !px-3" disabled={val === ''} onClick={() => { onLog(Number(val), day); setVal(''); setDay(todayStr()); }}>
+              <span className="flex items-center gap-1"><Plus size={13} /> Noter</span>
+            </Button>
+          </div>
+          {history.length > 0 && (
+            <div>
+              <button type="button" onClick={() => setShowHistory((v) => !v)} className="text-xs text-accent hover:underline cursor-pointer">
+                {showHistory ? 'Masquer l’historique' : `Historique (${history.length})`}
+              </button>
+              {showHistory && (
+                <ul className="mt-2 divide-y divide-line/60 rounded-lg border border-line">
+                  {history.map((v) => (
+                    <li key={v.date} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+                      <span className="text-mute flex-1">{fmtDate(v.date)}</span>
+                      <span className="font-data tabular-nums">{fmt(v.value)} {g.unit}</span>
+                      <button type="button" aria-label={`Corriger la valeur du ${fmtDate(v.date)}`} title="Corriger" onClick={() => { setVal(String(v.value)); setDay(v.date); }} className="ui-icon-btn p-1.5 text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                      <button type="button" aria-label={`Retirer la valeur du ${fmtDate(v.date)}`} title="Retirer" onClick={() => onDeleteValue(v.date)} className="ui-icon-btn p-1.5 text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
     </li>
@@ -212,9 +237,10 @@ function GoalCard({ g, phases, onEdit, onDelete, onLog, showProgram }) {
 }
 
 export default function GoalsBoard({ programId = null, phases = [] }) {
-  const { addGoal, editGoal, deleteGoal, logGoalValue, getGoalsWithProgress, bodyComp } = useHealthStore();
+  const { addGoal, editGoal, deleteGoal, logGoalValue, deleteGoalValue, getGoalsWithProgress, bodyComp } = useHealthStore();
   useHabitStore((s) => s.energyLogs); // re-render on new check-ins (sleep/energy goals)
-  const [creating, setCreating] = useState(false);
+  // « Nouvel objectif » from the Objectifs page lands here with ?new=1 (O1).
+  const [creating, setCreating] = useState(() => new URLSearchParams(window.location.search).get('new') === '1');
   const [editingId, setEditingId] = useState(null);
   const [showAchieved, setShowAchieved] = useState(false);
 
@@ -289,7 +315,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
         <ul className="grid gap-3 md:grid-cols-2">
           {active.map((g) => (
             <GoalCard key={g.id} g={g} phases={phases} showProgram={!programId}
-              onEdit={() => setEditingId(g.id)} onDelete={() => deleteWithUndo(null, () => deleteGoal(g.id))} onLog={(v) => logGoalValue(g.id, v)} />
+              onEdit={() => setEditingId(g.id)} onDelete={() => deleteWithUndo(null, () => deleteGoal(g.id))} onLog={(v, d) => logGoalValue(g.id, v, d)} onDeleteValue={(d) => deleteGoalValue(g.id, d)} />
           ))}
         </ul>
       ) : (

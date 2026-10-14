@@ -3,15 +3,20 @@
  * topic. A track is a `course` with kind 'free' plus trackType/level/goal
  * fields; its roadmap is the usual chapters/checklist.
  */
-import { Languages, CandlestickChart, Wrench, Compass } from 'lucide-react';
+import { Languages, CandlestickChart, Wrench, Compass, Music, Car } from 'lucide-react';
 
+// Learning outside school (E2): a language, an instrument, the driving code,
+// a skill… `legacy` types stay readable on existing tracks but are no longer
+// offered (Trading left the app on 2026-10-09).
 export const TRACK_TYPES = [
   { value: 'language', label: 'Langue', icon: Languages, color: '#06b6d4', desc: 'Niveaux CECRL A1 → C2, vocabulaire en fiches' },
-  { value: 'trading', label: 'Trading', icon: CandlestickChart, color: '#10b981', desc: 'Marchés, risque, psychologie, stratégie' },
-  { value: 'skill', label: 'Compétence', icon: Wrench, color: '#f59e0b', desc: 'Excel, Python, prise de parole…' },
+  { value: 'music', label: 'Musique', icon: Music, color: '#ec4899', desc: 'Un instrument, le chant, le solfège' },
+  { value: 'driving', label: 'Code et conduite', icon: Car, color: '#3b82f6', desc: 'Le code de la route, puis la conduite' },
+  { value: 'skill', label: 'Compétence', icon: Wrench, color: '#f59e0b', desc: 'Cuisine, couture, informatique, prise de parole…' },
   { value: 'topic', label: 'Autre sujet', icon: Compass, color: '#8b5cf6', desc: 'Tout ce que tu veux apprendre' },
+  { value: 'trading', label: 'Trading', icon: CandlestickChart, color: '#10b981', desc: 'Marchés, risque, psychologie, stratégie', legacy: true },
 ];
-export const trackMeta = (t) => TRACK_TYPES.find((x) => x.value === t) || TRACK_TYPES[3];
+export const trackMeta = (t) => TRACK_TYPES.find((x) => x.value === t) || TRACK_TYPES.find((x) => x.value === 'topic');
 
 export const CEFR = [
   { value: 'A1', label: 'A1 — Découverte', short: 'Découverte', words: 500 },
@@ -71,6 +76,21 @@ const GENERIC_ROADMAP = [
 ];
 
 /** Chapters (roadmap) prefilled for a new track. */
+const MUSIC_ROADMAP = [
+  ['Les bases', ['Bonne posture et tenue de l’instrument', 'Les notes et leur place', 'Jouer 10 minutes chaque jour']],
+  ['Premiers morceaux', ['Un morceau très simple en entier', 'Jouer en rythme avec un métronome', 'Un deuxième morceau']],
+  ['Lire et écouter', ['Lire une partition simple (ou une tablature)', 'Reconnaître les accords de base', 'Rejouer un air entendu']],
+  ['Répertoire', ['Cinq morceaux joués sans partition', 'Un morceau plus difficile', 'S’enregistrer et s’écouter']],
+  ['Partager', ['Jouer devant un proche', 'Jouer avec quelqu’un d’autre']],
+];
+
+const DRIVING_ROADMAP = [
+  ['Le code', ['La signalisation', 'Les priorités', 'La circulation et le stationnement', 'Les règles de sécurité']],
+  ['S’entraîner', ['Une série de questions par jour', 'Viser moins de 5 fautes sur une série', 'Revoir chaque erreur']],
+  ['L’examen du code', ['Réserver l’examen', 'Examen du code réussi']],
+  ['La conduite', ['Premières leçons', 'Manœuvres (créneau, demi-tour)', 'Conduite en ville et sur route', 'Examen de conduite']],
+];
+
 export function roadmapFor({ trackType, level, targetLevel }) {
   if (trackType === 'language') {
     const order = CEFR.map((l) => l.value);
@@ -84,7 +104,7 @@ export function roadmapFor({ trackType, level, targetLevel }) {
       checklistItems: CEFR_ROADMAP[lv].map((t) => ({ title: t, coefficient: 1 })),
     }));
   }
-  const src = trackType === 'trading' ? TRADING_ROADMAP : GENERIC_ROADMAP;
+  const src = trackType === 'trading' ? TRADING_ROADMAP : trackType === 'music' ? MUSIC_ROADMAP : trackType === 'driving' ? DRIVING_ROADMAP : GENERIC_ROADMAP;
   return src.map(([title, items]) => ({ title, coefficient: 1, checklistItems: items.map((t) => ({ title: t, coefficient: 1 })) }));
 }
 

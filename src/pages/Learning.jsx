@@ -11,7 +11,8 @@ import CoursesView from '../components/learning/CoursesView';
 import ReviewView from '../components/learning/ReviewView';
 import TracksView from '../components/learning/TracksView';
 import Readings from './Readings';
-import { upcomingEvaluations, normGrade } from '../utils/academic';
+import { upcomingEvaluations, normGrade, isAcademic } from '../utils/academic';
+import { useAuthStore } from '../store/authStore';
 import { todayKey } from '../utils/formatters';
 
 const TABS = [
@@ -29,7 +30,13 @@ export default function Learning() {
   const [params, setParams] = useSearchParams();
   const courses = useLearningStore((s) => s.courses);
   const settings = useAcademicSettings();
-  const tab = TABS.find((t) => t.key === params.get('tab')) || TABS[0];
+  // Not a student (E2): learning outside school comes first — tracks
+  // (a language, an instrument, the driving code…), readings and reviews; the
+  // school tabs move to the end.
+  const situation = useAuthStore((st) => st.user?.situation);
+  const student = situation === 'student' || courses.some(isAcademic);
+  const ordered = student ? TABS : [...TABS.filter((t) => ['tracks', 'readings', 'review'].includes(t.key)), ...TABS.filter((t) => !['tracks', 'readings', 'review'].includes(t.key))];
+  const tab = ordered.find((t) => t.key === params.get('tab')) || ordered[0];
   const Active = tab.Component;
 
   const today = todayKey();
@@ -37,7 +44,7 @@ export default function Learning() {
   const activeCount = courses.filter((c) => c.status === 'active').length;
   const fc = useFlashcardStore();
   const reviewCount = buildQueue({ cards: fc.cards, decks: fc.decks, reviewLog: fc.reviewLog, settings: fc.settings }).length;
-  const tabs = TABS.map((t) => ({
+  const tabs = ordered.map((t) => ({
     ...t,
     count: t.key === 'exams' ? upcomingCount || null : t.key === 'courses' ? activeCount || null : t.key === 'review' ? reviewCount || null : null,
   }));
@@ -47,10 +54,10 @@ export default function Learning() {
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-ink">Apprentissage</h1>
-          <p className="text-mute text-sm mt-1">Études, parcours et lectures : notes, échéances, révisions et progression au même endroit.</p>
+          <p className="text-mute text-sm mt-1">{student ? 'Études, parcours et lectures : notes, échéances, révisions et progression au même endroit.' : 'Ce que tu apprends : une langue, un instrument, le code de la route, une compétence, tes lectures.'}</p>
         </div>
       </div>
-      <SegmentedTabs tabs={tabs} value={tab.key} onChange={(k) => setParams(k === 'today' ? {} : { tab: k }, { replace: true })} />
+      <SegmentedTabs tabs={tabs} value={tab.key} onChange={(k) => setParams(k === ordered[0].key ? {} : { tab: k }, { replace: true })} />
       <Active />
     </div>
   );

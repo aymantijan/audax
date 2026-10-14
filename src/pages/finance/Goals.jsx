@@ -92,6 +92,8 @@ export default function Goals() {
   }, [rows, checkGoalAchievement]);
 
   const openAdd = () => { setEditing(null); setForm(blank()); setError(''); setModal(true); };
+  // « Nouvel objectif » from the Objectifs page lands here with ?new=1 (O1).
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('new') === '1') openAdd(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const openEdit = (g) => { setEditing(g); setForm({ ...blank(), kind: g.kind, name: g.name, targetAmount: g.targetAmount, targetDate: g.targetDate || '' }); setError(''); setModal(true); };
 
   const submit = (e) => {

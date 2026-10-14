@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { History, Link2, GraduationCap, HeartPulse, Wallet, Flame, Info } from 'lucide-react';
+import { History, Link2, GraduationCap, HeartPulse, Wallet, Flame, Info, Search } from 'lucide-react';
 import { useAccountingStore } from '../store/accountingStore';
 import { buildEvents, DOMAINS, MIN_DAYS } from '../utils/life-timeline';
 import { useTimelineData, useLifeLinks, LinksList } from '../components/today/LifeLinks';
@@ -18,6 +18,7 @@ export default function Timeline() {
   const [domain, setDomain] = useState(null);
   const [period, setPeriod] = useState(30);
   const [shown, setShown] = useState(PAGE);
+  const [query, setQuery] = useState(''); // search (C1)
   const data = useTimelineData();
   const base = useAccountingStore((s) => s.baseCurrency);
   const money = (n, cur) => formatMoney(n, cur || base);
@@ -25,7 +26,9 @@ export default function Timeline() {
   const links = useLifeLinks();
 
   const from = period ? (() => { const d = new Date(); d.setDate(d.getDate() - period + 1); return todayKey(d); })() : '';
-  const list = events.filter((e) => (!domain || e.domain === domain) && (!from || e.date >= from));
+  const q = query.trim().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const matches = (e) => !q || `${e.title} ${e.detail || ''}`.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().includes(q);
+  const list = events.filter((e) => (!domain || e.domain === domain) && (!from || e.date >= from) && matches(e));
   const byDay = [];
   for (const e of list.slice(0, shown)) {
     const last = byDay[byDay.length - 1];
@@ -47,6 +50,11 @@ export default function Timeline() {
 
       {view === 'frise' ? (
         <Card>
+          <div className="relative mb-3">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
+            <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setShown(PAGE); }} placeholder="Chercher (ex. courses, course à pied, IFRS…)" aria-label="Chercher dans la chronologie"
+              className="w-full bg-surface border border-line rounded-lg pl-9 pr-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
+          </div>
           <div className="flex flex-wrap gap-2 mb-4">
             <button type="button" className={chip(!domain)} onClick={() => setDomain(null)}>Tout</button>
             {Object.entries(DOMAINS).map(([k, d]) => (
@@ -78,7 +86,7 @@ export default function Timeline() {
               ))}
               {list.length > shown && <button type="button" className="text-xs text-accent hover:underline cursor-pointer" onClick={() => setShown((n) => n + PAGE)}>Voir plus ({list.length - shown})</button>}
             </div>
-          ) : <EmptyState>Rien de noté sur cette période. Utilise le bouton + pour noter une dépense, une séance, ton sommeil…</EmptyState>}
+          ) : <EmptyState>{q ? 'Rien ne correspond à cette recherche sur cette période.' : 'Rien de noté sur cette période. Utilise le bouton + pour noter une dépense, une séance, ton sommeil…'}</EmptyState>}
         </Card>
       ) : (
         <>

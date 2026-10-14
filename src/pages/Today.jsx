@@ -26,9 +26,11 @@ import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 import YesterdayCard from '../components/today/YesterdayCard';
 
+import { useCustomCards } from '../components/today/CustomCards';
 export default function Today() {
   const user = useAuthStore((s) => s.user);
   const today = todayKey();
+  const customCards = useCustomCards(); // the person's own notes and counters (J4)
 
   // ---- Habits + morning check-in (raw slices only — see the Zustand
   // useSyncExternalStore infinite-loop note in project memory: never select a
@@ -308,6 +310,7 @@ export default function Today() {
         )}
       </>
     ) },
+    ...customCards,
   ];
 
   return (

@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { Target, Trophy, AlertTriangle, CheckCircle2, Clock, Plus, HeartPulse, Wallet, GraduationCap, ChevronRight, Repeat, Flame } from 'lucide-react';
 import { useAllGoals, GOAL_DOMAINS } from '../hooks/useAllGoals';
 import { todayKey } from '../utils/formatters';
-import { Card, ProgressBar } from '../components/common/ui';
+import { Card, ProgressBar, Button } from '../components/common/ui';
 import { SegmentedTabs, tint, countdownLabel } from '../components/learning/design';
 import YearPlan from '../components/goals/YearPlan';
 
+import NewGoalModal from '../components/goals/NewGoalModal';
 const DOMAIN_ICONS = { health: HeartPulse, finance: Wallet, learning: GraduationCap, habits: Flame };
 const STATUS = {
   achieved: { label: 'Atteint', color: 'var(--success)', Icon: CheckCircle2 },
@@ -50,6 +51,7 @@ export default function GoalsHub() {
   const all = useAllGoals();
   const today = todayKey();
   const [domain, setDomain] = useState('all');
+  const [newOpen, setNewOpen] = useState(false); // one form for every kind of goal (O1)
   const list = all.filter((g) => domain === 'all' || g.domain === domain);
   const recurring = list.filter((g) => g.recurring);
   const open = list.filter((g) => !g.recurring && g.status !== 'achieved')
@@ -66,8 +68,12 @@ export default function GoalsHub() {
     <div className="space-y-5 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-ink">Objectifs</h1>
-        <p className="text-mute text-sm mt-1">Tous tes objectifs au même endroit : santé, argent, études, carrière, contenu, habitudes. Chacun se modifie dans sa section.</p>
+        <p className="text-mute text-sm mt-1">Tous tes objectifs au même endroit : santé, argent, études, habitudes. Chacun se modifie dans sa section.</p>
       </div>
+      <div>
+        <Button onClick={() => setNewOpen(true)}><span className="flex items-center gap-1.5"><Plus size={16} /> Nouvel objectif</span></Button>
+      </div>
+      <NewGoalModal open={newOpen} onClose={() => setNewOpen(false)} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
@@ -107,25 +113,6 @@ export default function GoalsHub() {
         </div>
       )}
 
-      <Card>
-        <div className="text-sm font-semibold text-ink mb-3 flex items-center gap-1.5"><Plus size={14} className="text-accent" /> Créer un objectif</div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {[
-            ['health', 'Poids, force, sommeil, cardio…', '/health?tab=goals'],
-            ['finance', 'Épargne, fonds d’urgence, patrimoine', '/finance?tab=goals'],
-            ['learning', 'Note visée par matière, niveau de langue', '/learning?tab=cursus'],
-            ['habits', 'Série visée sur une habitude', '/habits'],
-          ].map(([k, desc, to]) => {
-            const Icon = DOMAIN_ICONS[k];
-            return (
-              <Link key={k} to={to} className="rounded-xl border border-line p-3 hover:border-accent transition-colors">
-                <div className="flex items-center gap-2 text-sm font-medium text-ink"><Icon size={15} style={{ color: GOAL_DOMAINS[k].color }} /> {GOAL_DOMAINS[k].label}</div>
-                <div className="text-xs text-mute mt-1">{desc}</div>
-              </Link>
-            );
-          })}
-        </div>
-      </Card>
 
       {done.length > 0 && (
         <div>

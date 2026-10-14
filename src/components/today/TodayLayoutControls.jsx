@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { arrangeCards, moveCard, toggleCard } from '../../utils/today-layout';
 import { Button, Modal, IconButton } from '../common/ui';
 
+import { AddCustomCardButton } from './CustomCards';
 // Reorder / hide the cards of Aujourd'hui. Saved in the profile (synced).
 export function OrganizeButton({ cards }) {
   const { user, updateProfile } = useAuthStore();
@@ -32,6 +33,7 @@ export function OrganizeButton({ cards }) {
             </li>
           ))}
         </ul>
+        <div className="mt-3"><AddCustomCardButton /></div>
         <div className="flex justify-between mt-4">
           <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => save({ order: [], hidden: [] })}><span className="flex items-center gap-1.5"><RotateCcw size={13} /> Ordre par défaut</span></Button>
           <Button onClick={() => setOpen(false)}>Terminé</Button>
