@@ -16,6 +16,7 @@ import SkillPicker from '../common/SkillPicker';
 import { tint, MOMENT_ICON, catLabel, checkInFromLog } from './habit-ui';
 import { enableReminders } from './HabitCards';
 
+import { categoryChoices } from '../../utils/custom-lists';
 export function CheckinModal({ open, onClose, date }) {
   const { energyLogs, saveEnergyLog } = useHabitStore();
   const log = energyLogs.find((l) => l.date === date);
@@ -101,7 +102,7 @@ export function CheckinModal({ open, onClose, date }) {
 }
 
 // ── Add / edit a habit ───────────────────────────────────────────────────
-export const blankHabit = () => ({ kind: 'check', name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30, target: 8, unit: '', direction: 'atLeast', source: '', reminderTime: '', after: '' });
+export const blankHabit = () => ({ kind: 'check', name: '', category: 'health', moment: 'any', xpReward: 5, linkedSkill: '', healthLink: '', mandatory: false, frequency: 'daily', weekdays: [], timesPerWeek: 3, duration: 15, targetStreak: 30, target: 8, unit: '', direction: 'atLeast', source: '', reminderTime: '', extraReminders: [], after: '' });
 export const KINDS = [
   { value: 'check', label: 'À cocher', Icon: Check, desc: 'Fait / pas fait' },
   { value: 'quantity', label: 'Mesurable', Icon: Gauge, desc: 'Verres, pages, minutes… (peut être automatique)' },
@@ -110,7 +111,8 @@ export const KINDS = [
 export const unitOf = (src) => (src?.value === 'spent_amount' ? baseCurrencyShort() : src?.unit || '');
 
 export function HabitFormModal({ open, onClose, habit }) {
-  const { addHabit, editHabit, habits: allHabits, habitReminders, setHabitRemindersEnabled } = useHabitStore();
+  const { addHabit, editHabit, habits: allHabits, habitReminders, setHabitRemindersEnabled, customCategories, hiddenCategories, addCategory } = useHabitStore();
+  const [newCat, setNewCat] = useState(null); // typing a new category
   const skills = useSkillStore((s) => s.skills);
   // Anchor candidates: never itself nor a habit already chained after it (no loops).
   const anchors = allHabits.filter((h) => !h.archived && h.kind !== 'quit' && h.id !== habit?.id && (!habit || h.after !== habit.id));
@@ -120,7 +122,8 @@ export function HabitFormModal({ open, onClose, habit }) {
   useEffect(() => {
     if (!open) return;
     setError(''); setTemplate('');
-    setF(habit ? { ...blankHabit(), ...habit, kind: habit.kind || 'check', linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1, source: habit.source || '', target: habit.target ?? 8, unit: habit.unit || '', direction: habit.direction || 'atLeast', reminderTime: habit.reminderTime || '', after: habit.after || '' } : blankHabit());
+    setF(habit ? { ...blankHabit(), ...habit, kind: habit.kind || 'check', linkedSkill: habit.linkedSkill || '', healthLink: habit.healthLink || '', moment: habit.moment || 'any', timesPerWeek: habit.timesPerWeek || 1, source: habit.source || '', target: habit.target ?? 8, unit: habit.unit || '', direction: habit.direction || 'atLeast', reminderTime: habit.reminderTime || '', extraReminders: habit.extraReminders || [], after: habit.after || '' } : blankHabit());
+    setNewCat(null);
   }, [open, habit]);
 
   const applyTemplate = (value) => {
@@ -146,6 +149,8 @@ export function HabitFormModal({ open, onClose, habit }) {
       duration: Number(f.duration) || 15, targetStreak: Number(f.targetStreak) || 30,
       healthLink: f.healthLink || '', linkedSkill: f.linkedSkill || '',
       reminderTime: f.kind === 'quit' ? null : f.reminderTime || null, after: f.kind === 'quit' ? null : f.after || null,
+      extraReminders: f.kind === 'quit' || !f.reminderTime ? [] : (f.extraReminders || []).filter(Boolean),
+      category: f.category,
     };
     if (data.reminderTime && !habitReminders?.enabled) enableReminders(setHabitRemindersEnabled);
     if (habit) editHabit(habit.id, data); else addHabit(data);
@@ -215,10 +220,23 @@ export function HabitFormModal({ open, onClose, habit }) {
 
         {f.kind !== 'quit' && (
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Rappel (optionnel)" hint="Notification à cette heure si l’habitude n’est pas encore faite.">
-              <div className="flex gap-2">
-                <Input type="time" value={f.reminderTime} onChange={(e) => setF({ ...f, reminderTime: e.target.value })} />
-                {f.reminderTime && <Button type="button" variant="secondary" onClick={() => setF({ ...f, reminderTime: '' })}>Aucun</Button>}
+            <Field label="Rappels (optionnel)" hint="Une notification à chaque heure, tant que l’habitude n’est pas faite. Plusieurs par jour possible (médicaments, eau…).">
+              <div className="space-y-2">
+                {[f.reminderTime, ...(f.extraReminders || [])].map((t, i, all) => (
+                  <div key={i} className="flex gap-2">
+                    <Input type="time" aria-label={`Rappel ${i + 1}`} value={t || ''} onChange={(e) => {
+                      const times = all.slice(); times[i] = e.target.value;
+                      setF({ ...f, reminderTime: times[0] || '', extraReminders: times.slice(1) });
+                    }} />
+                    {(t || i > 0) && <Button type="button" variant="secondary" onClick={() => {
+                      const times = all.filter((_, k) => k !== i);
+                      setF({ ...f, reminderTime: times[0] || '', extraReminders: times.slice(1) });
+                    }}>Retirer</Button>}
+                  </div>
+                ))}
+                {f.reminderTime && (f.extraReminders || []).length < 5 && (
+                  <Button type="button" variant="ghost" onClick={() => setF({ ...f, extraReminders: [...(f.extraReminders || []), ''] })}>+ Ajouter une heure</Button>
+                )}
               </div>
             </Field>
             <Field label="Enchaîner après (optionnel)" hint="« Après mon café, je lis 10 pages » : l’ancrage rend l’habitude automatique.">
@@ -231,7 +249,18 @@ export function HabitFormModal({ open, onClose, habit }) {
         )}
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Catégorie"><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} options={[...new Set([...HABIT_CATEGORIES, f.category].filter(Boolean))].map((c) => ({ value: c, label: catLabel(c) }))} /></Field>
+          <Field label="Catégorie" hint="Tu peux créer les tiennes (Famille, Jardin…).">
+            {newCat !== null ? (
+              <div className="flex gap-2">
+                <Input autoFocus aria-label="Nom de la nouvelle catégorie" placeholder="Nom de la catégorie" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
+                <Button type="button" onClick={() => { const n = addCategory(newCat); if (n) setF({ ...f, category: n }); setNewCat(null); }}>Ajouter</Button>
+                <Button type="button" variant="ghost" onClick={() => setNewCat(null)}>Annuler</Button>
+              </div>
+            ) : (
+              <Select value={f.category} onChange={(e) => (e.target.value === '__new__' ? setNewCat('') : setF({ ...f, category: e.target.value }))}
+                options={[...categoryChoices(HABIT_CATEGORIES, customCategories, hiddenCategories, f.category).map((c) => ({ value: c, label: catLabel(c) })), { value: '__new__', label: '＋ Nouvelle catégorie…' }]} />
+            )}
+          </Field>
           {f.kind !== 'quit' && <Field label="Fréquence"><Select value={f.frequency} onChange={(e) => setF({ ...f, frequency: e.target.value })} options={HABIT_FREQUENCIES} /></Field>}
         </div>
         {f.kind !== 'quit' && f.frequency === 'custom' && (
@@ -306,10 +335,26 @@ export const DAY_LABEL = { done: 'réussi', joker: 'joker / pause', missed: 'man
 export const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 export const WEEKDAY_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
-export function HabitDetailModal({ habit, onClose, onEdit }) {
+export function HabitDetailModal({ habit: habitProp, onClose, onEdit }) {
   const allLogs = useHabitStore((s) => s.logs);
   const habits = useHabitStore((s) => s.habits);
+  // Live version: ticks made here can move the start date (see toggleHabit below).
+  const habit = habits.find((h) => h.id === habitProp?.id) || habitProp;
+  const toggleHabitRaw = useHabitStore((s) => s.toggleHabit);
+  const editHabit = useHabitStore((s) => s.editHabit);
+  // Ticking a day before the habit's start means it already existed: the start
+  // moves back so streaks and statistics count that day.
+  const toggleHabit = (id, day) => {
+    if (habit?.startDate && day < habit.startDate) editHabit(id, { startDate: day });
+    toggleHabitRaw(id, day);
+  };
   const today = todayKey();
+  // H4: any past day can be ticked from here (not the automatic ones nor « à arrêter »).
+  const canTick = !!habit && habit.kind !== 'quit' && !habit.source;
+  const recentDays = useMemo(() => Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - 13 + i);
+    return { key: todayKey(d), day: d.getDate(), dow: d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '') };
+  }), [today]); // eslint-disable-line react-hooks/exhaustive-deps
   const scroller = useRef(null);
   // Most recent weeks first in view when the grid is wider than the modal.
   useEffect(() => { if (scroller.current) scroller.current.scrollLeft = scroller.current.scrollWidth; }, [habit?.id]);
@@ -377,6 +422,25 @@ export function HabitDetailModal({ habit, onClose, onEdit }) {
             <ProgressBar value={Math.min(100, (data.streak / target) * 100)} color={data.streak >= target ? 'var(--success)' : 'var(--warning)'} />
           </div>
         )}
+        {canTick && (
+          <div>
+            <div className="text-xs font-semibold text-ink mb-2">Les 14 derniers jours — touche un jour pour le cocher ou le décocher</div>
+            <div className="grid grid-cols-7 gap-1.5">
+              {recentDays.map((d) => {
+                const done = allLogs.some((l) => l.habitId === habit.id && l.date === d.key && l.completed);
+                return (
+                  <button key={d.key} type="button" onClick={() => toggleHabit(habit.id, d.key)} aria-pressed={done}
+                    aria-label={`${fmtDate(d.key)} : ${done ? 'fait' : 'pas fait'}`}
+                    className={`ui-btn flex flex-col items-center justify-center rounded-lg border py-1.5 text-xs cursor-pointer ${done ? 'border-good bg-good/15 text-ink' : 'border-line text-mute hover:border-accent'}`}>
+                    <span className="capitalize">{d.dow}</span>
+                    <span className="font-semibold tabular-nums">{d.day}</span>
+                    {done ? <Check size={12} className="text-good" /> : <span className="h-3" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div>
           <div className="text-xs font-semibold text-ink mb-2">Les 12 derniers mois</div>
           <div ref={scroller} className="overflow-x-auto pb-1">
@@ -393,8 +457,15 @@ export function HabitDetailModal({ habit, onClose, onEdit }) {
                 {data.weeks.map((col, i) => (
                   <div key={i} className="flex flex-col gap-[2px]">
                     {col.map((c) => (
-                      <div key={c.key} title={c.st === 'future' ? '' : `${fmtDate(c.key)} · ${DAY_LABEL[c.st]}${c.value != null && habit.kind === 'quantity' ? ` · ${c.value} ${habit.unit || ''}` : ''}`}
-                        className="w-[10px] h-[10px] rounded-[3px]" style={{ background: DAY_COLOR[c.st], outline: c.key === today ? '1.5px solid var(--accent-primary)' : undefined }} />
+                      canTick && c.st !== 'future' ? (
+                        <button type="button" key={c.key} onClick={() => toggleHabit(habit.id, c.key)}
+                          title={`${fmtDate(c.key)} · ${DAY_LABEL[c.st]}${c.value != null && habit.kind === 'quantity' ? ` · ${c.value} ${habit.unit || ''}` : ''} — toucher pour cocher ou décocher`}
+                          aria-label={`${fmtDate(c.key)} : ${DAY_LABEL[c.st]}`}
+                          className="w-[10px] h-[10px] rounded-[3px] cursor-pointer hover:ring-1 hover:ring-accent" style={{ background: DAY_COLOR[c.st], outline: c.key === today ? '1.5px solid var(--accent-primary)' : undefined }} />
+                      ) : (
+                        <div key={c.key} title={c.st === 'future' ? '' : `${fmtDate(c.key)} · ${DAY_LABEL[c.st]}${c.value != null && habit.kind === 'quantity' ? ` · ${c.value} ${habit.unit || ''}` : ''}`}
+                          className="w-[10px] h-[10px] rounded-[3px]" style={{ background: DAY_COLOR[c.st], outline: c.key === today ? '1.5px solid var(--accent-primary)' : undefined }} />
+                      )
                     ))}
                   </div>
                 ))}

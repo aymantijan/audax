@@ -7,6 +7,7 @@ import { useLearningStore } from './learningStore';
 import { toast } from './uiStore';
 import { evaluateBadges } from '../utils/badges';
 
+import { addName } from '../utils/custom-lists';
 // Deep-work sessions — a cross-cutting focus timer/log, not its own life
 // domain: a session targets one of the OTHER domains (Trading, Engineering,
 // Learning…) via FOCUS_DOMAIN_SKILL, so this feeds XP into whichever domain
@@ -138,7 +139,12 @@ export const useFocusStore = create(
         return get().sessions.filter((s) => s.date >= weekAgo && s.date <= today).reduce((a, s) => a + s.durationMinutes, 0);
       },
 
-      resetAll: () => set({ sessions: [], awardedBadges: [], activeTimer: null }),
+      // The person's own focus domains (M2): piano, permis, couture…
+      customDomains: [],
+      addDomain: (name) => { const list = addName(get().customDomains || [], name); set({ customDomains: list }); return String(name).trim() || null; },
+      removeDomain: (name) => set({ customDomains: (get().customDomains || []).filter((d) => d !== name) }),
+
+      resetAll: () => set({ sessions: [], awardedBadges: [], activeTimer: null, customDomains: [] }),
     }),
     { name: 'audax-focus' }
   )

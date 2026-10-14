@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DIRECTIONS, EMOTIONS, HABIT_CATEGORIES, GRADES } from './constants';
+import { DIRECTIONS, EMOTIONS, GRADES } from './constants';
 
 // instrument/strategy are free strings, not a static enum — the trade form's
 // <Select> already constrains input to the built-in list plus the user's own
@@ -53,7 +53,8 @@ export const transactionSchema = z.object({
 
 export const habitSchema = z.object({
   name: z.string().min(1, 'Donne un nom à l’habitude'),
-  category: z.enum(HABIT_CATEGORIES),
+  // Any category: built-in, the person's own, or one of a removed module.
+  category: z.string().min(1, 'Choisis une catégorie'),
   xpReward: z.coerce.number().min(0).max(50),
   linkedSkill: z.string().optional(),
   healthLink: z.string().optional(),

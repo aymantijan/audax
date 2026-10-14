@@ -8,6 +8,7 @@ import { endRecurringEvent, deleteCalendarEvent } from '../services/google-calen
 import { evaluateBadges } from '../utils/badges';
 import { HABIT_CATEGORIES } from '../utils/constants';
 
+import { addName, renameName, moveAmong } from '../utils/custom-lists';
 // Same shape/mechanism as healthStore's BADGE_DEFS —
 // `check` receives this store's state, `awardedBadges` persists which ones
 // already fired so re-checking on every toggle never re-toasts one.
@@ -46,6 +47,29 @@ export const useHabitStore = create(
       habitSettings: { jokersPerMonth: 2 }, // jokers per habit per calendar month (streak protection)
       // Plan de l'année: year → quarter → week objectives linked to habits (utils/objectives.js).
       objectives: [],
+      // « À ta façon » (chantier 5): the person's own categories, built-ins they hid.
+      customCategories: [],
+      hiddenCategories: [],
+      addCategory: (name) => {
+        const list = addName(get().customCategories, name);
+        if (list !== get().customCategories) set({ customCategories: list });
+        return list.find((x) => x.toLocaleLowerCase('fr') === String(name).trim().toLocaleLowerCase('fr')) || null;
+      },
+      renameCategory: (from, to) => {
+        const list = renameName(get().customCategories, from, to);
+        if (list === get().customCategories) return false;
+        const name = String(to).trim();
+        set({ customCategories: list, habits: get().habits.map((h) => (h.category === from ? { ...h, category: name, updatedAt: Date.now() } : h)) });
+        return true;
+      },
+      // Habits keep the name as their category: it just leaves the picker.
+      removeCategory: (name) => set({ customCategories: get().customCategories.filter((c) => c !== name) }),
+      toggleCategoryHidden: (key) => {
+        const hidden = get().hiddenCategories || [];
+        set({ hiddenCategories: hidden.includes(key) ? hidden.filter((k) => k !== key) : [...hidden, key] });
+      },
+      // Order of the habits (Organiser): up (-1) or down (+1) among active ones.
+      moveHabit: (id, dir) => set({ habits: moveAmong(get().habits, id, dir, (h) => !h.archived) }),
       addObjective: (data) => {
         const title = data.title?.trim();
         if (!title) return null;
@@ -109,7 +133,8 @@ export const useHabitStore = create(
           direction: data.kind === 'quantity' ? data.direction || 'atLeast' : null, // 'atLeast' | 'atMost'
           source: data.kind === 'quantity' ? data.source || null : null, // auto source (utils/habit-sources.js)
           relapses: [],
-          reminderTime: data.reminderTime || null, // 'HH:MM'
+          reminderTime: data.reminderTime || null, // 'HH:MM' — first reminder
+          extraReminders: (data.extraReminders || []).filter(Boolean), // more times the same day (H3)
           after: data.after || null, // habit stacking: do this right after habit `after`
           archived: false,
           startDate: todayKey(),
@@ -335,7 +360,7 @@ export const useHabitStore = create(
         toast('Sieste enregistrée', 'success');
       },
 
-      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 }, coachSnooze: {}, objectives: [] }),
+      resetAll: () => set({ habits: [], logs: [], energyLogs: [], awardedBadges: [], pauses: [], habitSettings: { jokersPerMonth: 2 }, coachSnooze: {}, objectives: [], customCategories: [], hiddenCategories: [] }),
     }),
     { name: 'audax-habits' }
   )

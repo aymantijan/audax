@@ -78,6 +78,28 @@ export const DOMAIN_LABELS = {
 };
 export const domainLabel = (d) => DOMAIN_LABELS[d] || d;
 
+// Focus domain picker (M2): the built-in domains, the person's own, and
+// « ＋ Nouveau domaine… » to add one on the spot (piano, permis, couture…).
+export function DomainSelect({ value, onChange, id }) {
+  const custom = useFocusStore((st) => st.customDomains || []);
+  const addDomain = useFocusStore((st) => st.addDomain);
+  const [draft, setDraft] = useState(null);
+  if (draft !== null) {
+    return (
+      <div className="flex gap-2">
+        <Input autoFocus aria-label="Nom du nouveau domaine" placeholder="Ex. Piano" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <Button type="button" onClick={() => { const n = addDomain(draft); if (n) onChange(n); setDraft(null); }}>Ajouter</Button>
+        <Button type="button" variant="ghost" onClick={() => setDraft(null)}>Annuler</Button>
+      </div>
+    );
+  }
+  const list = [...new Set([...FOCUS_DOMAINS, ...custom, value].filter(Boolean))];
+  return (
+    <Select id={id} value={value} onChange={(e) => (e.target.value === '__new__' ? setDraft('') : onChange(e.target.value))}
+      options={[...list.map((d) => ({ value: d, label: domainLabel(d) })), { value: '__new__', label: '＋ Nouveau domaine…' }]} />
+  );
+}
+
 export function useCourseLabel(courseId, domain = 'Learning') {
   const course = useLearningStore((s) => s.courses.find((c) => c.id === courseId));
   if (course) return course.name;
@@ -144,7 +166,7 @@ export function StudyTimerCard({ preselect, allDomains = false }) {
           <div className="flex-1 w-full space-y-3">
             {allDomains && (
               <Field label="Domaine">
-                <Select value={domain} onChange={(e) => setDomain(e.target.value)} options={FOCUS_DOMAINS.map((d) => ({ value: d, label: domainLabel(d) }))} />
+                <DomainSelect value={domain} onChange={setDomain} />
               </Field>
             )}
             {(!allDomains || domain === 'Learning') && (

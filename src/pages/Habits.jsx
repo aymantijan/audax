@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck, Check, Archive, ArchiveRestore, ShieldAlert, Target, ListChecks, ChevronDown, Snowflake, Ban, Zap, Palmtree, Bell, BellOff, CalendarDays, CornerDownRight } from 'lucide-react';
+import { Plus, Trash2, Flame, AlertTriangle, Pencil, ChevronLeft, ChevronRight, History, CalendarPlus, CalendarCheck, Check, Archive, ArchiveRestore, ShieldAlert, Target, ListChecks, ChevronDown, Snowflake, Ban, Zap, Palmtree, Bell, BellOff, CalendarDays, CornerDownRight, ListOrdered } from 'lucide-react';
 import { sourceMeta } from '../utils/habit-sources';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useHabitStore } from '../store/habitStore';
@@ -18,9 +18,11 @@ import { QuantityControl, QuitCard, orderChains, enableReminders, CoachCard } fr
 import { skillLabel } from '../utils/skill-families';
 import { deleteWithUndo } from '../services/undo';
 
+import HabitOrganizer from '../components/habits/HabitOrganizer';
 export default function Habits() {
   const { habits, logs, energyLogs, toggleHabit, archiveHabit, unarchiveHabit, deleteHabit, editHabit, getBadges, useJoker, removeJoker, jokersLeft, logRelapse, endPause, pauses } = useHabitStore();
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [organizing, setOrganizing] = useState(false);
   const [relapsing, setRelapsing] = useState(null);
   const today = todayKey();
   const [date, setDate] = useState(today);
@@ -93,6 +95,7 @@ export default function Habits() {
             <span className="flex items-center gap-1.5">{habitReminders?.enabled ? <Bell size={15} className="text-accent" /> : <BellOff size={15} />} Rappels</span>
           </Button>
           <Button variant="secondary" onClick={() => setPauseOpen(true)}><span className="flex items-center gap-1.5"><Palmtree size={15} /> Pause</span></Button>
+          <Button variant="secondary" onClick={() => setOrganizing(true)}><span className="flex items-center gap-1.5"><ListOrdered size={15} /> Organiser</span></Button>
           <Button onClick={() => { setEditing(null); setFormOpen(true); }}><span className="flex items-center gap-1.5"><Plus size={16} /> Nouvelle habitude</span></Button>
         </div>
       </div>
@@ -200,7 +203,7 @@ export default function Habits() {
                               {h.mandatory && <span className="text-warning">· prioritaire</span>}
                               {h.mini && <span className="text-accent">· version mini</span>}
                               {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}
-                              {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {h.reminderTime}</span>}
+                              {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {[h.reminderTime, ...(h.extraReminders || [])].filter(Boolean).join(', ')}</span>}
                               {h.source && <span className="text-accent">· auto ({sourceMeta(h.source)?.section})</span>}
                               {isJoker && <span style={{ color: 'var(--accent-secondary)' }}>· {log.pause ? 'en pause' : 'joker'} — série protégée</span>}
                             </div>
@@ -327,6 +330,7 @@ export default function Habits() {
 
       {detail && <HabitDetailModal habit={habits.find((x) => x.id === detail.id) || detail} onClose={() => setDetail(null)} onEdit={(h) => { setDetail(null); setEditing(h); setFormOpen(true); }} />}
       <HabitFormModal open={formOpen} onClose={() => { setFormOpen(false); setEditing(null); }} habit={editing} />
+      <HabitOrganizer open={organizing} onClose={() => setOrganizing(false)} />
       <CheckinModal open={checkinOpen} onClose={() => setCheckinOpen(false)} date={date} />
       <PauseModal open={pauseOpen} onClose={() => setPauseOpen(false)} />
       <Modal open={!!relapsing} onClose={() => setRelapsing(null)} title="Noter une rechute ?">

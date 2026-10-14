@@ -7,7 +7,7 @@ import { todayKey } from '../utils/formatters';
 import { toast } from '../store/uiStore';
 import { Card, Stat, Button, Field, Input, Select, Textarea, Modal, Badge, EmptyState } from '../components/common/ui';
 import BadgeList from '../components/common/BadgeList';
-import { StudyTimerCard, domainLabel } from '../components/learning/StudyTimer';
+import { StudyTimerCard, domainLabel, DomainSelect } from '../components/learning/StudyTimer';
 import { useLearningStore } from '../store/learningStore';
 import { tooltipStyle } from '../components/common/chart-theme';
 
@@ -22,6 +22,7 @@ const blank = () => ({ domain: 'General', durationMinutes: '', date: todayKey(),
 
 export default function FocusSessions() {
   const { sessions, logSession, deleteSession, getBadges } = useFocusStore();
+  const customDomains = useFocusStore((st) => st.customDomains || []);
   const editSession = useFocusStore((st) => st.editSession);
   const [editingSession, setEditingSession] = useState(null);
   const courses = useLearningStore((s) => s.courses);
@@ -37,7 +38,7 @@ export default function FocusSessions() {
   }, [sessions]);
   const totalHours = Math.round((sessions.reduce((a, s) => a + s.durationMinutes, 0) / 60) * 10) / 10;
   const byDomain = useMemo(
-    () => [...new Set([...FOCUS_DOMAINS, ...sessions.map((s) => s.domain)])].filter(Boolean).map((d) => ({ key: d, name: domainLabel(d), minutes: sessions.filter((s) => s.domain === d).reduce((a, s) => a + s.durationMinutes, 0) })).filter((d) => d.minutes > 0),
+    () => [...new Set([...FOCUS_DOMAINS, ...customDomains, ...sessions.map((s) => s.domain)])].filter(Boolean).map((d) => ({ key: d, name: domainLabel(d), minutes: sessions.filter((s) => s.domain === d).reduce((a, s) => a + s.durationMinutes, 0) })).filter((d) => d.minutes > 0),
     [sessions]
   );
 
@@ -108,7 +109,7 @@ export default function FocusSessions() {
       <Modal open={modal} onClose={() => setModal(false)} title="Ajouter une session">
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Domaine"><Select value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} options={FOCUS_DOMAINS.map((d) => ({ value: d, label: domainLabel(d) }))} /></Field>
+            <Field label="Domaine"><DomainSelect value={form.domain} onChange={(d) => setForm({ ...form, domain: d })} /></Field>
             <Field label="Durée (minutes)"><Input type="number" min="1" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} autoFocus /></Field>
           </div>
           <Field label="Date"><Input type="date" value={form.date} max={todayKey()} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
@@ -127,7 +128,7 @@ export default function FocusSessions() {
         fields={[
           { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
           { name: 'durationMinutes', label: 'Durée (min)', type: 'number', min: 1 },
-          { name: 'domain', label: 'Domaine', type: 'select', options: [...new Set([...FOCUS_DOMAINS, editingSession?.domain].filter(Boolean))].map((d) => ({ value: d, label: domainLabel(d) })) },
+          { name: 'domain', label: 'Domaine', type: 'select', options: [...new Set([...FOCUS_DOMAINS, ...customDomains, editingSession?.domain].filter(Boolean))].map((d) => ({ value: d, label: domainLabel(d) })) },
           { name: 'notes', label: 'Note', type: 'textarea' },
         ]}
         onSave={(v) => { const r = editSession(editingSession.id, { date: v.date, durationMinutes: v.durationMinutes, notes: v.notes || '', domain: v.domain }); if (!r.ok) toast(r.error, 'error'); }}
