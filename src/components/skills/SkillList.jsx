@@ -33,7 +33,7 @@ export default function SkillList({ states, visibleIds, query, onSelect }) {
           <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
             {branches.map(([branch, fams]) => (
               <div key={branch}>
-                <div className="text-[11px] uppercase tracking-wide text-mute mb-1">{branch}</div>
+                <div className="text-xs uppercase tracking-wide text-mute mb-1">{branch}</div>
                 <ul>
                   {fams.map((f) => {
                     const st = states[f.id];

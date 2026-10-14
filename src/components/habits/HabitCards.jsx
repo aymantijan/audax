@@ -21,22 +21,22 @@ export function QuantityControl({ h, value, date }) {
     <div className="mt-1.5 flex items-center gap-2">
       <div className="flex-1 max-w-[12rem]"><ProgressBar value={h.direction === 'atMost' ? (over ? 100 : pct) : pct} height={5} color={color} /></div>
       {src ? (
-        <span className="text-[11px] tabular-nums" style={{ color }}>{value}/{target} {h.unit}</span>
+        <span className="text-xs tabular-nums" style={{ color }}>{value}/{target} {h.unit}</span>
       ) : (
         <div className="flex items-center gap-1">
           <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, Math.max(0, value - step))}><Minus size={11} /></button>
           {draft != null ? (
             <form onSubmit={(e) => { e.preventDefault(); setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}>
               <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => { setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}
-                className="w-14 bg-surface border border-accent rounded px-1 py-0.5 text-[11px] text-center tabular-nums text-ink" />
+                className="w-14 bg-surface border border-accent rounded px-1 py-0.5 text-xs text-center tabular-nums text-ink" />
             </form>
           ) : (
-            <button onClick={() => setDraft(String(value))} className="text-[11px] tabular-nums px-1 cursor-pointer hover:underline" style={{ color }} title="Saisir la valeur">{value}/{target} {h.unit}</button>
+            <button onClick={() => setDraft(String(value))} className="text-xs tabular-nums px-1 cursor-pointer hover:underline" style={{ color }} title="Saisir la valeur">{value}/{target} {h.unit}</button>
           )}
           <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, value + step)}><Plus size={11} /></button>
         </div>
       )}
-      {h.direction === 'atMost' && <span className="text-[10px] text-mute">{over ? 'limite dépassée' : `max ${target}`}</span>}
+      {h.direction === 'atMost' && <span className="text-[0.6875rem] text-mute">{over ? 'limite dépassée' : `max ${target}`}</span>}
     </div>
   );
 }
@@ -55,22 +55,22 @@ export function QuitCard({ h, today, onRelapse }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-ink truncate">{h.name}</div>
-          <div className="text-[11px] text-mute">{catLabel(h.category)} · record {best} j</div>
+          <div className="text-xs text-mute">{catLabel(h.category)} · record {best} j</div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold tabular-nums" style={{ color: days >= 7 ? 'var(--success)' : 'var(--accent-primary)' }}>{days}</div>
-          <div className="text-[10px] text-mute">jour{days > 1 ? 's' : ''} sans</div>
+          <div className="text-[0.6875rem] text-mute">jour{days > 1 ? 's' : ''} sans</div>
         </div>
       </div>
       {next && (
         <div className="mt-3">
           <ProgressBar value={((days - prev) / (next - prev)) * 100} height={4} color="var(--success)" />
-          <div className="text-[10px] text-mute mt-1 flex items-center gap-1"><Trophy size={10} /> prochain palier : {next} jour{next > 1 ? 's' : ''}</div>
+          <div className="text-[0.6875rem] text-mute mt-1 flex items-center gap-1"><Trophy size={10} /> prochain palier : {next} jour{next > 1 ? 's' : ''}</div>
         </div>
       )}
       <div className="flex items-center gap-2 mt-3">
         <Button variant="secondary" className="!py-1 !px-2.5 text-xs" onClick={() => onRelapse(h)}>J’ai craqué</Button>
-        {lastRelapse === today && <button className="text-[11px] text-mute hover:text-ink underline cursor-pointer" onClick={() => undoRelapse(h.id, today)}>annuler</button>}
+        {lastRelapse === today && <button className="text-xs text-mute hover:text-ink underline cursor-pointer" onClick={() => undoRelapse(h.id, today)}>annuler</button>}
       </div>
     </div>
   );
@@ -129,7 +129,7 @@ export function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
                   {slipping ? (
                     <>
                       <div className="text-ink">« {h.name} » décroche</div>
-                      <div className="text-[12px] text-mute">
+                      <div className="text-xs text-mute">
                         {a.weeks ? (Math.round(a.recent * 3) ? `Quota atteint 1 semaine sur les 3 dernières.` : `Quota non atteint ces 3 dernières semaines.`)
                           : `${a.done}/${a.due} jours réussis ces 14 derniers jours${a.prior != null ? ` (contre ${pctOf(a.prior)} avant)` : ''}.`}
                         {a.mini ? ` Réduis l’effort plutôt que d’abandonner : ${a.mini.text}.`
@@ -141,7 +141,7 @@ export function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
                   ) : (
                     <>
                       <div className="text-ink">« {h.name} » tient bon en version mini</div>
-                      <div className="text-[12px] text-mute">{a.done != null ? `${a.done}/${a.due} jours réussis ces 14 derniers jours (${pctOf(a.recent)}).` : 'Quota atteint 3 semaines sur 3.'} Prêt à revenir à la version normale ?</div>
+                      <div className="text-xs text-mute">{a.done != null ? `${a.done}/${a.due} jours réussis ces 14 derniers jours (${pctOf(a.recent)}).` : 'Quota atteint 3 semaines sur 3.'} Prêt à revenir à la version normale ?</div>
                     </>
                   )}
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -159,7 +159,7 @@ export function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
       )}
       {links.length > 0 && (
         <div className={advice.length ? 'mt-4 pt-3 border-t border-line' : ''}>
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2">Ce que disent tes check-ins</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-mute mb-2">Ce que disent tes check-ins</div>
           <div className="space-y-1.5">
             {links.map((l) => {
               const fem = METRIC_GENDER_F[l.metric.key];
@@ -170,13 +170,13 @@ export function CoachCard({ habits, logs, energyLogs, today, onEdit }) {
                   <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ background: c }} />
                   <span className="text-mute">
                     Le lendemain de « <span className="text-ink">{l.habit.name}</span> », ton {l.metric.label} est <b style={{ color: c }}>{word} de {nf1(Math.abs(l.diff))} pt</b>
-                    <span className="text-[11px]"> ({nf1(l.withMean)} contre {nf1(l.withoutMean)} sur 10 · {l.nWith} j avec, {l.nWithout} j sans)</span>
+                    <span className="text-xs"> ({nf1(l.withMean)} contre {nf1(l.withoutMean)} sur 10 · {l.nWith} j avec, {l.nWithout} j sans)</span>
                   </span>
                 </div>
               );
             })}
           </div>
-          <p className="text-[11px] text-mute mt-2">Sur 120 jours. Ce sont des corrélations, pas une preuve de cause à effet.</p>
+          <p className="text-xs text-mute mt-2">Sur 120 jours. Ce sont des corrélations, pas une preuve de cause à effet.</p>
         </div>
       )}
     </Card>

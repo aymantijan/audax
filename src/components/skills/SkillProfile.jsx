@@ -28,10 +28,10 @@ export function SkillProfile({ states, visibleIds, onModel }) {
             <span className="font-data text-lg font-bold">{t.levels}</span>
           </div>
           <div className="my-1.5"><ProgressBar value={t.levels} max={maxLevels} height={5} /></div>
-          <div className="text-[11px] text-mute truncate">
+          <div className="text-xs text-mute truncate">
             {t.practised}/{t.total} pratiquée{t.practised > 1 ? 's' : ''}{t.mastered ? ` · ${t.mastered} maîtrisée${t.mastered > 1 ? 's' : ''}` : ''}
           </div>
-          {t.best && <div className="text-[11px] text-mute truncate">Meilleure : {FAMILY_MAP[t.best.id].name} (niv. {t.best.st.level})</div>}
+          {t.best && <div className="text-xs text-mute truncate">Meilleure : {FAMILY_MAP[t.best.id].name} (niv. {t.best.st.level})</div>}
         </button>
       ))}
     </div>
@@ -61,17 +61,17 @@ export function UpcomingTrials({ goals, states, onSkill }) {
               <div className="flex items-baseline gap-2">
                 <span className="font-data text-sm font-bold shrink-0 w-14" style={{ color: urgent ? 'var(--warning)' : 'var(--accent-primary)' }}>{d === 0 ? 'Auj.' : `J-${d}`}</span>
                 <Link to={g.link} className="text-sm truncate hover:text-accent flex-1">{g.title}</Link>
-                <span className="text-[11px] text-mute shrink-0">{GOAL_DOMAINS[g.domain]?.label}</span>
+                <span className="text-xs text-mute shrink-0">{GOAL_DOMAINS[g.domain]?.label}</span>
               </div>
               <div className="pl-16 mt-1 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <div className="flex-1"><ProgressBar value={g.progress ?? 0} max={100} height={5} color={urgent ? 'var(--warning)' : 'var(--success)'} /></div>
-                  <span className="text-[11px] text-mute font-data shrink-0">prêt à {g.progress ?? 0} %</span>
+                  <span className="text-xs text-mute font-data shrink-0">prêt à {g.progress ?? 0} %</span>
                 </div>
                 {fams.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {fams.map((id) => (
-                      <button key={id} type="button" onClick={() => onSkill(id)} className="px-2 py-0.5 rounded-full text-[11px] border border-line text-mute hover:text-accent hover:border-accent cursor-pointer">
+                      <button key={id} type="button" onClick={() => onSkill(id)} className="px-2 py-0.5 rounded-full text-xs border border-line text-mute hover:text-accent hover:border-accent cursor-pointer">
                         {FAMILY_MAP[id].name} · niv. {states[id]?.level ?? 0}
                       </button>
                     ))}

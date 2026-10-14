@@ -72,7 +72,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
     <div className="rounded-2xl border border-line bg-card p-5">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <h3 className="flex items-center gap-2 text-base font-semibold text-ink"><CalendarDays size={16} className="text-accent" /> Structure hebdomadaire</h3>
+          <h3 className="flex items-center gap-2 text-[1rem] font-semibold text-ink"><CalendarDays size={16} className="text-accent" /> Structure hebdomadaire</h3>
           <p className="mt-0.5 text-xs text-mute">Coche les séances de chaque jour : chacune a sa propre heure, sa durée et son lieu.</p>
         </div>
         <span className="text-xs text-mute">{sessions.length} séance(s)</span>
@@ -99,7 +99,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
               .map((s) => ({ s, slot: slotFor(dp, s) })).sort(byTime);
             return (
               <div key={dow} className={`min-h-[76px] rounded-lg border p-1.5 ${dp?.is_rest_day ? 'border-line/60 bg-surface/40' : 'border-line bg-surface'}`}>
-                <div className="mb-1 text-center text-[10px] font-semibold uppercase text-mute">{label}</div>
+                <div className="mb-1 text-center text-[0.6875rem] font-semibold uppercase text-mute">{label}</div>
                 {dp?.is_rest_day ? (
                   <div className="flex justify-center pt-2 text-mute"><Moon size={13} /></div>
                 ) : (
@@ -107,7 +107,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
                     {items.map(({ s, slot }) => {
                       const m = typeMeta(s.type);
                       return (
-                        <div key={s.id} className="truncate rounded px-1 py-0.5 text-[10px] font-medium" style={{ background: tint(m.color, 18), color: m.color }} title={`${s.label}${slot.time ? ' · ' + slot.time : ''}`}>
+                        <div key={s.id} className="truncate rounded px-1 py-0.5 text-[0.6875rem] font-medium" style={{ background: tint(m.color, 18), color: m.color }} title={`${s.label}${slot.time ? ' · ' + slot.time : ''}`}>
                           {slot.time ? slot.time.slice(0, 5) + ' ' : ''}{s.label}
                         </div>
                       );
@@ -162,7 +162,7 @@ export default function WeeklyStructureEditor({ phaseId }) {
                   </div>
                 )}
                 {isRest && <span className="text-xs italic text-mute">Jour de repos</span>}
-                {saving === dow && <span className="text-[10px] text-accent">Enregistrement…</span>}
+                {saving === dow && <span className="text-[0.6875rem] text-accent">Enregistrement…</span>}
               </div>
 
               {/* One slot row per assigned session */}

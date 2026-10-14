@@ -57,7 +57,7 @@ export default function KPIDashboard() {
           {/* Pinned KPIs first */}
           {kpis.filter((k) => k.is_pinned).length > 0 && (
             <div>
-              <div className="text-[10px] text-mute uppercase tracking-wider mb-2 flex items-center gap-1">
+              <div className="text-[0.6875rem] text-mute uppercase tracking-wider mb-2 flex items-center gap-1">
                 <Pin size={10} /> Épinglés
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -73,7 +73,7 @@ export default function KPIDashboard() {
             const catMeta = KPI_CATEGORIES.find((c) => c.key === cat);
             return (
               <div key={cat}>
-                <div className="text-[10px] text-mute uppercase tracking-wider mb-2 flex items-center gap-1">
+                <div className="text-[0.6875rem] text-mute uppercase tracking-wider mb-2 flex items-center gap-1">
                   {catMeta?.icon || '📊'} {catMeta?.label || 'Personnalisé'}
                 </div>
                 <div className="space-y-1">
@@ -131,13 +131,13 @@ function KpiTile({ kpi }) {
 
   return (
     <div className="rounded-xl border border-line bg-surface/70 p-3">
-      <div className="mb-1 truncate text-[11px] text-mute">{name}</div>
+      <div className="mb-1 truncate text-xs text-mute">{name}</div>
       <div className="flex items-end gap-1">
         <span className="text-xl font-bold text-ink">{latest ? formatValue(latest.value) : '—'}</span>
         <span className="mb-0.5 text-xs text-mute">{unit}</span>
       </div>
       {trend != null && trend !== 0 && (
-        <div className={`mt-0.5 flex items-center gap-0.5 text-[11px] ${good ? 'text-good' : 'text-bad'}`}>
+        <div className={`mt-0.5 flex items-center gap-0.5 text-xs ${good ? 'text-good' : 'text-bad'}`}>
           {trend > 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
           {trend > 0 ? '+' : ''}{formatValue(trend)} {unit}
         </div>
@@ -180,7 +180,7 @@ function KpiRow({ kpi }) {
       </button>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm text-ink">{name}</div>
-        <div className="text-[11px] text-mute">
+        <div className="text-xs text-mute">
           {series.length ? `${series.length} mesure(s)` : manual ? 'Saisie manuelle' : 'En attente de données'}
           {trend != null && trend !== 0 && ` · ${trend > 0 ? '+' : ''}${formatValue(trend)} ${unit}`}
         </div>
@@ -285,7 +285,7 @@ function AddKpiModal({ programId, existingKeys, onClose }) {
               if (!items.length) return null;
               return (
                 <div key={cat.key}>
-                  <div className="text-[10px] text-mute uppercase tracking-wider mt-2 mb-1">
+                  <div className="text-[0.6875rem] text-mute uppercase tracking-wider mt-2 mb-1">
                     {cat.icon} {cat.label}
                   </div>
                   {items.map((kpi) => (

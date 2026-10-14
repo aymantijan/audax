@@ -89,7 +89,7 @@ export default function Ledger() {
                     <td className="py-1.5 pr-3">
                       <span className="text-mute text-xs mr-2">{r.code}</span>
                       {r.label}
-                      <span className="text-[10px] text-mute ml-2">cl.{r.cls} · {ACCOUNT_CLASSES[r.cls].label}</span>
+                      <span className="text-[0.6875rem] text-mute ml-2">cl.{r.cls} · {ACCOUNT_CLASSES[r.cls].label}</span>
                     </td>
                     <td className="py-1.5 pr-3 text-right">{fmtMAD(r.debit)}</td>
                     <td className="py-1.5 pr-3 text-right">{fmtMAD(r.credit)}</td>

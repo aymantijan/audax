@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { readLocalDisplay } from '../utils/display';
 // Ensure a rehydrated user has the career fields added in this version.
 // NOTE: `accounts`/`activeAccount` used to live here — they've moved to
 // tradingStore (accounts[]/activeAccountId), which supports an arbitrary
@@ -87,11 +88,15 @@ export const useAuthStore = create(
             gender: profile.gender || null,
             dobYear: profile.dobYear || null,
             heightCm: profile.heightCm || null,
-            theme: 'dark',
+            // Reading comfort chosen on the first screen (utils/display.js), Simple mode for newcomers (G5).
+            theme: profile.theme || readLocalDisplay().theme || 'dark',
+            textSize: profile.textSize || readLocalDisplay().textSize || 'normal',
+            contrast: profile.contrast || readLocalDisplay().contrast || 'normal',
+            uiLevel: 'simple',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()
             // Decision 2026-09-27: secondary modules start hidden for new users (activable in onboarding / Settings).
-            enabledModules: { trading: true, pe: true, business: true, engineering: false, networking: true, career: true, content: true, focus: true, fundraising: false, freelance: true, creative: false, realEstate: false }, // asked/confirmed in Onboarding.jsx step 1
+            enabledModules: { focus: false, creative: false }, // asked/confirmed in Onboarding.jsx step 1
           },
         }),
 

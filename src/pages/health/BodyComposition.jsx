@@ -9,6 +9,7 @@ import { tooltipStyle } from '../../components/common/chart-theme';
 
 import { deleteWithUndo } from '../../services/undo';
 import EntityFormModal from '../../components/common/EntityFormModal';
+import Term from '../../components/common/Term';
 const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
 const CALORIE_GOALS = [
   { key: 'cut20', label: 'Aggressive cut', pct: -0.2 },
@@ -279,7 +280,7 @@ export default function BodyComposition() {
               {form.photo ? 'Photo attached ✓' : 'Choose photo…'}
               <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
             </label>
-            {photoError && <p className="text-bad text-[11px] mt-1">{photoError}</p>}
+            {photoError && <p className="text-bad text-xs mt-1">{photoError}</p>}
           </Field>
           <div className="col-span-2 md:col-span-4">
             <Button type="submit" className="w-full">{form.date === todayKey() ? 'Enregistrer aujourd’hui' : `Enregistrer pour le ${form.date}`}</Button>
@@ -297,7 +298,7 @@ export default function BodyComposition() {
             <div>
               <div className="text-xs text-mute mb-1">Masse grasse %</div>
               <div className="text-xl font-bold">{latest.bodyFatPct ?? '—'}%</div>
-              <div className="text-[11px] text-mute">{latest.bodyFatMethod === 'navy' ? 'Navy method' : latest.bodyFatMethod === 'visual' ? 'Visual estimate' : ''}</div>
+              <div className="text-xs text-mute">{latest.bodyFatMethod === 'navy' ? 'Navy method' : latest.bodyFatMethod === 'visual' ? 'Visual estimate' : ''}</div>
             </div>
             <div>
               <div className="text-xs text-mute mb-1">Waist</div>
@@ -305,7 +306,7 @@ export default function BodyComposition() {
             </div>
           </div>
           {latest.bodyFatMethod === 'navy' && isImplausibleBodyFat(latest.bodyFatPct) && (
-            <p className="text-[11px] text-warning mt-3">
+            <p className="text-xs text-warning mt-3">
               {latest.bodyFatPct}% n'est pas un résultat plausible pour la méthode Navy — cette entrée ({latest.date}) a probablement une mesure inversée ou mal saisie (cou/taille/hanche). Modifie et resauvegarde l'entrée ci-dessous, ou dans l'historique.
             </p>
           )}
@@ -317,7 +318,7 @@ export default function BodyComposition() {
           <div className="grid grid-cols-3 gap-3 text-center mb-3">
             {[['navy', 'Navy'], ['ymca', 'YMCA'], ['deurenberg', 'Deurenberg']].map(([key, label]) => (
               <div key={key} className="bg-surface border border-line rounded-lg p-2.5">
-                <div className="text-[11px] text-mute mb-1">{label}</div>
+                <div className="text-xs text-mute mb-1">{label}</div>
                 <div className="text-sm font-semibold">{precision.methods[key] != null ? `${precision.methods[key]}%` : '—'}</div>
               </div>
             ))}
@@ -329,7 +330,7 @@ export default function BodyComposition() {
               <div><div className="text-xs text-mute mb-1">FFMI normalisé</div><div className="text-sm font-semibold">{precision.ffmi.normalizedFfmi}</div></div>
             </div>
           )}
-          <p className="text-[11px] text-mute mt-3">Le FFMI (masse maigre normalisée par la taille) est l'indicateur le plus fiable pour suivre la construction musculaire dans le temps — un FFMI qui monte à BF% stable ou en baisse = vrai gain musculaire.</p>
+          <p className="text-xs text-mute mt-3">Le FFMI (masse maigre normalisée par la taille) est l'indicateur le plus fiable pour suivre la construction musculaire dans le temps — un FFMI qui monte à BF% stable ou en baisse = vrai gain musculaire.</p>
         </Card>
       )}
 
@@ -339,14 +340,14 @@ export default function BodyComposition() {
             <>
               <div className="grid grid-cols-2 gap-4 text-center mb-4">
                 <div>
-                  <div className="text-xs text-mute mb-1">BMR</div>
+                  <div className="text-xs text-mute mb-1"><Term id="bmr" /></div>
                   <div className="text-xl font-bold">{bmr} kcal/day</div>
-                  <div className="text-[11px] text-mute">Mifflin-St Jeor, au repos</div>
+                  <div className="text-xs text-mute">Mifflin-St Jeor, au repos</div>
                 </div>
                 <div>
-                  <div className="text-xs text-mute mb-1">TDEE</div>
+                  <div className="text-xs text-mute mb-1"><Term id="tdee" /></div>
                   <div className="text-xl font-bold">{tdee} kcal/day</div>
-                  <div className="text-[11px] text-mute">BMR × activity level</div>
+                  <div className="text-xs text-mute"><Term id="bmr" /> × niveau d’activité</div>
                 </div>
               </div>
               <Field label="Niveau d’activité">
@@ -359,13 +360,13 @@ export default function BodyComposition() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
                 {CALORIE_GOALS.map((g) => (
                   <div key={g.key} className="bg-surface border border-line rounded-lg p-2.5 text-center">
-                    <div className="text-[11px] text-mute mb-1">{g.label}</div>
+                    <div className="text-xs text-mute mb-1">{g.label}</div>
                     <div className="text-sm font-semibold">{Math.round(tdee * (1 + g.pct))}</div>
-                    <div className="text-[10px] text-mute">kcal/day</div>
+                    <div className="text-[0.6875rem] text-mute">kcal/day</div>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-mute mt-3">
+              <p className="text-xs text-mute mt-3">
                 Une estimation, pas une prescription — la maintenance réelle varie selon chacun. Suis la tendance du poids 2-3 semaines à une cible donnée, puis ajuste.
               </p>
             </>
@@ -376,7 +377,7 @@ export default function BodyComposition() {
       )}
 
       <Card title="Cibles nutritionnelles (kcal & macros)">
-        <p className="text-[11px] text-mute mb-3">
+        <p className="text-xs text-mute mb-3">
           Choisis directement tes calories et macros quotidiennes — pas besoin de repasser par le questionnaire complet. {activePlan ? 'Modifie le plan actif ci-dessous.' : "Aucun plan actif pour l'instant : ceci en crée un minimal (sans repas types)."}
         </p>
         <form onSubmit={submitTarget} className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -394,7 +395,7 @@ export default function BodyComposition() {
           </Field>
           <div className="col-span-2 md:col-span-4">
             {kcalMismatch && (
-              <p className="text-[11px] text-warning mb-2">
+              <p className="text-xs text-warning mb-2">
                 Ces macros représentent ~{Math.round(kcalFromMacros)} kcal, assez loin des {targetForm.kcal} kcal indiqués — vérifie si c'est voulu (ex. marge d'alcool/fibres non comptée) avant d'enregistrer.
               </p>
             )}
@@ -464,7 +465,7 @@ export default function BodyComposition() {
             {[...bodyComp].filter((b) => b.photo).sort((a, b) => (a.date < b.date ? -1 : 1)).map((b) => (
               <div key={b.id} className="text-center">
                 <img src={b.photo} alt={b.date} className="w-full aspect-square rounded-lg object-cover border border-line" />
-                <div className="text-[10px] text-mute mt-1">{b.date.slice(5)}</div>
+                <div className="text-[0.6875rem] text-mute mt-1">{b.date.slice(5)}</div>
               </div>
             ))}
           </div>

@@ -252,7 +252,7 @@ export default function Echeances() {
             <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={!!form.autoPost} onChange={(e) => setForm({ ...form, autoPost: e.target.checked })} />
             <span>
               <span className="text-ink">Enregistrer automatiquement à chaque échéance</span>
-              <span className="block text-[11px] text-mute">Pour les montants fixes (loyer, abonnement, salaire, bourse) : l'opération est ajoutée toute seule à sa date, sans avoir à la marquer payée.</span>
+              <span className="block text-xs text-mute">Pour les montants fixes (loyer, abonnement, salaire, bourse) : l'opération est ajoutée toute seule à sa date, sans avoir à la marquer payée.</span>
             </span>
           </label>
           <div className="flex justify-between gap-3 pt-2 border-t border-line">

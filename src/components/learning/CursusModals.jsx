@@ -13,7 +13,7 @@ function Toggle({ checked, onChange, label, hint }) {
       <input type="checkbox" className="mt-1 accent-[var(--accent-primary)]" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
       <span>
         <span className="block text-sm text-ink">{label}</span>
-        {hint && <span className="block text-[11px] text-mute">{hint}</span>}
+        {hint && <span className="block text-xs text-mute">{hint}</span>}
       </span>
     </label>
   );
@@ -124,7 +124,7 @@ export function ModuleModal({ open, onClose, termId, module }) {
                     <label className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" className="accent-[var(--accent-primary)]" checked={on}
                         onChange={(e) => setPicked((cur) => { const n = { ...cur }; if (e.target.checked) n[c.id] = String(c.coefficient ?? 1); else delete n[c.id]; return n; })} />
-                      <span className="flex-1 min-w-0 truncate text-ink">{c.name}{elsewhere && <span className="text-[11px] text-mute"> · dans « {elsewhere} »</span>}</span>
+                      <span className="flex-1 min-w-0 truncate text-ink">{c.name}{elsewhere && <span className="text-xs text-mute"> · dans « {elsewhere} »</span>}</span>
                     </label>
                     {on && (
                       <input type="number" step="0.5" min="0.5" value={picked[c.id]} aria-label={`Coefficient de ${c.name}`}

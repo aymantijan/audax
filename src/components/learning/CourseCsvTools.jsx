@@ -137,7 +137,7 @@ export default function CourseCsvTools({ courses }) {
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} />
       </div>
       {result?.errors.length > 0 && (
-        <div className="text-[11px] text-mute max-h-24 overflow-y-auto border border-line rounded-lg p-2 space-y-0.5">
+        <div className="text-xs text-mute max-h-24 overflow-y-auto border border-line rounded-lg p-2 space-y-0.5">
           {result.errors.slice(0, 20).map((e, i) => (
             <div key={i} className="text-bad">{e.course}: {e.message}</div>
           ))}

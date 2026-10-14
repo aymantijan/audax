@@ -44,15 +44,15 @@ function WeekCard({ sessions, today, settings }) {
       <SectionHeader icon={Clock} title="Temps d'étude" />
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <div className="text-[11px] text-mute">Aujourd'hui</div>
+          <div className="text-xs text-mute">Aujourd'hui</div>
           <div className="text-xl font-bold tabular-nums text-ink">{fmtMinutes(todayMin)}</div>
         </div>
         <div>
-          <div className="text-[11px] text-mute">Cette semaine</div>
+          <div className="text-xs text-mute">Cette semaine</div>
           <div className="text-xl font-bold tabular-nums text-ink">{fmtMinutes(weekMin)}</div>
         </div>
         <div>
-          <div className="text-[11px] text-mute">Série</div>
+          <div className="text-xs text-mute">Série</div>
           <div className="text-xl font-bold tabular-nums flex items-center gap-1" style={{ color: streak ? 'var(--warning)' : 'var(--text-secondary)' }}>
             <Flame size={16} />{streak} j
           </div>
@@ -66,7 +66,7 @@ function WeekCard({ sessions, today, settings }) {
             <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); update({ weeklyStudyTarget: Math.max(0, Number(draft) || 0) }); setEditing(false); }}>
               <input autoFocus type="number" min="0" className="w-14 bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink" value={draft} onChange={(e) => setDraft(e.target.value)} />
               <span className="text-mute">h</span>
-              <button className="text-accent cursor-pointer p-0.5"><Check size={13} /></button>
+              <button className="text-accent cursor-pointer p-0.5" aria-label="Valider"><Check size={13} /></button>
             </form>
           ) : (
             <button onClick={() => { setDraft(settings.weeklyStudyTarget); setEditing(true); }} className="text-ink hover:text-accent cursor-pointer flex items-center gap-1">
@@ -86,7 +86,7 @@ function WeekCard({ sessions, today, settings }) {
           return (
             <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date} · ${fmtMinutes(d.minutes)}`}>
               <div className="w-full rounded-md" style={{ height: h, background: d.minutes ? (isToday ? 'var(--accent-primary)' : tint('var(--accent-primary)', 55)) : 'var(--border)' }} />
-              <span className={`text-[10px] ${isToday ? 'text-accent font-semibold' : 'text-mute'}`}>{DAY_LETTER[new Date(d.date + 'T12:00:00').getDay()]}</span>
+              <span className={`text-[0.6875rem] ${isToday ? 'text-accent font-semibold' : 'text-mute'}`}>{DAY_LETTER[new Date(d.date + 'T12:00:00').getDay()]}</span>
             </div>
           );
         })}
@@ -102,16 +102,16 @@ function PriorityCard({ p, index, settings, onStart, running }) {
     <div className="rounded-xl border border-line bg-card p-4 flex flex-col gap-2 min-w-0" style={{ borderTop: `3px solid ${color}` }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-mute">Priorité {index + 1}</div>
+          <div className="text-[0.6875rem] uppercase tracking-wide text-mute">Priorité {index + 1}</div>
           <Link to={`/learning/course/${c.id}`} className="font-semibold text-sm text-ink hover:text-accent leading-snug block truncate">{c.name}</Link>
         </div>
         {isAcademic(c) && p.exam && p.days <= 21 && (
-          <span className="text-[11px] rounded-md px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ background: tint(p.days <= 3 ? 'var(--error)' : 'var(--warning)', 15), color: p.days <= 3 ? 'var(--error)' : 'var(--warning)' }}>
+          <span className="text-xs rounded-md px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ background: tint(p.days <= 3 ? 'var(--error)' : 'var(--warning)', 15), color: p.days <= 3 ? 'var(--error)' : 'var(--warning)' }}>
             J-{p.days}
           </span>
         )}
       </div>
-      <ul className="text-[11px] text-mute space-y-0.5 flex-1">
+      <ul className="text-xs text-mute space-y-0.5 flex-1">
         {(p.reasons.length ? p.reasons : ['à entretenir']).slice(0, 3).map((r) => <li key={r}>• {r}</li>)}
       </ul>
       <Button variant="secondary" className="!py-1.5 text-xs" disabled={running} onClick={() => onStart(c.id)}>
@@ -189,7 +189,7 @@ export default function TodayView() {
           <Brain size={18} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-ink">{reviewQueue.length ? `${reviewQueue.length} fiche(s) à réviser` : 'Révisions à jour ✓'}</div>
-            <div className="text-[11px] text-mute">{reviewQueue.length ? `≈ ${Math.max(1, Math.round((reviewQueue.length * 10) / 60))} min · à faire avant d'apprendre du nouveau` : 'Les prochaines fiches reviendront au bon moment.'}</div>
+            <div className="text-xs text-mute">{reviewQueue.length ? `≈ ${Math.max(1, Math.round((reviewQueue.length * 10) / 60))} min · à faire avant d'apprendre du nouveau` : 'Les prochaines fiches reviendront au bon moment.'}</div>
           </div>
           {reviewQueue.length > 0 && <Button className="!py-1.5" onClick={() => setReviewing(true)}><span className="flex items-center gap-1.5"><Play size={13} /> Réviser</span></Button>}
         </div>
@@ -234,7 +234,7 @@ export default function TodayView() {
                     <span className="text-xs font-semibold w-16 shrink-0" style={{ color: urg }}>{countdownLabel(d)}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm text-ink truncate">{course.name}</span>
-                      <span className="text-[11px] text-mute">{ev.name || evalTypeLabel(ev.type)} · {ev.weight}%</span>
+                      <span className="text-xs text-mute">{ev.name || evalTypeLabel(ev.type)} · {ev.weight}%</span>
                     </span>
                     {req?.status === 'possible' && (
                       <span className="text-xs text-mute whitespace-nowrap">viser <b className="tabular-nums" style={{ color: gradeColor(req.needed, settings) }}>{fmtGrade(req.needed)}</b></span>
@@ -261,7 +261,7 @@ export default function TodayView() {
                     onChange={() => toggleChecklistItem(t.course.id, t.chapter.id, t.item.id)} />
                   <span className="min-w-0">
                     <span className="block text-sm text-ink">{t.item.title}</span>
-                    <span className="text-[11px] text-mute"><span style={{ color: courseColor(t.course.id) }}>●</span> {t.course.name} · {t.chapter.title}</span>
+                    <span className="text-xs text-mute"><span style={{ color: courseColor(t.course.id) }}>●</span> {t.course.name} · {t.chapter.title}</span>
                   </span>
                 </label>
               ))}
@@ -282,7 +282,7 @@ export default function TodayView() {
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.courseId ? courseColor(s.courseId) : 'var(--text-secondary)' }} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm text-ink truncate">{courseName(s.courseId)}</span>
-                    {s.notes && <span className="text-[11px] text-mute truncate block">{s.notes}</span>}
+                    {s.notes && <span className="text-xs text-mute truncate block">{s.notes}</span>}
                   </span>
                   <span className="text-sm tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
                   <button className="p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>

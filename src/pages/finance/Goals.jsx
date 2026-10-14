@@ -28,7 +28,7 @@ function GoalCard({ g, onEdit, onDelete, onContribute, simple }) {
           <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-accent/10"><Icon size={15} className="text-accent" /></span>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-ink truncate">{g.name}</div>
-            <div className="text-[11px] text-mute">
+            <div className="text-xs text-mute">
               {label} · {fmtMAD(g.targetAmount)}{g.targetDate ? ` d'ici le ${fmtDate(g.targetDate)}` : ''}
             </div>
           </div>
@@ -41,19 +41,19 @@ function GoalCard({ g, onEdit, onDelete, onContribute, simple }) {
         </div>
       </div>
       <ProgressBar value={g.progress ?? 0} color={g.progress >= 100 ? 'var(--success)' : 'var(--accent-primary)'} />
-      <div className="flex items-center justify-between gap-2 mt-2 text-[11px] text-mute">
+      <div className="flex items-center justify-between gap-2 mt-2 text-xs text-mute">
         <span className="tabular-nums"><b className="text-ink">{fmtMAD(g.current)}</b> / {fmtMAD(g.targetAmount)} · {Math.round(g.progress ?? 0)}%</span>
         {g.achieved && g.xpAwarded ? <span>atteint le {fmtDate(g.achievedAt)} · +{g.xpAwarded} XP</span> : null}
       </div>
       {!g.achieved && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {g.neededPerMonth != null && g.neededPerMonth > 0 && (
-            <span className="text-[11px] rounded-md px-2 py-1 bg-card border border-line text-mute">
+            <span className="text-xs rounded-md px-2 py-1 bg-card border border-line text-mute">
               Effort : <b className="text-ink">{fmtMAD(g.neededPerMonth)}/mois</b>
             </span>
           )}
           {g.projected != null && g.onTrack === false && g.current > 0 && (
-            <span className="text-[11px] text-warning">Au rythme actuel : {fmtMAD(g.projected)} à l'échéance</span>
+            <span className="text-xs text-warning">Au rythme actuel : {fmtMAD(g.projected)} à l'échéance</span>
           )}
           {g.kind === 'envelope' ? (
             <div className="ml-auto flex gap-1.5">
@@ -61,7 +61,7 @@ function GoalCard({ g, onEdit, onDelete, onContribute, simple }) {
               <Button className="!px-2.5 !py-1 text-xs" onClick={() => onContribute(g, 1)}><span className="flex items-center gap-1"><Plus size={12} /> Mettre de côté</span></Button>
             </div>
           ) : g.kind === 'account' ? (
-            <span className="ml-auto text-[11px] text-mute">{simple ? 'Faites un transfert vers ce compte pour avancer.' : 'Alimenté par virement vers le compte dédié.'}</span>
+            <span className="ml-auto text-xs text-mute">{simple ? 'Faites un transfert vers ce compte pour avancer.' : 'Alimenté par virement vers le compte dédié.'}</span>
           ) : null}
         </div>
       )}
@@ -127,7 +127,7 @@ export default function Goals() {
               <div style={{ width: `${Math.min(100, (alloc.allocated / alloc.treasury) * 100)}%`, background: 'var(--accent-primary)' }} />
               <div style={{ width: `${Math.min(100, (alloc.dedicated / alloc.treasury) * 100)}%`, background: 'var(--accent-secondary)' }} />
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-mute">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-mute">
               <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: 'var(--accent-primary)' }} />Mis de côté (enveloppes) : <b className="text-ink">{fmtMAD(alloc.allocated)}</b></span>
               {alloc.dedicated > 0 && <span><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: 'var(--accent-secondary)' }} />Comptes dédiés : <b className="text-ink">{fmtMAD(alloc.dedicated)}</b></span>}
               <span>Libre : <b className={alloc.unallocated < 0 ? 'text-bad' : 'text-ink'}>{fmtMAD(alloc.unallocated)}</b></span>
@@ -176,7 +176,7 @@ export default function Goals() {
               ))}
             </div>
           )}
-          {!editing && <p className="text-[11px] text-mute">{kindMeta(form.kind).desc}</p>}
+          {!editing && <p className="text-xs text-mute">{kindMeta(form.kind).desc}</p>}
           <Field label="Nom de l'objectif">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.kind === 'networth' ? `ex : Patrimoine ${fmtMAD(100000)}` : "ex : Fonds d'urgence 6 mois"} autoFocus />
           </Field>
@@ -207,7 +207,7 @@ export default function Goals() {
           <Field label={`Montant (${baseCurrencyShort()})`} hint={contrib?.sign > 0 ? `Libre sur tes comptes : ${fmtMAD(alloc.unallocated)}${contrib?.goal.neededPerMonth ? ` · effort conseillé : ${fmtMAD(contrib.goal.neededPerMonth)}/mois` : ''}` : `Dans l'enveloppe : ${fmtMAD(contrib?.goal.current || 0)}`}>
             <Input type="number" step="any" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
           </Field>
-          <p className="text-[11px] text-mute">L'argent reste sur tes comptes : il est simplement réservé à cet objectif et n'est plus compté comme libre.</p>
+          <p className="text-xs text-mute">L'argent reste sur tes comptes : il est simplement réservé à cet objectif et n'est plus compté comme libre.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setContrib(null)}>Annuler</Button>
             <Button type="submit" disabled={!Number(amount)}>{contrib?.sign > 0 ? 'Mettre de côté' : 'Reprendre'}</Button>

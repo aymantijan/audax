@@ -56,14 +56,14 @@ function ObjectiveRow({ o, all, ctx, depth, onAdd, onEdit }) {
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide text-mute">{labelOf(o.horizon)}</span>
+            <span className="text-[0.6875rem] uppercase tracking-wide text-mute">{labelOf(o.horizon)}</span>
             <span className={`text-sm font-medium ${o.done ? 'line-through text-mute' : ''}`}>{o.title}</span>
           </div>
           <div className="flex items-center gap-2 mt-1">
             <div className="w-32 sm:w-44"><ProgressBar value={progress} height={5} color={progress >= 100 ? 'var(--success)' : 'var(--accent-primary)'} /></div>
-            <span className="font-data text-[11px] text-mute">{progress} %</span>
+            <span className="font-data text-xs text-mute">{progress} %</span>
           </div>
-          {linked.length > 0 && <div className="text-[11px] text-mute mt-1 truncate">Habitudes : {linked.map((h) => h.name).join(', ')}</div>}
+          {linked.length > 0 && <div className="text-xs text-mute mt-1 truncate">Habitudes : {linked.map((h) => h.name).join(', ')}</div>}
         </div>
         <div className="flex items-center shrink-0">
           {child && <IconButton label={`Ajouter un objectif ${labelOf(child).toLowerCase()}`} onClick={() => onAdd({ horizon: child, period: childPeriod, parentId: o.id })}><Plus size={14} /></IconButton>}

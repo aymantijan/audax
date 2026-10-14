@@ -82,8 +82,46 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: "Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif;
-  font-size: 15.5px;
+  /* rem, so the « Taille du texte » setting (html font-size) scales it too */
+  font-size: 0.96875rem;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── Lisible par tous (chantier 4): Paramètres → Affichage ──
+   Text size scales every rem-based size of the app. */
+:root[data-text="grand"] {
+  font-size: 112.5%;
+}
+:root[data-text="tres-grand"] {
+  font-size: 125%;
+}
+/* Big text comes with big buttons: 48 px targets on every screen. */
+:root[data-text="grand"] .ui-btn,
+:root[data-text="tres-grand"] .ui-btn {
+  min-height: 48px;
+}
+:root[data-text="grand"] .ui-icon-btn,
+:root[data-text="tres-grand"] .ui-icon-btn {
+  min-width: 48px;
+  min-height: 48px;
+}
+/* Big text on a small phone: the top bar keeps its buttons, drops the word mark. */
+@media (max-width: 480px) {
+  :root[data-text="grand"] .brand-word,
+  :root[data-text="tres-grand"] .brand-word {
+    display: none;
+  }
+}
+/* Strong contrast: secondary text and borders close to the main text. */
+:root[data-contrast="high"],
+:root[data-contrast="high"][data-theme="dark"] {
+  --text-secondary: #e6dccb;
+  --border: #9a7389;
+}
+:root[data-contrast="high"][data-theme="light"] {
+  --text-secondary: #33202a;
+  --border: #8f7a66;
+  --bg-primary: #ffffff;
 }
 
 /* Display face for page titles and big figures, used with restraint. */

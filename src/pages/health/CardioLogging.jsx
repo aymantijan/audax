@@ -218,10 +218,10 @@ function Row({ w, onDelete, onEdit, showDate }) {
       <HeartPulse size={16} className="shrink-0 text-good" />
       <div className="min-w-0 flex-1">
         <div className="text-sm text-ink">{w.exercise || 'Cardio'}</div>
-        <div className="text-[11px] text-mute">{details}</div>
+        <div className="text-xs text-mute">{details}</div>
       </div>
-      <button onClick={onEdit} className="shrink-0 text-mute hover:text-accent cursor-pointer" title="Modifier"><Pencil size={14} /></button>
-      <button onClick={onDelete} className="shrink-0 text-mute hover:text-bad cursor-pointer" title="Supprimer"><Trash2 size={14} /></button>
+      <button onClick={onEdit} className="shrink-0 text-mute hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
+      <button onClick={onDelete} className="shrink-0 text-mute hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
     </li>
   );
 }

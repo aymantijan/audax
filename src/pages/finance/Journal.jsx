@@ -11,7 +11,7 @@ import { ENTRY_TEMPLATES, accountLabel, classOf } from '../../utils/chart-of-acc
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Button, Field, Input, Modal, Badge, EmptyState } from '../../components/common/ui';
 import AccountSelect from '../../components/common/AccountSelect';
-import { toast } from '../../store/uiStore';
+import { toast } from '../../store/uiStore';
 import { deleteWithUndo } from '../../services/undo';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -37,7 +37,7 @@ function LabelField({ label, value, onChange, account, placeholder }) {
         <button
           type="button"
           onClick={() => onChange(didYouMean.label)}
-          className="block text-[11px] text-accent hover:underline mt-1 cursor-pointer"
+          className="block text-xs text-accent hover:underline mt-1 cursor-pointer"
         >
           Tu voulais dire : « {didYouMean.label} » ?
         </button>
@@ -266,7 +266,7 @@ export default function Journal() {
             <Button variant="ghost" onClick={() => setMonthFilter('')}>Tout</Button>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {legacyCount > 0 && !legacyImported && (
             <Button
               variant="secondary"
@@ -304,8 +304,8 @@ export default function Journal() {
                     <meta.Icon size={15} style={{ color: meta.color }} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm text-ink truncate">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}</span></div>
-                    <div className="text-[11px] text-mute truncate">
+                    <div className="text-sm text-ink truncate">{e.label}<span className="text-xs text-mute">{fxNote(e)}</span></div>
+                    <div className="text-xs text-mute truncate">
                       {new Date(e.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       {d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}{d.via ? ` · ${d.via}` : ''}
                     </div>
@@ -328,7 +328,7 @@ export default function Journal() {
                   {expanded[e.id] ? <ChevronDown size={14} className="text-mute shrink-0" /> : <ChevronRight size={14} className="text-mute shrink-0" />}
                   <span className="text-mute text-xs whitespace-nowrap">{e.date}</span>
                   <Badge color="var(--accent-secondary)">{e.ref}</Badge>
-                  <span className="flex-1 truncate">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}</span></span>
+                  <span className="flex-1 truncate">{e.label}<span className="text-xs text-mute">{fxNote(e)}</span></span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(entryTotal(e))}</span>
                   <button
                     className="text-mute hover:text-accent cursor-pointer"

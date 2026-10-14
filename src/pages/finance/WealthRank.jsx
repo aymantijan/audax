@@ -6,6 +6,7 @@ import { rateFor } from '../../utils/currency';
 import { fmtMAD } from '../../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../../components/common/ui';
 
+import Term from '../../components/common/Term';
 const PAGE_SIZE = 50;
 
 // Personal, currency-only milestone ladder — deliberately separate from the
@@ -58,7 +59,7 @@ export default function WealthRank() {
               <div className="text-xs text-mute uppercase tracking-wide">Rang {rank.current.level} · {rank.current.era}</div>
               <div className="text-xl font-bold truncate">{rank.current.name}</div>
               <div className="mt-2">
-                <div className="flex justify-between text-[11px] text-mute mb-1">
+                <div className="flex justify-between text-xs text-mute mb-1">
                   <span>{rank.next ? `Suivant : ${rank.next.name}` : 'Rang maximum atteint'}</span>
                   <span>{Math.round(rank.progress)}%</span>
                 </div>
@@ -66,7 +67,7 @@ export default function WealthRank() {
                   <div className="h-full rounded-full" style={{ width: `${rank.progress}%`, background: 'linear-gradient(90deg, var(--warning), var(--accent-secondary))' }} />
                 </div>
                 {rank.next && (
-                  <div className="text-[10px] text-mute mt-1">
+                  <div className="text-[0.6875rem] text-mute mt-1">
                     Palier suivant : {fmtMAD(rank.next.threshold)} · il reste {fmtMAD(Math.max(0, rank.next.threshold - ancc))}
                   </div>
                 )}
@@ -74,12 +75,12 @@ export default function WealthRank() {
             </div>
           </div>
         </Card>
-        <Stat label="Patrimoine net (ANCC)" value={fmtMAD(ancc)} sub="détermine directement le rang" color="var(--warning)" />
+        <Stat label={<>Patrimoine net (<Term id="ancc" short />)</>} value={fmtMAD(ancc)} sub="détermine directement le rang" color="var(--warning)" />
       </div>
 
       <p className="text-xs text-mute">
         Contrairement au grade du Leaderboard (basé sur l'XP cumulé, jamais perdu), ce rang est une lecture <strong>en direct</strong> de ton patrimoine net —
-        il peut redescendre si ton ANCC baisse, exactement comme une vraie fortune.
+        il peut redescendre si ton patrimoine net baisse, exactement comme une vraie fortune.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -110,7 +111,7 @@ export default function WealthRank() {
                   <th className="py-2.5 px-4 w-16">Rang</th>
                   <th className="py-2.5 px-4">Nom</th>
                   <th className="py-2.5 px-4 hidden sm:table-cell">Ère</th>
-                  <th className="py-2.5 px-4 text-right">Palier (ANCC)</th>
+                  <th className="py-2.5 px-4 text-right">Palier (patrimoine net)</th>
                   <th className="py-2.5 px-4 text-center w-24">Statut</th>
                 </tr>
               </thead>

@@ -37,7 +37,7 @@ export function CheckinModal({ open, onClose, date }) {
   return (
     <Modal open={open} onClose={onClose} title={`Check-in · ${fmtDate(date)}`} wide>
       <div className="space-y-5">
-        <p className="text-[11px] text-mute flex items-center gap-1.5"><HeartPulse size={12} className="text-accent" /> Le même check-in que dans Santé : ce que tu remplis ici complète la version rapide, sans rien effacer.</p>
+        <p className="text-xs text-mute flex items-center gap-1.5"><HeartPulse size={12} className="text-accent" /> Le même check-in que dans Santé : ce que tu remplis ici complète la version rapide, sans rien effacer.</p>
         <div>
           <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Matin</div>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -51,7 +51,7 @@ export function CheckinModal({ open, onClose, date }) {
             <div className="text-2xl font-bold tabular-nums" style={{ color: SLEEP_BAND_COLOR[sleepEval.band] }}>{sleepEval.score}/10</div>
             <div className="flex-1">
               <div className="text-xs font-semibold" style={{ color: SLEEP_BAND_COLOR[sleepEval.band] }}>Sommeil : {SLEEP_BAND_LABEL[sleepEval.band]}</div>
-              <div className="text-[11px] text-mute">{sleepEval.durationHours.toFixed(1).replace('.', ',')} h · durée {sleepEval.durationScore}/5 · horaires {sleepEval.timingScore}/5</div>
+              <div className="text-xs text-mute">{sleepEval.durationHours.toFixed(1).replace('.', ',')} h · durée {sleepEval.durationScore}/5 · horaires {sleepEval.timingScore}/5</div>
             </div>
           </div>
         </div>
@@ -64,13 +64,13 @@ export function CheckinModal({ open, onClose, date }) {
                 <div className="flex gap-1">
                   {[0, 1, 2, 3].map((n) => (
                     <button key={n} type="button" onClick={() => setC({ ...c, stressChecklist: { ...c.stressChecklist, [item.key]: n } })}
-                      className={`w-6 h-6 rounded text-[11px] cursor-pointer border ${c.stressChecklist[item.key] === n ? 'border-accent bg-accent/15 text-accent' : 'border-line text-mute'}`}>{n}</button>
+                      className={`w-6 h-6 rounded text-xs cursor-pointer border ${c.stressChecklist[item.key] === n ? 'border-accent bg-accent/15 text-accent' : 'border-line text-mute'}`}>{n}</button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-          <div className="text-[10px] text-mute mt-1">0 = pas du tout · 3 = beaucoup</div>
+          <div className="text-[0.6875rem] text-mute mt-1">0 = pas du tout · 3 = beaucoup</div>
         </div>
         <div>
           <div className="text-xs font-semibold text-mute uppercase tracking-wide mb-2">Récupération aujourd’hui</div>
@@ -173,7 +173,7 @@ export function HabitFormModal({ open, onClose, habit }) {
               className={`rounded-xl border p-2.5 text-left cursor-pointer ${f.kind === k.value ? 'border-accent bg-accent/10' : 'border-line hover:border-accent/50'}`}>
               <k.Icon size={15} className={f.kind === k.value ? 'text-accent' : 'text-mute'} />
               <div className="text-xs font-semibold text-ink mt-1">{k.label}</div>
-              <div className="text-[10px] text-mute leading-snug">{k.desc}</div>
+              <div className="text-[0.6875rem] text-mute leading-snug">{k.desc}</div>
             </button>
           ))}
         </div>
@@ -194,7 +194,7 @@ export function HabitFormModal({ open, onClose, habit }) {
               <Field label="Valeur"><Input type="number" min="0" step="any" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} /></Field>
               <Field label="Unité"><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} placeholder="verres, pages, min…" /></Field>
             </div>
-            {f.direction === 'atMost' && <p className="text-[11px] text-mute">« Au plus » : la journée est réussie si tu restes sous la limite ; elle est validée une fois la journée terminée.</p>}
+            {f.direction === 'atMost' && <p className="text-xs text-mute">« Au plus » : la journée est réussie si tu restes sous la limite ; elle est validée une fois la journée terminée.</p>}
           </div>
         )}
 
@@ -205,7 +205,7 @@ export function HabitFormModal({ open, onClose, habit }) {
               const Icon = MOMENT_ICON[m.value];
               return (
                 <button key={m.value} type="button" onClick={() => setF({ ...f, moment: m.value })}
-                  className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-[11px] cursor-pointer ${f.moment === m.value ? 'border-accent bg-accent/10 text-accent' : 'border-line text-mute hover:text-ink'}`}>
+                  className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-xs cursor-pointer ${f.moment === m.value ? 'border-accent bg-accent/10 text-accent' : 'border-line text-mute hover:text-ink'}`}>
                   <Icon size={15} /> {m.label}
                 </button>
               );
@@ -257,7 +257,7 @@ export function HabitFormModal({ open, onClose, habit }) {
           <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={!!f.mandatory} onChange={(e) => setF({ ...f, mandatory: e.target.checked })} />
           <span>
             <span className="text-ink">Prioritaire</span>
-            <span className="block text-[11px] text-mute">Tant qu’elle n’est pas faite, un rappel s’affiche en haut de la page Habitudes.</span>
+            <span className="block text-xs text-mute">Tant qu’elle n’est pas faite, un rappel s’affiche en haut de la page Habitudes.</span>
           </span>
         </label>
         {error && <p className="text-bad text-sm">{error}</p>}
@@ -366,7 +366,7 @@ export function HabitDetailModal({ habit, onClose, onEdit }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {stats.map((s) => (
             <div key={s.label} className="rounded-xl border border-line bg-surface px-3 py-2">
-              <div className="text-[10px] uppercase tracking-wide text-mute">{s.label}</div>
+              <div className="text-[0.6875rem] uppercase tracking-wide text-mute">{s.label}</div>
               <div className="text-lg font-bold tabular-nums text-ink" style={s.color ? { color: s.color } : undefined}>{s.value}</div>
             </div>
           ))}
@@ -381,13 +381,13 @@ export function HabitDetailModal({ habit, onClose, onEdit }) {
           <div className="text-xs font-semibold text-ink mb-2">Les 12 derniers mois</div>
           <div ref={scroller} className="overflow-x-auto pb-1">
             <div className="inline-flex flex-col gap-1 min-w-max">
-              <div className="flex gap-[2px] pl-5 text-[9px] text-mute h-3">
+              <div className="flex gap-[2px] pl-5 text-[0.6875rem] text-mute h-3">
                 {data.weeks.map((col, i) => (
                   <div key={i} className="w-[10px] overflow-visible whitespace-nowrap">{col[0].day <= 7 ? MONTHS_FR[col[0].month] : ''}</div>
                 ))}
               </div>
               <div className="flex gap-[2px]">
-                <div className="flex flex-col gap-[2px] text-[9px] text-mute w-4 pr-1">
+                <div className="flex flex-col gap-[2px] text-[0.6875rem] text-mute w-4 pr-1">
                   {['L', '', 'M', '', 'V', '', 'D'].map((l, i) => <div key={i} className="h-[10px] leading-[10px]">{l}</div>)}
                 </div>
                 {data.weeks.map((col, i) => (
@@ -401,10 +401,10 @@ export function HabitDetailModal({ habit, onClose, onEdit }) {
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-mute">
+          <div className="flex flex-wrap gap-3 mt-2 text-[0.6875rem] text-mute">
             {['done', 'missed', 'joker', 'off'].map((k) => <span key={k} className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-[3px] inline-block" style={{ background: DAY_COLOR[k] }} /> {DAY_LABEL[k]}</span>)}
           </div>
-          {habit.frequency === 'weekly' && <p className="text-[11px] text-mute mt-1">Habitude hebdomadaire : les jours sans case verte ne sont pas des échecs, seule la semaine compte.</p>}
+          {habit.frequency === 'weekly' && <p className="text-xs text-mute mt-1">Habitude hebdomadaire : les jours sans case verte ne sont pas des échecs, seule la semaine compte.</p>}
         </div>
         {(data.anchor || data.chained.length > 0 || habit.reminderTime) && (
           <div className="text-xs text-mute space-y-1">

@@ -110,8 +110,8 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
           <div className="rounded-xl border border-accent/60 bg-surface p-3 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-wide text-mute">{K.label} → {K.where}</div>
-                <div className="text-base font-semibold text-ink font-data break-words">{describeDraft(draft, money)}</div>
+                <div className="text-xs uppercase tracking-wide text-mute">{K.label} → {K.where}</div>
+                <div className="text-[1rem] font-semibold text-ink font-data break-words">{describeDraft(draft, money)}</div>
                 <div className="text-xs text-mute">{draft.date === todayKey() ? 'Aujourd’hui' : draft.date === todayKey(new Date(Date.now() - 86400000)) ? 'Hier' : fmtDateShort(draft.date)}</div>
               </div>
               {(draft.kind === 'expense' || draft.kind === 'income') && (

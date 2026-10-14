@@ -15,7 +15,7 @@ import { tooltipStyle } from '../components/common/chart-theme';
 import { tint, MOMENT_ICON, catLabel } from '../components/habits/habit-ui';
 import { CheckinModal, HabitFormModal, PauseModal, HabitDetailModal } from '../components/habits/HabitModals';
 import { QuantityControl, QuitCard, orderChains, enableReminders, CoachCard } from '../components/habits/HabitCards';
-import { skillLabel } from '../utils/skill-families';
+import { skillLabel } from '../utils/skill-families';
 import { deleteWithUndo } from '../services/undo';
 
 export default function Habits() {
@@ -87,7 +87,7 @@ export default function Habits() {
           <h1 className="text-2xl font-bold text-ink">Habitudes</h1>
           <p className="text-mute text-sm mt-1">Tes routines quotidiennes, tes séries et ton énergie, avec une alerte précoce d’épuisement.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => (habitReminders?.enabled ? setHabitRemindersEnabled(false) : enableReminders(setHabitRemindersEnabled))}
             title={habitReminders?.enabled ? 'Désactiver les rappels' : 'Activer les rappels (heure choisie par habitude)'}>
             <span className="flex items-center gap-1.5">{habitReminders?.enabled ? <Bell size={15} className="text-accent" /> : <BellOff size={15} />} Rappels</span>
@@ -121,16 +121,16 @@ export default function Habits() {
             </div>
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Régularité 7 jours</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Régularité 7 jours</div>
             <div className="text-xl font-bold tabular-nums" style={{ color: compliance.total ? (compliance.rate >= 0.8 ? 'var(--success)' : compliance.rate >= 0.5 ? 'var(--warning)' : 'var(--error)') : undefined }}>{compliance.total ? `${Math.round(compliance.rate * 100)} %` : '—'}</div>
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Meilleure série en cours</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Meilleure série en cours</div>
             <div className="text-xl font-bold tabular-nums flex items-center gap-1" style={{ color: bestStreak?.s ? 'var(--warning)' : undefined }}><Flame size={17} />{bestStreak?.s || 0} {bestStreak ? streakUnit(bestStreak.h) : 'j'}</div>
-            <div className="text-[11px] text-mute truncate">{bestStreak?.s ? bestStreak.h.name : 'coche une habitude'}</div>
+            <div className="text-xs text-mute truncate">{bestStreak?.s ? bestStreak.h.name : 'coche une habitude'}</div>
           </div>
           <button onClick={() => setCheckinOpen(true)} className="text-left rounded-xl bg-card/70 border border-line px-4 py-3 hover:border-accent cursor-pointer transition-colors">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Check-in {isPast ? 'du jour choisi' : 'du jour'}</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Check-in {isPast ? 'du jour choisi' : 'du jour'}</div>
             {dayLog?.energyStartLevel != null || dayLog?.sleepData ? (
               <div className="text-sm text-ink mt-0.5">
                 Énergie {dayLog.energyStartLevel ?? '—'}/10 · Sommeil {dayLog.sleepData?.sleepQualityScore ?? '—'}/10 · Stress {dayLog.stressLevel ?? '—'}/10
@@ -166,14 +166,14 @@ export default function Habits() {
             {isPast && <button className="text-accent hover:underline cursor-pointer text-xs ml-1" onClick={() => setDate(today)}>Aujourd’hui</button>}
           </div>
         </div>
-        {isPast && <div className="flex items-center gap-2 text-[11px] text-warning rounded-lg px-3 py-1.5 mb-3" style={{ background: tint('var(--warning)', 10) }}><History size={12} /> Saisie rétroactive : l’XP et les séries sont calculées comme si c’était fait ce jour-là.</div>}
+        {isPast && <div className="flex items-center gap-2 text-xs text-warning rounded-lg px-3 py-1.5 mb-3" style={{ background: tint('var(--warning)', 10) }}><History size={12} /> Saisie rétroactive : l’XP et les séries sont calculées comme si c’était fait ce jour-là.</div>}
         {groups.length ? (
           <div className="space-y-4">
             {groups.map((g) => {
               const Icon = MOMENT_ICON[g.value];
               return (
                 <div key={g.value}>
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-mute mb-2 flex items-center gap-1.5"><Icon size={12} /> {g.label}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-mute mb-2 flex items-center gap-1.5"><Icon size={12} /> {g.label}</div>
                   <div className="space-y-2">
                     {orderChains(g.items).map(({ h, depth }) => {
                       const done = isDone(h, date);
@@ -192,7 +192,7 @@ export default function Habits() {
                           </button>
                           <div className="min-w-0 flex-1">
                             <button type="button" onClick={() => setDetail(h)} className={`text-left text-sm font-medium cursor-pointer hover:underline ${done ? 'text-mute line-through' : 'text-ink'}`} title="Historique et records">{h.name}</button>
-                            <div className="text-[11px] text-mute flex flex-wrap gap-x-2">
+                            <div className="text-xs text-mute flex flex-wrap gap-x-2">
                               <span>{catLabel(h.category)}</span>
                               {h.duration ? <span>· {h.duration} min</span> : null}
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
@@ -208,7 +208,7 @@ export default function Habits() {
                           </div>
                           <div className="hidden sm:block w-24 shrink-0">
                             <div className="flex items-center justify-end gap-1 text-xs font-semibold" style={{ color: streak ? 'var(--warning)' : 'var(--text-secondary)' }}><Flame size={12} /> {streak} {streakUnit(h)}</div>
-                            {target > 0 && <div className="mt-1"><ProgressBar value={Math.min(100, (streak / target) * 100)} height={3} color={streak >= target ? 'var(--success)' : 'var(--warning)'} /><div className="text-[9px] text-mute text-right mt-0.5">objectif {target} {streakUnit(h)}</div></div>}
+                            {target > 0 && <div className="mt-1"><ProgressBar value={Math.min(100, (streak / target) * 100)} height={3} color={streak >= target ? 'var(--success)' : 'var(--warning)'} /><div className="text-[0.6875rem] text-mute text-right mt-0.5">objectif {target} {streakUnit(h)}</div></div>}
                           </div>
                           <div className="flex items-center shrink-0">
                             {canJoker && <button className="p-1.5 text-mute hover:text-accent2 cursor-pointer" onClick={() => useJoker(h.id, date)} title={`Utiliser un joker (${jokersLeft(h.id, date)} restant(s) ce mois-ci)`}><Snowflake size={13} /></button>}
@@ -254,13 +254,13 @@ export default function Habits() {
                 <div key={h.id} className="flex items-center gap-3 py-2.5">
                   <div className="min-w-0 flex-1">
                     <button type="button" onClick={() => setDetail(h)} className="block max-w-full text-left text-sm text-ink truncate cursor-pointer hover:underline">{h.name}</button>
-                    <div className="text-[11px] text-mute">
+                    <div className="text-xs text-mute">
                       {h.kind === 'quit' ? `À arrêter · ${catLabel(h.category)}`
                         : `${catLabel(h.category)} · ${freqText(h)} · ${HABIT_MOMENTS.find((m) => m.value === (h.moment || 'any'))?.label}`}
                       {h.kind === 'quantity' && ` · ${h.direction === 'atMost' ? '≤' : '≥'} ${h.target} ${h.unit || ''}${h.source ? ` · auto (${sourceMeta(h.source)?.section})` : ''}`}
                     </div>
                   </div>
-                  <div className="text-right text-[11px] text-mute w-28 shrink-0">
+                  <div className="text-right text-xs text-mute w-28 shrink-0">
                     <div className="flex items-center justify-end gap-1" style={{ color: streak ? 'var(--warning)' : undefined }}><Flame size={11} /> {streak} {h.kind === 'quit' ? 'j sans' : streakUnit(h)}</div>
                     <div>{h.kind === 'quit' ? `record ${quitBest(h, today)} j` : r == null ? (h.frequency === 'weekly' ? 'suivi par semaine' : '—') : `${r} % sur 30 j`}</div>
                   </div>

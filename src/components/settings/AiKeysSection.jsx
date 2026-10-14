@@ -162,7 +162,7 @@ export default function AiKeysSection() {
                 <button key={p.key} type="button" role="radio" aria-checked={provider === p.key} onClick={() => pick(p.key)}
                   className={`ui-btn rounded-lg border px-3 py-2 text-left cursor-pointer transition-colors ${provider === p.key ? 'border-accent bg-accent/10' : 'border-line hover:border-accent'}`}>
                   <div className="text-sm font-semibold flex items-center gap-1.5">{p.label}{active && <Check size={13} className="text-good" />}</div>
-                  <div className="text-[11px] text-mute">{has ? (active ? 'Utilisée' : 'Enregistrée') : 'Aucune clé'}</div>
+                  <div className="text-xs text-mute">{has ? (active ? 'Utilisée' : 'Enregistrée') : 'Aucune clé'}</div>
                 </button>
               );
             })}

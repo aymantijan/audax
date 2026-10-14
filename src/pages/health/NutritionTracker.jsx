@@ -229,7 +229,7 @@ export default function NutritionTracker({ pendingPrompt }) {
                 Pour 100g — {scannedProduct.kcal} kcal · {scannedProduct.protein}g P · {scannedProduct.carbs}g G · {scannedProduct.fat}g L
               </div>
               {Object.keys(scannedProduct.micros || {}).length > 0 && (
-                <div className="text-[11px] text-mute mt-1">
+                <div className="text-xs text-mute mt-1">
                   {Object.entries(scannedProduct.micros).slice(0, 6).map(([k, v]) => `${MICRONUTRIENT_LABELS[k] || k}: ${v.value}${v.unit}`).join(' · ')}
                 </div>
               )}
@@ -321,7 +321,7 @@ export default function NutritionTracker({ pendingPrompt }) {
                           </span>
                           <span className="flex items-center gap-1.5 shrink-0">
                             {micros && (
-                              <button title="Vitamines & minéraux" onClick={() => setMicrosFor((s) => (isShowingMicros ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="text-mute hover:text-ink cursor-pointer text-[10px] underline">
+                              <button title="Vitamines & minéraux" onClick={() => setMicrosFor((s) => (isShowingMicros ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="text-mute hover:text-ink cursor-pointer text-[0.6875rem] underline">
                                 micros
                               </button>
                             )}
@@ -333,10 +333,10 @@ export default function NutritionTracker({ pendingPrompt }) {
                           </span>
                         </div>
                         {est && (
-                          <div className="text-[10px] text-mute mt-0.5">{est.kcal} kcal · {est.protein}g P · {est.carbs}g G · {est.fat}g L</div>
+                          <div className="text-[0.6875rem] text-mute mt-0.5">{est.kcal} kcal · {est.protein}g P · {est.carbs}g G · {est.fat}g L</div>
                         )}
                         {isShowingMicros && micros && (
-                          <div className="text-[10px] text-mute mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 border-t border-line pt-1.5">
+                          <div className="text-[0.6875rem] text-mute mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 border-t border-line pt-1.5">
                             {Object.entries(micros).filter(([, v]) => v.value > 0).map(([k, v]) => (
                               <span key={k}>{MICRONUTRIENT_LABELS[k] || k}: {v.value}{v.unit}</span>
                             ))}
@@ -374,7 +374,7 @@ export default function NutritionTracker({ pendingPrompt }) {
               if (!logged) return null;
               return (
                 <div key={key}>
-                  <div className="flex justify-between text-[11px] mb-1">
+                  <div className="flex justify-between text-xs mb-1">
                     <span>{MICRONUTRIENT_LABELS[key] || key}</span>
                     <span className="text-mute">{Math.round(logged * 100) / 100}{rda.unit} / {rda.value}{rda.unit}</span>
                   </div>
@@ -383,7 +383,7 @@ export default function NutritionTracker({ pendingPrompt }) {
               );
             })}
           </div>
-          <p className="text-[11px] text-mute mt-3">Basé sur les aliments scannés (code-barres) et les repas du plan nutritionnel loggés depuis "Plan nutritionnel actif" — un aliment tapé à la main dans Quick Log n'a pas de données vitamines/minéraux.</p>
+          <p className="text-xs text-mute mt-3">Basé sur les aliments scannés (code-barres) et les repas du plan nutritionnel loggés depuis "Plan nutritionnel actif" — un aliment tapé à la main dans Quick Log n'a pas de données vitamines/minéraux.</p>
         </Card>
       )}
 

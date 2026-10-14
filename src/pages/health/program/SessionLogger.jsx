@@ -5,6 +5,7 @@ import { useProgramStore } from '../../../store/programStore';
 import { useHealthStore } from '../../../store/healthStore';
 import { getCardioConfig, HR_ZONES, CARDIO_METRIC_LABELS, cardioSessionType } from '../../../utils/exercise-library';
 
+import Term from '../../../components/common/Term';
 // ── Progressive overload ──────────────────────────────────────────
 // Last logged performance of an exercise (from healthStore, which every
 // Programme strength log mirrors into), strictly before `beforeDate`.
@@ -313,7 +314,7 @@ export default function SessionLogger({ event, date, onClose }) {
               )}
             </div>
             {cardioModality?.note && (
-              <p className="text-[11px] text-mute">💡 {cardioModality.note}</p>
+              <p className="text-xs text-mute">💡 {cardioModality.note}</p>
             )}
             <div className="grid grid-cols-3 gap-3">
               {cardioMetricKeys.map((key) => (
@@ -353,7 +354,7 @@ export default function SessionLogger({ event, date, onClose }) {
               </span>
             </div>
             {(row.last || row.suggestion) && (
-              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-xs">
                 {row.last && (
                   <span className="rounded-md bg-card px-2 py-1 text-mute">
                     Dernière fois ({new Date(row.last.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}) :{' '}
@@ -375,8 +376,8 @@ export default function SessionLogger({ event, date, onClose }) {
 
             {/* Sets table */}
             <div className="space-y-1">
-              <div className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 text-[10px] text-mute font-semibold uppercase`}>
-                <span>Série</span><span>{isDrill ? 'Qté' : 'Reps'}</span>{!isDrill && <span>Poids (kg)</span>}<span>RPE</span><span>Forme</span>
+              <div className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 text-[0.6875rem] text-mute font-semibold uppercase`}>
+                <span>Série</span><span>{isDrill ? 'Qté' : 'Reps'}</span>{!isDrill && <span>Poids (kg)</span>}<span><Term id="rpe" short /></span><span>Forme</span>
               </div>
               {row.actual_sets.map((s, setIdx) => (
                 <div key={setIdx} className={`grid ${isDrill ? 'grid-cols-4' : 'grid-cols-5'} gap-1 items-center`}>
@@ -419,11 +420,11 @@ export default function SessionLogger({ event, date, onClose }) {
             </div>
 
             <div className="flex gap-1 mt-2">
-              <button onClick={() => addSet(exIdx)} className="text-[10px] text-accent flex items-center gap-0.5 cursor-pointer">
+              <button onClick={() => addSet(exIdx)} className="text-[0.6875rem] text-accent flex items-center gap-0.5 cursor-pointer">
                 <Plus size={10} /> Série
               </button>
               {row.actual_sets.length > 1 && (
-                <button onClick={() => removeSet(exIdx)} className="text-[10px] text-mute flex items-center gap-0.5 cursor-pointer ml-2">
+                <button onClick={() => removeSet(exIdx)} className="text-[0.6875rem] text-mute flex items-center gap-0.5 cursor-pointer ml-2">
                   <Minus size={10} /> Retirer
                 </button>
               )}
@@ -433,7 +434,7 @@ export default function SessionLogger({ event, date, onClose }) {
 
         {/* Session summary */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="RPE global">
+          <Field label={<><Term id="rpe" /> de la séance</>}>
             <Input type="number" min={1} max={10} step={0.5} value={sessionRpe} onChange={(e) => setSessionRpe(e.target.value)} placeholder="7.0" />
           </Field>
           <Field label="Niveau d'énergie (1-10)">

@@ -86,7 +86,7 @@ export default function EntityFormModal({
         </div>
 
         {isEdit && initial.updatedAt && (
-          <div className="text-[11px] text-mute pt-1">
+          <div className="text-xs text-mute pt-1">
             Modifié le {new Date(initial.updatedAt).toLocaleString('fr-FR')}
           </div>
         )}

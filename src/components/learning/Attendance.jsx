@@ -33,7 +33,7 @@ function StatusChip({ status }) {
   const meta = ATTENDANCE_STATUS[status];
   if (!meta) return null;
   return (
-    <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap" style={{ background: tint(meta.tone, 16), color: meta.tone }}>
+    <span className="text-[0.6875rem] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap" style={{ background: tint(meta.tone, 16), color: meta.tone }}>
       {meta.label}
     </span>
   );
@@ -105,7 +105,7 @@ function CorrectionMenu({ occ, state, onArrival }) {
         if (v === 'time') onArrival();
         else setAttendance(occ.key, v === 'reset' ? null : v);
       }}
-      className="text-[11px] bg-transparent border border-line rounded-md px-1 py-0.5 text-mute cursor-pointer max-w-[6.5rem] focus:outline-none focus:border-accent">
+      className="text-xs bg-transparent border border-line rounded-md px-1 py-0.5 text-mute cursor-pointer max-w-[6.5rem] focus:outline-none focus:border-accent">
       <option value="" disabled>Corriger…</option>
       {(present || ended) && <option value="time">{present ? 'Modifier l’heure d’arrivée' : 'J’étais en salle à…'}</option>}
       {options.map((s) => <option key={s} value={s}>{ATTENDANCE_STATUS[s].label}</option>)}
@@ -190,7 +190,7 @@ export function ClassRow({ occ, now }) {
       <span className="text-xs tabular-nums text-mute w-[4.6rem] shrink-0 leading-tight">{occ.start}<br />{occ.end}</span>
       <span className="flex-1 min-w-0">
         <Link to={`/learning/course/${occ.course.id}`} className="block text-sm font-medium text-ink truncate hover:text-accent">{occ.course.name}</Link>
-        <span className="text-[11px] text-mute flex items-center gap-1 flex-wrap">
+        <span className="text-xs text-mute flex items-center gap-1 flex-wrap">
           {occ.slot.kind}{occ.slot.room && <> · <MapPin size={9} /> {occ.slot.room}</>}
           {hint && <> · {hint}</>}
         </span>
@@ -203,7 +203,7 @@ export function ClassRow({ occ, now }) {
         ) : state !== 'upcoming' && (
           <>
             {rec?.at && ATTENDANCE_STATUS[state]?.present && state !== 'forgot' && (
-              <button type="button" onClick={() => setArrival(occ)} className="text-[11px] tabular-nums text-mute hover:text-accent cursor-pointer" title="Modifier l’heure d’arrivée">{fmtClock(rec.at)}</button>
+              <button type="button" onClick={() => setArrival(occ)} className="text-xs tabular-nums text-mute hover:text-accent cursor-pointer" title="Modifier l’heure d’arrivée">{fmtClock(rec.at)}</button>
             )}
             <StatusChip status={state} />
           </>
@@ -272,7 +272,7 @@ export function NextClassBanner() {
       {next ? (
         <div className="space-y-2">
           <ClassRow occ={next} now={now} />
-          {pending.length > 1 && <p className="text-[11px] text-mute">Ensuite : {pending.slice(1).map((o) => `${o.start} ${o.course.name}`).join(' · ')}</p>}
+          {pending.length > 1 && <p className="text-xs text-mute">Ensuite : {pending.slice(1).map((o) => `${o.start} ${o.course.name}`).join(' · ')}</p>}
         </div>
       ) : (
         <p className="text-sm text-mute">
@@ -301,8 +301,8 @@ export function CourseEndControl({ course }) {
       </select>
       {course.endRule === 'date' && <input type="date" className={cls} value={course.endDate || ''} onChange={(e) => editCourse(course.id, { endDate: e.target.value })} />}
       {end.rule === 'midterms' && (end.pending
-        ? <span className="text-[11px] text-warning flex items-center gap-1"><AlertTriangle size={11} /> date inconnue : saisis la date du CC ci-dessous (Évaluations) ; les créneaux continuent en attendant</span>
-        : <span className="text-[11px] text-mute">dernier cours avant le {new Date(`${end.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ({end.source === 'eval' ? 'date du CC' : 'début des partiels du semestre'})</span>)}
+        ? <span className="text-xs text-warning flex items-center gap-1"><AlertTriangle size={11} /> date inconnue : saisis la date du CC ci-dessous (Évaluations) ; les créneaux continuent en attendant</span>
+        : <span className="text-xs text-mute">dernier cours avant le {new Date(`${end.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} ({end.source === 'eval' ? 'date du CC' : 'début des partiels du semestre'})</span>)}
     </div>
   );
 }
@@ -315,7 +315,7 @@ export function CourseAttendanceSummary({ course }) {
   const academic = useLearningStore((s) => s.academic);
   const records = useLearningStore((s) => s.attendance);
   const a = useMemo(() => courseAttendance(course, academic, records), [course, academic, records]);
-  if (!a.history.length) return <p className="text-[11px] text-mute mt-3">Assiduité : aucun cours passé pour l’instant.</p>;
+  if (!a.history.length) return <p className="text-xs text-mute mt-3">Assiduité : aucun cours passé pour l’instant.</p>;
   return (
     <div className="mt-3 flex items-center gap-3 flex-wrap text-xs text-mute">
       <span className="flex items-center gap-1"><UserCheck size={12} /> À l’heure <b className="tabular-nums" style={{ color: rateColor(a.onTimeRate) }}>{pct(a.onTimeRate)}</b></span>
@@ -418,7 +418,7 @@ export function AttendanceOverview() {
         )}
         <div className="rounded-lg border border-line overflow-x-auto">
           <table className="w-full text-sm min-w-[32rem]">
-            <thead className="bg-surface text-[11px] text-mute">
+            <thead className="bg-surface text-xs text-mute">
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Matière</th>
                 <th className="px-3 py-2 font-medium">À l’heure</th>
@@ -434,7 +434,7 @@ export function AttendanceOverview() {
                   <tr key={course.id} className="border-t border-line/60">
                     <td className="px-3 py-1.5">
                       <Link to={`/learning/course/${course.id}`} className="text-ink hover:text-accent">{course.name}</Link>
-                      {end.rule === 'midterms' && <span className="ml-1.5 text-[10px] text-mute">· jusqu’aux partiels</span>}
+                      {end.rule === 'midterms' && <span className="ml-1.5 text-[0.6875rem] text-mute">· jusqu’aux partiels</span>}
                     </td>
                     <td className="px-3 py-1.5 text-center tabular-nums font-semibold" style={{ color: rateColor(a.onTimeRate) }}>{pct(a.onTimeRate)}</td>
                     <td className="px-3 py-1.5 text-center tabular-nums text-mute">{a.counts.late + a.counts.forgot}</td>
@@ -474,7 +474,7 @@ function RecentClasses() {
       <div className="mt-3 space-y-3">
         {days.map(({ key, classes }) => (
           <div key={key}>
-            <div className="text-[11px] text-mute mb-1.5">{new Date(`${key}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+            <div className="text-xs text-mute mb-1.5">{new Date(`${key}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
             <div className="space-y-1.5">{classes.map((o) => <ClassRow key={o.key} occ={o} now={now} />)}</div>
           </div>
         ))}
@@ -494,7 +494,7 @@ export function ClassNotesCard({ course }) {
       <div className="space-y-3 max-h-80 overflow-y-auto">
         {entries.map(([key, n]) => (
           <div key={key}>
-            <div className="text-[11px] text-mute mb-1">
+            <div className="text-xs text-mute mb-1">
               {new Date(`${n.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
               {n.cards ? ` · ${n.cards} fiche${n.cards > 1 ? 's' : ''}` : ''}
             </div>

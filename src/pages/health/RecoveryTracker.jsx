@@ -5,6 +5,7 @@ import { readinessBand } from '../../utils/health-science';
 import { todayKey, fmtDate } from '../../utils/formatters';
 import { Card, Button, Badge, Field, Input, ProgressBar } from '../../components/common/ui';
 
+import Term from '../../components/common/Term';
 const ACTIVITIES = [
   { key: 'sleep8', label: 'Sommeil 8 h+' },
   { key: 'meditation', label: 'Meditation' },
@@ -56,7 +57,7 @@ export default function RecoveryTracker({ pendingPrompt }) {
 
   return (
     <div className="space-y-6">
-      <Card title="Readiness Breakdown">
+      <Card title={<>Détail : <Term id="readiness" /></>}>
         <div className="flex items-center gap-4 mb-4">
           <div className="text-4xl font-bold" style={{ color: band.color }}>{readiness.score}</div>
           <Badge color={band.color}>{band.label}</Badge>
@@ -114,12 +115,12 @@ export default function RecoveryTracker({ pendingPrompt }) {
             value={logDate}
             max={today}
             onChange={(e) => e.target.value && changeDate(e.target.value)}
-            className="bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink cursor-pointer"
+            className="bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink cursor-pointer"
           />
         }
       >
         {isPastDate && (
-          <div className="flex items-center gap-2 text-[11px] text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-1.5 mb-3">
+          <div className="flex items-center gap-2 text-xs text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-1.5 mb-3">
             <History size={12} /> Logging retroactively for {fmtDate(logDate)}.
           </div>
         )}

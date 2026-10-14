@@ -86,7 +86,7 @@ export default function Timeline() {
             {links.findings.length ? <LinksList links={links} /> : (
               <p className="text-sm text-mute">Pas encore assez de jours pour comparer. Il faut au moins {MIN_DAYS} jours « avec » et {MIN_DAYS} jours « sans » et un écart net ; continue à noter ton sommeil, ton sport, tes révisions et tes dépenses.</p>
             )}
-            <p className="flex items-start gap-1.5 text-[11px] text-mute mt-3"><Info size={12} className="mt-0.5 shrink-0" /> Un lien observé sur tes propres jours, pas une cause prouvée : d’autres choses jouent aussi. Clique sur un constat pour voir les jours comparés. Tout est calculé sur ton appareil.</p>
+            <p className="flex items-start gap-1.5 text-xs text-mute mt-3"><Info size={12} className="mt-0.5 shrink-0" /> Un lien observé sur tes propres jours, pas une cause prouvée : d’autres choses jouent aussi. Clique sur un constat pour voir les jours comparés. Tout est calculé sur ton appareil.</p>
           </Card>
           {links.waiting.length > 0 && (
             <Card title="En attente de données">

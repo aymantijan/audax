@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useUiStore } from '../../store/uiStore';
 
 export function Card({ title, action, children, className = '' }) {
@@ -54,7 +55,7 @@ export function Field({ label, children, hint }) {
     <label className="block">
       <span className="block text-xs text-mute mb-1.5">{label}</span>
       {children}
-      {hint && <span className="block text-[11px] text-mute mt-1">{hint}</span>}
+      {hint && <span className="block text-xs text-mute mt-1">{hint}</span>}
     </label>
   );
 }
@@ -202,7 +203,7 @@ export function Wizard({ steps, onComplete, onCancel, initialData = {} }) {
 export function Badge({ children, color = 'var(--accent-primary)' }) {
   return (
     <span
-      className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium"
+      className="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
       style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
     >
       {children}
@@ -252,7 +253,10 @@ export function Modal({ open, onClose, title, children, wide }) {
     };
   }, [open]);
   if (!open) return null;
-  return (
+  // Rendered at the top of the page (portal): a modal opened from inside a
+  // fixed bar (the « ? » of the top bar) was otherwise trapped under the
+  // phone tab bar.
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-end sm:items-start justify-center bg-black/60 backdrop-blur-sm sm:overflow-y-auto sm:py-10 sm:px-4"
       onClick={onClose}
@@ -273,7 +277,8 @@ export function Modal({ open, onClose, title, children, wide }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -189,7 +189,7 @@ export default function ProgramTab() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-ink">Programmes archivés</h3>
+          <h3 className="text-[1rem] font-semibold text-ink">Programmes archivés</h3>
           <Button variant="secondary" onClick={() => setView('main')}><span className="flex items-center gap-1.5"><ArrowLeft size={14} /> Retour</span></Button>
         </div>
         {archivedPrograms.length ? archivedPrograms.map((p) => (

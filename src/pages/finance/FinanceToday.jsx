@@ -104,27 +104,27 @@ export default function FinanceToday() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Dépensé aujourd'hui</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Dépensé aujourd'hui</div>
             <div className="text-xl font-bold tabular-nums text-ink">{fmtMAD(t.spentToday)}</div>
-            <div className="text-[11px] text-mute">{t.perDay > 0 ? (t.spentToday > t.perDay ? 'au-dessus du rythme' : 'dans le rythme') : ''}</div>
+            <div className="text-xs text-mute">{t.perDay > 0 ? (t.spentToday > t.perDay ? 'au-dessus du rythme' : 'dans le rythme') : ''}</div>
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Cette semaine</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Cette semaine</div>
             <div className="text-xl font-bold tabular-nums text-ink">{fmtMAD(t.spentWeek)}</div>
-            <div className="text-[11px] text-mute">dépensés depuis lundi</div>
+            <div className="text-xs text-mute">dépensés depuis lundi</div>
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Ce mois</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Ce mois</div>
             <div className="text-xl font-bold tabular-nums text-ink">{fmtMAD(t.expense)}</div>
             {spentPct != null ? (
               <div className="mt-1"><ProgressBar value={spentPct} height={4} color={spentPct > monthPct + 10 ? 'var(--warning)' : 'var(--accent-primary)'} />
-                <div className="text-[10px] text-mute mt-0.5">{Math.round(spentPct)}% des revenus · {monthPct}% du mois écoulé</div></div>
-            ) : <div className="text-[11px] text-mute">aucun revenu ce mois</div>}
+                <div className="text-[0.6875rem] text-mute mt-0.5">{Math.round(spentPct)}% des revenus · {monthPct}% du mois écoulé</div></div>
+            ) : <div className="text-xs text-mute">aucun revenu ce mois</div>}
           </div>
           <div className="rounded-xl bg-card/70 border border-line px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute">Libre sur tes comptes</div>
+            <div className="text-xs uppercase tracking-wide text-mute">Libre sur tes comptes</div>
             <div className="text-xl font-bold tabular-nums" style={{ color: alloc.unallocated < 0 ? 'var(--error)' : 'var(--text-primary)' }}>{fmtMAD(alloc.unallocated)}</div>
-            <div className="text-[11px] text-mute">hors argent mis de côté</div>
+            <div className="text-xs text-mute">hors argent mis de côté</div>
           </div>
         </div>
       </div>
@@ -138,9 +138,9 @@ export default function FinanceToday() {
                 <div key={`${r.id}-${r.occurrenceDate}`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ background: tint('var(--error)', 10) }}>
                   <AlertTriangle size={13} className="text-bad shrink-0" />
                   <span className="flex-1 min-w-0 truncate text-ink">{r.label}</span>
-                  <span className="text-[11px] text-bad">{relDay(r.occurrenceDate, t.today)}</span>
+                  <span className="text-xs text-bad">{relDay(r.occurrenceDate, t.today)}</span>
                   <span className="tabular-nums text-sm">{fmtMAD(r.amount)}</span>
-                  <Button className="!px-2 !py-0.5 text-[11px]" onClick={() => pay(r)}>Payée</Button>
+                  <Button className="!px-2 !py-0.5 text-xs" onClick={() => pay(r)}>Payée</Button>
                 </div>
               ))}
             </div>
@@ -149,13 +149,13 @@ export default function FinanceToday() {
             <div className="divide-y divide-line/60">
               {t.next7.map((r) => (
                 <div key={`${r.id}-${r.occurrenceDate}`} className="flex items-center gap-3 py-2 text-sm">
-                  <span className="w-20 shrink-0 text-[11px] text-mute">{frDay(r.occurrenceDate)}</span>
+                  <span className="w-20 shrink-0 text-xs text-mute">{frDay(r.occurrenceDate)}</span>
                   <span className="flex-1 min-w-0 truncate text-ink">{r.label}</span>
-                  {r.autoPost && <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-accent/15 text-accent">auto</span>}
+                  {r.autoPost && <span className="text-[0.6875rem] rounded-full px-1.5 py-0.5 bg-accent/15 text-accent">auto</span>}
                   <span className="tabular-nums font-medium" style={{ color: r.impact.income ? 'var(--success)' : r.impact.expense ? 'var(--error)' : undefined }}>
                     {r.impact.income ? '+' : r.impact.expense ? '−' : ''}{fmtMAD(r.amount)}
                   </span>
-                  {!r.autoPost && r.occurrenceDate === t.today && <Button variant="secondary" className="!px-2 !py-0.5 text-[11px]" onClick={() => pay(r)}>Payée</Button>}
+                  {!r.autoPost && r.occurrenceDate === t.today && <Button variant="secondary" className="!px-2 !py-0.5 text-xs" onClick={() => pay(r)}>Payée</Button>}
                 </div>
               ))}
             </div>
@@ -176,14 +176,14 @@ export default function FinanceToday() {
                 return (
                   <div key={b.id}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-ink truncate">{b.label} <span className="text-[11px] text-mute">· {b.periodLabel}</span></span>
+                      <span className="text-ink truncate">{b.label} <span className="text-xs text-mute">· {b.periodLabel}</span></span>
                       <span className="tabular-nums text-xs text-mute"><b style={{ color: c }}>{fmtMAD(b.reel)}</b> / {fmtMAD(b.amount)}</span>
                     </div>
                     <div className="relative">
                       <ProgressBar value={pct} height={6} color={c} />
                       <div className="absolute top-[-2px] h-[10px] w-0.5 bg-ink/40" style={{ left: `${b.elapsedPct}%` }} title="Temps écoulé" />
                     </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: bad || risk ? c : 'var(--text-secondary)' }}>
+                    <div className="text-xs mt-0.5" style={{ color: bad || risk ? c : 'var(--text-secondary)' }}>
                       {bad ? `Dépassé de ${fmtMAD(-b.left)}` : risk ? `Au rythme actuel : ${fmtMAD(b.projected)} en fin de période` : `Reste ${fmtMAD(b.left)}`}
                     </div>
                   </div>
@@ -206,7 +206,7 @@ export default function FinanceToday() {
                 return (
                   <div key={e.id} className="flex items-center gap-3 py-2 text-sm">
                     <Icon size={14} style={{ color: m[1] }} className="shrink-0" />
-                    <span className="flex-1 min-w-0 truncate text-ink">{e.label}<span className="text-[11px] text-mute">{fxNote(e)}{d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}</span></span>
+                    <span className="flex-1 min-w-0 truncate text-ink">{e.label}<span className="text-xs text-mute">{fxNote(e)}{d.category && d.kind !== 'transfer' ? ` · ${d.category}` : ''}</span></span>
                     <span className="tabular-nums font-medium" style={{ color: d.kind === 'other' ? undefined : m[1] }}>{m[2]}{fmtMAD(d.amount)}</span>
                   </div>
                 );
@@ -231,7 +231,7 @@ export default function FinanceToday() {
                     <span className="text-xs text-mute tabular-nums">{fmtMAD(s.done)} / {fmtMAD(s.needed)}</span>
                   </div>
                   <ProgressBar value={Math.min(100, (s.done / s.needed) * 100)} height={5} color={s.left === 0 ? 'var(--success)' : 'var(--accent-primary)'} />
-                  <div className="text-[11px] mt-0.5 text-mute">{s.left === 0 ? <span className="text-good flex items-center gap-1"><CheckCircle2 size={11} /> effort du mois fait</span> : `encore ${fmtMAD(s.left)} à mettre de côté ce mois-ci`}</div>
+                  <div className="text-xs mt-0.5 text-mute">{s.left === 0 ? <span className="text-good flex items-center gap-1"><CheckCircle2 size={11} /> effort du mois fait</span> : `encore ${fmtMAD(s.left)} à mettre de côté ce mois-ci`}</div>
                 </div>
               ))}
             </div>

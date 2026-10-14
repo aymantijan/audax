@@ -86,7 +86,7 @@ function FoodSearch({ value, onSelect }) {
               }`}
             >
               <span className="font-medium truncate">{food.name}</span>
-              <span className="text-[10px] text-mute whitespace-nowrap flex gap-1.5">
+              <span className="text-[0.6875rem] text-mute whitespace-nowrap flex gap-1.5">
                 <span>{food.kcal} kcal</span>
                 <span className="text-good">{food.protein}P</span>
                 <span className="text-warning">{food.carbs}G</span>
@@ -114,7 +114,7 @@ function ServingPicker({ food, grams, onChangeGrams }) {
           onChange={(e) => onChangeGrams(parseInt(e.target.value) || 0)}
           className="w-14 text-xs py-1 px-1.5 text-center bg-surface border border-line rounded-md text-ink focus:outline-none focus:border-accent"
         />
-        <span className="text-[10px] text-mute">g</span>
+        <span className="text-[0.6875rem] text-mute">g</span>
       </div>
     );
   }
@@ -134,7 +134,7 @@ function ServingPicker({ food, grams, onChangeGrams }) {
           const serving = servings.find((s) => s.label === val);
           if (serving) onChangeGrams(serving.grams);
         }}
-        className="text-[10px] py-1 px-0.5 bg-surface border border-line rounded-md text-mute cursor-pointer focus:outline-none"
+        className="text-[0.6875rem] py-1 px-0.5 bg-surface border border-line rounded-md text-mute cursor-pointer focus:outline-none"
         defaultValue="g"
       >
         <option value="g">g</option>
@@ -360,8 +360,8 @@ function TemplateForm({ phaseId, template, onClose }) {
             { label: 'Fibres', value: Math.round(totals.fiber), unit: 'g', color: 'text-mute' },
           ].map((m) => (
             <div key={m.label} className="bg-surface border border-line rounded-lg p-2">
-              <div className={`text-lg font-bold ${m.color}`}>{m.value}<span className="text-[10px] font-normal ml-0.5">{m.unit}</span></div>
-              <div className="text-[10px] text-mute">{m.label}</div>
+              <div className={`text-lg font-bold ${m.color}`}>{m.value}<span className="text-[0.6875rem] font-normal ml-0.5">{m.unit}</span></div>
+              <div className="text-[0.6875rem] text-mute">{m.label}</div>
             </div>
           ))}
         </div>
@@ -390,12 +390,12 @@ function TemplateForm({ phaseId, template, onClose }) {
             {/* Column headers */}
             {(meal.items || []).length > 0 && (
               <div className="grid grid-cols-[1fr_auto_55px_55px_55px_55px_24px] gap-1 mb-1 px-0.5">
-                <span className="text-[9px] text-mute font-medium uppercase">Aliment</span>
-                <span className="text-[9px] text-mute font-medium uppercase text-center w-[76px]">Quantité</span>
-                <span className="text-[9px] text-mute font-medium uppercase text-center">Kcal</span>
-                <span className="text-[9px] text-good font-medium uppercase text-center">Prot.</span>
-                <span className="text-[9px] text-warning font-medium uppercase text-center">Gluc.</span>
-                <span className="text-[9px] text-bad font-medium uppercase text-center">Lip.</span>
+                <span className="text-[0.6875rem] text-mute font-medium uppercase">Aliment</span>
+                <span className="text-[0.6875rem] text-mute font-medium uppercase text-center w-[76px]">Quantité</span>
+                <span className="text-[0.6875rem] text-mute font-medium uppercase text-center">Kcal</span>
+                <span className="text-[0.6875rem] text-good font-medium uppercase text-center">Prot.</span>
+                <span className="text-[0.6875rem] text-warning font-medium uppercase text-center">Gluc.</span>
+                <span className="text-[0.6875rem] text-bad font-medium uppercase text-center">Lip.</span>
                 <span></span>
               </div>
             )}
@@ -412,10 +412,10 @@ function TemplateForm({ phaseId, template, onClose }) {
                   grams={item.grams}
                   onChangeGrams={(g) => updateGrams(mealIdx, itemIdx, g)}
                 />
-                <span className="text-[10px] text-mute text-center font-medium">{item.kcal || 0}</span>
-                <span className="text-[10px] text-good text-center font-medium">{item.protein || 0}g</span>
-                <span className="text-[10px] text-warning text-center font-medium">{item.carbs || 0}g</span>
-                <span className="text-[10px] text-bad text-center font-medium">{item.fat || 0}g</span>
+                <span className="text-[0.6875rem] text-mute text-center font-medium">{item.kcal || 0}</span>
+                <span className="text-[0.6875rem] text-good text-center font-medium">{item.protein || 0}g</span>
+                <span className="text-[0.6875rem] text-warning text-center font-medium">{item.carbs || 0}g</span>
+                <span className="text-[0.6875rem] text-bad text-center font-medium">{item.fat || 0}g</span>
                 <button onClick={() => removeFoodItem(mealIdx, itemIdx)} className="text-mute hover:text-bad cursor-pointer">
                   <Trash2 size={10} />
                 </button>
@@ -432,18 +432,18 @@ function TemplateForm({ phaseId, template, onClose }) {
               }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
               return (
                 <div className="grid grid-cols-[1fr_auto_55px_55px_55px_55px_24px] gap-1 mt-1 pt-1 border-t border-line/50">
-                  <span className="text-[10px] text-mute font-semibold">Sous-total</span>
+                  <span className="text-[0.6875rem] text-mute font-semibold">Sous-total</span>
                   <span className="w-[76px]"></span>
-                  <span className="text-[10px] text-mute text-center font-bold">{Math.round(mealTotals.kcal)}</span>
-                  <span className="text-[10px] text-good text-center font-bold">{Math.round(mealTotals.protein)}g</span>
-                  <span className="text-[10px] text-warning text-center font-bold">{Math.round(mealTotals.carbs)}g</span>
-                  <span className="text-[10px] text-bad text-center font-bold">{Math.round(mealTotals.fat)}g</span>
+                  <span className="text-[0.6875rem] text-mute text-center font-bold">{Math.round(mealTotals.kcal)}</span>
+                  <span className="text-[0.6875rem] text-good text-center font-bold">{Math.round(mealTotals.protein)}g</span>
+                  <span className="text-[0.6875rem] text-warning text-center font-bold">{Math.round(mealTotals.carbs)}g</span>
+                  <span className="text-[0.6875rem] text-bad text-center font-bold">{Math.round(mealTotals.fat)}g</span>
                   <span></span>
                 </div>
               );
             })()}
 
-            <button onClick={() => addFoodItem(mealIdx)} className="text-[10px] text-accent flex items-center gap-0.5 mt-2 cursor-pointer hover:underline">
+            <button onClick={() => addFoodItem(mealIdx)} className="text-[0.6875rem] text-accent flex items-center gap-0.5 mt-2 cursor-pointer hover:underline">
               <Plus size={10} /> Ajouter un aliment
             </button>
           </div>

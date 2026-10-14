@@ -4,6 +4,7 @@ import { Card, Badge } from '../../../components/common/ui';
 import { useHealthStore } from '../../../store/healthStore';
 import { useHabitStore } from '../../../store/habitStore';
 
+import Term from '../../../components/common/Term';
 /**
  * ReadinessCard — daily auto-regulation, per the program's Section 14
  * (Monitoring & Nervous System Protection). Maps today's readiness score to
@@ -50,7 +51,7 @@ export default function ReadinessCard() {
     <Card>
       <div className="flex items-center gap-2 mb-3">
         <Gauge size={16} className="text-accent" />
-        <span className="font-semibold text-sm">Readiness — auto-régulation</span>
+        <span className="font-semibold text-sm"><Term id="readiness" /> — séance ajustée à ta forme</span>
         {!hasCheckIn && <Badge>Check-in du jour manquant</Badge>}
       </div>
 
@@ -60,7 +61,7 @@ export default function ReadinessCard() {
           <div className="text-3xl font-bold" style={{ color: tier?.color || 'var(--text-mute)' }}>
             {score != null ? score : '—'}
           </div>
-          <div className="text-[10px] text-mute">/ 100</div>
+          <div className="text-[0.6875rem] text-mute">/ 100</div>
         </div>
 
         {/* Tier action */}
@@ -82,7 +83,7 @@ export default function ReadinessCard() {
 
       {/* Score breakdown */}
       {readiness?.breakdown && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[10px] text-mute">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[0.6875rem] text-mute">
           <span>😴 Sommeil {readiness.breakdown.sleep}/30</span>
           <span>⚡ Énergie {readiness.breakdown.energy}/25</span>
           <span>🧘 Stress {readiness.breakdown.stress}/20</span>

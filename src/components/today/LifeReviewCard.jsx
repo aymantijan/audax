@@ -65,12 +65,12 @@ export default function LifeReviewCard() {
             const T = TREND[r.trend];
             return (
               <div key={r.key} className="rounded-lg border border-line bg-surface px-3 py-2.5">
-                <div className="text-[11px] text-mute">{r.label}</div>
+                <div className="text-xs text-mute">{r.label}</div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="font-data font-bold">{fmtValue(r, r.value)}</span>
                   <T.icon size={14} style={{ color: T.color }} aria-label={r.trend === 'better' ? 'en progrès' : r.trend === 'worse' ? 'en baisse' : 'stable'} />
                 </div>
-                <div className="text-[10px] text-mute">avant : {fmtValue(r, r.previous)}</div>
+                <div className="text-[0.6875rem] text-mute">avant : {fmtValue(r, r.previous)}</div>
               </div>
             );
           })}

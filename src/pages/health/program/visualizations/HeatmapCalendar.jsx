@@ -73,7 +73,7 @@ export default function HeatmapCalendar() {
             {months.map((m, i) => (
               <div
                 key={i}
-                className="text-[9px] text-mute"
+                className="text-[0.6875rem] text-mute"
                 style={{ marginLeft: m.week > 0 ? `${(m.week - (months[i - 1]?.week || 0)) * 14 - 14}px` : 0 }}
               >
                 {m.label}
@@ -84,7 +84,7 @@ export default function HeatmapCalendar() {
           {/* Grid: 7 rows (Mon–Sun) × N weeks */}
           {Array.from({ length: 7 }).map((_, rowIdx) => (
             <div key={rowIdx} className="flex items-center gap-0.5">
-              <span className="text-[8px] text-mute w-4 text-right">{DAY_LABELS[rowIdx]}</span>
+              <span className="text-[0.6875rem] text-mute w-4 text-right">{DAY_LABELS[rowIdx]}</span>
               {weeks.map((wk, wi) => {
                 const cell = wk.find((c) => c.dow === rowIdx);
                 return (
@@ -105,7 +105,7 @@ export default function HeatmapCalendar() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-2 mt-3 text-[9px] text-mute">
+      <div className="flex items-center gap-2 mt-3 text-[0.6875rem] text-mute">
         <span>Moins</span>
         {[null, 40, 60, 75, 90].map((score, i) => (
           <div

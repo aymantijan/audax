@@ -76,7 +76,7 @@ export default function TimetableView() {
             <div key={d.value} className={`rounded-xl border bg-card p-3 min-h-[120px] ${isToday ? 'border-accent' : 'border-line'}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-semibold ${isToday ? 'text-accent' : 'text-ink'}`}>{d.label}</span>
-                {isToday && <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-accent/15 text-accent font-semibold">Aujourd'hui</span>}
+                {isToday && <span className="text-[0.6875rem] rounded-full px-1.5 py-0.5 bg-accent/15 text-accent font-semibold">Aujourd'hui</span>}
               </div>
               {daySlots.length ? (
                 <div className="space-y-2">
@@ -86,17 +86,17 @@ export default function TimetableView() {
                       <Link key={s.id} to={`/learning/course/${s.course.id}`}
                         className="block rounded-lg px-2.5 py-2 border-l-[3px] hover:brightness-110 transition"
                         style={{ background: tint(color, 12), borderColor: color }}>
-                        <div className="text-[11px] tabular-nums flex items-center gap-1" style={{ color }}><Clock size={10} /> {s.start}–{s.end} · {s.kind}</div>
+                        <div className="text-xs tabular-nums flex items-center gap-1" style={{ color }}><Clock size={10} /> {s.start}–{s.end} · {s.kind}</div>
                         <div className="text-xs font-medium text-ink mt-0.5 leading-snug">{s.course.name}</div>
-                        {s.room && <div className="text-[10px] text-mute mt-0.5 flex items-center gap-1"><MapPin size={9} /> {s.room}</div>}
-                        {s.endRule === 'midterms' && <div className="text-[10px] text-mute mt-0.5">jusqu’aux partiels{s.endDate ? ` (${new Date(`${s.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})` : ''}</div>}
-                        {s.endRule === 'date' && s.course.endDate && <div className="text-[10px] text-mute mt-0.5">jusqu’au {new Date(`${s.course.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>}
+                        {s.room && <div className="text-[0.6875rem] text-mute mt-0.5 flex items-center gap-1"><MapPin size={9} /> {s.room}</div>}
+                        {s.endRule === 'midterms' && <div className="text-[0.6875rem] text-mute mt-0.5">jusqu’aux partiels{s.endDate ? ` (${new Date(`${s.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})` : ''}</div>}
+                        {s.endRule === 'date' && s.course.endDate && <div className="text-[0.6875rem] text-mute mt-0.5">jusqu’au {new Date(`${s.course.endDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>}
                       </Link>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-[11px] text-mute">Libre</div>
+                <div className="text-xs text-mute">Libre</div>
               )}
             </div>
           );

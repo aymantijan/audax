@@ -78,7 +78,7 @@ export function buildNavItems(user) {
     }
   }
   items.push({ id: 'page-settings', domain: 'Page', label: 'Paramètres', sub: 'Profil, synchronisation, données', to: '/settings', kind: 'page' });
-  items.push({ id: 'page-leaderboard', domain: 'Page', label: 'Classement', sub: 'Grades et XP', to: '/leaderboard', kind: 'page' });
+  if (user?.uiLevel !== 'simple') items.push({ id: 'page-leaderboard', domain: 'Page', label: 'Classement', sub: 'Grades et XP', to: '/leaderboard', kind: 'page' });
   for (const a of ACTIONS) {
     if (a.module && !isModuleEnabled(user, a.module)) continue;
     items.push({ ...a, domain: 'Action', kind: 'action' });

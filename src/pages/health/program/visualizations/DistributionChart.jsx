@@ -85,7 +85,7 @@ export default function DistributionChart() {
               {/* Whiskers */}
               <div className="absolute top-1/2 h-px bg-mute w-full" />
             </div>
-            <div className="flex justify-between text-[9px] text-mute mt-1">
+            <div className="flex justify-between text-[0.6875rem] text-mute mt-1">
               <span>{stats.min.toFixed(1)}</span>
               <span>Q1: {stats.q1.toFixed(1)}</span>
               <span>Méd: {stats.median.toFixed(1)}</span>
@@ -131,7 +131,7 @@ export default function DistributionChart() {
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="text-xs font-bold text-ink">{s.value}</div>
-                <div className="text-[9px] text-mute">{s.label}</div>
+                <div className="text-[0.6875rem] text-mute">{s.label}</div>
               </div>
             ))}
           </div>

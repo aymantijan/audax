@@ -106,7 +106,7 @@ export function CardModal({ open, onClose, deckId, card }) {
             <Button type="submit">{card ? 'Enregistrer' : 'Ajouter et continuer'}</Button>
           </div>
         </div>
-        {!card && <p className="text-[11px] text-mute">Astuce : une fiche = une seule idée. Question courte, réponse courte.</p>}
+        {!card && <p className="text-xs text-mute">Astuce : une fiche = une seule idée. Question courte, réponse courte.</p>}
       </form>
     </Modal>
   );
@@ -204,7 +204,7 @@ function DeckDetail({ deck, onBack, onReview }) {
             <div key={c.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-x-4 gap-y-1 px-4 py-3 items-start">
               <div className="text-sm text-ink whitespace-pre-wrap break-words">{c.front}</div>
               <div className="text-sm text-mute whitespace-pre-wrap break-words">{c.back}</div>
-              <div className="flex items-center gap-2 md:justify-end text-[11px] text-mute whitespace-nowrap">
+              <div className="flex items-center gap-2 md:justify-end text-xs text-mute whitespace-nowrap">
                 {chapterName(c.chapterId) && <span className="truncate max-w-[8rem]">{chapterName(c.chapterId)}</span>}
                 <span className="rounded-full px-1.5 py-0.5 border border-line">{STATE_LABEL[c.state]}</span>
                 {c.state !== 'new' && <span>{c.due <= now ? 'à revoir' : `dans ${fmtInterval(c.due - now)}`}</span>}
@@ -292,15 +292,15 @@ export default function ReviewView() {
               <div key={d.id} className="rounded-xl border border-line bg-card p-4 flex flex-col gap-3 hover:border-accent/60 transition-colors" style={{ borderTop: `3px solid ${color}` }}>
                 <button onClick={() => setOpenDeck(d.id)} className="text-left cursor-pointer min-w-0">
                   <div className="font-semibold text-ink truncate hover:text-accent">{d.name}</div>
-                  <div className="text-[11px] text-mute mt-0.5 flex items-center gap-1">
+                  <div className="text-xs text-mute mt-0.5 flex items-center gap-1">
                     {course ? <><GraduationCap size={11} /> {course.name}</> : <><Sparkles size={11} /> Paquet indépendant</>}
                   </div>
                 </button>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[['À revoir', st.due, 'var(--warning)'], ['Nouvelles', st.fresh, 'var(--accent-primary)'], ['Total', st.total, 'var(--text-secondary)']].map(([l, v, c]) => (
                     <div key={l} className="rounded-lg bg-surface py-1.5">
-                      <div className="text-base font-bold tabular-nums" style={{ color: v ? c : 'var(--text-secondary)' }}>{v}</div>
-                      <div className="text-[10px] text-mute">{l}</div>
+                      <div className="text-[1rem] font-bold tabular-nums" style={{ color: v ? c : 'var(--text-secondary)' }}>{v}</div>
+                      <div className="text-[0.6875rem] text-mute">{l}</div>
                     </div>
                   ))}
                 </div>
@@ -335,7 +335,7 @@ export default function ReviewView() {
             <Select value={settings.retention} onChange={(e) => updateSettings({ retention: Number(e.target.value) })}
               options={[0.8, 0.85, 0.9, 0.93, 0.95].map((v) => ({ value: v, label: `${Math.round(v * 100)} %` }))} />
           </Field>
-          <div className="flex items-start gap-2 text-[11px] text-mute"><Target size={12} className="mt-0.5 shrink-0" /> Algorithme FSRS (celui d'Anki) : l'intervalle s'adapte à chaque fiche selon tes réponses.</div>
+          <div className="flex items-start gap-2 text-xs text-mute"><Target size={12} className="mt-0.5 shrink-0" /> Algorithme FSRS (celui d'Anki) : l'intervalle s'adapte à chaque fiche selon tes réponses.</div>
           <div className="flex justify-end"><Button onClick={() => setSettingsOpen(false)}>Fermer</Button></div>
         </div>
       </Modal>

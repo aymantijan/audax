@@ -64,7 +64,7 @@ export default function IronTracking() {
                   <Badge color="var(--warning)">{FLAG_COPY[f]}</Badge>
                 </div>
               ))}
-              <p className="text-[11px] text-mute mt-1">Seuils OMS (hémoglobine {status.labStatus.hbThreshold}g/dL, ferritine {status.labStatus.ferritinLowThreshold}/{status.labStatus.ferritinBorderlineThreshold}ng/mL) — ce n'est pas un diagnostic, à confirmer avec un·e professionnel·le de santé.</p>
+              <p className="text-xs text-mute mt-1">Seuils OMS (hémoglobine {status.labStatus.hbThreshold}g/dL, ferritine {status.labStatus.ferritinLowThreshold}/{status.labStatus.ferritinBorderlineThreshold}ng/mL) — ce n'est pas un diagnostic, à confirmer avec un·e professionnel·le de santé.</p>
             </div>
           ) : (
             <p className="text-xs text-mute">Dans les normes OMS pour les valeurs renseignées.</p>

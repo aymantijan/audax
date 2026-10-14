@@ -9,6 +9,7 @@ import { tooltipStyle } from '../../components/common/chart-theme';
 
 import { deleteWithUndo } from '../../services/undo';
 import EntityFormModal from '../../components/common/EntityFormModal';
+import Term from '../../components/common/Term';
 // Performance & Recovery — the men's-track expansion. Deliberately scoped to
 // lifestyle/performance metrics that are directly measurable from what the
 // user logs (strength PRs, training volume, resting HR, self-reported
@@ -58,7 +59,7 @@ export default function Performance() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="FC au repos" value={todayLog?.restingHr ? `${todayLog.restingHr} bpm` : '—'} />
-        <Stat label="VO2max estimé" value={vo2max ? `${vo2max.value}` : '—'} sub={vo2max ? `via FC repos du ${vo2max.date}` : 'Log FC repos + année de naissance dans le profil'} />
+        <Stat label={<><Term id="vo2max" /> estimée</>} value={vo2max ? `${vo2max.value}` : '—'} sub={vo2max ? `via FC repos du ${vo2max.date}` : 'Log FC repos + année de naissance dans le profil'} />
         <Stat label="Capacité de récupération" value={`${readiness.breakdown.recovery}/15`} sub="Composante readiness" />
         <Stat label="Volume 12 sem." value={`${volume.reduce((a, v) => a + v.volume, 0).toLocaleString()} kg`} />
       </div>

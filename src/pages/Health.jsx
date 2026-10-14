@@ -57,7 +57,7 @@ const SPACES = [
     pages: [
       { key: 'goals', label: 'Objectifs', icon: Target, Component: Goals },
       { key: 'performance', label: 'Performance', icon: Gauge, Component: Performance },
-      { key: 'analytics', label: 'Analyses', icon: LineChart, Component: Analytics },
+      { key: 'analytics', label: 'Analyses', icon: LineChart, Component: Analytics, expertOnly: true },
     ],
   },
 ];
@@ -70,12 +70,13 @@ export default function Health() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { pendingPrompts, dismissPrompt } = useHealthStore();
   const gender = useAuthStore((s) => s.user?.gender);
+  const simple = useAuthStore((s) => s.user?.uiLevel === 'simple');
   const [activePrompt, setActivePrompt] = useState(null);
 
   // Cycle is strictly gender-gated (female accounts only), as before.
   const spaces = useMemo(
-    () => SPACES.map((sp) => ({ ...sp, pages: sp.pages.filter((p) => !p.femaleOnly || gender === 'female') })),
-    [gender]
+    () => SPACES.map((sp) => ({ ...sp, pages: sp.pages.filter((p) => (!p.femaleOnly || gender === 'female') && !(p.expertOnly && simple)) })),
+    [gender, simple]
   );
   const allPages = useMemo(() => spaces.flatMap((sp) => sp.pages.map((p) => ({ ...p, space: sp.key }))), [spaces]);
 
@@ -145,8 +146,8 @@ export default function Health() {
                 <Icon size={17} />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[11px] font-semibold sm:text-sm">{sp.label}</span>
-                <span className="hidden truncate text-[11px] text-mute lg:block">{sp.desc}</span>
+                <span className="block truncate text-xs font-semibold sm:text-sm">{sp.label}</span>
+                <span className="hidden truncate text-xs text-mute lg:block">{sp.desc}</span>
               </span>
             </button>
           );

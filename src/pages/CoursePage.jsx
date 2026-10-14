@@ -51,7 +51,7 @@ function EvaluationsCard({ course, settings }) {
 
       {evals.length ? (
         <div className="space-y-2">
-          <div className="hidden md:grid grid-cols-[8.5rem_minmax(0,1fr)_4.5rem_9rem_8rem_2rem] gap-2 text-[11px] text-mute px-1">
+          <div className="hidden md:grid grid-cols-[8.5rem_minmax(0,1fr)_4.5rem_9rem_8rem_2rem] gap-2 text-xs text-mute px-1">
             <span>Type</span><span>Intitulé</span><span>Poids %</span><span>Date</span><span>Note</span><span />
           </div>
           {evals.map((e) => {
@@ -229,7 +229,7 @@ function ProgrammeCard({ course }) {
                 <div className="flex items-center gap-2 px-3 py-2.5">
                   <button onClick={() => setOpen((o) => ({ ...o, [ch.id]: !isOpen }))} className="text-mute cursor-pointer">{isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
                   <span className="text-sm font-medium flex-1 min-w-0 truncate">{ch.title}</span>
-                  <span className="text-[11px] text-mute whitespace-nowrap">{done}/{items.length} · ×{ch.coefficient}</span>
+                  <span className="text-xs text-mute whitespace-nowrap">{done}/{items.length} · ×{ch.coefficient}</span>
                   <span className="text-xs font-semibold w-10 text-right tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : undefined }}>{pct}%</span>
                   <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setChapterModal({ data: ch, isAdd: false })} title="Modifier"><Pencil size={12} /></button>
                   <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => setConfirm({ label: `Supprimer le chapitre « ${ch.title} » et ses tâches ?`, run: () => deleteWithUndo(null, () => deleteChapter(ch.id)) })} title="Supprimer"><Trash2 size={12} /></button>
@@ -240,7 +240,7 @@ function ProgrammeCard({ course }) {
                       <div key={it.id} className="py-1.5 flex items-center gap-2 text-sm group">
                         <input type="checkbox" checked={it.completed} onChange={() => toggleChecklistItem(course.id, ch.id, it.id)} className="cursor-pointer accent-[var(--accent-primary)]" />
                         <span className={`flex-1 min-w-0 ${it.completed ? 'line-through text-mute' : ''}`}>{it.title}</span>
-                        <span className="text-[10px] text-mute">×{it.coefficient}</span>
+                        <span className="text-[0.6875rem] text-mute">×{it.coefficient}</span>
                         <button className="p-1 text-mute hover:text-accent cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => setItemModal({ chapterId: ch.id, data: it, isAdd: false })}><Pencil size={11} /></button>
                         <button className="p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteWithUndo(null, () => deleteItem(ch.id, it.id))}><Trash2 size={11} /></button>
                       </div>

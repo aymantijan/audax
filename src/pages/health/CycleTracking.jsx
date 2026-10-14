@@ -10,6 +10,7 @@ import { tooltipStyle } from '../../components/common/chart-theme';
 
 import { deleteWithUndo } from '../../services/undo';
 import EntityFormModal from '../../components/common/EntityFormModal';
+import Term from '../../components/common/Term';
 // Stored values stay in English (saved entries); the labels are French.
 const SYMPTOMS = ['Cramps', 'Fatigue', 'Bloating', 'Headache', 'Mood swings', 'Breast tenderness', 'Acne', 'Cravings'];
 // Shown on top of the usual list at perimenopause and menopause.
@@ -289,7 +290,7 @@ export default function CycleTracking() {
               min={openPeriod.date}
               max={todayKey()}
               onChange={(e) => e.target.value && setEndDate(e.target.value)}
-              className="bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink cursor-pointer"
+              className="bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink cursor-pointer"
             />
             <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => markPeriodEnd(openPeriod.id, endDate)}>Mark ended</Button>
           </div>
@@ -377,11 +378,11 @@ export default function CycleTracking() {
               <div key={phaseKey}>
                 <div className="text-xs text-mute mb-1">{CYCLE_PHASE_LABEL[phaseKey]}</div>
                 <div className="text-lg font-semibold" style={{ color: CYCLE_PHASE_COLOR[phaseKey] }}>{avg ?? '—'}</div>
-                <div className="text-[10px] text-mute">{n} série{n > 1 ? 's' : ''}</div>
+                <div className="text-[0.6875rem] text-mute">{n} série{n > 1 ? 's' : ''}</div>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-mute mt-2">RPE moyen (1-10) de tes séries loggées, par phase du cycle — basé sur tes propres données d'entraînement.</p>
+          <p className="text-xs text-mute mt-2"><Term id="rpe" /> moyen (1 à 10) de tes séries, par phase du cycle — basé sur tes propres données d'entraînement.</p>
         </Card>
       )}
 
@@ -392,11 +393,11 @@ export default function CycleTracking() {
               <div key={phaseKey}>
                 <div className="text-xs text-mute mb-1">{CYCLE_PHASE_LABEL[phaseKey]}</div>
                 <div className="text-lg font-semibold" style={{ color: CYCLE_PHASE_COLOR[phaseKey] }}>{avg ?? '—'}</div>
-                <div className="text-[10px] text-mute">{n} mesure{n > 1 ? 's' : ''}</div>
+                <div className="text-[0.6875rem] text-mute">{n} mesure{n > 1 ? 's' : ''}</div>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-mute mt-2">FC au repos moyenne (bpm), par phase — une hausse en phase lutéale est normale (progestérone) et pas un signe de fatigue.</p>
+          <p className="text-xs text-mute mt-2">FC au repos moyenne (bpm), par phase — une hausse en phase lutéale est normale (progestérone) et pas un signe de fatigue.</p>
         </Card>
       )}
 
@@ -411,7 +412,7 @@ export default function CycleTracking() {
               <Bar dataKey="count" fill="#ff6b6b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-[11px] text-mute mt-2">Nombre de symptômes cochés par entrée — une tendance simple, pas une échelle de sévérité clinique.</p>
+          <p className="text-xs text-mute mt-2">Nombre de symptômes cochés par entrée — une tendance simple, pas une échelle de sévérité clinique.</p>
         </Card>
       )}
 

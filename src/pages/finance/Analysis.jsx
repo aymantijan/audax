@@ -128,7 +128,7 @@ export default function Analysis() {
           </div>
         }
       >
-        <p className="text-[11px] text-mute mb-3">
+        <p className="text-xs text-mute mb-3">
           Réutilise la prévision de trésorerie détaillée (onglet Trésorerie) : un produit/charge fait bouger le patrimoine, un emprunt/investissement (échéance "Achat d'immobilisation", "Réception/Remboursement d'emprunt") est neutre — il convertit juste de la trésorerie en dette ou en actif. Simplification assumée : seuls les mouvements programmés en échéance sont anticipés — le reste du bilan (immobilisé, créances, dettes hors échéances, corrections) est gelé à sa valeur actuelle sur l'horizon.
         </p>
         {nwForecast.alerts.length > 0 && (
@@ -147,7 +147,7 @@ export default function Analysis() {
             <Line type="monotone" dataKey="ancc" name="ANCC projeté" stroke="var(--accent-secondary)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-        <p className="text-[11px] text-mute mt-2">ANCC actuel : {fmtMAD(nwForecast.anccActuel)}</p>
+        <p className="text-xs text-mute mt-2">ANCC actuel : {fmtMAD(nwForecast.anccActuel)}</p>
       </Card>
 
       <Card title="Résultat mensuel (produits − charges) — 12 mois">

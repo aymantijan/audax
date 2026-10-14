@@ -129,7 +129,7 @@ export default function ComparisonChart() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-line">
           {chartData.filter((d) => d.change != null).map((d) => (
             <div key={d.fullName} className="text-center">
-              <div className="text-[10px] text-mute truncate">{d.fullName}</div>
+              <div className="text-[0.6875rem] text-mute truncate">{d.fullName}</div>
               <div className={`text-sm font-bold ${d.change >= 0 ? 'text-good' : 'text-bad'}`}>
                 {d.change >= 0 ? '+' : ''}{d.change.toFixed(1)}
               </div>

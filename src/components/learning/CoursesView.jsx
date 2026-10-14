@@ -41,7 +41,7 @@ function CourseCard({ c, settings, selected, onSelect, onDelete, weekMin = 0 }) 
         <div className="w-1 self-stretch rounded-full" style={{ background: color }} />
         <div className="min-w-0 flex-1">
           <Link to={`/learning/course/${c.id}`} className="font-semibold text-ink hover:text-accent leading-snug block">{c.name}</Link>
-          <div className="text-[11px] text-mute mt-0.5 flex flex-wrap gap-x-2">
+          <div className="text-xs text-mute mt-0.5 flex flex-wrap gap-x-2">
             <span className="inline-flex items-center gap-1" style={{ color: acad ? 'var(--accent-primary)' : 'var(--accent-secondary)' }}>
               {acad ? <GraduationCap size={11} /> : <Sparkles size={11} />}{acad ? 'Cursus' : 'Cours libre'}
             </span>
@@ -52,19 +52,19 @@ function CourseCard({ c, settings, selected, onSelect, onDelete, weekMin = 0 }) 
         {acad && <GradePill value={r.value} settings={settings} />}
       </div>
       <div>
-        <div className="flex justify-between text-[11px] text-mute mb-1">
+        <div className="flex justify-between text-xs text-mute mb-1">
           <span className="flex items-center gap-1"><ListChecks size={11} /> Programme{c.chapters?.length ? ` · ${c.chapters.length} chapitre(s)` : ''}</span>
           <span className="tabular-nums text-ink">{p}%</span>
         </div>
         <ProgressBar value={p} color={color} height={6} />
-        <div className="text-[11px] text-mute mt-1.5 truncate">
+        <div className="text-xs text-mute mt-1.5 truncate">
           {next ? <>Prochaine étape : <span className="text-ink">{next}</span></> : c.chapters?.length ? 'Programme terminé 🎉' : 'Ajoute les chapitres pour suivre l’avancement.'}
         </div>
       </div>
       <div className="flex items-center gap-2 mt-auto">
         <Link to={`/learning/course/${c.id}`} className="px-3 py-1.5 rounded-lg text-xs bg-surface border border-line text-ink hover:border-accent">Ouvrir</Link>
-        <span className="text-[11px] text-mute">{weekMin ? `${fmtMinutes(weekMin)} cette semaine` : 'pas étudié cette semaine'}</span>
-        <button className="ml-auto p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={onDelete}><Trash2 size={13} /></button>
+        <span className="text-xs text-mute">{weekMin ? `${fmtMinutes(weekMin)} cette semaine` : 'pas étudié cette semaine'}</span>
+        <button className="ml-auto p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={onDelete} aria-label="Supprimer"><Trash2 size={13} /></button>
       </div>
     </div>
   );
@@ -130,7 +130,7 @@ export default function CoursesView() {
         <Card><div className="text-center py-6 text-sm text-mute">Aucun cours ici. Ajoute une formation (trading, langues, n'importe quel sujet) ou une matière du cursus.</div></Card>
       )}
 
-      <div className="rounded-xl border border-line px-4 py-3 text-[11px] text-mute flex items-start gap-2" style={{ background: tint('var(--accent-primary)', 5) }}>
+      <div className="rounded-xl border border-line px-4 py-3 text-xs text-mute flex items-start gap-2" style={{ background: tint('var(--accent-primary)', 5) }}>
         <Flame size={13} className="text-accent shrink-0 mt-0.5" />
         La régularité est séparée de l'avancement : chaque jour où tu coches une tâche fait monter la série, chaque jour manqué la fait baisser. Le score de chaque cours = avancement × régularité.
       </div>

@@ -101,7 +101,7 @@ export default function GlobalSearch() {
             <div className="px-4 py-8 text-center text-sm text-mute">Aucun résultat pour « {query} ».</div>
           )}
           {!query.trim() && (
-            <div className="px-4 pt-3 pb-1 text-[11px] text-mute uppercase tracking-wide">Actions rapides · tape pour chercher partout</div>
+            <div className="px-4 pt-3 pb-1 text-xs text-mute uppercase tracking-wide">Actions rapides · tape pour chercher partout</div>
           )}
           {results.map((item, i) => {
             const Icon = DOMAIN_ICON[item.domain] || Search;
@@ -115,9 +115,9 @@ export default function GlobalSearch() {
                 <Icon size={15} className="text-accent shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm truncate">{item.label}</div>
-                  {item.sub && <div className="text-[11px] text-mute truncate">{item.sub}</div>}
+                  {item.sub && <div className="text-xs text-mute truncate">{item.sub}</div>}
                 </div>
-                <span className="text-[10px] text-mute uppercase tracking-wide shrink-0">{DOMAIN_FR[item.domain] || item.domain}</span>
+                <span className="text-[0.6875rem] text-mute uppercase tracking-wide shrink-0">{DOMAIN_FR[item.domain] || item.domain}</span>
               </button>
             );
           })}

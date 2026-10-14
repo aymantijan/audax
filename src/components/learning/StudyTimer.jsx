@@ -139,7 +139,7 @@ export function StudyTimerCard({ preselect, allDomains = false }) {
         <div className="flex flex-col sm:flex-row gap-5 mt-4 items-center">
           <Ring pct={0} color="var(--accent-primary)">
             <div className="text-2xl font-bold tabular-nums text-ink">00:00</div>
-            <div className="text-[10px] text-mute">prêt</div>
+            <div className="text-[0.6875rem] text-mute">prêt</div>
           </Ring>
           <div className="flex-1 w-full space-y-3">
             {allDomains && (
@@ -181,12 +181,12 @@ export function StudyTimerCard({ preselect, allDomains = false }) {
           <span className={`w-2 h-2 rounded-full shrink-0 ${timer.pausedAt ? '' : 'animate-pulse'}`} style={{ background: color }} />
           <span className="truncate">{label}</span>
         </div>
-        <span className="text-[11px] text-mute shrink-0">{timer.pausedAt ? 'En pause' : 'En cours'}</span>
+        <span className="text-xs text-mute shrink-0">{timer.pausedAt ? 'En pause' : 'En cours'}</span>
       </div>
       <div className="flex flex-col sm:flex-row gap-5 mt-4 items-center">
         <Ring pct={pct} color={reached ? 'var(--success)' : color}>
           <div className="text-2xl font-bold tabular-nums text-ink">{fmtClock(ms)}</div>
-          <div className="text-[10px] text-mute">{target ? (reached ? 'objectif atteint ✓' : `sur ${timer.targetMin} min`) : 'chrono libre'}</div>
+          <div className="text-[0.6875rem] text-mute">{target ? (reached ? 'objectif atteint ✓' : `sur ${timer.targetMin} min`) : 'chrono libre'}</div>
         </Ring>
         <div className="flex-1 w-full space-y-2">
           {reached && <div className="text-xs rounded-lg px-3 py-2" style={{ background: tint('var(--success)', 12), color: 'var(--success)' }}>Bravo ! Fais une pause de 5–10 min, ou continue sur ta lancée.</div>}
@@ -196,7 +196,7 @@ export function StudyTimerCard({ preselect, allDomains = false }) {
               : <Button variant="secondary" onClick={pauseTimer}><span className="flex items-center justify-center gap-1.5"><Pause size={14} /> Pause</span></Button>}
             <Button onClick={() => stopTimer({ courseLabel: label })}><span className="flex items-center justify-center gap-1.5"><Square size={14} /> Terminer</span></Button>
           </div>
-          <button onClick={cancelTimer} className="w-full text-[11px] text-mute hover:text-bad cursor-pointer py-1">Annuler sans enregistrer</button>
+          <button onClick={cancelTimer} className="w-full text-xs text-mute hover:text-bad cursor-pointer py-1">Annuler sans enregistrer</button>
         </div>
       </div>
     </div>

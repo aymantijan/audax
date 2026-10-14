@@ -83,7 +83,7 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
                 style={active ? { borderColor: t.color, background: tint(t.color, 12) } : { borderColor: 'var(--border)' }}>
                 <Icon size={18} style={{ color: t.color }} />
                 <div className="text-sm font-semibold text-ink mt-1.5">{t.label}</div>
-                <div className="text-[10px] text-mute leading-snug mt-0.5">{t.desc}</div>
+                <div className="text-[0.6875rem] text-mute leading-snug mt-0.5">{t.desc}</div>
               </button>
             );
           })}
@@ -121,7 +121,7 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
             <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={f.roadmap} onChange={(e) => setF({ ...f, roadmap: e.target.checked })} />
             <span>
               <span className="text-ink">Pré-remplir la feuille de route</span>
-              <span className="block text-[11px] text-mute">
+              <span className="block text-xs text-mute">
                 {type === 'language' ? 'Objectifs « je sais faire » du CECRL pour chaque niveau à franchir. Un paquet de fiches de vocabulaire est aussi créé.'
                   : type === 'trading' ? '6 étapes : bases, analyse technique, gestion du risque, psychologie, backtest, exécution.'
                     : '4 étapes : fondamentaux, pratique guidée, projet, approfondissement.'} Modifiable ensuite.
@@ -198,8 +198,8 @@ export function ResourceModal({ open, onClose, courseId }) {
                 {matches.map((b) => (
                   <button key={b.id} type="button" onClick={() => linkBook(b.id, b.title)} className="w-full text-left px-3 py-2 hover:bg-surface cursor-pointer flex items-center gap-3">
                     <BookOpen size={14} className="text-mute shrink-0" />
-                    <span className="min-w-0 flex-1"><span className="block text-sm text-ink truncate">{b.title}</span><span className="text-[11px] text-mute">{b.author} · {b.pages} p.</span></span>
-                    {isReading(b.id) && <span className="text-[10px] text-good">déjà en lecture</span>}
+                    <span className="min-w-0 flex-1"><span className="block text-sm text-ink truncate">{b.title}</span><span className="text-xs text-mute">{b.author} · {b.pages} p.</span></span>
+                    {isReading(b.id) && <span className="text-[0.6875rem] text-good">déjà en lecture</span>}
                   </button>
                 ))}
               </div>
@@ -265,7 +265,7 @@ export function ResourcesCard({ course }) {
                   </button>
                   <div className="min-w-0 flex-1">
                     <div className={`text-sm truncate ${st.value === 'done' ? 'text-mute line-through' : 'text-ink'}`}>{r.title}</div>
-                    <div className="text-[10px] text-mute">{resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
+                    <div className="text-[0.6875rem] text-mute">{resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
                   </div>
                   {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="p-1 text-mute hover:text-accent" title="Ouvrir"><ExternalLink size={13} /></a>}
                   <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteWithUndo(null, () => deleteResource(course.id, r.id))}><Trash2 size={12} /></button>
@@ -273,14 +273,14 @@ export function ResourcesCard({ course }) {
                 {prog && (
                   <div className="mt-2 pl-6">
                     <ProgressBar value={pct} height={5} color={pct >= 100 ? 'var(--success)' : 'var(--accent-primary)'} />
-                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-mute">
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-mute">
                       <span className="tabular-nums">{prog.pagesRead}/{total} p. · {pct}%</span>
                       <div className="ml-auto flex items-center gap-1">
                         <button className="p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.pagesRead <= 0} onClick={() => removePage(prog.id)}><Minus size={10} /></button>
                         <button className="p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.status === 'completed'} onClick={() => addPage(prog.id)}><Plus size={10} /></button>
                         <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); const v = Number(pageDraft[r.id]); if (v >= 0) setPagesRead(prog.id, v); setPageDraft((d) => ({ ...d, [r.id]: '' })); }}>
                           <input type="number" min="0" placeholder="page" value={pageDraft[r.id] ?? ''} onChange={(e) => setPageDraft((d) => ({ ...d, [r.id]: e.target.value }))}
-                            className="w-16 bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-ink" />
+                            className="w-16 bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink" />
                         </form>
                       </div>
                     </div>

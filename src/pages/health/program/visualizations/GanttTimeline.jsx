@@ -95,7 +95,7 @@ export default function GanttTimeline() {
             {months.map((m, i) => (
               <div
                 key={i}
-                className="absolute text-[9px] text-mute"
+                className="absolute text-[0.6875rem] text-mute"
                 style={{ left: `${(m.offset / totalDays) * 100}%` }}
               >
                 {m.label}
@@ -114,7 +114,7 @@ export default function GanttTimeline() {
                   background: 'var(--accent)',
                 }}
               >
-                <div className="absolute -top-5 -translate-x-1/2 text-[8px] text-accent font-semibold">
+                <div className="absolute -top-5 -translate-x-1/2 text-[0.6875rem] text-accent font-semibold">
                   Auj.
                 </div>
               </div>
@@ -135,7 +135,7 @@ export default function GanttTimeline() {
                       opacity: row.isActive ? 1 : 0.5,
                     }}
                   >
-                    <span className="text-[9px] text-white font-medium whitespace-nowrap overflow-hidden">
+                    <span className="text-[0.6875rem] text-white font-medium whitespace-nowrap overflow-hidden">
                       {row.duration}j · {row.sessionCount} séance{row.sessionCount > 1 ? 's' : ''}
                     </span>
                   </div>

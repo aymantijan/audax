@@ -65,7 +65,7 @@ export default function ExamsView() {
               <Link key={ev.id} to={`/learning/course/${course.id}`}
                 className="flex items-center gap-4 rounded-xl border border-line bg-card px-4 py-3 hover:border-accent transition-colors">
                 <div className="w-14 shrink-0 text-center rounded-lg py-1.5" style={{ background: tint(color, 12) }}>
-                  <div className="text-[10px] uppercase font-semibold" style={{ color }}>{frDate(ev.date, { month: 'short' })}</div>
+                  <div className="text-[0.6875rem] uppercase font-semibold" style={{ color }}>{frDate(ev.date, { month: 'short' })}</div>
                   <div className="text-lg font-bold leading-none text-ink">{new Date(ev.date + 'T12:00:00').getDate()}</div>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -83,7 +83,7 @@ export default function ExamsView() {
                       {req.status === 'secured' ? <span className="text-good">Validation assurée</span>
                         : req.status === 'impossible' ? <span className="text-bad">Objectif hors d'atteinte</span>
                         : <>Viser <b className="text-sm tabular-nums" style={{ color: gradeColor(req.needed, settings) }}>{fmtGrade(req.needed)}</b><span className="text-mute">/{settings.scale}</span></>}
-                      <div className="text-[10px] text-mute">{course.targetGrade != null ? `objectif ${fmtGrade(target)}` : 'pour valider'}</div>
+                      <div className="text-[0.6875rem] text-mute">{course.targetGrade != null ? `objectif ${fmtGrade(target)}` : 'pour valider'}</div>
                     </div>
                   ) : null}
                 </div>

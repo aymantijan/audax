@@ -77,7 +77,7 @@ export default function AccountingOverview() {
             <div key={al.id} className={`border rounded-xl p-3 flex items-start gap-3 ${al.level === 'red' ? 'border-bad/60 bg-bad/10' : 'border-warn/60 bg-warn/10'}`}>
               {al.level === 'red' ? <AlertTriangle size={18} className="text-bad shrink-0 mt-0.5" /> : <AlertCircle size={18} className="text-warn shrink-0 mt-0.5" />}
               <div className="text-sm">
-                <span className="font-semibold text-[11px] uppercase tracking-wide" style={{ color: al.level === 'red' ? 'var(--error)' : 'var(--warning)' }}>{al.cat}</span>
+                <span className="font-semibold text-xs uppercase tracking-wide" style={{ color: al.level === 'red' ? 'var(--error)' : 'var(--warning)' }}>{al.cat}</span>
                 <span className="text-mute"> — </span>{al.msg}
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function AccountingOverview() {
               </ResponsiveContainer>
               <div className="flex flex-wrap gap-2 mt-2 justify-center">
                 {chargesPie.map((p, i) => (
-                  <span key={p.name} className="text-[11px] text-mute flex items-center gap-1">
+                  <span key={p.name} className="text-xs text-mute flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} /> {p.name}
                   </span>
                 ))}

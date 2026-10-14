@@ -103,7 +103,7 @@ export default function Creative() {
                       </div>
                       <button className="text-mute hover:text-accent cursor-pointer shrink-0" onClick={() => setEditing(w)}><Pencil size={12} /></button>
                     </div>
-                    <div className="text-[11px] text-mute mt-1.5">{fmtDateShort(w.startDate)}</div>
+                    <div className="text-xs text-mute mt-1.5">{fmtDateShort(w.startDate)}</div>
                     {status !== 'Terminé' && (
                       <button
                         className="mt-2 text-xs text-accent hover:underline cursor-pointer"

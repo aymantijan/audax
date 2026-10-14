@@ -29,7 +29,7 @@ export function TypeBadge({ type, compact = false }) {
   const Icon = m.icon;
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap"
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium whitespace-nowrap"
       style={{ background: tint(m.color), color: m.color }}
     >
       <Icon size={12} />
@@ -67,7 +67,7 @@ export function SectionHeader({ icon: Icon, title, subtitle, action }) {
   return (
     <div className="flex items-end justify-between gap-3 mb-3">
       <div className="min-w-0">
-        <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+        <h3 className="text-[1rem] font-semibold text-ink flex items-center gap-2">
           {Icon && <Icon size={16} className="text-accent shrink-0" />}
           {title}
         </h3>
@@ -96,7 +96,7 @@ export function SegmentedTabs({ tabs, value, onChange }) {
             {Icon && <Icon size={15} className={active ? 'text-accent' : ''} />}
             {t.label}
             {t.count != null && (
-              <span className={`text-[10px] rounded-full px-1.5 ${active ? 'bg-accent/15 text-accent' : 'bg-card text-mute'}`}>{t.count}</span>
+              <span className={`text-[0.6875rem] rounded-full px-1.5 ${active ? 'bg-accent/15 text-accent' : 'bg-card text-mute'}`}>{t.count}</span>
             )}
           </button>
         );
@@ -135,7 +135,7 @@ export const PHASE_STATE = {
 export function PhaseStateBadge({ phase }) {
   const s = PHASE_STATE[phaseState(phase)];
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap" style={{ background: tint(s.color, 16), color: s.color }}>
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap" style={{ background: tint(s.color, 16), color: s.color }}>
       {phaseState(phase) === 'done' && <Check size={11} />}
       {s.label}
     </span>
@@ -158,7 +158,7 @@ export function PhaseList({ phases = [] }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-ink">Phase {p.phase_order} · {p.name}</span>
-              <span className="block text-[11px] text-mute">{fmtDate(p.start_date)} → {fmtDate(p.end_date)}{st === 'done' ? ' · consultable, ne peut plus être lancée' : ''}</span>
+              <span className="block text-xs text-mute">{fmtDate(p.start_date)} → {fmtDate(p.end_date)}{st === 'done' ? ' · consultable, ne peut plus être lancée' : ''}</span>
             </span>
             <PhaseStateBadge phase={p} />
           </li>
@@ -202,7 +202,7 @@ export function ProgramHero({ program, phases = [], actions }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
               style={{ background: tint(status.color, 18), color: status.color }}
             >
               {program.status === 'active' && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: status.color }} />}

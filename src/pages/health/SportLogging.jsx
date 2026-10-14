@@ -124,13 +124,13 @@ function Row({ w, onDelete, onEdit, showDate }) {
       <Activity size={16} className="text-accent shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-sm">{w.exercise || 'Sport'}</div>
-        <div className="text-[11px] text-mute">
+        <div className="text-xs text-mute">
           {showDate ? `${w.date} · ` : ''}{w.durationMin}min
           {w.quality ? ` · qualité ${w.quality}/10` : ''}
         </div>
       </div>
-      <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0"><Pencil size={14} /></button>
-      <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0"><Trash2 size={14} /></button>
+      <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier"><Pencil size={14} /></button>
+      <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer"><Trash2 size={14} /></button>
     </li>
   );
 }

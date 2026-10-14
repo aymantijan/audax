@@ -48,7 +48,7 @@ export default function ActionCard({ action, state, onChange, onClose }) {
     <div className={`rounded-xl border p-3 space-y-2 text-sm ${status === 'pending' ? 'border-accent/60 bg-surface' : 'border-line bg-surface/50'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wide text-mute">{title}</div>
+          <div className="text-xs uppercase tracking-wide text-mute">{title}</div>
           <div className={`font-medium break-words ${status === 'refused' ? 'line-through text-mute' : 'text-ink'}`}>{describeAction(shown)}</div>
         </div>
         {status === 'done' && <span className="shrink-0 flex items-center gap-1 text-xs text-good"><Check size={13} /> Fait</span>}
@@ -56,7 +56,7 @@ export default function ActionCard({ action, state, onChange, onClose }) {
         {status === 'undone' && <span className="shrink-0 text-xs text-mute">Annulé</span>}
       </div>
 
-      {a.type === 'message' && !edit && <p className="select-all whitespace-pre-wrap text-ink bg-card border border-line rounded-lg p-2.5 text-[13px]">{a.text}</p>}
+      {a.type === 'message' && !edit && <p className="select-all whitespace-pre-wrap text-ink bg-card border border-line rounded-lg p-2.5 text-[0.8125rem]">{a.text}</p>}
       {a.type === 'flashcards' && (
         <ul className="space-y-1 max-h-40 overflow-y-auto">
           {(edit ? a : shown).cards.map((c, i) => (

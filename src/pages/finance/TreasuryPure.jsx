@@ -126,7 +126,7 @@ export default function TreasuryPure() {
                       <span className="font-medium whitespace-nowrap" style={{ color: (balances[a.code]?.balance || 0) >= 0 ? undefined : 'var(--error)' }}>
                         {fmtMAD(balances[a.code]?.balance || 0)}
                         {a.currency && a.currency !== store.baseCurrency && (
-                          <span className="block text-[10px] text-mute text-right">≈ {formatMoney(fromBase(balances[a.code]?.balance || 0, a.currency, store.baseCurrency, store.fxRates), a.currency)}</span>
+                          <span className="block text-[0.6875rem] text-mute text-right">≈ {formatMoney(fromBase(balances[a.code]?.balance || 0, a.currency, store.baseCurrency, store.fxRates), a.currency)}</span>
                         )}
                       </span>
                       <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEditSub(a)} title="Modifier"><Pencil size={13} /></button>
@@ -181,7 +181,7 @@ export default function TreasuryPure() {
                 <Line type="monotone" dataKey="prevision" name="Prévision (budget)" stroke="var(--accent-secondary)" strokeWidth={2} strokeDasharray="6 4" dot={false} />
               </LineChart>
             </ResponsiveContainer>
-            <p className="text-[11px] text-mute mt-2">
+            <p className="text-xs text-mute mt-2">
               La prévision applique chaque mois le solde budgété net (budgets produits − budgets charges) au solde actuel — le budget de trésorerie découle des autres budgets.
             </p>
           </Card>
@@ -197,7 +197,7 @@ export default function TreasuryPure() {
           </div>
         }
       >
-        <p className="text-[11px] text-mute mb-3">
+        <p className="text-xs text-mute mb-3">
           Combine le solde actuel, une base mensuelle sur les comptes non couverts par une échéance active — {method === 'sma' ? 'moyenne mobile simple sur 3 mois' : method === 'ema' ? 'moyenne mobile exponentielle sur 3 mois (pondère les mois récents)' : 'tes objectifs de l\'onglet Budget, pas l\'historique réel'} — et les échéances programmées à leur date exacte.
         </p>
         {forecastV2.alerts.length > 0 && (
@@ -217,7 +217,7 @@ export default function TreasuryPure() {
             <Line type="monotone" dataKey="solde" name="Solde projeté" stroke="var(--accent-primary)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-        <p className="text-[11px] text-mute mt-2">
+        <p className="text-xs text-mute mt-2">
           {forecastV2.echeancesInWindow} occurrence{forecastV2.echeancesInWindow !== 1 ? 's' : ''} d'échéance dans la fenêtre · habitude libre estimée : {fmtMAD(forecastV2.freeHabitMonthly)}/mois
         </p>
       </Card>

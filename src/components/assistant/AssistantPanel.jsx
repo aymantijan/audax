@@ -134,7 +134,7 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
                 </div>
                 {m.actions?.length > 0 && (
                   <div className="space-y-2 max-w-[95%]">
-                    <div className="text-[11px] text-mute">Préparé pour toi — rien n’est fait sans ton accord :</div>
+                    <div className="text-xs text-mute">Préparé pour toi — rien n’est fait sans ton accord :</div>
                     {m.actions.map((a, k) => (
                       <ActionCard key={k} action={a} state={m.states?.[k]} onClose={onClose}
                         onChange={(st) => setMessages((ms) => ms.map((x, xi) => (xi === i ? { ...x, states: { ...x.states, [k]: st } } : x)))} />
@@ -165,7 +165,7 @@ function AssistantDialog({ onClose, messages, setMessages, pending, clearPending
           )}
         </form>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-mute">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-mute">
           <span>
             Lit : {scopes.length ? scopes.length === DEFAULT_SCOPES.length ? 'toutes tes sections' : `${scopes.length} section${scopes.length > 1 ? 's' : ''}` : 'aucune section'} ·{' '}
             <Link to="/settings#assistant" onClick={onClose} className="text-accent hover:underline">régler</Link>

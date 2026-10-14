@@ -103,7 +103,7 @@ export default function DisciplineCard() {
       <div className="flex items-center gap-6">
         <div className="flex flex-col items-center">
           <ScoreRing score={todayScore?.overall_score ?? 0} />
-          <span className="text-[10px] text-mute mt-1">Aujourd'hui</span>
+          <span className="text-[0.6875rem] text-mute mt-1">Aujourd'hui</span>
         </div>
 
         {/* 7-day mini bars */}
@@ -127,7 +127,7 @@ export default function DisciplineCard() {
             </div>
             <div className="flex gap-1 mt-0.5">
               {trend.map((t) => (
-                <div key={t.score_date} className="flex-1 text-center text-[8px] text-mute">
+                <div key={t.score_date} className="flex-1 text-center text-[0.6875rem] text-mute">
                   {new Date(t.score_date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'narrow' })}
                 </div>
               ))}
@@ -158,7 +158,7 @@ export default function DisciplineCard() {
                 <span className={`text-xs font-medium w-8 text-right ${scoreColor(value)}`}>
                   {Math.round(value)}
                 </span>
-                <span className="text-[9px] text-mute w-8 text-right">{(weight * 100).toFixed(0)}%</span>
+                <span className="text-[0.6875rem] text-mute w-8 text-right">{(weight * 100).toFixed(0)}%</span>
               </div>
             );
           })}

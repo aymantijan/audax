@@ -23,7 +23,7 @@ export function CurrencySettingsModal({ open, onClose }) {
             options={CURRENCIES.filter((c) => c.code !== 'BTC').map((c) => ({ value: c.code, label: `${c.label} (${c.short})` }))} />
         </Field>
         {locked && (
-          <p className="text-[11px] text-mute flex items-start gap-1.5 -mt-3">
+          <p className="text-xs text-mute flex items-start gap-1.5 -mt-3">
             <Lock size={11} className="mt-0.5 shrink-0" /> Verrouillée : tes {journal.length} opérations sont exprimées en {base.label.toLowerCase()}. Les opérations dans d'autres devises sont converties au taux ci-dessous, avec le montant d'origine conservé.
           </p>
         )}
@@ -33,7 +33,7 @@ export function CurrencySettingsModal({ open, onClose }) {
           <div className="flex items-center justify-between gap-2 mb-2">
             <div>
               <div className="text-sm font-semibold text-ink">Taux de change</div>
-              <div className="text-[11px] text-mute">Valeur d'une unité en {base.short} · {fxUpdatedAt ? `mis à jour le ${new Date(fxUpdatedAt).toLocaleDateString('fr-FR')}` : 'valeurs indicatives par défaut'}</div>
+              <div className="text-xs text-mute">Valeur d'une unité en {base.short} · {fxUpdatedAt ? `mis à jour le ${new Date(fxUpdatedAt).toLocaleDateString('fr-FR')}` : 'valeurs indicatives par défaut'}</div>
             </div>
             <Button variant="secondary" className="!py-1.5 text-xs" disabled={busy} onClick={async () => { setBusy(true); await refreshFxRates(); setBusy(false); }}>
               <span className="flex items-center gap-1.5"><RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Mettre à jour en ligne</span>
@@ -43,11 +43,11 @@ export function CurrencySettingsModal({ open, onClose }) {
             {CURRENCIES.filter((c) => c.code !== baseCurrency).map((c) => (
               <label key={c.code} className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5">
                 <span className="w-12 text-xs font-semibold text-ink">{c.code}</span>
-                <span className="text-[11px] text-mute flex-1 truncate">1 {c.short} =</span>
+                <span className="text-xs text-mute flex-1 truncate">1 {c.short} =</span>
                 <input type="number" step="any" min="0" defaultValue={rateFor(c.code, baseCurrency, fxRates)} key={`${c.code}-${fxUpdatedAt}-${baseCurrency}`}
                   onBlur={(e) => setFxRate(c.code, e.target.value)}
                   className="w-28 bg-surface border border-line rounded px-2 py-1 text-xs text-right tabular-nums text-ink" />
-                <span className="text-[11px] text-mute w-8">{base.short}</span>
+                <span className="text-xs text-mute w-8">{base.short}</span>
               </label>
             ))}
           </div>
@@ -77,15 +77,15 @@ export function MoneyInput({ value, onChange, autoFocus, big = false, inputRef }
           onChange={(e) => onChange({ ...value, amount: e.target.value.replace(/[^\d.,]/g, '') })}
           className={big ? 'w-44 bg-transparent text-center text-4xl font-bold tabular-nums text-ink placeholder:text-mute focus:outline-none' : `${inputCls} tabular-nums`} />
         <select value={cur} onChange={(e) => setCur(e.target.value)}
-          className={`bg-surface border border-line rounded-lg px-2 py-2 text-ink ${big ? 'text-base' : 'text-sm'}`}>
+          className={`bg-surface border border-line rounded-lg px-2 py-2 text-ink ${big ? 'text-[1rem]' : 'text-sm'}`}>
           {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.short === c.code ? c.code : `${c.short} ${c.code}`}</option>)}
         </select>
       </div>
       {foreign && (
-        <div className={`mt-1.5 flex items-center gap-2 text-[11px] text-mute ${big ? 'justify-center' : ''}`}>
+        <div className={`mt-1.5 flex items-center gap-2 text-xs text-mute ${big ? 'justify-center' : ''}`}>
           <Coins size={11} /> 1 {currencyMeta(cur).short} =
           <input type="number" step="any" min="0" value={rate} onChange={(e) => onChange({ ...value, rate: Number(e.target.value) || 0 })}
-            className="w-20 bg-surface border border-line rounded px-1.5 py-0.5 text-[11px] text-right tabular-nums text-ink" />
+            className="w-20 bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-right tabular-nums text-ink" />
           {currencyMeta(baseCurrency).short}
           {amt > 0 && <span>→ <b className="text-ink">{formatMoney(Math.round(amt * rate * 100) / 100, baseCurrency, 0)}</b></span>}
         </div>

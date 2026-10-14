@@ -89,7 +89,7 @@ export default function CorrelationScatter() {
             </Badge>
             <Badge>{stats.strength}</Badge>
             <Badge>{stats.direction}</Badge>
-            <span className="text-[10px] text-mute">n = {stats.n} points</span>
+            <span className="text-[0.6875rem] text-mute">n = {stats.n} points</span>
             {stats.significant && <Badge color="var(--accent)">p &lt; 0.05</Badge>}
           </div>
 

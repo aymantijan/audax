@@ -80,7 +80,7 @@ export default function QuickCheckin() {
         <div className="space-y-5">
           <div>
             <DayPicker value={today} onChange={setDay} label="Jour du check-in" />
-            {!isToday && <p className="text-[11px] text-mute mt-1.5">Tu remplis le {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}.</p>}
+            {!isToday && <p className="text-xs text-mute mt-1.5">Tu remplis le {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}.</p>}
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="border border-line rounded-lg p-3">
@@ -113,7 +113,7 @@ export default function QuickCheckin() {
                 <Field label="Heure"><Input type="time" value={weightTime} onChange={(e) => setWeightTime(e.target.value)} /></Field>
               </div>
               <Button className="!px-3 !py-1.5 text-xs w-full" onClick={saveWeight}>Enregistrer poids</Button>
-              {healthProfile.reminderPrefs?.weighInTime && <div className="text-[11px] text-mute mt-1">Heure cible : {healthProfile.reminderPrefs.weighInTime}</div>}
+              {healthProfile.reminderPrefs?.weighInTime && <div className="text-xs text-mute mt-1">Heure cible : {healthProfile.reminderPrefs.weighInTime}</div>}
             </div>
 
             <div className="border border-line rounded-lg p-3">
@@ -124,9 +124,9 @@ export default function QuickCheckin() {
                 ))}
                 <Button variant="ghost" className="!px-2.5 !py-1 text-xs" disabled={!waterToday} onClick={() => logWater(-250, today)} aria-label="Retirer 250 ml">−250ml</Button>
               </div>
-              <div className="text-[11px] text-mute mb-1">Total {isToday ? 'aujourd’hui' : 'ce jour-là'} : {waterToday} ml</div>
+              <div className="text-xs text-mute mb-1">Total {isToday ? 'aujourd’hui' : 'ce jour-là'} : {waterToday} ml</div>
               {isToday && chrono.hydrationGaps.lastIntakeHoursAgo != null && (
-                <div className="text-[11px] text-mute">Dernière eau il y a {chrono.hydrationGaps.lastIntakeHoursAgo}h</div>
+                <div className="text-xs text-mute">Dernière eau il y a {chrono.hydrationGaps.lastIntakeHoursAgo}h</div>
               )}
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function QuickCheckin() {
               <Button onClick={saveMeal} disabled={!mealTemplateId}>Logger</Button>
             </div>
             {isToday && chrono.fastingWindows.currentFastHours != null && (
-              <div className="text-[11px] text-mute mt-1">Aucun repas aujourd’hui — jeûne en cours: {chrono.fastingWindows.currentFastHours}h</div>
+              <div className="text-xs text-mute mt-1">Aucun repas aujourd’hui — jeûne en cours: {chrono.fastingWindows.currentFastHours}h</div>
             )}
           </div>
 

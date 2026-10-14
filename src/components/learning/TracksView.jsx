@@ -28,7 +28,7 @@ export function LevelLadder({ course, compact = false }) {
           <div key={l.value} className="flex-1 min-w-0" title={l.label}>
             <div className="h-1.5 rounded-full" style={{ background: reached ? color : isTarget ? tint(color, 35) : 'var(--border)' }} />
             {!compact && (
-              <div className={`text-[10px] mt-1 text-center truncate ${i === cur ? 'font-bold' : ''}`} style={{ color: i === cur ? color : isTarget ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+              <div className={`text-[0.6875rem] mt-1 text-center truncate ${i === cur ? 'font-bold' : ''}`} style={{ color: i === cur ? color : isTarget ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {course.trackType === 'language' ? l.value : l.short}{isTarget ? ' 🎯' : ''}
               </div>
             )}
@@ -66,19 +66,19 @@ export function TrackLevelCard({ course }) {
           </Button>
         ) : null}
         {course.levelHistory?.length > 1 && (
-          <span className="text-[11px] text-mute">
+          <span className="text-xs text-mute">
             {course.levelHistory.slice(-3).map((h) => `${h.level} (${new Date(h.date + 'T12:00:00').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })})`).join(' → ')}
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-line text-sm">
         <div>
-          <div className="text-[11px] text-mute flex items-center gap-1"><Clock size={11} /> Cette semaine</div>
+          <div className="text-xs text-mute flex items-center gap-1"><Clock size={11} /> Cette semaine</div>
           <div className="font-semibold text-ink tabular-nums">{fmtMinutes(weekMin)}{targetMin ? <span className="text-mute font-normal"> / {course.weeklyHours} h</span> : ''}</div>
           {targetMin > 0 && <div className="mt-1"><ProgressBar value={Math.min(100, (weekMin / targetMin) * 100)} height={4} color={meta.color} /></div>}
         </div>
         <div>
-          <div className="text-[11px] text-mute flex items-center gap-1"><CalendarClock size={11} /> Échéance</div>
+          <div className="text-xs text-mute flex items-center gap-1"><CalendarClock size={11} /> Échéance</div>
           <div className="font-semibold tabular-nums" style={{ color: days != null && days < 14 ? 'var(--warning)' : 'var(--text-primary)' }}>
             {days == null ? '—' : days < 0 ? 'dépassée' : countdownLabel(days)}
           </div>
@@ -103,21 +103,21 @@ function TrackCard({ c, weekMin, due, onStart, running }) {
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: tint(meta.color, 20) }}><Icon size={19} style={{ color: meta.color }} /></div>
         <div className="min-w-0 flex-1">
           <Link to={`/learning/course/${c.id}`} className="font-semibold text-ink hover:text-accent leading-snug block truncate">{c.name}</Link>
-          <div className="text-[11px] text-mute mt-0.5 truncate">
+          <div className="text-xs text-mute mt-0.5 truncate">
             {meta.label}{c.language ? ` · ${c.language}` : ''}{c.level ? ` · ${c.level === 'A0' ? 'débutant' : levelLabel(c.trackType, c.level)}` : ''}
           </div>
         </div>
-        {days != null && days >= 0 && <span className="text-[10px] rounded-md px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ background: tint(days < 14 ? 'var(--warning)' : meta.color, 15), color: days < 14 ? 'var(--warning)' : meta.color }}>{countdownLabel(days)}</span>}
+        {days != null && days >= 0 && <span className="text-[0.6875rem] rounded-md px-1.5 py-0.5 font-semibold whitespace-nowrap" style={{ background: tint(days < 14 ? 'var(--warning)' : meta.color, 15), color: days < 14 ? 'var(--warning)' : meta.color }}>{countdownLabel(days)}</span>}
       </div>
       <div className="px-4 pb-4 space-y-3 flex-1 flex flex-col">
         {c.level && c.trackType && <LevelLadder course={c} compact />}
         {c.goal && <p className="text-xs text-mute line-clamp-2">🎯 {c.goal}</p>}
         <div>
-          <div className="flex justify-between text-[11px] text-mute mb-1"><span>Feuille de route</span><span className="text-ink tabular-nums">{progress}%</span></div>
+          <div className="flex justify-between text-xs text-mute mb-1"><span>Feuille de route</span><span className="text-ink tabular-nums">{progress}%</span></div>
           <ProgressBar value={progress} height={5} color={meta.color} />
-          {next && <div className="text-[11px] text-mute mt-1 truncate">Ensuite : <span className="text-ink">{next.item.title}</span></div>}
+          {next && <div className="text-xs text-mute mt-1 truncate">Ensuite : <span className="text-ink">{next.item.title}</span></div>}
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-mute">
+        <div className="flex items-center gap-3 text-xs text-mute">
           <span className="flex items-center gap-1"><Clock size={11} /> {fmtMinutes(weekMin)}{targetMin ? ` / ${c.weeklyHours} h` : ''} cette sem.</span>
           {due > 0 && <span className="flex items-center gap-1" style={{ color: 'var(--accent-secondary)' }}><Brain size={11} /> {due} fiche(s)</span>}
         </div>

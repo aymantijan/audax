@@ -91,7 +91,7 @@ export default function CorrelationNetwork() {
       <Card>
         <div className="text-sm text-mute text-center py-6">
           Pas assez de données pour calculer les corrélations.<br />
-          <span className="text-[10px]">Ajoute des KPIs et enregistre des données sur plusieurs jours.</span>
+          <span className="text-[0.6875rem]">Ajoute des KPIs et enregistre des données sur plusieurs jours.</span>
         </div>
       </Card>
     );
@@ -112,7 +112,7 @@ export default function CorrelationNetwork() {
             {threshold}
           </button>
         ))}
-        <span className="text-[10px] text-mute ml-auto">{filtered.length} corrélation{filtered.length > 1 ? 's' : ''}</span>
+        <span className="text-[0.6875rem] text-mute ml-auto">{filtered.length} corrélation{filtered.length > 1 ? 's' : ''}</span>
       </div>
 
       {/* SVG Network */}
@@ -176,7 +176,7 @@ export default function CorrelationNetwork() {
               </Badge>
               <Badge>{c.strength}</Badge>
               <Badge>{c.direction}</Badge>
-              <span className="text-[10px] text-mute">n = {c.n} jours</span>
+              <span className="text-[0.6875rem] text-mute">n = {c.n} jours</span>
               {c.significant && <Badge color="var(--accent)">Significatif</Badge>}
             </div>
             <p className="text-xs text-mute mt-2 italic">{c.pair.insight}</p>
@@ -187,7 +187,7 @@ export default function CorrelationNetwork() {
       {/* Category legend */}
       <div className="flex flex-wrap gap-3 mt-3 pt-2 border-t border-line">
         {CORRELATION_CATEGORIES.map((cat) => (
-          <div key={cat.key} className="flex items-center gap-1 text-[10px] text-mute">
+          <div key={cat.key} className="flex items-center gap-1 text-[0.6875rem] text-mute">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: NODE_COLORS[cat.key] }} />
             {cat.icon} {cat.label}
           </div>

@@ -87,7 +87,7 @@ export default function BankImportModal({ open, onClose }) {
             <button type="button" onClick={() => fileRef.current?.click()}
               className="w-full rounded-xl border-2 border-dashed border-line hover:border-accent py-8 flex flex-col items-center gap-2 text-mute hover:text-ink cursor-pointer transition-colors">
               <Upload size={24} /> <span className="text-sm font-medium">Choisir un fichier CSV</span>
-              <span className="text-[11px]">séparateur ; , ou tabulation · dates JJ/MM/AAAA ou AAAA-MM-JJ</span>
+              <span className="text-xs">séparateur ; , ou tabulation · dates JJ/MM/AAAA ou AAAA-MM-JJ</span>
             </button>
             <input ref={fileRef} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={onFile} />
             <textarea rows={4} value={draft} placeholder="…ou colle ici les lignes du relevé (avec la ligne d'en-tête si possible)"
@@ -138,12 +138,12 @@ export default function BankImportModal({ open, onClose }) {
                     return (
                       <div key={i} className={`grid grid-cols-[auto_4.5rem_minmax(0,1fr)_auto] sm:grid-cols-[auto_4.5rem_minmax(0,1fr)_12rem_7.5rem] gap-2 items-center px-3 py-2 text-sm ${st.include ? '' : 'opacity-45'}`}>
                         <input type="checkbox" checked={st.include} onChange={(e) => setRow(i, { include: e.target.checked })} />
-                        <span className="text-[11px] text-mute tabular-nums">{new Date(l.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                        <span className="text-xs text-mute tabular-nums">{new Date(l.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
                         <span className="min-w-0">
                           <span className="block truncate text-ink">{l.label}</span>
-                          {l.dup ? <span className="text-[10px] text-warning flex items-center gap-1"><AlertTriangle size={10} /> déjà saisie ?</span>
+                          {l.dup ? <span className="text-[0.6875rem] text-warning flex items-center gap-1"><AlertTriangle size={10} /> déjà saisie ?</span>
                             : !rowsState[i]?.category && l.guess.source !== 'default' && (
-                              <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--accent-primary)' }}>
+                              <span className="text-[0.6875rem] flex items-center gap-1" style={{ color: 'var(--accent-primary)' }}>
                                 {l.guess.source === 'history' ? <History size={10} /> : <Sparkles size={10} />}{l.guess.source === 'history' ? 'ton historique' : 'devinée'}
                               </span>
                             )}
@@ -152,7 +152,7 @@ export default function BankImportModal({ open, onClose }) {
                           <AccountSelect simple={simple} classes={l.kind === 'expense' ? [6, 5] : [7, 5]} value={st.category} onChange={(e) => setRow(i, { category: e.target.value })} />
                         </div>
                         <span className="text-right tabular-nums font-semibold whitespace-nowrap" style={{ color: l.amount < 0 ? 'var(--error)' : 'var(--success)' }}>
-                          {fmt(l.amount)}{l.fx && <span className="block text-[10px] font-normal text-mute">{formatMoney(l.fx.amount, l.fx.currency)}</span>}
+                          {fmt(l.amount)}{l.fx && <span className="block text-[0.6875rem] font-normal text-mute">{formatMoney(l.fx.amount, l.fx.currency)}</span>}
                         </span>
                       </div>
                     );

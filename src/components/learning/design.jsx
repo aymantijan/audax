@@ -29,7 +29,7 @@ export function gradeColor(v, settings) {
 
 export function GradePill({ value, settings, size = 'md', suffix = true }) {
   const color = gradeColor(value, settings);
-  const cls = size === 'lg' ? 'text-base px-2.5 py-1' : size === 'sm' ? 'text-[11px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5';
+  const cls = size === 'lg' ? 'text-[1rem] px-2.5 py-1' : size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-xs px-2 py-0.5';
   return (
     <span className={`inline-flex items-baseline gap-0.5 rounded-md font-semibold tabular-nums whitespace-nowrap ${cls}`} style={{ background: tint(color, 14), color }}>
       {fmtGrade(value)}
@@ -41,7 +41,7 @@ export function GradePill({ value, settings, size = 'md', suffix = true }) {
 export function StatusPill({ status }) {
   const m = STATUS_META[status] || STATUS_META.empty;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap" style={{ background: tint(m.color, 15), color: m.color }}>
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap" style={{ background: tint(m.color, 15), color: m.color }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: m.color }} />
       {m.label}
     </span>
@@ -58,9 +58,9 @@ export function MentionTag({ avg, settings }) {
 export function BigStat({ label, value, sub, color }) {
   return (
     <div className="rounded-xl bg-card/70 border border-line px-4 py-3 min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-mute">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-mute">{label}</div>
       <div className="text-2xl font-bold mt-0.5 tabular-nums truncate" style={color ? { color } : undefined}>{value}</div>
-      {sub && <div className="text-[11px] text-mute mt-0.5 truncate">{sub}</div>}
+      {sub && <div className="text-xs text-mute mt-0.5 truncate">{sub}</div>}
     </div>
   );
 }

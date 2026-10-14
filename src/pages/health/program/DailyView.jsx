@@ -9,6 +9,7 @@ import { typeMeta, tint, TypeBadge } from './shared/design';
 import SessionLogger from './SessionLogger';
 import OverrideModal from './OverrideModal';
 
+import Term from '../../../components/common/Term';
 const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -76,7 +77,7 @@ export default function DailyView() {
         <button onClick={() => goDay(-1)} className="rounded-lg p-2 text-mute hover:bg-surface hover:text-ink cursor-pointer" aria-label="Jour précédent"><ChevronLeft size={18} /></button>
         <button onClick={() => setSelectedDate(localToday())} className="text-center cursor-pointer">
           <div className={`text-sm font-semibold capitalize ${isToday ? 'text-accent' : 'text-ink'}`}>{formatDate(selectedDate)}</div>
-          <div className="text-[11px] text-mute">
+          <div className="text-xs text-mute">
             {isToday ? 'Aujourd’hui' : 'Revenir à aujourd’hui'}
             {schedule.length > 0 && ` · ${doneCount}/${schedule.length} fait(es)`}
           </div>
@@ -140,7 +141,7 @@ export default function DailyView() {
                           <div className="mt-2 flex flex-wrap gap-x-3 text-xs text-mute">
                             {logged.actual_start && <span className="flex items-center gap-1"><Clock size={12} /> {new Date(logged.actual_start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>}
                             {logged.duration_min && <span>{logged.duration_min} min réalisées</span>}
-                            {logged.session_rpe && <span>RPE {logged.session_rpe}</span>}
+                            {logged.session_rpe && <span><Term id="rpe" short /> {logged.session_rpe}</span>}
                           </div>
                         )}
                       </div>

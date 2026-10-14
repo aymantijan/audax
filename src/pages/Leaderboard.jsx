@@ -27,7 +27,7 @@ function YourGradeCard({ grade, consistency }) {
           <div className="text-xs text-mute uppercase tracking-wide">Grade {grade.current.level} · {grade.current.era}</div>
           <div className="text-xl font-bold truncate">{grade.current.name}</div>
           <div className="mt-2">
-            <div className="flex justify-between text-[11px] text-mute mb-1">
+            <div className="flex justify-between text-xs text-mute mb-1">
               <span>{grade.next ? `Suivant : ${grade.next.name}` : 'Grade maximal atteint'}</span>
               <span>{Math.round(grade.progress)}%</span>
             </div>
@@ -35,7 +35,7 @@ function YourGradeCard({ grade, consistency }) {
               <div className="h-full rounded-full" style={{ width: `${grade.progress}%`, background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }} />
             </div>
             {grade.next && (
-              <div className="text-[10px] text-mute mt-1">
+              <div className="text-[0.6875rem] text-mute mt-1">
                 Pour le suivant : {grade.next.xpRequired.toLocaleString()} XP · synergie {grade.next.scoreGate}
                 {grade.scoreProgress < grade.xpProgress ? ' · augmente ton score de synergie pour avancer' : ''}
               </div>
@@ -45,7 +45,7 @@ function YourGradeCard({ grade, consistency }) {
         <div className="hidden sm:flex flex-col items-end gap-1 pl-4 border-l border-line shrink-0" title="S’applique à toute l’XP gagnée : une activité régulière le fait monter jusqu’à 1,25×, un rattrapage après une longue pause le fait descendre jusqu’à 0,7×.">
           <div className="flex items-center gap-1.5 text-xs text-mute"><Flame size={13} style={{ color: cColor }} /> Régularité</div>
           <div className="text-lg font-bold" style={{ color: cColor }}>×{consistency.momentum.toFixed(2)}</div>
-          <div className="text-[10px] text-mute">{consistency.streak > 0 ? `${consistency.streak} j d’affilée` : consistency.missedDays > 0 ? `${consistency.missedDays} j manqué${consistency.missedDays > 1 ? 's' : ''}` : 'commence aujourd’hui'}</div>
+          <div className="text-[0.6875rem] text-mute">{consistency.streak > 0 ? `${consistency.streak} j d’affilée` : consistency.missedDays > 0 ? `${consistency.missedDays} j manqué${consistency.missedDays > 1 ? 's' : ''}` : 'commence aujourd’hui'}</div>
         </div>
       </div>
     </Card>
@@ -212,7 +212,7 @@ function RankingView() {
                         <span className={r.isYou ? 'font-bold text-accent' : 'font-medium'}>{r.name}</span>
                         {r.isYou && <span className="text-xs text-mute">(toi)</span>}
                       </div>
-                      {r.occupation && <div className="text-[11px] text-mute mt-0.5 max-w-md truncate">{r.occupation}</div>}
+                      {r.occupation && <div className="text-xs text-mute mt-0.5 max-w-md truncate">{r.occupation}</div>}
                     </td>
                     <td className="py-2.5 px-4 hidden md:table-cell text-mute text-xs">{r.grade.name}</td>
                     <td className="py-2.5 px-4 text-right font-semibold tabular-nums">{r.xp.toLocaleString('fr-FR')}</td>

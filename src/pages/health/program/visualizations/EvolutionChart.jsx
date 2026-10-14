@@ -86,7 +86,7 @@ export default function EvolutionChart() {
             <button
               key={kpi.id}
               onClick={() => toggleKpi(kpi.id)}
-              className={`px-2 py-1 rounded-full text-[10px] cursor-pointer transition-all border ${
+              className={`px-2 py-1 rounded-full text-[0.6875rem] cursor-pointer transition-all border ${
                 isSelected
                   ? 'border-accent/50 bg-accent/10 text-accent'
                   : 'border-line text-mute hover:border-accent/30'

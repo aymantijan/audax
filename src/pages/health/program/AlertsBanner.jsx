@@ -55,7 +55,7 @@ export default function AlertsBanner() {
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-medium ${config.text}`}>{alert.title}</div>
               <p className="text-xs text-mute mt-0.5">{alert.message}</p>
-              <span className="text-[9px] text-mute">
+              <span className="text-[0.6875rem] text-mute">
                 {new Date(alert.created_at).toLocaleDateString('fr-FR', {
                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                 })}

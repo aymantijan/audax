@@ -7,6 +7,7 @@ import { Card, Badge, EmptyState, Field, Select } from '../../components/common/
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 
+import Term from '../../components/common/Term';
 const CORRELATIONS = [
   { key: 'sleepVsStrength', label: 'Qualité du sommeil ↔ volume de force', desc: 'Un meilleur sommeil va-t-il de pair avec des séances plus lourdes ?' },
   { key: 'stressVsSpending', label: 'Stress ↔ dépenses', desc: 'Transversal : le stress est-il lié aux dépenses discrétionnaires ? (Finance)' },
@@ -74,7 +75,7 @@ export default function Analytics() {
                   <span className="text-sm font-medium">{c.label}</span>
                   <Badge color={strength.color}>{r != null ? `r = ${r}` : strength.label}</Badge>
                 </div>
-                <div className="text-[11px] text-mute mt-1">{c.desc}</div>
+                <div className="text-xs text-mute mt-1">{c.desc}</div>
               </div>
             );
           })}
@@ -117,7 +118,7 @@ export default function Analytics() {
         )}
       </Card>
 
-      <Card title="RPE vs reps (séries de force)">
+      <Card title={<><Term id="rpe" /> et répétitions (séries de force)</>}>
         {rpeReps.length > 2 ? (
           <ResponsiveContainer width="100%" height={220}>
             <ScatterChart>

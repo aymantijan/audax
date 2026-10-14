@@ -13,6 +13,7 @@ import CyclePhaseHint from '../../components/health/CyclePhaseHint';
 import { tooltipStyle } from '../../components/common/chart-theme';
 
 import { deleteWithUndo } from '../../services/undo';
+import Term from '../../components/common/Term';
 const blankSet = () => ({ reps: '', weight: '', rpe: 7, form: 'Good' });
 
 export default function GymLogging({ pendingPrompt }) {
@@ -260,7 +261,7 @@ export default function GymLogging({ pendingPrompt }) {
                               key={u}
                               type="button"
                               onClick={() => setWeightUnit(u)}
-                              className={`px-1.5 py-0.5 rounded text-[10px] uppercase cursor-pointer border ${weightUnit === u ? 'border-accent text-accent' : 'border-line text-mute'}`}
+                              className={`px-1.5 py-0.5 rounded text-[0.6875rem] uppercase cursor-pointer border ${weightUnit === u ? 'border-accent text-accent' : 'border-line text-mute'}`}
                             >
                               {u}
                             </button>
@@ -277,7 +278,7 @@ export default function GymLogging({ pendingPrompt }) {
                         <Input type="number" placeholder={`Poids (${weightUnit})`} value={s.weight} onChange={(e) => updateSetInExercise(exIdx, setIdx, { weight: e.target.value })} />
                         <div>
                           <input type="range" min="1" max="10" value={s.rpe} onChange={(e) => updateSetInExercise(exIdx, setIdx, { rpe: Number(e.target.value) })} className="w-full" />
-                          <div className="text-[10px] text-mute text-center">RPE {s.rpe}</div>
+                          <div className="text-[0.6875rem] text-mute text-center"><Term id="rpe" short /> {s.rpe}</div>
                         </div>
                         <Select value={s.form} onChange={(e) => updateSetInExercise(exIdx, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
                         <button type="button" onClick={() => removeSetFromExercise(exIdx, setIdx)} className="text-mute hover:text-bad cursor-pointer justify-self-center">
@@ -347,7 +348,7 @@ export default function GymLogging({ pendingPrompt }) {
       )}
 
       {oneRMs.length > 0 && (
-        <Card title="1RM estimé" action={<span className="text-[10px] text-mute">Formule d'Epley</span>}>
+        <Card title={<><Term id="1rm" /> estimée</>} action={<span className="text-[0.6875rem] text-mute">Formule d'Epley</span>}>
           <ul className="space-y-1.5">
             {oneRMs.map((rm) => (
               <li key={rm.exercise} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
@@ -451,21 +452,21 @@ function SessionRow({ item, onDelete, onEdit, showDate }) {
         <Dumbbell size={16} className="text-accent shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-sm">{label}</div>
-          <div className="text-[11px] text-mute">
+          <div className="text-xs text-mute">
             {showDate ? `${item.date} · ` : ''}
             {item.exercises.length} exercice{item.exercises.length !== 1 ? 's' : ''} · {totalSets} séries · {totalVolume}kg vol
           </div>
         </div>
         {onEdit && (
-          <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0">
+          <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier">
             <Pencil size={14} />
           </button>
         )}
-        <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0">
+        <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer">
           <Trash2 size={14} />
         </button>
       </div>
-      <div className="mt-1.5 pl-7 text-[11px] text-mute space-y-0.5">
+      <div className="mt-1.5 pl-7 text-xs text-mute space-y-0.5">
         {item.exercises.map((ex) => (
           <div key={ex.id}>{ex.exercise} — {ex.sets?.length || 0} séries</div>
         ))}

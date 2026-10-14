@@ -5,10 +5,12 @@ import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 import { DESKTOP_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
 import GlobalSearch from './GlobalSearch';
+import HelpButton from './HelpButton';
 import { openAssistant } from '../../services/assistant';
+import { saveLocalDisplay } from '../../utils/display';
 
-// Top bar: logo, the five sections (from md up; phones use the bottom tabs),
-// search, and a profile menu holding Paramètres, Classement, theme, sign-out.
+// Top bar: logo, the sections (from md up; phones use the bottom tabs),
+// search, help « ? », and a profile menu holding Paramètres, Classement, theme, sign-out.
 function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
   const [open, setOpen] = useState(false);
   const item = 'flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left cursor-pointer';
@@ -34,9 +36,11 @@ function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
             <NavLink to="/settings" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
               <Settings size={16} /> Paramètres
             </NavLink>
-            <NavLink to="/leaderboard" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
-              <Trophy size={16} /> Classement
-            </NavLink>
+            {user?.uiLevel !== 'simple' && (
+              <NavLink to="/leaderboard" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
+                <Trophy size={16} /> Classement
+              </NavLink>
+            )}
             <button type="button" role="menuitem" onClick={() => { onToggleTheme(); setOpen(false); }} className={`${item} text-ink hover:bg-line/40`}>
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} Thème {theme === 'dark' ? 'clair' : 'sombre'}
             </button>
@@ -60,6 +64,7 @@ export default function Navbar() {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     updateProfile({ theme: next });
+    saveLocalDisplay({ theme: next });
     document.documentElement.dataset.theme = next;
   };
 
@@ -76,7 +81,7 @@ export default function Navbar() {
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center">
             <Zap size={16} className="text-on-accent" />
           </span>
-          <span className="font-display text-xl tracking-widest">VAUDAX</span>
+          <span className="brand-word font-display text-xl tracking-widest">VAUDAX</span>
         </button>
 
         <div className="hidden md:flex items-center gap-1 lg:gap-2">
@@ -100,6 +105,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-1 shrink-0">
           <GlobalSearch />
+          <HelpButton />
           <button type="button" onClick={() => openAssistant()} aria-label="Assistant" title="Assistant" className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-accent hover:bg-card transition-colors cursor-pointer">
             <Sparkles size={18} />
           </button>

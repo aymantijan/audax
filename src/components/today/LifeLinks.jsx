@@ -37,7 +37,7 @@ function Finding({ f }) {
         {open ? <ChevronDown size={15} className="mt-0.5 shrink-0 text-mute" /> : <ChevronRight size={15} className="mt-0.5 shrink-0 text-mute" />}
         <span className="text-sm">
           <span className="inline-block w-2 h-2 rounded-full mr-2 align-middle" style={{ background: f.better ? 'var(--success)' : 'var(--warning)' }} />
-          {f.text} <span className="text-[11px] text-mute">({f.detail})</span>
+          {f.text} <span className="text-xs text-mute">({f.detail})</span>
         </span>
       </button>
       {open && (

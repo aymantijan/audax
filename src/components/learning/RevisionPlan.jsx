@@ -40,7 +40,7 @@ function PlanItem({ it, studied, today }) {
     <div className={`flex items-center gap-3 rounded-lg px-3 py-2 border-l-[3px] ${done ? 'opacity-60' : ''}`} style={{ background: tint(color, 8), borderColor: color }}>
       <span className="flex-1 min-w-0">
         <Link to={`/learning/course/${it.course.id}`} className="block text-sm font-medium text-ink truncate hover:text-accent">{it.course.name}</Link>
-        <span className="text-[11px] text-mute">{it.label} J-{it.daysBefore} · {it.content}</span>
+        <span className="text-xs text-mute">{it.label} J-{it.daysBefore} · {it.content}</span>
       </span>
       <span className="text-xs tabular-nums text-mute whitespace-nowrap">{fmtMinutes(it.minutes)}</span>
       {done ? <CheckCircle2 size={16} className="text-good shrink-0" />

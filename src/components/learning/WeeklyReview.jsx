@@ -18,9 +18,9 @@ const addDays = (key, n) => { const d = new Date(`${key}T12:00:00`); d.setDate(d
 function Tile({ label, value, sub, color }) {
   return (
     <div className="rounded-lg bg-surface px-3 py-2">
-      <div className="text-[11px] text-mute">{label}</div>
+      <div className="text-xs text-mute">{label}</div>
       <div className="text-lg font-bold tabular-nums" style={color ? { color } : undefined}>{value}</div>
-      {sub && <div className="text-[10px] text-mute">{sub}</div>}
+      {sub && <div className="text-[0.6875rem] text-mute">{sub}</div>}
     </div>
   );
 }
@@ -84,7 +84,7 @@ export function WeeklyReviewCard() {
 
       <div className="rounded-lg border border-line overflow-x-auto mt-3">
         <table className="w-full text-sm min-w-[28rem]">
-          <thead className="bg-surface text-[11px] text-mute">
+          <thead className="bg-surface text-xs text-mute">
             <tr><th className="text-left px-3 py-1.5 font-medium">Matière</th><th className="px-3 py-1.5 font-medium">À l’heure</th><th className="px-3 py-1.5 font-medium">Étude / visé</th><th className="px-3 py-1.5 font-medium">Résumés</th></tr>
           </thead>
           <tbody>
@@ -99,7 +99,7 @@ export function WeeklyReviewCard() {
           </tbody>
         </table>
       </div>
-      {weakest && <p className="text-[11px] text-mute mt-1.5">Surlignée : la matière la plus en retard cette semaine (assiduité + étude), à prioriser.</p>}
+      {weakest && <p className="text-xs text-mute mt-1.5">Surlignée : la matière la plus en retard cette semaine (assiduité + étude), à prioriser.</p>}
 
       <div className="grid sm:grid-cols-2 gap-3 mt-4">
         <Textarea rows={2} value={win} onChange={(e) => setWin(e.target.value)} placeholder="Ce qui a marché cette semaine…" />

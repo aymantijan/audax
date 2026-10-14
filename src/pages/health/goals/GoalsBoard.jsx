@@ -166,8 +166,8 @@ function GoalCard({ g, phases, onEdit, onDelete, onLog, showProgram }) {
           {g.title && <div className="mt-0.5 text-xs text-mute">{g.what}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button onClick={onEdit} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-accent cursor-pointer" title="Modifier"><Pencil size={14} /></button>
-          <button onClick={onDelete} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-bad cursor-pointer" title="Supprimer"><Trash2 size={14} /></button>
+          <button onClick={onEdit} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
+          <button onClick={onDelete} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
         </div>
       </div>
 
@@ -241,7 +241,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
       <div className="rounded-2xl border border-line bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="flex items-center gap-2 text-base font-semibold text-ink"><Target size={16} className="text-accent" /> Objectifs</h3>
+            <h3 className="flex items-center gap-2 text-[1rem] font-semibold text-ink"><Target size={16} className="text-accent" /> Objectifs</h3>
             <p className="mt-0.5 text-xs text-mute">
               {programId ? 'Objectifs de ce programme — un objectif atteint débloque un trophée.' : 'Tous tes objectifs, mesurés automatiquement à partir de ce que tu enregistres.'}
             </p>

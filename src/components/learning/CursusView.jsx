@@ -30,13 +30,13 @@ function termProgress(term, today) {
 
 function EvalChips({ course, settings }) {
   const evals = course.evaluations || [];
-  if (!evals.length) return <span className="text-[11px] text-mute">Aucune évaluation</span>;
+  if (!evals.length) return <span className="text-xs text-mute">Aucune évaluation</span>;
   return (
     <div className="flex flex-wrap gap-1">
       {evals.map((e) => {
         const g = normGrade(e, settings);
         return (
-          <span key={e.id} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 text-[11px] text-mute whitespace-nowrap">
+          <span key={e.id} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 text-xs text-mute whitespace-nowrap">
             {evalTypeLabel(e.type, true)} <span className="opacity-60">{e.weight}%</span>
             <span className="font-semibold tabular-nums" style={{ color: g == null ? 'var(--text-secondary)' : gradeColor(g, settings) }}>{g == null ? '—' : fmtGrade(g)}</span>
           </span>
@@ -51,10 +51,10 @@ function NeededHint({ course, settings }) {
   const req = requiredGrade(course, target, settings);
   if (!req) return null;
   const label = course.targetGrade != null ? `pour ${fmtGrade(target)}` : 'pour valider';
-  if (req.status === 'secured') return <span className="text-[11px] text-good flex items-center gap-1"><CheckCircle2 size={11} /> {course.targetGrade != null ? 'Objectif' : 'Validation'} assuré(e)</span>;
-  if (req.status === 'impossible') return <span className="text-[11px] text-bad flex items-center gap-1"><AlertTriangle size={11} /> {label} : hors d'atteinte</span>;
+  if (req.status === 'secured') return <span className="text-xs text-good flex items-center gap-1"><CheckCircle2 size={11} /> {course.targetGrade != null ? 'Objectif' : 'Validation'} assuré(e)</span>;
+  if (req.status === 'impossible') return <span className="text-xs text-bad flex items-center gap-1"><AlertTriangle size={11} /> {label} : hors d'atteinte</span>;
   return (
-    <span className="text-[11px] text-mute">
+    <span className="text-xs text-mute">
       Il te faut <b className="tabular-nums" style={{ color: gradeColor(req.needed, settings) }}>{fmtGrade(req.needed)}</b> {label}
     </span>
   );
@@ -67,7 +67,7 @@ function SubjectRow({ course, result, settings, forecast }) {
       className="group grid grid-cols-[1fr_auto] sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_auto] gap-x-4 gap-y-1.5 items-center px-4 py-3 hover:bg-surface/60 transition-colors">
       <div className="min-w-0">
         <div className="font-medium text-sm text-ink truncate group-hover:text-accent transition-colors">{course.name}</div>
-        <div className="text-[11px] text-mute mt-0.5 flex items-center gap-2 flex-wrap">
+        <div className="text-xs text-mute mt-0.5 flex items-center gap-2 flex-wrap">
           <span>coef. {course.coefficient ?? 1}</span>
           {Number(course.credits) > 0 && <span>· {course.credits} crédits</span>}
           {course.chapters?.length > 0 && <span>· programme {progress}%</span>}
@@ -99,7 +99,7 @@ function UnitCard({ unit, settings, onEditModule, onAddSubject, forecasts }) {
             <span className="font-semibold text-sm text-ink truncate">{m ? m.name : 'Matière hors module'}</span>
             <StatusPill status={unit.status} />
           </div>
-          <div className="text-[11px] text-mute mt-0.5">
+          <div className="text-xs text-mute mt-0.5">
             {m && <>coef. {unit.coefficient} · </>}{unit.subjects.length} matière{unit.subjects.length > 1 ? 's' : ''}
             {m && hasLevelMarks(settings) && <> · validé à {fmtGrade(unit.pass)}</>}
             {unit.credits > 0 && <> · {unit.credits} crédits</>}
@@ -149,7 +149,7 @@ function Onboarding({ onCreateTerm, onSettings, settings }) {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
         {steps.map((s, i) => (
           <div key={s.title} className="rounded-xl bg-card/80 border border-line p-4 flex flex-col">
-            <div className="flex items-center gap-2 text-xs text-mute"><span className="w-5 h-5 rounded-full bg-surface border border-line flex items-center justify-center text-[10px] font-bold text-ink">{i + 1}</span><s.icon size={14} className="text-accent" /></div>
+            <div className="flex items-center gap-2 text-xs text-mute"><span className="w-5 h-5 rounded-full bg-surface border border-line flex items-center justify-center text-[0.6875rem] font-bold text-ink">{i + 1}</span><s.icon size={14} className="text-accent" /></div>
             <div className="font-semibold text-sm text-ink mt-2">{s.title}</div>
             <p className="text-xs text-mute mt-1 flex-1">{s.text}</p>
             {s.action && <Button variant={i === 1 ? 'primary' : 'secondary'} className="mt-3 !py-1.5" onClick={s.action}>{s.cta}</Button>}
@@ -306,7 +306,7 @@ export default function CursusView() {
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <div>
-              <div className="text-[11px] text-mute">Moyenne générale</div>
+              <div className="text-xs text-mute">Moyenne générale</div>
               <div className="font-data text-2xl font-bold" style={{ color: gradeColor(overall.avg, settings) }}>{fmtGrade(overall.avg)}/{settings.scale}</div>
               <MentionTag avg={overall.avg} settings={settings} />
             </div>

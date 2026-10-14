@@ -22,7 +22,7 @@ export default function MobileTabBar() {
             key={key}
             to={pole.home}
             aria-current={active ? 'page' : undefined}
-            className={`flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[56px] py-1.5 text-[10px] ${active ? 'text-accent' : 'text-mute'}`}
+            className={`flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[56px] py-1.5 text-[0.6875rem] ${active ? 'text-accent' : 'text-mute'}`}
           >
             {center ? (
               <span className={`-mt-5 mb-0.5 w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-4 border-surface ${active ? 'bg-accent text-on-accent' : 'bg-card text-ink'}`}>

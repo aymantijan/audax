@@ -3,6 +3,7 @@ import { Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { isSupabaseConfigured } from '../services/supabase';
 import CloudAuthPanel from '../components/auth/CloudAuthPanel';
+import DisplayControls from '../components/common/DisplayControls';
 import { Button, Field, Input, Select } from '../components/common/ui';
 
 // When Supabase is configured, cloud accounts are the ONLY path — a local-only
@@ -21,7 +22,7 @@ export default function Welcome() {
     e.preventDefault();
     if (!form.name.trim()) return setError('Indique ton prénom pour continuer.');
     if (!form.gender) return setError('Choisis une option pour « Sexe » pour continuer.');
-    register(form);
+    register(form); // takes the reading comfort chosen above (authStore → readLocalDisplay)
   };
 
   return (
@@ -33,9 +34,15 @@ export default function Welcome() {
         </div>
         <p className="text-center text-mute mb-8 text-sm">
           {isSupabaseConfigured
-            ? 'Études, argent, santé, travail, habitudes : organise ta vie au même endroit. Connecte-toi ou crée ton compte.'
-            : 'Études, argent, santé, travail, habitudes : organise ta vie au même endroit. Tout reste sur cet appareil.'}
+            ? 'Études, argent, santé, habitudes : organise ta vie au même endroit. Connecte-toi ou crée ton compte.'
+            : 'Études, argent, santé, habitudes : organise ta vie au même endroit. Tout reste sur cet appareil.'}
         </p>
+
+        {/* Confort de lecture dès le premier écran (A4) */}
+        <div className="mb-4 rounded-xl border border-line bg-card p-3">
+          <div className="text-xs text-mute mb-2">Confort de lecture</div>
+          <DisplayControls compact />
+        </div>
 
         {isSupabaseConfigured ? (
           <CloudAuthPanel />

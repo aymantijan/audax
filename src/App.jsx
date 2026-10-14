@@ -16,6 +16,7 @@ import MainLayout from './components/layout/MainLayout';
 import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
+import { applyDisplay, resolveDisplay } from './utils/display';
 import { PageLoader } from './components/common/ui';
 
 // Route-level code splitting: each page (and its heavy deps — recharts, d3)
@@ -57,9 +58,10 @@ function AuthGuard({ children }) {
 export default function App() {
   const user = useAuthStore((s) => s.user);
 
+  // Theme, text size and contrast (utils/display.js): profile first, then this device.
   useEffect(() => {
-    document.documentElement.dataset.theme = user?.theme || 'dark';
-  }, [user?.theme]);
+    applyDisplay(resolveDisplay(user));
+  }, [user?.theme, user?.textSize, user?.contrast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-time migration: sex/dobYear/heightCm used to live on healthStore's
   // healthProfile (Health-scoped) — now they live on the global profile

@@ -46,7 +46,7 @@ export default function DesignReference() {
               <span className="w-9 h-9 rounded-lg border border-line shrink-0" style={{ background: `var(${v})` }} />
               <div className="min-w-0">
                 <div className="text-sm">{name}</div>
-                <code className="text-[11px] text-mute">{v}</code>
+                <code className="text-xs text-mute">{v}</code>
               </div>
             </div>
           ))}

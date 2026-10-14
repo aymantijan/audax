@@ -115,7 +115,7 @@ export default function PnLCalendar() {
               {bestDay != null && <span>Meilleur jour : <span className="text-success">{fmtSignedMAD(bestDay)}</span></span>}
               {worstDay != null && <span>Pire jour : <span className="text-bad">{fmtSignedMAD(worstDay)}</span></span>}
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-mute mb-1">
+            <div className="grid grid-cols-7 gap-1 text-center text-[0.6875rem] text-mute mb-1">
               {WEEKDAYS.map((w) => <div key={w}>{w}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -128,13 +128,13 @@ export default function PnLCalendar() {
                     type="button"
                     disabled={c.resultat == null}
                     onClick={() => setSelectedDay(selectedDay === c.key ? null : c.key)}
-                    className={`aspect-square rounded-md text-[11px] flex flex-col items-center justify-center transition-transform ${c.resultat != null ? 'cursor-pointer hover:scale-105' : ''} ${selectedDay === c.key ? 'ring-2 ring-accent' : ''}`}
+                    className={`aspect-square rounded-md text-xs flex flex-col items-center justify-center transition-transform ${c.resultat != null ? 'cursor-pointer hover:scale-105' : ''} ${selectedDay === c.key ? 'ring-2 ring-accent' : ''}`}
                     style={{ background: cellColor(c.resultat), color: c.resultat != null ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                     title={c.resultat != null ? `${fmtSignedMAD(c.resultat)} · produits ${fmtMAD(c.produits)} · charges ${fmtMAD(c.charges)}` : undefined}
                   >
                     <span>{c.day}</span>
                     {c.resultat != null && (
-                      <span className="text-[9px] font-semibold leading-none mt-0.5">{fmtCellAmount(c.resultat)}</span>
+                      <span className="text-[0.6875rem] font-semibold leading-none mt-0.5">{fmtCellAmount(c.resultat)}</span>
                     )}
                   </button>
                 )

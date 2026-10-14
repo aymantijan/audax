@@ -34,7 +34,7 @@ const CONF_COLOR = { faible: 'var(--text-secondary)', moyenne: 'var(--warning)',
 export function ForecastBadge({ forecast, settings }) {
   if (!forecast || forecast.average == null) return null;
   return (
-    <span className="text-[11px] tabular-nums whitespace-nowrap" title={`Moyenne prévue (confiance ${forecast.confidence})`} style={{ color: gradeColor(forecast.average, settings) }}>
+    <span className="text-xs tabular-nums whitespace-nowrap" title={`Moyenne prévue (confiance ${forecast.confidence})`} style={{ color: gradeColor(forecast.average, settings) }}>
       ≈ {fmtGrade(forecast.average, 1)}
     </span>
   );
@@ -44,7 +44,7 @@ function Driver({ icon: Icon, label, value, hint }) {
   return (
     <div className="flex items-start gap-2 text-xs">
       <Icon size={13} className="text-accent shrink-0 mt-0.5" />
-      <span className="flex-1 text-mute">{label}{hint && <span className="block text-[10px] opacity-80">{hint}</span>}</span>
+      <span className="flex-1 text-mute">{label}{hint && <span className="block text-[0.6875rem] opacity-80">{hint}</span>}</span>
       <span className="text-ink font-medium tabular-nums whitespace-nowrap">{value}</span>
     </div>
   );
@@ -74,19 +74,19 @@ export function ForecastCard({ course }) {
         <div className="space-y-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="text-[11px] text-mute">Moyenne prévue</div>
+              <div className="text-xs text-mute">Moyenne prévue</div>
               <div className="text-2xl font-bold tabular-nums" style={{ color: gradeColor(f.average ?? f.partialAverage, settings) }}>
                 {f.average != null ? `≈ ${fmtGrade(f.average, 1)}` : '—'}<span className="text-sm text-mute font-normal">/{settings.scale}</span>
               </div>
               {f.average != null && (
-                <div className="text-[11px] mt-0.5" style={{ color: f.average >= pass ? 'var(--success)' : 'var(--error)' }}>
+                <div className="text-xs mt-0.5" style={{ color: f.average >= pass ? 'var(--success)' : 'var(--error)' }}>
                   {f.average >= pass ? `matière validée (≥ ${fmtGrade(pass)})` : `sous la validation (${fmtGrade(pass)})`}
                 </div>
               )}
             </div>
             {potential != null && f.average != null && potential - f.average >= 0.25 && (
               <div className="text-right rounded-lg px-3 py-2" style={{ background: tint('var(--success)', 10) }}>
-                <div className="text-[10px] text-mute">Assiduité parfaite + temps d’étude tenu</div>
+                <div className="text-[0.6875rem] text-mute">Assiduité parfaite + temps d’étude tenu</div>
                 <div className="text-sm font-semibold tabular-nums text-good">≈ {fmtGrade(potential, 1)} (+{fmtGrade(potential - f.average, 1)})</div>
               </div>
             )}
@@ -96,7 +96,7 @@ export function ForecastCard({ course }) {
             {f.evals.map((x) => (
               <div key={x.ev.id} className="flex items-center gap-2 text-sm rounded-lg bg-surface px-3 py-1.5">
                 <span className="flex-1 min-w-0 truncate text-ink">{x.ev.name || evalTypeLabel(x.ev.type)} <span className="text-mute text-xs">{x.ev.weight} %</span></span>
-                {isTassType(x.ev.type) && sig.A != null && <span className="text-[10px] text-mute whitespace-nowrap">assiduité {pct(sig.A)}</span>}
+                {isTassType(x.ev.type) && sig.A != null && <span className="text-[0.6875rem] text-mute whitespace-nowrap">assiduité {pct(sig.A)}</span>}
                 {x.graded ? (
                   <span className="text-xs text-mute">note connue</span>
                 ) : x.estimate != null ? (
@@ -114,11 +114,11 @@ export function ForecastCard({ course }) {
             {sig.info.F && <Driver icon={Brain} label="Fiches : rappel (30 j)" hint={`${sig.info.F.reviews} révisions`} value={pct(sig.info.F.recall)} />}
             {sig.info.P && <Driver icon={ListChecks} label="Programme" hint={`semestre écoulé à ${pct(sig.info.P.frac)}`} value={pct(sig.info.P.done)} />}
             {!sig.info.S && !sig.info.F && !sig.info.P && (
-              <p className="text-[11px] text-mute">Pour estimer CC et CF : lance le minuteur d’étude sur cette matière, crée ses fiches ou son programme.</p>
+              <p className="text-xs text-mute">Pour estimer CC et CF : lance le minuteur d’étude sur cette matière, crée ses fiches ou son programme.</p>
             )}
           </div>
 
-          <p className="text-[10px] text-mute flex items-start gap-1.5">
+          <p className="text-[0.6875rem] text-mute flex items-start gap-1.5">
             <Info size={11} className="shrink-0 mt-px" />
             Estimation, pas une promesse : notes déjà obtenues, puis assiduité (TASS) et travail fourni (CC, CF), corrigés au fil de tes vraies notes.
           </p>

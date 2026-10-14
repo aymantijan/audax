@@ -155,7 +155,7 @@ export default function FoodsCard() {
           </Field>
           <Button type="submit" className="sm:col-span-2"><span className="flex items-center gap-2 justify-center"><Plus size={14} /> Ajouter à mes aliments</span></Button>
         </form>
-        <p className="text-[11px] text-mute mt-1.5">Les macros restent toujours saisies pour 100g (fait nutritionnel indépendant de l'unité d'achat) — seule l'unité de prix/achat change.</p>
+        <p className="text-xs text-mute mt-1.5">Les macros restent toujours saisies pour 100g (fait nutritionnel indépendant de l'unité d'achat) — seule l'unité de prix/achat change.</p>
       </div>
 
       {customFoods.length > 0 && (
@@ -177,7 +177,7 @@ export default function FoodsCard() {
 
       <div className="mb-2">
         <div className="text-xs text-mute uppercase tracking-wide mb-2">Prix d'un aliment existant</div>
-        <p className="text-[11px] text-mute mb-2">
+        <p className="text-xs text-mute mb-2">
           Par défaut, tout se prix au poids (100g) — sauf les œufs et quelques aliments avec une unité connue (boîte, cuisse…). Comme dans MyFitnessPal, tu peux choisir de prix n'importe quel aliment par unité à la place (ex. "1 barquette de poulet = 45Dh"), même s'il n'en avait pas une au départ.
         </p>
         <form onSubmit={submitPrice} className="flex flex-wrap gap-2 items-end">
@@ -209,7 +209,7 @@ export default function FoodsCard() {
           </Field>
           <Button type="submit" variant="secondary">Enregistrer le prix</Button>
         </form>
-        {priceEntry.priceMode === 'unit' && priceEntryUnit && <p className="text-[11px] text-mute mt-1.5">"{priceEntry.name.trim()}" a déjà une unité connue : {priceEntryUnit.label} ({priceEntryUnit.grams}g).</p>}
+        {priceEntry.priceMode === 'unit' && priceEntryUnit && <p className="text-xs text-mute mt-1.5">"{priceEntry.name.trim()}" a déjà une unité connue : {priceEntryUnit.label} ({priceEntryUnit.grams}g).</p>}
       </div>
 
       {Object.keys(foodPrices).length > 0 && (
@@ -228,7 +228,7 @@ export default function FoodsCard() {
 
       <div className="mb-2 mt-5 border-t border-line pt-4">
         <div className="text-xs text-mute uppercase tracking-wide mb-2">Corriger la fiche d'un aliment existant</div>
-        <p className="text-[11px] text-mute mb-2">
+        <p className="text-xs text-mute mb-2">
           Les valeurs génériques ne correspondent pas toujours à ton produit réel — ex. une boîte de sardines assumée à 106g de poids net alors que la tienne n'en fait que 55g (ce qui change complètement le prix réel au 100g). Marche aussi pour donner une unité à un aliment qui n'en a pas encore (ex. une barquette de poulet). Corrige uniquement ce qui diffère, le reste garde la valeur générique.
         </p>
         <form onSubmit={submitFoodInfo} className="grid sm:grid-cols-3 gap-2 items-end">

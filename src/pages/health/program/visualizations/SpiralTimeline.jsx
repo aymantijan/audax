@@ -187,7 +187,7 @@ export default function SpiralTimeline() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mt-3 text-[9px] text-mute">
+      <div className="flex items-center gap-3 mt-3 text-[0.6875rem] text-mute">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full border-2 border-accent shadow-[0_0_6px_var(--accent)]" />
           Aujourd'hui

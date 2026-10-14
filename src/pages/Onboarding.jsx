@@ -202,7 +202,7 @@ export default function Onboarding() {
                   ))}
                 </div>
                 {goals.includes('savings') && !(Number(String(savingsAmount).replace(',', '.')) > 0) && (
-                  <p className="text-[11px] text-mute mt-1.5">Sans montant, l’objectif d’épargne ne sera pas créé : tu pourras le faire dans Finances.</p>
+                  <p className="text-xs text-mute mt-1.5">Sans montant, l’objectif d’épargne ne sera pas créé : tu pourras le faire dans Finances.</p>
                 )}
               </section>
             )}

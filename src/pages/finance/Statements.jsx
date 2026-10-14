@@ -114,7 +114,7 @@ export default function Statements() {
           <Row label="Actif immobilisé (cl. 2)" value={bs.actif.immobilise} />
           {bs.actif.immobiliseByTier.map((t) => (
             <div key={t.tier}>
-              <div className="flex justify-between pl-4 pt-1.5 text-[11px] uppercase tracking-wide text-mute">
+              <div className="flex justify-between pl-4 pt-1.5 text-xs uppercase tracking-wide text-mute">
                 <span>Tier {t.tier} · {LIQUIDITY_TIERS[t.tier]?.label || ''}</span>
                 <span>{fmtMAD(t.total)}</span>
               </div>
@@ -135,7 +135,7 @@ export default function Statements() {
           {bs.passif.detailDettesCT.map((d) => <Row key={d.code} label={d.label} value={d.amount} indent />)}
           <Row label="Résultat cumulé (7 − 6)" value={bs.passif.resultat} color={bs.passif.resultat >= 0 ? 'var(--success)' : 'var(--error)'} />
           <Row label="TOTAL PASSIF" value={bs.passif.total} bold color="var(--accent-primary)" />
-          <p className="text-[11px] mt-2" style={{ color: bs.equilibre ? 'var(--success)' : 'var(--error)' }}>
+          <p className="text-xs mt-2" style={{ color: bs.equilibre ? 'var(--success)' : 'var(--error)' }}>
             {bs.equilibre ? '✓ Actif = Passif : le bilan est équilibré (partie double respectée).' : '⚠ Bilan déséquilibré.'}
           </p>
           <div className="mt-3 pt-3 border-t border-line">
@@ -179,7 +179,7 @@ export default function Statements() {
             <Row label="+ Plus-values sur éléments d'actif" value={netWorth.plusValues} indent color="var(--success)" />
             <Row label="− Moins-values sur éléments d'actif" value={-netWorth.moinsValues} indent color="var(--error)" />
             <Row label="= ACTIF NET COMPTABLE CORRIGÉ (ANCC)" value={netWorth.ancc} bold color="var(--accent-primary)" />
-            <p className="text-[11px] text-mute mt-2">
+            <p className="text-xs text-mute mt-2">
               L'ANC vient automatiquement du journal (Actif − Dettes). Les corrections ci-contre reflètent l'écart entre la valeur comptable (coût historique) et la valeur réelle actuelle de tes biens.
             </p>
           </div>
@@ -218,7 +218,7 @@ export default function Statements() {
           </Button>
         }
       >
-        <p className="text-[11px] text-mute mb-3">
+        <p className="text-xs text-mute mb-3">
           Le journal porte le <strong>coût historique</strong> de chaque bien. Ces définitions ajoutent la catégorie, le palier de liquidité et les métadonnées (quantité, coût unitaire, identifiant marché) que Wealth OS utilise pour valoriser. VAUDAX ne calcule aucun cours : pour l'or, les métaux et les actions, il n'expose que quantité + coût unitaire + identifiant.
         </p>
         {assets.length ? (
@@ -226,13 +226,13 @@ export default function Statements() {
             {assets.map((as) => (
               <div key={as.id} className="flex items-center gap-2 text-sm border border-line rounded-lg px-3 py-2">
                 <Badge>{assetClassLabel(as.assetClass)}</Badge>
-                <span className="text-[10px] text-mute">T{as.liquidityTier}</span>
+                <span className="text-[0.6875rem] text-mute">T{as.liquidityTier}</span>
                 <span className="flex-1 truncate">
                   {as.label}
                   {as.quantity != null ? <span className="text-mute"> · {as.quantity}{as.unit ? ` ${as.unit}` : ''}</span> : null}
                   {as.marketIdentifier ? <span className="text-mute"> · {as.marketIdentifier}</span> : null}
                 </span>
-                <span className="text-[10px] text-mute">{as.valuationSource}</span>
+                <span className="text-[0.6875rem] text-mute">{as.valuationSource}</span>
                 <span className="font-medium">{fmtMAD(as.totalCost ?? 0)}</span>
                 <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingAsset(as); setAssetForm({ ...blankAsset(), ...as, quantity: as.quantity ?? '', unit: as.unit ?? '', unitCost: as.unitCost ?? '', totalCost: as.totalCost ?? '', marketIdentifier: as.marketIdentifier ?? '', currentEstimate: as.currentEstimate ?? '', acquisitionDate: as.acquisitionDate ?? '', valuationSource: as.valuationSource ?? '' }); setAssetModal(true); }} title="Modifier">
                   <Pencil size={13} />
@@ -271,7 +271,7 @@ export default function Statements() {
           {c.detailCharges.length ? c.detailCharges.map((d) => <Row key={d.code} label={`${d.code} ${d.label}`} value={d.amount} indent />) : <p className="text-xs text-mute pl-4 py-1">Aucune charge sur la période.</p>}
           <Row label="Total charges" value={c.chargesCourantes + c.chargesExcep} bold color="var(--error)" />
           <Row label="RÉSULTAT NET" value={c.resultatNet} bold color={c.resultatNet >= 0 ? 'var(--success)' : 'var(--error)'} />
-          <p className="text-[11px] text-mute mt-1">
+          <p className="text-xs text-mute mt-1">
             dont courant {fmtMAD(c.resultatCourant)} · exceptionnel {fmtMAD(c.resultatExcep)}
           </p>
         </Card>
@@ -335,7 +335,7 @@ export default function Statements() {
           <Field label="Sous-compte d'immobilisation (classe 2)">
             <AccountSelect classes={[2]} value={assetForm.accountCode} onChange={(e2) => setAssetForm({ ...assetForm, accountCode: e2.target.value })} />
           </Field>
-          <p className="text-[11px] text-mute -mt-1">{VALUATION_HINT[assetValuation]}</p>
+          <p className="text-xs text-mute -mt-1">{VALUATION_HINT[assetValuation]}</p>
           <Field label="Libellé">
             <Input value={assetForm.label} onChange={(e2) => setAssetForm({ ...assetForm, label: e2.target.value })} placeholder="ex : Lingot or 18K · Actions IAM · Appartement Rabat" autoFocus />
           </Field>

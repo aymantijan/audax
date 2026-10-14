@@ -30,6 +30,14 @@ test('module switches: defaults, removed modules, toggling', () => {
   assert.equal(isModuleEnabled({}, 'health'), true); // no flag: always on
 });
 
+test('Simple mode leaves the expert pages out of the menus', () => {
+  assert.equal(isModuleEnabled({ uiLevel: 'simple' }, 'skills'), false);
+  assert.equal(isModuleEnabled({ uiLevel: 'simple' }, 'timeline'), false);
+  assert.equal(isModuleEnabled({ uiLevel: 'simple' }, 'habits'), true);
+  assert.equal(isModuleEnabled({ uiLevel: 'expert' }, 'skills'), true);
+  assert.equal(isModuleEnabled({}, 'skills'), true); // older accounts: expert
+});
+
 test('every section module exists', () => {
   for (const p of POLES) for (const k of p.modules) assert.ok(MODULES[k], k);
 });

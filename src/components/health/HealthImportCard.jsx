@@ -125,7 +125,7 @@ export default function HealthImportCard() {
       )}
       {result && <p className={`text-sm mt-4 ${result.ok ? 'text-good' : 'text-bad'}`}>{result.text}</p>}
       {avgSteps != null && <p className="text-xs text-mute mt-3">Moyenne des 30 derniers jours : <span className="font-data text-ink">{avgSteps.toLocaleString('fr-FR')}</span> pas par jour.</p>}
-      <p className="text-[11px] text-mute mt-3">Le fichier est lu sur ton appareil : il n’est envoyé nulle part. Tu peux réimporter sans créer de doublons.</p>
+      <p className="text-xs text-mute mt-3">Le fichier est lu sur ton appareil : il n’est envoyé nulle part. Tu peux réimporter sans créer de doublons.</p>
     </Card>
   );
 }

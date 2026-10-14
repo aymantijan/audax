@@ -161,8 +161,8 @@ export default function Finance() {
               className={`flex flex-col items-center gap-0.5 rounded-xl px-2 py-2.5 text-center transition-colors cursor-pointer sm:flex-row sm:gap-2.5 sm:px-3 sm:text-left ${active ? 'bg-card text-ink shadow-sm ring-1 ring-line' : 'text-mute hover:bg-card/50 hover:text-ink'}`}>
               <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-accent/15 text-accent' : 'bg-card/60'}`}><Icon size={17} /></span>
               <span className="min-w-0">
-                <span className="block truncate text-[11px] font-semibold sm:text-sm">{sp.label}</span>
-                <span className="hidden truncate text-[11px] text-mute lg:block">{sp.desc}</span>
+                <span className="block truncate text-xs font-semibold sm:text-sm">{sp.label}</span>
+                <span className="hidden truncate text-xs text-mute lg:block">{sp.desc}</span>
               </span>
             </button>
           );

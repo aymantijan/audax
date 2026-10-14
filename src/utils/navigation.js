@@ -10,17 +10,19 @@ import {
 
 // Modules: one page each. `flag` = key(s) in user.enabledModules; modules
 // without a flag are always on. `def` = value for accounts that predate the flag.
+// `expert` = left out of the menus in Simple mode (utils/ui-level.js); the page
+// itself still opens from a link.
 export const MODULES = {
   today: { label: 'Aujourd’hui', to: '/today', icon: Sun, end: true },
   goals: { label: 'Objectifs', to: '/goals', icon: Target },
   habits: { label: 'Habitudes', to: '/habits', icon: Flame },
-  challenges: { label: 'Défis', to: '/defis', icon: Swords },
-  timeline: { label: 'Chronologie', to: '/chronologie', icon: History },
+  challenges: { label: 'Défis', to: '/defis', icon: Swords, expert: true },
+  timeline: { label: 'Chronologie', to: '/chronologie', icon: History, expert: true },
   focus: { label: 'Minuteur', to: '/focus', icon: Timer, flag: 'focus', def: false, desc: 'Sessions de concentration et d’étude, et leur historique.' },
 
   learning: { label: 'Études', to: '/learning', icon: GraduationCap, prefixes: ['/learning/course'] },
   readings: { label: 'Lectures', to: '/learning/readings', icon: Library },
-  skills: { label: 'Compétences', to: '/skills', icon: GitBranch },
+  skills: { label: 'Compétences', to: '/skills', icon: GitBranch, expert: true },
   creative: { label: 'Création', to: '/creative', icon: Palette, flag: 'creative', def: false, desc: 'Œuvres, pratique et expositions, pour les artistes, musiciens et auteurs.' },
 
   health: { label: 'Santé', to: '/health', icon: HeartPulse },
@@ -45,6 +47,7 @@ export const poleByKey = (key) => POLES.find((p) => p.key === key);
 export function isModuleEnabled(user, key) {
   const m = MODULES[key];
   if (!m) return false; // unknown or removed module (e.g. 'trading' since 2026-10-09)
+  if (m.expert && user?.uiLevel === 'simple') return false;
   if (!m.flag) return true;
   const flags = Array.isArray(m.flag) ? m.flag : [m.flag];
   return flags.some((f) => user?.enabledModules?.[f] ?? m.def);

@@ -125,7 +125,7 @@ export default function Today() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
-                      <div className="text-[11px] text-mute">
+                      <div className="text-xs text-mute">
                         {HABIT_CATEGORY_LABELS[h.category] || h.category}
                         {h.mandatory ? ' · prioritaire' : ''}
                         {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
@@ -330,7 +330,7 @@ function EcheanceRow({ e, overdue, accountingStore }) {
     <li className={`flex items-center justify-between gap-3 rounded-lg px-4 py-2.5 border ${overdue ? 'bg-bad/10 border-bad/30' : 'bg-surface border-line'}`}>
       <div className="min-w-0">
         <div className="text-sm truncate">{e.label}</div>
-        <div className={`text-[11px] ${overdue ? 'text-bad' : 'text-mute'}`}>
+        <div className={`text-xs ${overdue ? 'text-bad' : 'text-mute'}`}>
           {overdue ? 'En retard — ' : ''}
           {fmtDate(e.occurrenceDate)} · {e.type === 'produit' ? '+' : '-'}{fmtMAD(e.amount)}
         </div>

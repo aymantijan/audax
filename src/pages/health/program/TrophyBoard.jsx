@@ -40,7 +40,7 @@ export default function TrophyBoard() {
           const style = TIER_STYLES[tier];
           return (
             <div key={tier}>
-              <div className={`text-[10px] uppercase tracking-wider mb-2 ${style.text}`}>
+              <div className={`text-[0.6875rem] uppercase tracking-wider mb-2 ${style.text}`}>
                 {tier === 'diamond' ? '💎 Diamant' : tier === 'gold' ? '🥇 Or' : tier === 'silver' ? '🥈 Argent' : '🥉 Bronze'}
                 {' '}({items.length})
               </div>
@@ -57,7 +57,7 @@ export default function TrophyBoard() {
                         {trophy.description && (
                           <p className="text-xs text-mute mt-0.5 line-clamp-2">{trophy.description}</p>
                         )}
-                        <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-mute">
+                        <div className="flex flex-wrap gap-2 mt-2 text-[0.6875rem] text-mute">
                           {trophy.achieved_value != null && trophy.target_value != null && (
                             <span>{trophy.achieved_value} / {trophy.target_value}</span>
                           )}
@@ -71,7 +71,7 @@ export default function TrophyBoard() {
                             <span>{trophy.phase_name}</span>
                           )}
                         </div>
-                        <div className="text-[9px] text-mute mt-1">
+                        <div className="text-[0.6875rem] text-mute mt-1">
                           {new Date(trophy.achieved_at).toLocaleDateString('fr-FR', {
                             day: 'numeric', month: 'short', year: 'numeric',
                           })}

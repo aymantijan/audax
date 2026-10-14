@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Trash2, Search, Dumbbell, Zap, Plus, Minus, Check } from 'lucide-react';
+import Term from '../../../../components/common/Term';
 import {
   EXERCISE_LIBRARY, MUSCLE_GROUPS, searchExercises,
   DRILL_LIBRARY, DRILL_CATEGORIES, DRILL_UNITS, searchDrills,
@@ -76,7 +77,7 @@ function ExerciseSearch({ mode, value, exerciseKey, onChange }) {
           className="w-full rounded-lg border border-line bg-surface py-2.5 pl-9 pr-16 text-sm font-medium text-ink placeholder:text-mute placeholder:font-normal outline-none transition-colors focus:border-accent"
         />
         {exerciseKey && (
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 rounded bg-good/15 px-1.5 py-0.5 text-[10px] font-semibold text-good">
+          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 rounded bg-good/15 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-good">
             <Check size={10} /> suivi
           </span>
         )}
@@ -93,7 +94,7 @@ function ExerciseSearch({ mode, value, exerciseKey, onChange }) {
                   key={g.label}
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); setFilterGroup(active ? null : g.value); setHighlighted(0); }}
-                  className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer"
+                  className="rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer"
                   style={active
                     ? { background: color, borderColor: color, color: '#0b0e14' }
                     : { borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
@@ -117,7 +118,7 @@ function ExerciseSearch({ mode, value, exerciseKey, onChange }) {
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: MG_COLORS[ex.muscleGroup] || '#888' }} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-ink">{ex.name}</span>
-                <span className="block truncate text-[11px] text-mute">
+                <span className="block truncate text-xs text-mute">
                   {groupLabel(mode, ex.muscleGroup)} · {ex.equipment}
                   {ex.unit ? ` · ${DRILL_UNITS[ex.unit]}` : ''}
                   {ex.secondaryMuscles?.length ? ` · + ${ex.secondaryMuscles.map((m) => groupLabel(mode, m)).join(', ')}` : ''}
@@ -133,7 +134,7 @@ function ExerciseSearch({ mode, value, exerciseKey, onChange }) {
               className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-left text-sm transition-colors hover:bg-surface cursor-pointer"
             >
               <Plus size={15} className="shrink-0 text-accent" />
-              <span>Ajouter <span className="font-semibold text-ink">« {trimmed} »</span> <span className="text-[11px] text-mute">(personnalisé)</span></span>
+              <span>Ajouter <span className="font-semibold text-ink">« {trimmed} »</span> <span className="text-xs text-mute">(personnalisé)</span></span>
             </button>
           )}
         </div>
@@ -148,7 +149,7 @@ function Stepper({ label, value, onChange, min = 0, max = 999, step = 1, width =
   const set = (v) => onChange(Math.max(min, Math.min(max, Math.round(v * 100) / 100)));
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-mute">{label}</span>
+      <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-mute">{label}</span>
       <div className="inline-flex items-center rounded-lg border border-line bg-surface">
         <button type="button" onClick={() => set(n - step)} className="px-1.5 py-1.5 text-mute hover:text-ink cursor-pointer" aria-label={`${label} moins`}><Minus size={12} /></button>
         <input
@@ -169,7 +170,7 @@ function Stepper({ label, value, onChange, min = 0, max = 999, step = 1, width =
 function TextField({ label, value, onChange, placeholder, className = '' }) {
   return (
     <label className={`flex flex-col gap-1 ${className}`}>
-      <span className="text-[10px] font-medium uppercase tracking-wide text-mute">{label}</span>
+      <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-mute">{label}</span>
       <input
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
@@ -214,7 +215,7 @@ export default function ExerciseRow({ exercise, index, onChange, onRemove, mode 
       </div>
 
       {lib && (
-        <div className="mt-1.5 flex items-center gap-1.5 pl-9 text-[11px] text-mute">
+        <div className="mt-1.5 flex items-center gap-1.5 pl-9 text-xs text-mute">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: MG_COLORS[lib.muscleGroup] || '#888' }} />
           {groupLabel(mode, lib.muscleGroup)} · {lib.equipment}{lib.mechanic && !isDrill ? ` · ${lib.mechanic}` : ''}
         </div>
@@ -230,7 +231,7 @@ export default function ExerciseRow({ exercise, index, onChange, onRemove, mode 
         <Stepper label="Repos (s)" value={exercise.rest_seconds} min={0} max={600} step={15} onChange={(v) => update('rest_seconds', v)} width="w-10" />
         {!isDrill && (
           <>
-            <Stepper label="RPE" value={exercise.target_rpe} min={1} max={10} step={0.5} onChange={(v) => update('target_rpe', v)} width="w-9" />
+            <Stepper label={<Term id="rpe" short />} value={exercise.target_rpe} min={1} max={10} step={0.5} onChange={(v) => update('target_rpe', v)} width="w-9" />
             <TextField label="Tempo" value={exercise.tempo} onChange={(v) => update('tempo', v)} placeholder="3-1-1-0" className="w-24" />
           </>
         )}

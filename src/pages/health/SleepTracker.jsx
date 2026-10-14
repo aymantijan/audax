@@ -78,7 +78,7 @@ export default function SleepTracker() {
           </p>
         )}
         {target.avgLoad > 0 && (
-          <p className="text-[11px] text-mute mt-1">Charge estimée aujourd'hui vs moyenne des 14 derniers jours : {target.todayLoad} vs {target.avgLoad}.</p>
+          <p className="text-xs text-mute mt-1">Charge estimée aujourd'hui vs moyenne des 14 derniers jours : {target.todayLoad} vs {target.avgLoad}.</p>
         )}
         {lifeStageSleepNote && <p className="text-xs text-mute mt-2 border-t border-line pt-2">{lifeStageSleepNote}</p>}
       </Card>

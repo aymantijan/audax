@@ -80,9 +80,9 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
       <div className="flex items-center gap-3 px-4 sm:px-8 py-3 border-b border-line">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-ink truncate">{title}</div>
-          <div className="text-[11px] text-mute">{done ? 'Terminé' : `${queue.length} fiche(s) restante(s) · ${stats.done} révisée(s)`}</div>
+          <div className="text-xs text-mute">{done ? 'Terminé' : `${queue.length} fiche(s) restante(s) · ${stats.done} révisée(s)`}</div>
         </div>
-        <button onClick={finish} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Quitter (Échap)"><X size={18} /></button>
+        <button onClick={finish} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Quitter (Échap)" aria-label="Quitter (Échap)"><X size={18} /></button>
       </div>
       <div className="h-1 bg-surface"><div className="h-full transition-all" style={{ width: `${done ? 100 : progress}%`, background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }} /></div>
 
@@ -100,12 +100,12 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
                     return (
                       <div key={r} className="rounded-lg py-2" style={{ background: tint(meta.color, 12) }}>
                         <div className="text-lg font-bold tabular-nums" style={{ color: meta.color }}>{stats.counts[r]}</div>
-                        <div className="text-[10px] text-mute">{meta.label}</div>
+                        <div className="text-[0.6875rem] text-mute">{meta.label}</div>
                       </div>
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-mute mt-4">Les fiches reviendront automatiquement au bon moment : juste avant que tu ne les oublies.</p>
+                <p className="text-xs text-mute mt-4">Les fiches reviendront automatiquement au bon moment : juste avant que tu ne les oublies.</p>
               </>
             ) : (
               <p className="text-sm text-mute mt-1">Toutes tes fiches sont à jour. Ajoutes-en de nouvelles ou reviens plus tard.</p>
@@ -114,7 +114,7 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
           </div>
         ) : (
           <div className="max-w-2xl w-full">
-            <div className="flex items-center gap-2 text-[11px] text-mute mb-2">
+            <div className="flex items-center gap-2 text-xs text-mute mb-2">
               <span className="rounded-full px-2 py-0.5 border border-line">{deck?.name}</span>
               {chapter && <span className="truncate">{chapter.title}</span>}
               <span className="ml-auto">{card.state === 'new' ? 'Nouvelle' : card.state === 'review' ? 'Révision' : 'Apprentissage'}</span>
@@ -122,7 +122,7 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
             <div className="rounded-2xl border border-line bg-card shadow-xl overflow-hidden">
               <div className="px-6 sm:px-10 py-10 sm:py-14 text-center text-lg sm:text-2xl font-medium text-ink whitespace-pre-wrap break-words">{card.front}</div>
               {shown && (
-                <div className="border-t border-dashed border-line px-6 sm:px-10 py-8 sm:py-10 text-center text-base sm:text-xl text-ink whitespace-pre-wrap break-words" style={{ background: tint('var(--accent-primary)', 5) }}>
+                <div className="border-t border-dashed border-line px-6 sm:px-10 py-8 sm:py-10 text-center text-[1rem] sm:text-xl text-ink whitespace-pre-wrap break-words" style={{ background: tint('var(--accent-primary)', 5) }}>
                   {card.back}
                 </div>
               )}
@@ -131,7 +131,7 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
             <div className="mt-6">
               {!shown ? (
                 <Button className="w-full !py-3" onClick={() => setShown(true)}>
-                  <span className="flex items-center justify-center gap-2"><Eye size={16} /> Afficher la réponse <span className="text-[10px] opacity-60 hidden sm:inline">(Espace)</span></span>
+                  <span className="flex items-center justify-center gap-2"><Eye size={16} /> Afficher la réponse <span className="text-[0.6875rem] opacity-60 hidden sm:inline">(Espace)</span></span>
                 </Button>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
@@ -140,12 +140,12 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
                       className="rounded-xl border px-2 py-2.5 cursor-pointer transition-transform hover:-translate-y-0.5"
                       style={{ borderColor: tint(r.color, 45), background: tint(r.color, 12) }}>
                       <div className="text-sm font-semibold" style={{ color: r.color }}>{r.label}</div>
-                      <div className="text-[11px] text-mute">{r.interval} <span className="hidden sm:inline opacity-60">· {r.key}</span></div>
+                      <div className="text-xs text-mute">{r.interval} <span className="hidden sm:inline opacity-60">· {r.key}</span></div>
                     </button>
                   ))}
                 </div>
               )}
-              {shown && <p className="text-[11px] text-mute text-center mt-3 flex items-center justify-center gap-1"><RotateCcw size={10} /> Sois honnête : « À revoir » fait revenir la fiche dans quelques minutes.</p>}
+              {shown && <p className="text-xs text-mute text-center mt-3 flex items-center justify-center gap-1"><RotateCcw size={10} /> Sois honnête : « À revoir » fait revenir la fiche dans quelques minutes.</p>}
             </div>
           </div>
         )}

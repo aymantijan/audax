@@ -15,6 +15,7 @@ import { Card, Button, Field, Input, Select } from '../components/common/ui';
 import FoodsCard from '../components/settings/FoodsCard';
 import AssistantCard from '../components/settings/AssistantCard';
 import { TrashCard, EraseCard } from '../components/settings/DataCards';
+import DisplayCard from '../components/settings/DisplayCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 
 // Backups keep the keys of removed modules (trading, deals, engineering, business,
@@ -210,6 +211,8 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">Paramètres</h1>
         <p className="text-mute text-sm mt-1">Profil, données et préférences.</p>
       </div>
+
+      <DisplayCard />
 
       <Card title="Profil">
         <div className="grid md:grid-cols-2 gap-3">

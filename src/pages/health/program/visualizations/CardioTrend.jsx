@@ -80,7 +80,7 @@ export default function CardioTrend() {
             <button
               key={m.key}
               onClick={() => setMetric(m.key)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-medium cursor-pointer transition-colors ${
+              className={`px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
                 metric === m.key ? 'bg-accent text-white' : 'bg-surface border border-line text-mute hover:text-ink'
               }`}
             >
@@ -132,7 +132,7 @@ export default function CardioTrend() {
 
       {/* Per-modality summary */}
       <div className="mt-4 space-y-1.5">
-        <div className="text-[10px] text-mute uppercase tracking-wide font-semibold">Par modalité</div>
+        <div className="text-[0.6875rem] text-mute uppercase tracking-wide font-semibold">Par modalité</div>
         {summary.map((m) => (
           <div key={m.modality} className="flex items-center gap-2 text-xs">
             <Badge color="var(--success)">{m.modality}</Badge>

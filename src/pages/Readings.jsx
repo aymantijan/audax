@@ -68,11 +68,11 @@ export default function Readings({ embedded = false }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-ink truncate">{r.book.title}</div>
-            <div className="text-[11px] text-mute">{r.book.author} · {r.book.genre}</div>
+            <div className="text-xs text-mute">{r.book.author} · {r.book.genre}</div>
             {links.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {links.map((c) => (
-                  <Link key={c.id} to={`/learning/course/${c.id}`} className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10px] text-mute hover:text-accent hover:border-accent">
+                  <Link key={c.id} to={`/learning/course/${c.id}`} className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[0.6875rem] text-mute hover:text-accent hover:border-accent">
                     {isAcademic(c) ? <GraduationCap size={10} /> : <Compass size={10} />}{c.name}
                   </Link>
                 ))}
@@ -86,7 +86,7 @@ export default function Readings({ embedded = false }) {
         </div>
         <div className="mt-3">
           <ProgressBar value={r.pct} height={7} color={done ? 'var(--success)' : 'var(--accent-primary)'} />
-          <div className="flex items-center gap-2 mt-2 text-[11px] text-mute flex-wrap">
+          <div className="flex items-center gap-2 mt-2 text-xs text-mute flex-wrap">
             <span className="tabular-nums">{fr(r.pagesRead)} / {fr(r.totalPages)} pages · {r.pct}%</span>
             <span className="hidden sm:inline">· ~{fr(r.wordsRead)} mots</span>
             <div className="ml-auto flex items-center gap-1.5">
@@ -98,7 +98,7 @@ export default function Readings({ embedded = false }) {
               </form>
             </div>
           </div>
-          {r.completedAt && <div className="text-[10px] text-mute mt-1">Terminé le {new Date(r.completedAt).toLocaleDateString('fr-FR')}</div>}
+          {r.completedAt && <div className="text-[0.6875rem] text-mute mt-1">Terminé le {new Date(r.completedAt).toLocaleDateString('fr-FR')}</div>}
         </div>
       </div>
     );

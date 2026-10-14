@@ -13,6 +13,7 @@ import DisciplineCard from './program/DisciplineCard';
 import { tierFor } from './program/ReadinessCard';
 import HealthImportCard from '../../components/health/HealthImportCard';
 
+import Term from '../../components/common/Term';
 export default function Dashboard({ goTo }) {
   const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap, nutritionPlans, proteinTargetG, waterLogs, waterTargetMl, getGoalsWithProgress } = useHealthStore();
   const programAvailable = useProgramStore((s) => s.available);
@@ -149,7 +150,7 @@ export default function Dashboard({ goTo }) {
             <div className="flex-1">
               <div className="mb-1 flex items-center justify-between">
                 <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: toneColor[coach.tone] }}>Coach</div>
-                {coach.source === 'ai' && <span className="flex items-center gap-1 text-[10px] text-accent"><Sparkles size={10} /> IA</span>}
+                {coach.source === 'ai' && <span className="flex items-center gap-1 text-[0.6875rem] text-accent"><Sparkles size={10} /> IA</span>}
               </div>
               <div className="text-sm">{coach.text}</div>
               {coach.source !== 'ai' && (
@@ -221,19 +222,19 @@ export default function Dashboard({ goTo }) {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-bold">{readiness.score}</span>
-                  <span className="text-[10px] font-semibold" style={{ color: band.color }}>{band.label}</span>
+                  <span className="text-[0.6875rem] font-semibold" style={{ color: band.color }}>{band.label}</span>
                 </div>
               </div>
               <div className="min-w-0">
-                <div className="text-xs uppercase tracking-wide text-mute">Readiness</div>
+                <div className="text-xs uppercase tracking-wide text-mute"><Term id="readiness" /></div>
                 <div className="text-sm font-semibold" style={{ color: tier.color }}>{tier.label}</div>
                 <p className="mt-0.5 text-xs text-mute">{tier.action}</p>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center">
-              <div><div className="text-[11px] text-mute">Sommeil</div><div className="text-sm font-semibold">{todayLog?.sleepData ? `${todayLog.sleepData.sleepHours} h` : '—'}</div></div>
-              <div><div className="text-[11px] text-mute">Énergie</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.energyStartLevel}/10` : '—'}</div></div>
-              <div><div className="text-[11px] text-mute">Stress</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.stressLevel}/10` : '—'}</div></div>
+              <div><div className="text-xs text-mute">Sommeil</div><div className="text-sm font-semibold">{todayLog?.sleepData ? `${todayLog.sleepData.sleepHours} h` : '—'}</div></div>
+              <div><div className="text-xs text-mute">Énergie</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.energyStartLevel}/10` : '—'}</div></div>
+              <div><div className="text-xs text-mute">Stress</div><div className="text-sm font-semibold">{todayLog ? `${todayLog.stressLevel}/10` : '—'}</div></div>
             </div>
           </Card>
 
@@ -247,7 +248,7 @@ export default function Dashboard({ goTo }) {
                       <span className="shrink-0 text-xs font-semibold">{g.percent} %</span>
                     </div>
                     <ProgressBar value={g.percent} color={g.percent >= 90 ? 'var(--success)' : 'var(--accent-primary)'} height={6} />
-                    <div className="mt-0.5 text-[11px] text-mute">{g.current ?? '—'} → {g.target} {g.unit}{g.etaWeeks != null ? ` · ≈ ${g.etaWeeks} sem.` : ''}</div>
+                    <div className="mt-0.5 text-xs text-mute">{g.current ?? '—'} → {g.target} {g.unit}{g.etaWeeks != null ? ` · ≈ ${g.etaWeeks} sem.` : ''}</div>
                   </li>
                 ))}
               </ul>
@@ -306,7 +307,7 @@ function DeltaChip({ value }) {
   if (value == null || value === 0) return null;
   const up = value > 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold ${up ? 'text-good' : 'text-bad'}`}>
+    <span className={`inline-flex items-center gap-0.5 text-[0.6875rem] font-semibold ${up ? 'text-good' : 'text-bad'}`}>
       {up ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
       {Math.abs(value)}
     </span>

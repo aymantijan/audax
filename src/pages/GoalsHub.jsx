@@ -31,14 +31,14 @@ function GoalRow({ g, today }) {
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <div className="flex-1 max-w-xs"><ProgressBar value={g.progress ?? 0} height={5} color={g.status === 'achieved' ? 'var(--success)' : d.color} /></div>
-          <span className="text-[11px] tabular-nums text-mute w-9">{g.progress ?? 0}%</span>
+          <span className="text-xs tabular-nums text-mute w-9">{g.progress ?? 0}%</span>
         </div>
-        <div className="text-[11px] text-mute mt-1 truncate">{g.valueText}{g.detail ? ` · ${g.detail}` : ''}</div>
+        <div className="text-xs text-mute mt-1 truncate">{g.valueText}{g.detail ? ` · ${g.detail}` : ''}</div>
       </div>
       <div className="text-right shrink-0 hidden sm:block">
-        <div className="text-[11px] font-semibold flex items-center gap-1 justify-end" style={{ color: st.color }}><st.Icon size={12} /> {st.label}</div>
+        <div className="text-xs font-semibold flex items-center gap-1 justify-end" style={{ color: st.color }}><st.Icon size={12} /> {st.label}</div>
         {days != null && g.status !== 'achieved' && (
-          <div className={`text-[11px] mt-0.5 ${days < 0 ? 'text-bad' : days <= 14 ? 'text-warning' : 'text-mute'}`}>{days < 0 ? `échéance dépassée de ${-days} j` : countdownLabel(days)}</div>
+          <div className={`text-xs mt-0.5 ${days < 0 ? 'text-bad' : days <= 14 ? 'text-warning' : 'text-mute'}`}>{days < 0 ? `échéance dépassée de ${-days} j` : countdownLabel(days)}</div>
         )}
       </div>
       <ChevronRight size={15} className="text-mute group-hover:text-accent shrink-0" />
@@ -77,7 +77,7 @@ export default function GoalsHub() {
           ['Atteints', counts.done, Trophy, 'var(--success)'],
         ].map(([label, v, Icon, color]) => (
           <div key={label} className="rounded-xl border border-line bg-card px-4 py-3">
-            <div className="text-[11px] uppercase tracking-wide text-mute flex items-center gap-1.5"><Icon size={12} style={{ color }} /> {label}</div>
+            <div className="text-xs uppercase tracking-wide text-mute flex items-center gap-1.5"><Icon size={12} style={{ color }} /> {label}</div>
             <div className="text-2xl font-bold tabular-nums mt-0.5" style={{ color: v ? color : undefined }}>{v}</div>
           </div>
         ))}
@@ -120,7 +120,7 @@ export default function GoalsHub() {
             return (
               <Link key={k} to={to} className="rounded-xl border border-line p-3 hover:border-accent transition-colors">
                 <div className="flex items-center gap-2 text-sm font-medium text-ink"><Icon size={15} style={{ color: GOAL_DOMAINS[k].color }} /> {GOAL_DOMAINS[k].label}</div>
-                <div className="text-[11px] text-mute mt-1">{desc}</div>
+                <div className="text-xs text-mute mt-1">{desc}</div>
               </Link>
             );
           })}

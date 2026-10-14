@@ -129,7 +129,7 @@ export default function QuickEntryModal({ open, onClose }) {
               className="ui-btn flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-mute hover:text-ink hover:border-accent cursor-pointer disabled:opacity-50">
               {reading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} {reading ? 'Lecture du reçu…' : 'Photo du reçu'}
             </button>
-            {readNote && <span className="text-[11px] text-mute text-center">{readNote}</span>}
+            {readNote && <span className="text-xs text-mute text-center">{readNote}</span>}
           </div>
         )}
 
@@ -139,7 +139,7 @@ export default function QuickEntryModal({ open, onClose }) {
             className="w-full bg-surface border border-line rounded-lg px-3 py-2.5 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
           <datalist id="quick-labels">{labelOptions.map((l) => <option key={l} value={l} />)}</datalist>
           {label.trim() && !category && guess.source !== 'default' && (
-            <div className="text-[11px] mt-1 flex items-center gap-1" style={{ color: 'var(--accent-primary)' }}>
+            <div className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--accent-primary)' }}>
               {guess.source === 'history' ? <History size={11} /> : <Sparkles size={11} />}
               {guess.source === 'history' ? 'Comme la dernière fois' : 'Catégorie devinée'} : {name(guess.account)}
             </div>

@@ -108,7 +108,7 @@ export default function SkillDetail({ familyId, states, onNavigate }) {
             {SOURCE_KINDS.map((k) => {
               const on = st.kinds.includes(k.id);
               return (
-                <div key={k.id} title={k.hint} className="rounded-md border px-1.5 py-1 text-[11px] text-center" style={{ borderColor: on ? 'var(--success)' : 'var(--border)', color: on ? 'var(--success)' : 'var(--text-secondary)' }}>
+                <div key={k.id} title={k.hint} className="rounded-md border px-1.5 py-1 text-xs text-center" style={{ borderColor: on ? 'var(--success)' : 'var(--border)', color: on ? 'var(--success)' : 'var(--text-secondary)' }}>
                   {on ? '✓ ' : ''}{k.label}
                 </div>
               );
