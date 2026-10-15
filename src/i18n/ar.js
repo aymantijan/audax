@@ -1,5 +1,16 @@
 // العربية (chantier 6b). Key = the French text of the code; see i18n/index.js.
 export default {
+  "Ce que tu faisais, ce qui s’est passé, ce que tu attendais.": "ما كنت تفعله، وما حدث، وما كنت تتوقعه.",
+  "Ce qui t’aiderait, ce qui manque, ce qui est compliqué.": "ما قد يساعدك، وما ينقص، وما هو معقّد.",
+  "Que s’est-il passé ?": "ماذا حدث؟",
+  "Ton appli d’e-mail s’ouvre avec le message prêt : tu le relis et tu l’envoies. L’écran et le type d’appareil sont ajoutés pour retrouver le problème, rien d’autre.": "يُفتح تطبيق البريد لديك والرسالة جاهزة: تراجعها ثم ترسلها. تُضاف الشاشة ونوع الجهاز لإيجاد المشكلة، لا شيء آخر.",
+  "Ton idée": "فكرتك",
+  "Type de message": "نوع الرسالة",
+  "Un problème": "مشكلة",
+  "Une idée": "فكرة",
+  "Une idée, un problème ?": "فكرة أو مشكلة؟",
+  "Une idée, un problème ? Écris-nous.": "فكرة أو مشكلة؟ راسلنا.",
+  "Écrire l’e-mail": "كتابة البريد",
   "Santé du jour": "صحة اليوم",
   "{n} prise(s) à noter sur {total}": "{n} جرعة لتسجيلها من أصل {total}",
   "Toutes les prises du jour sont notées.": "كل جرعات اليوم مسجّلة.",

@@ -9,6 +9,7 @@ import { XP_DOMAINS, XP_DOMAIN_LABELS, domainXpBreakdown } from '../utils/xp-dom
 import { todayKey } from '../utils/formatters';
 import { Card, Stat, Badge, EmptyState } from '../components/common/ui';
 import { fetchLeaderboardProfiles } from '../services/cloud-sync';
+import LeaderboardOptIn from '../components/settings/LeaderboardOptIn';
 import { getSession } from '../services/auth-supabase';
 import { isSupabaseConfigured } from '../services/supabase';
 
@@ -124,7 +125,7 @@ function RankingView() {
     return () => { cancelled = true; };
   }, []);
 
-  const youName = user?.name || 'Toi';
+  const youName = `${(user?.leaderboardOptIn && user?.leaderboardName) || user?.name || 'Toi'}${user?.leaderboardOptIn ? '' : ' (visible par toi seul·e)'}`;
 
   const ranked = useMemo(() => {
     const rows = [
@@ -353,11 +354,11 @@ function MilestonesView({ currentLevel }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
-            <ChevronLeft size={14} /> Prev
+            <ChevronLeft size={14} /> Précédent
           </button>
           <span className="text-sm text-mute">Page {clampedPage + 1} / {pageCount}</span>
           <button onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={clampedPage >= pageCount - 1} className="flex items-center gap-1 text-sm border border-line rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-40 hover:border-accent">
-            Next <ChevronRight size={14} />
+            Suivant <ChevronRight size={14} />
           </button>
         </div>
       </div>
@@ -413,7 +414,7 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      {tab === 'ranking' ? <RankingView /> : <MilestonesView currentLevel={grade.current.level} />}
+      {tab === 'ranking' ? <><LeaderboardOptIn /><RankingView /></> : <MilestonesView currentLevel={grade.current.level} />}
     </div>
   );
 }

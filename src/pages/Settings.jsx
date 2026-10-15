@@ -18,6 +18,7 @@ import { TrashCard, EraseCard } from '../components/settings/DataCards';
 import DisplayCard from '../components/settings/DisplayCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 import { t } from '../i18n';
+import SheetExportButton from '../components/settings/SheetExportButton';
 
 // Backups keep the keys of removed modules (trading, deals, engineering, business,
 // networking, career, content, fundraising, freelance, realestate — 2026-10-09):
@@ -464,7 +465,9 @@ export default function SettingsPage() {
             <span className="flex items-center gap-2"><Upload size={15} /> Restaurer une sauvegarde</span>
           </Button>
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={importJSON} />
+          <SheetExportButton />
         </div>
+        <p className="text-xs text-mute mt-2">« Exporter en tableur » donne un fichier par partie (habitudes, argent, santé, études, lectures), à ouvrir dans Excel, Numbers ou Google Sheets. Pour lire ou partager, pas pour restaurer.</p>
         {safetyCopies.length > 0 && (
           <div className="mt-4 pt-4 border-t border-line text-sm">
             <p className="text-mute">

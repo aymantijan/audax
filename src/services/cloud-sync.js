@@ -49,15 +49,27 @@ function debounce(fn, ms) {
 // copy of app_state (that stays private, per-user-only via RLS). Cheap
 // enough to recompute from scratch on every call: getLifetimeXP() is a
 // single reduce over already-in-memory skills.
+// Appearing in the ranking is a choice (chantier 8, C3): user.leaderboardOptIn,
+// off by default, under a chosen pseudonym. Not opted in → the own row is
+// removed (delete policy: migration 011), once per session.
+let removedOwnRow = false;
 async function pushLeaderboardProfile(userId) {
   if (!isSupabaseConfigured) return;
   const user = useAuthStore.getState().user;
   if (!user) return;
+  if (!user.leaderboardOptIn) {
+    if (removedOwnRow) return;
+    const { error } = await supabase.from('leaderboard_profiles').delete().eq('user_id', userId);
+    if (error) console.error('[cloud-sync] remove leaderboard profile failed:', error.message);
+    else removedOwnRow = true;
+    return;
+  }
+  removedOwnRow = false;
   const lifetimeXp = useSkillStore.getState().getLifetimeXP();
   const { error } = await supabase
     .from('leaderboard_profiles')
     .upsert(
-      { user_id: userId, display_name: user.name || 'Anonymous', career_goal: user.occupation || null, lifetime_xp: lifetimeXp, updated_at: new Date().toISOString() },
+      { user_id: userId, display_name: (user.leaderboardName || '').trim() || user.name || 'Utilisateur VAUDAX', career_goal: user.leaderboardShowOccupation ? user.occupation || null : null, lifetime_xp: lifetimeXp, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     );
   if (error) console.error('[cloud-sync] push leaderboard profile failed:', error.message);

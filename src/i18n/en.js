@@ -1,5 +1,16 @@
 // English (chantier 6b). Key = the French text of the code; see i18n/index.js.
 export default {
+  "Ce que tu faisais, ce qui s’est passé, ce que tu attendais.": "What you were doing, what happened, what you expected.",
+  "Ce qui t’aiderait, ce qui manque, ce qui est compliqué.": "What would help you, what is missing, what is complicated.",
+  "Que s’est-il passé ?": "What happened?",
+  "Ton appli d’e-mail s’ouvre avec le message prêt : tu le relis et tu l’envoies. L’écran et le type d’appareil sont ajoutés pour retrouver le problème, rien d’autre.": "Your email app opens with the message ready: you read it and send it. The screen and the type of device are added to find the problem, nothing else.",
+  "Ton idée": "Your idea",
+  "Type de message": "Type of message",
+  "Un problème": "A problem",
+  "Une idée": "An idea",
+  "Une idée, un problème ?": "An idea, a problem?",
+  "Une idée, un problème ? Écris-nous.": "An idea, a problem? Write to us.",
+  "Écrire l’e-mail": "Write the email",
   "Santé du jour": "Today’s health",
   "{n} prise(s) à noter sur {total}": "{n} dose(s) to log out of {total}",
   "Toutes les prises du jour sont notées.": "All of today’s doses are logged.",

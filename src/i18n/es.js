@@ -1,5 +1,16 @@
 // Español (chantier 6b). Clave = el texto francés del código; ver i18n/index.js.
 export default {
+  "Ce que tu faisais, ce qui s’est passé, ce que tu attendais.": "Lo que hacías, lo que pasó, lo que esperabas.",
+  "Ce qui t’aiderait, ce qui manque, ce qui est compliqué.": "Lo que te ayudaría, lo que falta, lo que es complicado.",
+  "Que s’est-il passé ?": "¿Qué pasó?",
+  "Ton appli d’e-mail s’ouvre avec le message prêt : tu le relis et tu l’envoies. L’écran et le type d’appareil sont ajoutés pour retrouver le problème, rien d’autre.": "Tu app de correo se abre con el mensaje listo: lo relees y lo envías. Se añaden la pantalla y el tipo de dispositivo para encontrar el problema, nada más.",
+  "Ton idée": "Tu idea",
+  "Type de message": "Tipo de mensaje",
+  "Un problème": "Un problema",
+  "Une idée": "Una idea",
+  "Une idée, un problème ?": "¿Una idea, un problema?",
+  "Une idée, un problème ? Écris-nous.": "¿Una idea, un problema? Escríbenos.",
+  "Écrire l’e-mail": "Escribir el correo",
   "Santé du jour": "Salud del día",
   "{n} prise(s) à noter sur {total}": "{n} toma(s) por anotar de {total}",
   "Toutes les prises du jour sont notées.": "Todas las tomas del día están anotadas.",

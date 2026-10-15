@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, LogOut, Settings, Trophy, Zap, Sparkles, Siren } from 'lucide-react';
+import { Moon, Sun, LogOut, Settings, Trophy, Zap, Sparkles, Siren, MessageSquareText } from 'lucide-react';
+import FeedbackModal from './FeedbackModal';
 import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 import { DESKTOP_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
@@ -14,6 +15,7 @@ import { t } from '../../i18n';
 // search, help « ? », and a profile menu holding Paramètres, Classement, theme, sign-out.
 function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
   const [open, setOpen] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const item = 'flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left cursor-pointer';
   return (
     <div className="relative">
@@ -48,12 +50,16 @@ function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
             <button type="button" role="menuitem" onClick={() => { onToggleTheme(); setOpen(false); }} className={`${item} text-ink hover:bg-line/40`}>
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} {theme === 'dark' ? t('Thème clair') : t('Thème sombre')}
             </button>
+            <button type="button" role="menuitem" onClick={() => { setOpen(false); setFeedback(true); }} className={`${item} text-ink hover:bg-line/40`}>
+              <MessageSquareText size={16} /> {t('Une idée, un problème ?')}
+            </button>
             <button type="button" role="menuitem" onClick={onLogout} className={`${item} text-bad hover:bg-bad/10`}>
               <LogOut size={16} /> {t('Se déconnecter')}
             </button>
           </div>
         </>
       )}
+      <FeedbackModal open={feedback} onClose={() => setFeedback(false)} />
     </div>
   );
 }

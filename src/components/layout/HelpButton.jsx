@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { moduleOfPath } from '../../utils/navigation';
 import { helpFor, TOUR } from '../../utils/help';
 import { Modal, Button } from '../common/ui';
+import FeedbackModal from './FeedbackModal';
 import { t } from '../../i18n';
 
 // The guided tour: four short screens. Shown once to new accounts (Simple
@@ -38,6 +39,7 @@ export default function HelpButton() {
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const [open, setOpen] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const [tourOpen, setTourOpen] = useState(() => !!user && user.uiLevel === 'simple' && !user.tourSeen);
   const help = helpFor(moduleOfPath(pathname), pathname);
 
@@ -55,12 +57,14 @@ export default function HelpButton() {
         <ul className="space-y-3 text-[1rem] leading-relaxed">
           {help.lines.map((l) => <li key={l} className="flex gap-2"><span className="text-accent" aria-hidden="true">•</span><span>{t(l)}</span></li>)}
         </ul>
-        <div className="flex flex-wrap justify-between gap-2 mt-6">
+        <button type="button" className="mt-5 text-sm text-accent hover:underline cursor-pointer" onClick={() => { setOpen(false); setFeedback(true); }}>{t('Une idée, un problème ? Écris-nous.')}</button>
+        <div className="flex flex-wrap justify-between gap-2 mt-4">
           <Button variant="secondary" onClick={() => { setOpen(false); setTourOpen(true); }}>{t('Revoir la visite guidée')}</Button>
           <Button onClick={() => setOpen(false)}>{t('Compris')}</Button>
         </div>
       </Modal>
       <Tour open={tourOpen} onClose={closeTour} />
+      <FeedbackModal open={feedback} onClose={() => setFeedback(false)} />
     </>
   );
 }
