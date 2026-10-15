@@ -13,6 +13,8 @@ import SkillPicker from '../common/SkillPicker';
 import { SectionHeader, tint } from './design';
 
 import { deleteWithUndo } from '../../services/undo';
+import { PasteLinks, LinkIcon } from './CourseLinks';
+import { detectLink } from '../../utils/links';
 // Skill ids suggested per track type.
 const SUGGESTED_SKILLS = {
   trading: ['trading-discipline-lv1', 'risk-management-lv1', 'technical-analysis-lv1'],
@@ -146,10 +148,10 @@ export function TrackFormModal({ open, onClose, course, onCreated }) {
 export function ResourceModal({ open, onClose, courseId }) {
   const addResource = useLearningStore((s) => s.addResource);
   const { library, addBookToLibrary, addToReading, isReading, seedCatalog } = useReadingsStore();
-  const [type, setType] = useState('book');
+  const [type, setType] = useState('paste');
   const [q, setQ] = useState('');
   const [f, setF] = useState({ title: '', url: '', author: '', pages: '' });
-  useEffect(() => { if (open) { setType('book'); setQ(''); setF({ title: '', url: '', author: '', pages: '' }); seedCatalog?.(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setType('paste'); setQ(''); setF({ title: '', url: '', author: '', pages: '' }); seedCatalog?.(); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const matches = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -178,13 +180,15 @@ export function ResourceModal({ open, onClose, courseId }) {
     <Modal open={open} onClose={onClose} title="Ajouter une ressource">
       <div className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => setType('paste')}
+            className={`rounded-lg px-2.5 py-1 text-xs border cursor-pointer ${type === 'paste' ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'}`}>Coller des liens</button>
           {RESOURCE_TYPES.map((r) => (
             <button key={r.value} type="button" onClick={() => setType(r.value)}
               className={`rounded-lg px-2.5 py-1 text-xs border cursor-pointer ${type === r.value ? 'border-accent text-accent bg-accent/10' : 'border-line text-mute hover:text-ink'}`}>{r.label}</button>
           ))}
         </div>
 
-        {type === 'book' ? (
+        {type === 'paste' ? <PasteLinks courseId={courseId} onDone={onClose} /> : type === 'book' ? (
           <>
             <Field label="Chercher dans la bibliothèque" hint="Le livre est suivi à un seul endroit : ses pages lues s'affichent ici et dans Lectures.">
               <div className="relative">
@@ -264,8 +268,9 @@ export function ResourcesCard({ course }) {
                     <st.Icon size={16} style={{ color: st.color }} />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <div className={`text-sm truncate ${st.value === 'done' ? 'text-mute line-through' : 'text-ink'}`}>{r.title}</div>
-                    <div className="text-[0.6875rem] text-mute">{resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
+                    {r.url ? <a href={r.url} target="_blank" rel="noreferrer" className={`block text-sm truncate hover:underline ${st.value === 'done' ? 'text-mute line-through' : 'text-ink'}`}>{r.title}</a>
+                      : <div className={`text-sm truncate ${st.value === 'done' ? 'text-mute line-through' : 'text-ink'}`}>{r.title}</div>}
+                    <div className="text-[0.6875rem] text-mute flex items-center gap-1">{r.url ? <><LinkIcon url={r.url} size={11} /> {detectLink(r.url).label}</> : resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
                   </div>
                   {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="p-1 text-mute hover:text-accent" title="Ouvrir"><ExternalLink size={13} /></a>}
                   <button aria-label="Retirer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteWithUndo(null, () => deleteResource(course.id, r.id))}><Trash2 size={12} /></button>
@@ -291,7 +296,7 @@ export function ResourcesCard({ course }) {
           })}
         </div>
       ) : (
-        <p className="text-sm text-mute">Livres, vidéos, cours en ligne, podcasts, outils… Les livres viennent de ta <Link to="/learning?tab=readings" className="text-accent underline">bibliothèque</Link>.</p>
+        <p className="text-sm text-mute">Colle les liens de tes documents (Drive, OneDrive, PDF, vidéos…) : ils restent où ils sont, tu les ouvres d’ici. Les livres viennent de ta <Link to="/learning?tab=readings" className="text-accent underline">bibliothèque</Link>.</p>
       )}
       <ResourceModal open={open} onClose={() => setOpen(false)} courseId={course.id} />
     </Card>

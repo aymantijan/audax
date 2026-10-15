@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Sparkles, History, Check, Camera, Loader2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Sparkles, History, Check, Camera, Loader2, Zap, Repeat } from 'lucide-react';
 import { useAccountingStore } from '../../store/accountingStore';
 import { guessCategory, lastCashAccount, topCategories } from '../../utils/bank-import';
+import { frequentEntries } from '../../utils/quick-entries';
 import { classOf } from '../../utils/chart-of-accounts';
 import { normalizeLabel } from '../../utils/label-analysis';
 import { todayKey } from '../../utils/formatters';
@@ -24,7 +25,8 @@ const KINDS = {
  * your last operation; both stay one tap away to change.
  */
 export default function QuickEntryModal({ open, onClose }) {
-  const { journal, addEntry, getAccountMap, baseCurrency, fxRates } = useAccountingStore();
+  const { journal, addEntry, getAccountMap, baseCurrency, fxRates, addEcheance, editEcheance } = useAccountingStore();
+  const [monthly, setMonthly] = useState(false);
   const accountMap = getAccountMap();
   const [kind, setKind] = useState('expense');
   const [money, setMoney] = useState({ amount: '', currency: null, rate: null });
@@ -62,7 +64,7 @@ export default function QuickEntryModal({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
-    setKind('expense'); setMoney({ amount: '', currency: null, rate: null }); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0); setReadNote('');
+    setKind('expense'); setMoney({ amount: '', currency: null, rate: null }); setLabel(''); setCategory(null); setCash(null); setDate(todayKey()); setCount(0); setReadNote(''); setMonthly(false);
     setTimeout(() => amountRef.current?.focus(), 50);
   }, [open]);
 
@@ -70,6 +72,8 @@ export default function QuickEntryModal({ open, onClose }) {
   const chosenCategory = category || guess.account;
   const chosenCash = cash || lastCashAccount(journal, kind);
   const chips = useMemo(() => topCategories(journal, kind, 6), [journal, kind]);
+  const usual = useMemo(() => frequentEntries(journal, kind, 6), [journal, kind]);
+  const pickUsual = (u) => { setMoney({ amount: String(u.amount), currency: null, rate: null }); setLabel(u.label); setCategory(u.category); setCash(u.cash); };
   const cashChips = useMemo(() => {
     const counts = {};
     for (const e of journal) for (const l of e.lines) if (classOf(l.account) === 5) counts[l.account] = (counts[l.account] || 0) + 1;
@@ -97,6 +101,11 @@ export default function QuickEntryModal({ open, onClose }) {
       : [{ account: chosenCash, debit: amt, credit: 0 }, { account: chosenCategory, debit: 0, credit: amt }];
     const res = addEntry({ date, label: lbl, lines, fx });
     if (!res.ok) { toast(res.error, 'error'); return; }
+    // « Revient chaque mois »: the same operation is then noted by itself each month (autoPost).
+    if (monthly) {
+      const r = addEcheance({ label: lbl, templateId: kind === 'expense' ? 'expense' : 'income', debitAccount: lines[0].account, creditAccount: lines[1].account, amount: amt, dueDate: date, recurrence: 'monthly', autoPost: true });
+      if (r.ok) editEcheance(r.id, { paidDates: [date] });
+    }
     toast(`${KINDS[kind].label} enregistrée : ${lbl} · ${fx ? `${formatMoney(fx.amount, fx.currency)} → ` : ''}${formatMoney(amt, baseCurrency)}`, 'success');
     if (again) {
       setCount((c) => c + 1); setMoney((m) => ({ ...m, amount: '' })); setLabel(''); setCategory(null);
@@ -117,6 +126,20 @@ export default function QuickEntryModal({ open, onClose }) {
             </button>
           ))}
         </div>
+
+        {usual.length > 0 && (
+          <div>
+            <div className="text-xs text-mute mb-1.5 flex items-center gap-1"><Zap size={12} /> Tes habituelles : un appui remplit tout</div>
+            <div className="flex flex-wrap gap-1.5">
+              {usual.map((u) => (
+                <button key={`${u.label}-${u.category}`} type="button" onClick={() => pickUsual(u)}
+                  className={`ui-btn rounded-full px-3 py-1.5 text-xs border cursor-pointer ${label === u.label && Number(amount) === u.amount ? 'border-accent text-accent bg-accent/10' : 'border-line text-ink hover:border-accent'}`}>
+                  {u.label} · <span className="font-data">{formatMoney(u.amount, baseCurrency)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="py-2" style={{ color: amount ? K.color : undefined }}>
           <MoneyInput big value={money} onChange={setMoney} inputRef={amountRef} />
@@ -174,6 +197,11 @@ export default function QuickEntryModal({ open, onClose }) {
           <input type="date" value={date} max={todayKey()} onChange={(e) => setDate(e.target.value)}
             className="bg-surface border border-line rounded-lg px-2 py-1.5 text-xs text-ink" />
         </div>
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={monthly} onChange={(e) => setMonthly(e.target.checked)} />
+          <Repeat size={14} className="text-mute" /> Revient chaque mois (loyer, abonnement, salaire…) : noter automatiquement les prochaines fois
+        </label>
 
         <div className="flex items-center gap-2 pt-1">
           {count > 0 && <span className="text-xs text-good">{count} enregistrée(s)</span>}

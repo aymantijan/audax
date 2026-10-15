@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, Pencil, GraduationCap, Layers, ClipboardList, CalendarClock, Target, Settings2, ChevronRight, AlertTriangle, CheckCircle2,
-  Scale, FileDown } from 'lucide-react';
+  Scale, FileDown, Copy } from 'lucide-react';
 import { useLearningStore } from '../../store/learningStore';
+import { toast } from '../../store/uiStore';
 import {
   termResult, overallResult, requiredGrade, upcomingEvaluations, daysUntil, evalTypeLabel, normGrade, fmtGrade,
 } from '../../utils/academic';
@@ -164,6 +165,7 @@ export default function CursusView() {
   const courses = useLearningStore((s) => s.courses);
   const academic = useLearningStore((s) => s.academic);
   const setActiveTerm = useLearningStore((s) => s.setActiveTerm);
+  const duplicateTerm = useLearningStore((s) => s.duplicateTerm);
   const settings = useAcademicSettings();
   const today = todayKey();
 
@@ -249,6 +251,7 @@ export default function CursusView() {
                 </button>
               ))}
               <button aria-label="Nouveau semestre" onClick={() => setTermModal({})} className="ui-icon-btn inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-sm border border-dashed border-line text-mute hover:text-accent hover:border-accent cursor-pointer" title="Nouveau semestre"><Plus size={14} /></button>
+              <button aria-label="Recopier ce semestre" title="Recopier ce semestre (mêmes matières, sans les notes)" onClick={() => { const r = duplicateTerm(term.id); if (r) toast(`Semestre recopié : ${r.courses} matière${r.courses > 1 ? 's' : ''}, sans notes ni dates.`, 'success'); }} className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer"><Copy size={13} /></button>
               <button aria-label="Modifier le semestre" onClick={() => setTermModal({ term })} className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" title="Modifier le semestre"><Pencil size={13} /></button>
             </div>
             <div className="text-xs text-mute mt-2">

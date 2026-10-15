@@ -48,6 +48,9 @@ async function callExtract(kind, file) {
 // Photo/PDF of a timetable → import-format text lines to review.
 export const extractTimetable = async (file) => (await callExtract('timetable', file)).text || '';
 
+// Photo/PDF of a course plan → lines for PasteProgramme (utils/links.js parseProgramme), to review.
+export const extractSyllabus = async (file) => (await callExtract('syllabus', file)).text || '';
+
 // Photo of a receipt → { amount, currency, date, merchant, category } to review.
 export const extractReceipt = (file) => callExtract('receipt', file);
 

@@ -196,6 +196,27 @@ export const useLearningStore = create(
         });
       },
       setActiveTerm: (id) => get().updateAcademicSettings({ activeTermId: id }),
+      // « Recopier ce semestre » (chantier 9): same modules, subjects, evaluation
+      // split and plan, without grades, dates, attendance or done tasks.
+      duplicateTerm: (id, name) => {
+        const a = get().academic;
+        const src = a.terms.find((t) => t.id === id);
+        if (!src) return null;
+        const term = { id: uid(), name: name || `${src.name} (copie)`, year: '', startDate: '', endDate: '', midtermsDate: '', createdAt: Date.now() };
+        const moduleIds = {};
+        const modules = a.modules.filter((m) => m.termId === id).map((m) => { const nm = { ...m, id: uid(), termId: term.id }; moduleIds[m.id] = nm.id; return nm; });
+        const courses = get().courses.filter((c) => c.termId === id && c.status !== 'dropped').map((c) => ({
+          ...c,
+          id: uid(), termId: term.id, moduleId: c.moduleId ? moduleIds[c.moduleId] || null : null,
+          status: 'active', actualGrade: null, targetGrade: null, completedAt: null, googleEventLink: null, updatedAt: Date.now(), createdAt: Date.now(),
+          slots: [], folderUrl: null,
+          evaluations: (c.evaluations || []).map((ev) => ({ ...ev, id: uid(), grade: null, retakeGrade: null, date: '' })),
+          chapters: (c.chapters || []).map((ch) => ({ ...ch, id: uid(), checklistItems: (ch.checklistItems || []).map((it) => ({ ...it, id: uid(), completed: false, completedDate: null })) })),
+          resources: [],
+        }));
+        set({ academic: { ...a, terms: [...a.terms, term], modules: [...a.modules, ...modules], settings: { ...a.settings, activeTermId: term.id } }, courses: [...get().courses, ...courses] });
+        return { termId: term.id, courses: courses.length };
+      },
 
       addModule: (data) => {
         const a = get().academic;

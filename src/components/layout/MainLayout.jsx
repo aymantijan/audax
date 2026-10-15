@@ -7,6 +7,7 @@ import SampleBanner from './SampleBanner';
 import DemoBanner from './DemoBanner';
 import AssistantPanel from '../assistant/AssistantPanel';
 import { syncChallengeScores } from '../../services/challenges';
+import { useAccountingStore } from '../../store/accountingStore';
 import { StudyTimerDock } from '../learning/StudyTimer';
 import { useAutoHabitSync } from '../../hooks/useAutoHabitSync';
 import QuickAdd from './QuickAdd';
@@ -16,6 +17,8 @@ import { ToastContainer, PageLoader } from '../common/ui';
 export default function MainLayout() {
   const location = useLocation();
   useAutoHabitSync(); // measured habits tick themselves from the other sections
+  // Payments marked « automatique » are noted on their date, wherever the app is opened (chantier 9).
+  useEffect(() => { useAccountingStore.getState().autoPostEcheances?.(); }, []);
   // Challenges: publish my scores once, a little after opening (only if signed in).
   useEffect(() => {
     const t = setTimeout(() => { syncChallengeScores().catch(() => {}); }, 15000);

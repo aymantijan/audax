@@ -29,8 +29,11 @@ import { useAcademicSettings, GradePill, BigStat, SectionHeader, MentionTag, tin
 import { courseColor } from '../components/learning/course-color';
 import { CourseEndControl, CourseAttendanceSummary, ClassNotesCard } from '../components/learning/Attendance';
 import { ForecastCard } from '../components/learning/Forecast';
-import { skillLabel } from '../utils/skill-families';
+import { skillLabel } from '../utils/skill-families';
+
 import { deleteWithUndo } from '../services/undo';
+import { normalizeUrl } from '../utils/links';
+import { CourseFolder, PasteProgramme, LinkIcon } from '../components/learning/CourseLinks';
 
 const cellCls = 'w-full bg-surface border border-line rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:border-accent';
 const parseNum = (v) => (v === '' ? null : Number(String(v).replace(',', '.')));
@@ -183,13 +186,15 @@ function ProgrammeCard({ course }) {
   const [chapterModal, setChapterModal] = useState(null);
   const [itemModal, setItemModal] = useState(null);
   const [confirm, setConfirm] = useState(null); // { label, run }
+  const [pasting, setPasting] = useState(false);
   const progress = calculateCourseProgress(course);
   const color = courseColor(course.id);
 
   const saveChapter = (data) => {
     const coefficient = Math.max(0.5, Math.min(2, Number(data.coefficient) || 1));
-    if (chapterModal?.isAdd) updateCourse(course.id, { chapters: [...chapters, { id: uid(), title: data.title || 'Sans titre', coefficient, checklistItems: [] }] });
-    else updateCourse(course.id, { chapters: chapters.map((ch) => (ch.id === chapterModal.data.id ? { ...ch, title: data.title, coefficient } : ch)) });
+    const url = data.url ? normalizeUrl(data.url) : null;
+    if (chapterModal?.isAdd) updateCourse(course.id, { chapters: [...chapters, { id: uid(), title: data.title || 'Sans titre', url, coefficient, checklistItems: [] }] });
+    else updateCourse(course.id, { chapters: chapters.map((ch) => (ch.id === chapterModal.data.id ? { ...ch, title: data.title, url, coefficient } : ch)) });
   };
   const deleteChapter = (id) => updateCourse(course.id, { chapters: chapters.filter((ch) => ch.id !== id) });
   const saveItem = (data) => {
@@ -208,7 +213,7 @@ function ProgrammeCard({ course }) {
   return (
     <Card>
       <SectionHeader icon={ListChecks} title="Programme" subtitle="Chapitres et tâches pondérés — cocher une tâche fait avancer la régularité du jour."
-        action={<Button variant="secondary" className="!py-1.5" onClick={() => setChapterModal({ data: {}, isAdd: true })}><span className="flex items-center gap-1"><Plus size={13} /> Chapitre</span></Button>} />
+        action={<span className="flex gap-1.5"><Button variant="secondary" className="!py-1.5" onClick={() => setPasting(true)}>Coller le plan</Button><Button variant="secondary" className="!py-1.5" onClick={() => setChapterModal({ data: {}, isAdd: true })}><span className="flex items-center gap-1"><Plus size={13} /> Chapitre</span></Button></span>} />
       {chapters.length > 0 && (
         <div className="mb-4">
           <div className="flex justify-between text-xs text-mute mb-1"><span>Avancement</span><span className="text-ink tabular-nums">{progress}%</span></div>
@@ -229,6 +234,7 @@ function ProgrammeCard({ course }) {
                 <div className="flex items-center gap-2 px-3 py-2.5">
                   <button onClick={() => setOpen((o) => ({ ...o, [ch.id]: !isOpen }))} className="ui-icon-btn inline-flex items-center justify-center text-mute cursor-pointer">{isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
                   <span className="text-sm font-medium flex-1 min-w-0 truncate">{ch.title}</span>
+                  {ch.url && <a href={ch.url} target="_blank" rel="noreferrer" aria-label={`Ouvrir le document : ${ch.title}`} title="Ouvrir le document" className="ui-icon-btn inline-flex items-center justify-center p-1 text-accent"><LinkIcon url={ch.url} size={14} /></a>}
                   <span className="text-xs text-mute whitespace-nowrap">{done}/{items.length} · ×{ch.coefficient}</span>
                   <span className="text-xs font-semibold w-10 text-right tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : undefined }}>{pct}%</span>
                   <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setChapterModal({ data: ch, isAdd: false })} title="Modifier"><Pencil size={12} /></button>
@@ -240,6 +246,7 @@ function ProgrammeCard({ course }) {
                       <div key={it.id} className="py-1.5 flex items-center gap-2 text-sm group">
                         <input type="checkbox" checked={it.completed} onChange={() => toggleChecklistItem(course.id, ch.id, it.id)} className="cursor-pointer accent-[var(--accent-primary)]" />
                         <span className={`flex-1 min-w-0 ${it.completed ? 'line-through text-mute' : ''}`}>{it.title}</span>
+                        {it.url && <a href={it.url} target="_blank" rel="noreferrer" aria-label={`Ouvrir : ${it.title}`} className="ui-icon-btn inline-flex items-center justify-center p-1 text-accent"><LinkIcon url={it.url} size={12} /></a>}
                         <span className="text-[0.6875rem] text-mute">×{it.coefficient}</span>
                         <button className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => setItemModal({ chapterId: ch.id, data: it, isAdd: false })}><Pencil size={11} /></button>
                         <button className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteWithUndo(null, () => deleteItem(ch.id, it.id))}><Trash2 size={11} /></button>
@@ -253,13 +260,14 @@ function ProgrammeCard({ course }) {
           })}
         </div>
       ) : (
-        <p className="text-sm text-mute">Découpe la matière en chapitres (d'après le plan du cours) pour suivre ton avancement.</p>
+        <p className="text-sm text-mute">Découpe la matière en chapitres pour suivre ton avancement. Le plus rapide : « Coller le plan » depuis le syllabus ou le sommaire du cours.</p>
       )}
 
       {chapterModal && (
         <EntityFormModal open onClose={() => setChapterModal(null)} title={chapterModal.isAdd ? 'Nouveau chapitre' : 'Modifier le chapitre'}
           fields={[
             { name: 'title', label: 'Titre du chapitre', type: 'text' },
+            { name: 'url', label: 'Lien vers le document (facultatif)', type: 'text', placeholder: 'https://… (Drive, OneDrive, PDF…)' },
             { name: 'coefficient', label: 'Poids', type: 'number', step: '0.1', min: 0.5, max: 2, hint: '0,5 à 2 (importance par rapport aux autres chapitres)' },
           ]}
           initial={chapterModal.isAdd ? { coefficient: 1 } : chapterModal.data}
@@ -276,6 +284,7 @@ function ProgrammeCard({ course }) {
           onSave={saveItem}
           onDelete={itemModal.isAdd ? null : () => deleteItem(itemModal.chapterId, itemModal.data.id)} />
       )}
+      <PasteProgramme course={course} open={pasting} onClose={() => setPasting(false)} />
       <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Confirmer">
         <p className="text-sm text-mute">{confirm?.label}</p>
         <div className="flex justify-end gap-2 mt-5">
@@ -379,6 +388,7 @@ export default function CoursePage() {
               {[course.institution, course.professor, acad ? `coef. ${course.coefficient ?? 1}` : null, Number(course.credits) > 0 ? `${course.credits} crédits` : null].filter(Boolean).join(' · ')}
               {course.updatedAt && <span className="text-xs"> · modifié le {new Date(course.updatedAt).toLocaleDateString('fr-FR')}</span>}
             </p>
+            <CourseFolder course={course} />
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             {course.status === 'active' && (
@@ -434,12 +444,12 @@ export default function CoursePage() {
               <ProgrammeCard course={course} />
             </div>
             <div className="lg:col-span-2 space-y-5 order-first lg:order-none">
+              <ResourcesCard course={course} />
               <ForecastCard course={course} />
               <SimulatorCard key={`${course.id}-${course.targetGrade}`} course={course} settings={settings} />
               <FlashcardsCard course={course} />
               <SlotsCard course={course} />
               <ClassNotesCard course={course} />
-              <ResourcesCard course={course} />
             </div>
           </div>
         </>

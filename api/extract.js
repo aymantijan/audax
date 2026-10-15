@@ -3,6 +3,8 @@
 // 12 functions): body { kind, mimeType, data (base64) }.
 //   kind 'timetable' → { text }: lines "Matière ; Jour ; Début-Fin ; Enseignant ; Salle ; Type"
 //   kind 'receipt'   → { amount, currency, date, merchant, category }
+//   kind 'syllabus'  → { text }: a course plan, one chapter per line, its tasks as "- …" lines
+//                      (format read by src/utils/links.js parseProgramme)
 //   kind 'text'      → { draft } — body { kind, text, context }: one free sentence
 //                      from the + button, as a draft checked again on the device
 //                      (utils/quick-capture.js normalizeDraft). Nothing is saved.
@@ -18,6 +20,13 @@ const TIMETABLE = [
   'Jour en toutes lettres en français (Lundi…Dimanche). Horaires au format 8h30-10h00. Type parmi Cours, TD, TP, Séminaire (Cours si inconnu).',
   'Laisse Enseignant et Salle vides s’ils ne figurent pas (garde les points-virgules). Un créneau par ligne ; une même matière peut avoir plusieurs lignes.',
   'N’invente rien : ignore ce qui est illisible. Aucun texte avant ou après les lignes, pas de puces, pas de Markdown.',
+].join(' ');
+
+const SYLLABUS = [
+  'Tu extrais le plan d’un cours (syllabus, sommaire, programme) d’une image ou d’un PDF.',
+  'Réponds UNIQUEMENT par des lignes : une ligne par chapitre ou partie, avec sa numérotation d’origine si elle existe ;',
+  'sous un chapitre, ses sous-parties ou travaux sur des lignes commençant par "- ".',
+  'Garde les titres tels qu’écrits, dans leur langue. N’invente rien, ignore les dates, horaires, noms et consignes administratives. Pas de Markdown, aucun texte avant ou après.',
 ].join(' ');
 
 const RECEIPT = [
@@ -65,7 +74,7 @@ export default async function handler(req, res) {
   const guard = await guardAiRequest(req, res, { isConfigured: isGeminiConfigured });
   if (!guard) return;
   const { kind, mimeType, data } = req.body || {};
-  if (!['timetable', 'receipt', 'text'].includes(kind)) return res.status(400).json({ error: 'bad_kind' });
+  if (!['timetable', 'receipt', 'text', 'syllabus'].includes(kind)) return res.status(400).json({ error: 'bad_kind' });
   if (kind === 'text') {
     const text = typeof req.body.text === 'string' ? req.body.text.trim().slice(0, 500) : '';
     if (!text) return res.status(400).json({ error: 'bad_text' });
@@ -93,6 +102,11 @@ export default async function handler(req, res) {
       const { text } = await aiText({ system: TIMETABLE, contents: [{ role: 'user', parts: [file, { text: 'Extrais l’emploi du temps.' }] }], maxTokens: 2000, temperature: 0.1 }, { userKey: guard.userKey });
       const lines = text.split(/\r?\n/).map((l) => l.replace(/^[-*•\s]+/, '').replace(/`/g, '').trim()).filter((l) => l.includes(';'));
       return res.status(200).json({ text: lines.join('\n') });
+    }
+    if (kind === 'syllabus') {
+        const { text } = await aiText({ system: SYLLABUS, contents: [{ role: 'user', parts: [file, { text: 'Extrais le plan du cours.' }] }], maxTokens: 2500, temperature: 0.1 }, { userKey: guard.userKey });
+        const lines = text.split(/\r?\n/).map((l) => l.replace(/`/g, '').replace(/^\s*[*•]\s+/, '- ').trimEnd()).filter((l) => l.trim() && !/^#+\s/.test(l));
+        return res.status(200).json({ text: lines.join('\n') });
     }
     const { text } = await aiText({ system: RECEIPT, contents: [{ role: 'user', parts: [file, { text: 'Lis ce reçu.' }] }], maxTokens: 300, temperature: 0.1, json: true }, { userKey: guard.userKey });
     const receipt = parseReceipt(text);

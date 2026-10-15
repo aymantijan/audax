@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle, Pencil } from 'lucide-react';
+import { Trash2, Plus, ScanBarcode, Repeat, RefreshCw, Salad, AlertTriangle, Pencil, Zap, Copy } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
+import { frequentFoods } from '../../utils/quick-entries';
 import { useAuthStore } from '../../store/authStore';
 import { FOOD_DB, getServingOptions, estimateMacros } from '../../utils/nutrition-db';
 import { getFoodMicros } from '../../utils/food-micronutrients';
@@ -80,6 +81,13 @@ export default function NutritionTracker({ pendingPrompt }) {
   // The list follows the day chosen in the form: a forgotten day can be checked and corrected.
   const isLogToday = logDate === todayKey();
   const dayEntries = isLogToday ? entries : nutritionLogs.filter((n) => n.date === logDate);
+  // One-tap logging (chantier 9): usual foods, and the day before copied in one go.
+  const usualFoods = useMemo(() => frequentFoods(nutritionLogs, 8), [nutritionLogs]);
+  const prevDay = (() => { const d = new Date(`${logDate}T12:00:00`); d.setDate(d.getDate() - 1); return todayKey(d); })();
+  const prevDayEntries = nutritionLogs.filter((n) => n.date === prevDay);
+  const copyPrevDay = () => {
+    for (const en of prevDayEntries) logMeal(en.name, en.amount ?? en.grams, en.unit || 'g', undefined, logDate, en.time);
+  };
   const activePlan = getActiveNutritionPlan();
   const planDirty = activePlan && healthProfile.lastRecomputedAt && healthProfile.lastRecomputedAt > activePlan.generatedAt;
   const microRDA = useMemo(() => getMicronutrientRDA(gender, healthProfile.lifeStage, !!healthProfile.breastfeeding), [gender, healthProfile.lifeStage, healthProfile.breastfeeding]);
@@ -197,9 +205,31 @@ export default function NutritionTracker({ pendingPrompt }) {
       ) : null}
 
       <Card title="Saisie rapide" action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setScanOpen(true)}><span className="flex items-center gap-1.5"><ScanBarcode size={13} /> Scanner un code-barres</span></Button>}>
+        {(usualFoods.length > 0 || prevDayEntries.length > 0) && (
+          <div className="mb-4 space-y-2">
+            {usualFoods.length > 0 && (
+              <div>
+                <div className="text-xs text-mute mb-1.5 flex items-center gap-1"><Zap size={12} /> Tes aliments habituels : un appui suffit</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {usualFoods.map((f) => (
+                    <button key={f.name} type="button" onClick={() => logMeal(f.name, f.amount, f.unit, pendingPrompt?.id, logDate)}
+                      className="ui-btn rounded-full border border-line px-3 py-1.5 text-xs hover:border-accent cursor-pointer">
+                      + {f.name} <span className="text-mute">· {f.amount}{f.unit === 'g' ? ' g' : ` ${f.unit}`}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {prevDayEntries.length > 0 && dayEntries.length === 0 && (
+              <Button type="button" variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={copyPrevDay}>
+                <span className="flex items-center gap-1.5"><Copy size={13} /> Comme la veille ({prevDayEntries.length} aliment{prevDayEntries.length > 1 ? 's' : ''})</span>
+              </Button>
+            )}
+          </div>
+        )}
         <form onSubmit={submit} className="flex flex-wrap gap-3 items-end">
-          <Field label="Food">
-            <Input list="food-db" value={name} onChange={(e) => changeName(e.target.value)} placeholder="e.g. Chicken breast, egg, banana…" />
+          <Field label="Aliment">
+            <Input list="food-db" value={name} onChange={(e) => changeName(e.target.value)} placeholder="ex. riz, poulet, œuf, banane…" />
             <datalist id="food-db">
               {FOOD_DB.map((f) => <option key={f.name} value={f.name} />)}
             </datalist>
@@ -430,7 +460,7 @@ export default function NutritionTracker({ pendingPrompt }) {
         )}
         {entries.length > 0 && (
           <div className="flex gap-2 mt-3">
-            <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Template name (e.g. Breakfast Standard)" />
+            <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="Nom du modèle (ex. Petit-déjeuner habituel)" />
             <Button variant="secondary" onClick={saveTemplate}><span className="flex items-center gap-2"><Plus size={14} /> Enregistrer comme modèle</span></Button>
           </div>
         )}
