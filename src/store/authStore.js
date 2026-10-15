@@ -92,6 +92,7 @@ export const useAuthStore = create(
             theme: profile.theme || readLocalDisplay().theme || 'dark',
             textSize: profile.textSize || readLocalDisplay().textSize || 'normal',
             contrast: profile.contrast || readLocalDisplay().contrast || 'normal',
+            language: profile.language || readLocalDisplay().language || 'fr',
             uiLevel: 'simple',
             createdAt: Date.now(),
             onboarded: false, // gates App.jsx into the Onboarding wizard until completeOnboarding()

@@ -27,6 +27,7 @@ import LifeReviewCard from '../components/today/LifeReviewCard';
 import YesterdayCard from '../components/today/YesterdayCard';
 
 import { useCustomCards } from '../components/today/CustomCards';
+import { t, locale } from '../i18n';
 export default function Today() {
   const user = useAuthStore((s) => s.user);
   const today = todayKey();
@@ -80,39 +81,39 @@ export default function Today() {
   // Every card of the page, in the default order; the person can reorder or hide
   // them (Organiser), saved in their profile so every device shows the same page.
   const cards = [
-    { id: 'briefing', label: 'Briefing du jour', node: (
+    { id: 'briefing', label: t('Briefing du jour'), node: (
       <>
         <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
       </>
     ) },
-    { id: 'exam', label: 'Mode examen', node: (
+    { id: 'exam', label: t('Mode examen'), node: (
       <>
         <ExamDayCard />
       </>
     ) },
-    { id: 'nudge', label: 'Suggestions de modules', node: (
+    { id: 'nudge', label: t('Suggestions de modules'), node: (
       <>
         <NudgeCard />
       </>
     ) },
-    { id: 'week', label: 'Bilan de la semaine (dimanche et lundi)', node: (
+    { id: 'week', label: t('Bilan de la semaine (dimanche et lundi)'), node: (
       <>
         {/* Sunday and Monday: time to look back at the week */}
         {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}
       </>
     ) },
-    { id: 'nextClass', label: 'Prochain cours', node: (
+    { id: 'nextClass', label: t('Prochain cours'), node: (
       <>
         {/* ---- Class check-in (attendance habit) ---- */}
         <NextClassBanner />
       </>
     ) },
-    { id: 'habits', label: 'Habitudes du jour', node: (
+    { id: 'habits', label: t('Habitudes du jour'), node: (
       <>
         <YesterdayCard />
         {/* ---- Habits: the primary daily checklist ---- */}
         <Card
-          title="Habitudes du jour"
+          title={t('Habitudes du jour')}
           action={<span className="text-xs text-mute">{doneToday.length}/{dueToday.length}</span>}
         >
           {dueToday.length ? (
@@ -122,15 +123,15 @@ export default function Today() {
                 const streak = habitStreak(h.id, logs, today, h);
                 return (
                   <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-                    <button type="button" aria-label={done ? `Décocher ${h.name}` : `Cocher ${h.name}`} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
+                    <button type="button" aria-label={done ? t('Décocher {name}', { name: h.name }) : t('Cocher {name}', { name: h.name })} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
                       {done ? <CheckCircle2 size={19} /> : <Circle size={19} className="text-mute" />}
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
                       <div className="text-xs text-mute">
-                        {HABIT_CATEGORY_LABELS[h.category] || h.category}
-                        {h.mandatory ? ' · prioritaire' : ''}
-                        {streak > 0 ? ` · série ${streak} ${streakUnit(h)}` : ''}
+                        {t(HABIT_CATEGORY_LABELS[h.category] || h.category)}
+                        {h.mandatory ? ` · ${t('prioritaire')}` : ''}
+                        {streak > 0 ? ` · ${t('série')} ${streak} ${t(streakUnit(h))}` : ''}
                         {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
                       </div>
                     </div>
@@ -140,53 +141,53 @@ export default function Today() {
               })}
             </ul>
           ) : (
-            <EmptyState>Aucune habitude programmée aujourd'hui.</EmptyState>
+            <EmptyState>{t('Aucune habitude programmée aujourd’hui.')}</EmptyState>
           )}
           {allHabitsDone && (
             <div className="mt-3 flex items-center gap-2 text-sm text-good">
-              <Sparkles size={15} /> Tout est fait — protège ta série demain.
+              <Sparkles size={15} /> {t('Tout est fait — protège ta série demain.')}
             </div>
           )}
         </Card>
       </>
     ) },
-    { id: 'checkin', label: 'Check-in du matin', node: (
+    { id: 'checkin', label: t('Check-in du matin'), node: (
       <>
         {/* ---- Morning check-in ---- */}
-        <Card title="Check-in du matin">
+        <Card title={t('Check-in du matin')}>
           {todayEnergyLog ? (
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="text-mute text-xs">Énergie</div>
+                <div className="text-mute text-xs">{t('Énergie')}</div>
                 <div className="text-lg font-semibold">{todayEnergyLog.energyStartLevel}/10</div>
               </div>
               <div>
-                <div className="text-mute text-xs">Sommeil</div>
+                <div className="text-mute text-xs">{t('Sommeil')}</div>
                 <div className="text-lg font-semibold">{todayEnergyLog.sleepData?.sleepQualityScore ?? '—'}/10</div>
               </div>
               <div>
-                <div className="text-mute text-xs">Stress</div>
+                <div className="text-mute text-xs">{t('Stress')}</div>
                 <div className="text-lg font-semibold">{todayEnergyLog.stressLevel}/10</div>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-mute">
-                <Sunrise size={16} /> Pas encore fait aujourd'hui.
+                <Sunrise size={16} /> {t('Pas encore fait aujourd’hui.')}
               </div>
               <Link to="/habits">
-                <Button className="!px-3 !py-1.5 text-xs">Faire le check-in</Button>
+                <Button className="!px-3 !py-1.5 text-xs">{t('Faire le check-in')}</Button>
               </Link>
             </div>
           )}
         </Card>
       </>
     ) },
-    { id: 'echeances', label: 'Échéances', node: (
+    { id: 'echeances', label: t('Échéances'), node: (
       <>
         {/* ---- Finance: échéances ---- */}
         {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
-          <Card title="Échéances">
+          <Card title={t('Échéances')}>
             <ul className="space-y-2">
               {overdueEcheances.map((e) => (
                 <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} overdue accountingStore={accountingStore} />
@@ -199,38 +200,38 @@ export default function Today() {
         )}
       </>
     ) },
-    { id: 'health', label: 'Santé', node: (
+    { id: 'health', label: t('Santé'), node: (
       <>
         {/* ---- Health ---- */}
         <Card
-          title="Santé"
+          title={t('Santé')}
           action={
             <Link to="/health" className="text-xs text-accent hover:underline flex items-center gap-1">
-              Ouvrir <ChevronRight size={12} />
+              {t('Ouvrir')} <ChevronRight size={12} />
             </Link>
           }
         >
           <div className="flex items-center gap-6 text-sm flex-wrap">
             <div className="flex items-center gap-1.5">
               <HeartPulse size={15} className={workedOutToday ? 'text-good' : 'text-mute'} />
-              <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? 'Séance enregistrée' : 'Pas de séance'}</span>
+              <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? t('Séance enregistrée') : t('Pas de séance')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Receipt size={15} className={loggedMealToday ? 'text-good' : 'text-mute'} />
-              <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? 'Repas enregistré' : 'Aucun repas enregistré'}</span>
+              <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? t('Repas enregistré') : t('Aucun repas enregistré')}</span>
             </div>
           </div>
           {pendingPrompts.length > 0 && (
             <ul className="mt-3 space-y-2">
               {pendingPrompts.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
-                  <span>Enregistrer « {p.habitName} » comme activité santé ?</span>
+                  <span>{t('Enregistrer « {name} » comme activité santé ?', { name: p.habitName })}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Link to="/health">
-                      <Button className="!px-2.5 !py-1 text-xs">Enregistrer</Button>
+                      <Button className="!px-2.5 !py-1 text-xs">{t('Enregistrer')}</Button>
                     </Link>
                     <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
-                      Ignorer
+                      {t('Ignorer')}
                     </Button>
                   </div>
                 </li>
@@ -240,7 +241,7 @@ export default function Today() {
         </Card>
       </>
     ) },
-    { id: 'focus', label: 'Concentration et création', node: (
+    { id: 'focus', label: t('Concentration et création'), node: (
       <>
         {/* ---- Focus / Creative ---- */}
         {(() => {
@@ -250,18 +251,18 @@ export default function Today() {
           const showCreative = creativeOn && creativeWorks.length > 0;
           if (!showFocus && !showCreative) return null;
           return (
-            <Card title="Concentration et création">
+            <Card title={t('Concentration et création')}>
               <div className="flex items-center gap-6 text-sm flex-wrap">
                 {showFocus && (
                   <Link to="/focus" className="flex items-center gap-1.5 hover:text-accent">
                     <Timer size={15} className="text-mute" />
-                    <span>{todayFocusMinutes > 0 ? `${todayFocusMinutes} min aujourd'hui` : 'Aucune session aujourd\'hui'}</span>
+                    <span>{todayFocusMinutes > 0 ? t('{n} min aujourd’hui', { n: todayFocusMinutes }) : t('Aucune session aujourd’hui')}</span>
                   </Link>
                 )}
                 {showCreative && (
                   <Link to="/creative" className="flex items-center gap-1.5 hover:text-accent">
                     <Palette size={15} className="text-mute" />
-                    <span>{inProgressWorks.length} œuvre{inProgressWorks.length !== 1 ? 's' : ''} en cours</span>
+                    <span>{inProgressWorks.length === 1 ? t('1 œuvre en cours') : t('{n} œuvres en cours', { n: inProgressWorks.length })}</span>
                   </Link>
                 )}
               </div>
@@ -270,11 +271,11 @@ export default function Today() {
         })()}
       </>
     ) },
-    { id: 'learning', label: 'Études et lecture', node: (
+    { id: 'learning', label: t('Études et lecture'), node: (
       <>
         {/* ---- Learning & reading ---- */}
         {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (
-          <Card title="Apprentissage & lecture">
+          <Card title={t('Apprentissage & lecture')}>
             <div className="space-y-3">
               {focusCourse && (
                 <Link
@@ -296,11 +297,11 @@ export default function Today() {
                   </div>
                   {!readToday ? (
                     <Link to="/learning/readings" className="text-xs text-accent hover:underline shrink-0">
-                      Lire aujourd'hui
+                      {t('Lire aujourd’hui')}
                     </Link>
                   ) : (
                     <span className="text-xs text-good shrink-0 flex items-center gap-1">
-                      <Flame size={12} /> série {readingStreak}j
+                      <Flame size={12} /> {t('série {n} j', { n: readingStreak })}
                     </span>
                   )}
                 </div>
@@ -317,8 +318,8 @@ export default function Today() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Bonjour, {user?.name}</h1>
-          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — ce qu'il te reste à faire aujourd'hui.</p>
+          <h1 className="text-2xl font-bold">{t('Bonjour, {name}', { name: user?.name })}</h1>
+          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — {t('ce qu’il te reste à faire aujourd’hui.')}</p>
         </div>
         <OrganizeButton cards={cards} />
       </div>
@@ -334,7 +335,7 @@ function EcheanceRow({ e, overdue, accountingStore }) {
       <div className="min-w-0">
         <div className="text-sm truncate">{e.label}</div>
         <div className={`text-xs ${overdue ? 'text-bad' : 'text-mute'}`}>
-          {overdue ? 'En retard — ' : ''}
+          {overdue ? `${t('En retard')} — ` : ''}
           {fmtDate(e.occurrenceDate)} · {e.type === 'produit' ? '+' : '-'}{fmtMAD(e.amount)}
         </div>
       </div>
@@ -342,7 +343,7 @@ function EcheanceRow({ e, overdue, accountingStore }) {
         className="!px-2.5 !py-1 text-xs shrink-0"
         onClick={() => accountingStore.markEcheancePaid(e.id, e.occurrenceDate)}
       >
-        Marquer payé
+        {t('Marquer payé')}
       </Button>
     </li>
   );

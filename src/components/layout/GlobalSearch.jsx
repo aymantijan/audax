@@ -4,6 +4,7 @@ import { Search, X, Compass, Zap, Wallet, Flame, BookOpen, Library, GitBranch, P
 import { buildSearchIndex, buildNavItems, searchIndex } from '../../utils/global-search';
 import { useAuthStore } from '../../store/authStore';
 import { openAssistant } from '../../services/assistant';
+import { t } from '../../i18n';
 
 const DOMAIN_ICON = {
   Finance: Wallet, Habits: Flame, Learning: BookOpen, Reading: Library,
@@ -71,7 +72,7 @@ export default function GlobalSearch() {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} aria-label="Rechercher (Ctrl K)" className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title="Rechercher (Ctrl K)">
+      <button type="button" onClick={() => setOpen(true)} aria-label={t('Rechercher (Ctrl K)')} className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-ink hover:bg-card transition-colors cursor-pointer" title={t('Rechercher (Ctrl K)')}>
         <Search size={18} />
       </button>
     );
@@ -88,20 +89,20 @@ export default function GlobalSearch() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
             onKeyDown={onKeyDownInput}
-            placeholder="Une page, une action, un cours, une habitude, un livre…"
-            aria-label="Rechercher"
+            placeholder={t('Une page, une action, un cours, une habitude, un livre…')}
+            aria-label={t('Rechercher')}
             className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-mute"
           />
-          <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="ui-icon-btn flex items-center justify-center text-mute hover:text-ink cursor-pointer shrink-0">
+          <button type="button" onClick={() => setOpen(false)} aria-label={t('Fermer')} className="ui-icon-btn flex items-center justify-center text-mute hover:text-ink cursor-pointer shrink-0">
             <X size={16} />
           </button>
         </div>
         <div className="max-h-[70dvh] sm:max-h-96 overflow-y-auto">
           {query.trim() && results.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-mute">Aucun résultat pour « {query} ».</div>
+            <div className="px-4 py-8 text-center text-sm text-mute">{t('Aucun résultat pour « {query} ».', { query })}</div>
           )}
           {!query.trim() && (
-            <div className="px-4 pt-3 pb-1 text-xs text-mute uppercase tracking-wide">Actions rapides · tape pour chercher partout</div>
+            <div className="px-4 pt-3 pb-1 text-xs text-mute uppercase tracking-wide">{t('Actions rapides · tape pour chercher partout')}</div>
           )}
           {results.map((item, i) => {
             const Icon = DOMAIN_ICON[item.domain] || Search;

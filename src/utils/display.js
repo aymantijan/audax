@@ -2,6 +2,8 @@
 // Saved on the profile (every device follows) and on this device, so the very
 // first screen — before any account exists — already uses them.
 // The CSS lives in styles/globals.css ([data-text], [data-contrast], [data-theme]).
+// The language (chantier 6b) travels with them.
+import { setLanguage } from '../i18n/index.js';
 
 export const TEXT_SIZES = [
   { value: 'normal', label: 'Normal', sample: 'Aa' },
@@ -28,11 +30,13 @@ export function resolveDisplay(user) {
     theme: user?.theme || local.theme || 'dark',
     textSize: user?.textSize || local.textSize || 'normal',
     contrast: user?.contrast || local.contrast || 'normal',
+    language: user?.language || local.language || 'fr',
   };
 }
 
-export function applyDisplay({ theme, textSize, contrast }) {
+export function applyDisplay({ theme, textSize, contrast, language }) {
   const root = document.documentElement;
+  setLanguage(language || 'fr'); // sets lang/dir and loads the dictionary (i18n/index.js)
   root.dataset.theme = theme || 'dark';
   root.dataset.text = textSize || 'normal';
   root.dataset.contrast = contrast || 'normal';

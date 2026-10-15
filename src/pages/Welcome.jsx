@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from '../services/supabase';
 import CloudAuthPanel from '../components/auth/CloudAuthPanel';
 import DisplayControls from '../components/common/DisplayControls';
 import { Button, Field, Input, Select } from '../components/common/ui';
+import { t } from '../i18n';
 
 // When Supabase is configured, cloud accounts are the ONLY path — a local-only
 // "just type a name" fallback next to it would let anyone on a shared deployed
@@ -20,7 +21,7 @@ export default function Welcome() {
 
   const submit = (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return setError('Indique ton prénom pour continuer.');
+    if (!form.name.trim()) return setError(t('Indique ton prénom pour continuer.'));
     register(form); // takes the reading comfort chosen above (authStore → readLocalDisplay)
   };
 
@@ -33,13 +34,13 @@ export default function Welcome() {
         </div>
         <p className="text-center text-mute mb-8 text-sm">
           {isSupabaseConfigured
-            ? 'Études, argent, santé, habitudes : organise ta vie au même endroit. Connecte-toi ou crée ton compte.'
-            : 'Études, argent, santé, habitudes : organise ta vie au même endroit. Tout reste sur cet appareil.'}
+            ? t('Études, argent, santé, habitudes : organise ta vie au même endroit. Connecte-toi ou crée ton compte.')
+            : t('Études, argent, santé, habitudes : organise ta vie au même endroit. Tout reste sur cet appareil.')}
         </p>
 
         {/* Confort de lecture dès le premier écran (A4) */}
         <div className="mb-4 rounded-xl border border-line bg-card p-3">
-          <div className="text-xs text-mute mb-2">Confort de lecture</div>
+          <div className="text-xs text-mute mb-2">{t('Langue et confort de lecture')}</div>
           <DisplayControls compact />
         </div>
 
@@ -47,34 +48,34 @@ export default function Welcome() {
           <CloudAuthPanel />
         ) : (
           <form onSubmit={submit} className="bg-card border border-line rounded-xl p-6 space-y-4 glow">
-            <Field label="Prénom">
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ton prénom" autoFocus />
+            <Field label={t('Prénom')}>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('Ton prénom')} autoFocus />
             </Field>
-            <Field label="E-mail (facultatif)">
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="toi@exemple.com" />
+            <Field label={t('E-mail (facultatif)')}>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t('toi@exemple.com')} />
             </Field>
-            <Field label="Ce qui compte le plus pour toi en ce moment" hint="Pèse davantage dans ton score global. Modifiable dans les paramètres.">
+            <Field label={t('Ce qui compte le plus pour toi en ce moment')} hint={t('Pèse davantage dans ton score global. Modifiable dans les paramètres.')}>
               <Select
                 value={form.primaryDomain}
                 onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
                 options={[
-                  { value: 'learning', label: 'Études et apprentissage' },
-                  { value: 'finance', label: 'Argent et finances' },
-                  { value: 'health', label: 'Santé et forme' },
-                  { value: 'growthOutput', label: 'Progression et création' },
+                  { value: 'learning', label: t('Études et apprentissage') },
+                  { value: 'finance', label: t('Argent et finances') },
+                  { value: 'health', label: t('Santé et forme') },
+                  { value: 'growthOutput', label: t('Progression et création') },
                 ]}
               />
             </Field>
-            <Field label="Sexe (facultatif)" hint="Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.">
+            <Field label={t('Sexe (facultatif)')} hint={t('Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.')}>
               <Select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+                options={[{ value: '', label: t('Je préfère ne pas dire') }, { value: 'female', label: t('Femme') }, { value: 'male', label: t('Homme') }]}
               />
             </Field>
             {error && <p className="text-bad text-sm">{error}</p>}
             <Button type="submit" className="w-full">
-              Commencer
+              {t('Commencer')}
             </Button>
           </form>
         )}

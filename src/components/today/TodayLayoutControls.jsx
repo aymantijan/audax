@@ -5,6 +5,7 @@ import { arrangeCards, moveCard, toggleCard } from '../../utils/today-layout';
 import { Button, Modal, IconButton } from '../common/ui';
 
 import { AddCustomCardButton } from './CustomCards';
+import { t } from '../../i18n';
 // Reorder / hide the cards of Aujourd'hui. Saved in the profile (synced).
 export function OrganizeButton({ cards }) {
   const { user, updateProfile } = useAuthStore();
@@ -17,17 +18,17 @@ export function OrganizeButton({ cards }) {
   return (
     <>
       <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setOpen(true)}>
-        <span className="flex items-center gap-1.5"><LayoutList size={14} /> Organiser</span>
+        <span className="flex items-center gap-1.5"><LayoutList size={14} /> {t('Organiser')}</span>
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Organiser Aujourd’hui">
-        <p className="text-sm text-mute mb-3">Monte, descends ou masque les cartes. Le même ordre s’affiche sur tous tes appareils.</p>
+      <Modal open={open} onClose={() => setOpen(false)} title={t('Organiser Aujourd’hui')}>
+        <p className="text-sm text-mute mb-3">{t('Monte, descends ou masque les cartes. Le même ordre s’affiche sur tous tes appareils.')}</p>
         <ul className="divide-y divide-line/60 border border-line rounded-lg">
           {ordered.map((c, i) => (
             <li key={c.id} className={`flex items-center gap-2 px-3 py-2 ${hidden.has(c.id) ? 'opacity-50' : ''}`}>
               <span className="text-sm flex-1">{c.label}</span>
-              <IconButton label={`Monter ${c.label}`} disabled={i === 0} onClick={() => save(moveCard(ids, layout, c.id, -1))}><ArrowUp size={15} /></IconButton>
-              <IconButton label={`Descendre ${c.label}`} disabled={i === ordered.length - 1} onClick={() => save(moveCard(ids, layout, c.id, 1))}><ArrowDown size={15} /></IconButton>
-              <IconButton label={hidden.has(c.id) ? `Afficher ${c.label}` : `Masquer ${c.label}`} onClick={() => save(toggleCard(layout, c.id))}>
+              <IconButton label={t('Monter {card}', { card: c.label })} disabled={i === 0} onClick={() => save(moveCard(ids, layout, c.id, -1))}><ArrowUp size={15} /></IconButton>
+              <IconButton label={t('Descendre {card}', { card: c.label })} disabled={i === ordered.length - 1} onClick={() => save(moveCard(ids, layout, c.id, 1))}><ArrowDown size={15} /></IconButton>
+              <IconButton label={hidden.has(c.id) ? t('Afficher {card}', { card: c.label }) : t('Masquer {card}', { card: c.label })} onClick={() => save(toggleCard(layout, c.id))}>
                 {hidden.has(c.id) ? <EyeOff size={15} /> : <Eye size={15} />}
               </IconButton>
             </li>
@@ -35,8 +36,8 @@ export function OrganizeButton({ cards }) {
         </ul>
         <div className="mt-3"><AddCustomCardButton /></div>
         <div className="flex justify-between mt-4">
-          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => save({ order: [], hidden: [] })}><span className="flex items-center gap-1.5"><RotateCcw size={13} /> Ordre par défaut</span></Button>
-          <Button onClick={() => setOpen(false)}>Terminé</Button>
+          <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => save({ order: [], hidden: [] })}><span className="flex items-center gap-1.5"><RotateCcw size={13} /> {t('Ordre par défaut')}</span></Button>
+          <Button onClick={() => setOpen(false)}>{t('Terminé')}</Button>
         </div>
       </Modal>
     </>

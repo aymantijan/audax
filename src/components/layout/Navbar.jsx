@@ -8,6 +8,7 @@ import GlobalSearch from './GlobalSearch';
 import HelpButton from './HelpButton';
 import { openAssistant } from '../../services/assistant';
 import { saveLocalDisplay } from '../../utils/display';
+import { t } from '../../i18n';
 
 // Top bar: logo, the sections (from md up; phones use the bottom tabs),
 // search, help « ? », and a profile menu holding Paramètres, Classement, theme, sign-out.
@@ -19,7 +20,7 @@ function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Menu du profil"
+        aria-label={t('Menu du profil')}
         aria-expanded={open}
         className="ui-icon-btn flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-card cursor-pointer"
       >
@@ -34,18 +35,18 @@ function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
           <div className="absolute right-0 mt-2 w-56 bg-card border border-line rounded-xl shadow-2xl z-50 py-1.5" role="menu">
             <div className="px-3.5 py-2 text-xs text-mute border-b border-line mb-1 truncate">{user?.name}</div>
             <NavLink to="/settings" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
-              <Settings size={16} /> Paramètres
+              <Settings size={16} /> {t('Paramètres')}
             </NavLink>
             {user?.uiLevel !== 'simple' && (
               <NavLink to="/leaderboard" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
-                <Trophy size={16} /> Classement
+                <Trophy size={16} /> {t('Classement')}
               </NavLink>
             )}
             <button type="button" role="menuitem" onClick={() => { onToggleTheme(); setOpen(false); }} className={`${item} text-ink hover:bg-line/40`}>
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} Thème {theme === 'dark' ? 'clair' : 'sombre'}
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />} {theme === 'dark' ? t('Thème clair') : t('Thème sombre')}
             </button>
             <button type="button" role="menuitem" onClick={onLogout} className={`${item} text-bad hover:bg-bad/10`}>
-              <LogOut size={16} /> Se déconnecter
+              <LogOut size={16} /> {t('Se déconnecter')}
             </button>
           </div>
         </>
@@ -77,7 +78,7 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 inset-x-0 h-16 bg-surface border-b border-line z-50">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between gap-4">
-        <button type="button" className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/today')} aria-label="VAUDAX, aller à Aujourd’hui">
+        <button type="button" className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/today')} aria-label={t('VAUDAX, aller à Aujourd’hui')}>
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent2 flex items-center justify-center">
             <Zap size={16} className="text-on-accent" />
           </span>
@@ -96,8 +97,8 @@ export default function Navbar() {
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active ? 'text-accent bg-accent/10' : 'text-mute hover:text-ink hover:bg-card'}`}
               >
                 <pole.icon size={16} />
-                <span className="hidden lg:inline">{pole.label}</span>
-                <span className="lg:hidden">{pole.short}</span>
+                <span className="hidden lg:inline">{t(pole.label)}</span>
+                <span className="lg:hidden">{t(pole.short)}</span>
               </Link>
             );
           })}
@@ -106,7 +107,7 @@ export default function Navbar() {
         <div className="flex items-center gap-1 shrink-0">
           <GlobalSearch />
           <HelpButton />
-          <button type="button" onClick={() => openAssistant()} aria-label="Assistant" title="Assistant" className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-accent hover:bg-card transition-colors cursor-pointer">
+          <button type="button" onClick={() => openAssistant()} aria-label={t('Assistant')} title={t('Assistant')} className="ui-icon-btn flex items-center justify-center p-2 rounded-lg text-mute hover:text-accent hover:bg-card transition-colors cursor-pointer">
             <Sparkles size={18} />
           </button>
           <ProfileMenu user={user} theme={theme} onToggleTheme={toggleTheme} onLogout={handleLogout} />

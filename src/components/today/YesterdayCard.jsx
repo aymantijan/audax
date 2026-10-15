@@ -3,6 +3,7 @@ import { History, Check, X } from 'lucide-react';
 import { useHabitStore } from '../../store/habitStore';
 import { isHabitShownOn } from '../../utils/calculations';
 import { todayKey } from '../../utils/formatters';
+import { t } from '../../i18n';
 
 const DISMISS_KEY = 'audax-yesterday-dismissed';
 const readDismissed = () => { try { return localStorage.getItem(DISMISS_KEY); } catch { return null; } };
@@ -33,7 +34,7 @@ export default function YesterdayCard() {
       <div className="flex items-start gap-3">
         <History size={16} className="text-accent shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Hier : {missed.length} habitude{missed.length > 1 ? 's' : ''} non cochée{missed.length > 1 ? 's' : ''}. {missed.length > 1 ? 'Tu les as faites ? Coche-les.' : 'Tu l’as faite ? Coche-la.'}</p>
+          <p className="text-sm font-medium">{missed.length > 1 ? t('Hier : {n} habitudes non cochées. Tu les as faites ? Coche-les.', { n: missed.length }) : t('Hier : 1 habitude non cochée. Tu l’as faite ? Coche-la.')}</p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {missed.map((h) => (
               <li key={h.id}>
@@ -48,7 +49,7 @@ export default function YesterdayCard() {
             ))}
           </ul>
         </div>
-        <button type="button" onClick={close} aria-label="Ne plus afficher pour hier" className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink cursor-pointer"><X size={16} /></button>
+        <button type="button" onClick={close} aria-label={t('Ne plus afficher pour hier')} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink cursor-pointer"><X size={16} /></button>
       </div>
     </div>
   );

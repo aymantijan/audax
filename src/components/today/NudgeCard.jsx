@@ -12,6 +12,7 @@ import { moduleNudges } from '../../utils/module-nudges';
 import { MODULES, withModule } from '../../utils/navigation';
 import { toast } from '../../store/uiStore';
 import { Button } from '../common/ui';
+import { t } from '../../i18n';
 
 // One suggestion at a time, dismissible for good.
 export default function NudgeCard() {
@@ -37,11 +38,11 @@ export default function NudgeCard() {
     const a = nudge.action;
     if (a.type === 'enable') {
       updateProfile({ enabledModules: withModule(user, a.module, true), dismissedNudges: [...(user?.dismissedNudges || []), nudge.id] });
-      toast(`${MODULES[a.module].label} est activé.`, 'success');
+      toast(t('{module} est activé.', { module: t(MODULES[a.module].label) }), 'success');
       navigate(MODULES[a.module].to);
     } else if (a.type === 'hide') {
       updateProfile({ enabledModules: withModule(user, a.module, false), dismissedNudges: [...(user?.dismissedNudges || []), nudge.id] });
-      toast(`${MODULES[a.module].label} est masqué. Tu peux le réactiver dans Paramètres.`, 'success');
+      toast(t('{module} est masqué. Tu peux le réactiver dans Paramètres.', { module: t(MODULES[a.module].label) }), 'success');
     } else {
       dismiss();
       navigate(a.to);
@@ -54,7 +55,7 @@ export default function NudgeCard() {
       <p className="text-sm flex-1 min-w-[12rem]">{nudge.text}</p>
       <div className="flex items-center gap-2">
         <Button className="!px-3 !py-1.5 text-xs" onClick={act}>{nudge.action.label}</Button>
-        <button type="button" onClick={dismiss} aria-label="Ne plus proposer" title="Ne plus proposer" className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink cursor-pointer flex items-center justify-center"><X size={16} /></button>
+        <button type="button" onClick={dismiss} aria-label={t('Ne plus proposer')} title={t('Ne plus proposer')} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink cursor-pointer flex items-center justify-center"><X size={16} /></button>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { register, login, requestPasswordReset } from '../../services/auth-supabase';
 import { Button, Field, Input, Select } from '../common/ui';
+import { t } from '../../i18n';
 
 // Real cloud auth (Supabase). Rendered on Welcome only when configured.
 // On a successful session it hydrates the local profile so the rest of the
@@ -51,39 +52,39 @@ export default function CloudAuthPanel() {
   return (
     <form onSubmit={submit} className="bg-card border border-line rounded-xl p-6 space-y-4 glow">
       <div className="flex gap-5">
-        <Tab id="login" label="Connexion" />
-        <Tab id="register" label="Créer un compte" />
-        <Tab id="forgot" label="Mot de passe oublié" />
+        <Tab id="login" label={t('Connexion')} />
+        <Tab id="register" label={t('Créer un compte')} />
+        <Tab id="forgot" label={t('Mot de passe oublié')} />
       </div>
 
       {mode === 'register' && (
         <>
-          <Field label="Prénom et nom">
+          <Field label={t('Prénom et nom')}>
             <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoFocus />
           </Field>
-          <Field label="Sexe (facultatif)" hint="Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.">
+          <Field label={t('Sexe (facultatif)')} hint={t('Sert seulement aux calculs Santé (calories, cycle). Tu peux le donner plus tard.')}>
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+              options={[{ value: '', label: t('Je préfère ne pas dire') }, { value: 'female', label: t('Femme') }, { value: 'male', label: t('Homme') }]}
             />
           </Field>
         </>
       )}
-      <Field label="E-mail">
-        <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="toi@exemple.com" />
+      <Field label={t('E-mail')}>
+        <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t('toi@exemple.com')} />
       </Field>
       {mode !== 'forgot' && (
-        <Field label="Mot de passe" hint={mode === 'register' ? '12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.' : ''}>
+        <Field label={t('Mot de passe')} hint={mode === 'register' ? t('12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.') : ''}>
           <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         </Field>
       )}
 
-      {err && <p className="text-bad text-sm">{err}</p>}
-      {msg && <p className="text-good text-sm">{msg}</p>}
+      {err && <p className="text-bad text-sm">{t(err)}</p>}
+      {msg && <p className="text-good text-sm">{t(msg)}</p>}
 
       <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? '…' : mode === 'register' ? 'Créer mon compte' : mode === 'forgot' ? 'Envoyer le lien' : 'Se connecter'}
+        {busy ? '…' : mode === 'register' ? t('Créer mon compte') : mode === 'forgot' ? t('Envoyer le lien') : t('Se connecter')}
       </Button>
     </form>
   );

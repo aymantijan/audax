@@ -4,6 +4,7 @@ import { useAccountingStore } from '../../store/accountingStore';
 import { uiLevelOf } from '../../utils/ui-level';
 import { Card } from '../common/ui';
 import DisplayControls from '../common/DisplayControls';
+import { t } from '../../i18n';
 
 const LEVELS = [
   { value: 'simple', label: 'Simple', icon: Sparkles, text: 'L’essentiel, en mots de tous les jours : cocher, noter, voir ta semaine.' },
@@ -23,11 +24,11 @@ export default function DisplayCard() {
   };
 
   return (
-    <Card title="Affichage">
+    <Card title={t('Langue et affichage')}>
       <DisplayControls />
       <div className="mt-5">
-        <div className="text-sm font-medium mb-1.5">Niveau de détail</div>
-        <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Niveau de détail">
+        <div className="text-sm font-medium mb-1.5">{t('Niveau de détail')}</div>
+        <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label={t('Niveau de détail')}>
           {LEVELS.map(({ value, label, icon: Icon, text }) => (
             <button
               key={value}
@@ -37,8 +38,8 @@ export default function DisplayCard() {
               onClick={() => choose(value)}
               className={`ui-btn text-left rounded-xl border p-3 cursor-pointer ${level === value ? 'border-accent bg-accent/10' : 'border-line hover:border-accent/50'}`}
             >
-              <span className={`flex items-center gap-2 font-semibold ${level === value ? 'text-accent' : 'text-ink'}`}><Icon size={16} /> {label}</span>
-              <span className="block text-xs text-mute mt-1">{text}</span>
+              <span className={`flex items-center gap-2 font-semibold ${level === value ? 'text-accent' : 'text-ink'}`}><Icon size={16} /> {t(label)}</span>
+              <span className="block text-xs text-mute mt-1">{t(text)}</span>
             </button>
           ))}
         </div>

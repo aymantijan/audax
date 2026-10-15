@@ -5,6 +5,7 @@
 import { habitCompliance } from './calculations.js';
 import { classOf } from './chart-of-accounts.js';
 import { dayAttendance } from './attendance.js';
+import { t } from '../i18n/index.js';
 
 const DAY = 86400000;
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -116,10 +117,10 @@ export function compareWeeks(current, previous) {
 export function weekHeadline(rows) {
   const better = rows.filter((r) => r.trend === 'better');
   const worse = rows.filter((r) => r.trend === 'worse');
-  if (!rows.length) return 'Pas encore assez de données cette semaine.';
-  if (!better.length && !worse.length) return 'Semaine stable par rapport à la précédente.';
+  if (!rows.length) return t('Pas encore assez de données cette semaine.');
+  if (!better.length && !worse.length) return t('Semaine stable par rapport à la précédente.');
   const parts = [];
-  if (better.length) parts.push(`en progrès : ${better.slice(0, 3).map((r) => r.label.toLowerCase()).join(', ')}`);
-  if (worse.length) parts.push(`à surveiller : ${worse.slice(0, 3).map((r) => r.label.toLowerCase()).join(', ')}`);
+  if (better.length) parts.push(t('en progrès : {list}', { list: better.slice(0, 3).map((r) => t(r.label).toLowerCase()).join(', ') }));
+  if (worse.length) parts.push(t('à surveiller : {list}', { list: worse.slice(0, 3).map((r) => t(r.label).toLowerCase()).join(', ') }));
   return parts.join(' · ').replace(/^./, (c) => c.toUpperCase());
 }

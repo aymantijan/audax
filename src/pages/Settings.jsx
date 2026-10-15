@@ -17,6 +17,7 @@ import AssistantCard from '../components/settings/AssistantCard';
 import { TrashCard, EraseCard } from '../components/settings/DataCards';
 import DisplayCard from '../components/settings/DisplayCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
+import { t } from '../i18n';
 
 // Backups keep the keys of removed modules (trading, deals, engineering, business,
 // networking, career, content, fundraising, freelance, realestate — 2026-10-09):
@@ -208,47 +209,47 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold">Paramètres</h1>
-        <p className="text-mute text-sm mt-1">Profil, données et préférences.</p>
+        <h1 className="text-2xl font-bold">{t('Paramètres')}</h1>
+        <p className="text-mute text-sm mt-1">{t('Profil, données et préférences.')}</p>
       </div>
 
       <DisplayCard />
 
-      <Card title="Profil">
+      <Card title={t('Profil')}>
         <div className="grid md:grid-cols-2 gap-3">
-          <Field label="Prénom et nom">
+          <Field label={t('Prénom et nom')}>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <Field label="E-mail">
+          <Field label={t('E-mail')}>
             <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </Field>
-          <Field label="Ce qui compte le plus pour toi" hint="Pèse davantage dans ton score global (75 %).">
+          <Field label={t('Ce qui compte le plus pour toi')} hint={t('Pèse davantage dans ton score global (75 %).')}>
             <Select
               value={form.primaryDomain}
               onChange={(e) => setForm({ ...form, primaryDomain: e.target.value })}
               options={[
-                { value: 'learning', label: 'Études et apprentissage' },
-                { value: 'finance', label: 'Argent et finances' },
-                { value: 'health', label: 'Santé et forme' },
-                { value: 'growthOutput', label: 'Progression et création' },
+                { value: 'learning', label: t('Études et apprentissage') },
+                { value: 'finance', label: t('Argent et finances') },
+                { value: 'health', label: t('Santé et forme') },
+                { value: 'growthOutput', label: t('Progression et création') },
               ]}
             />
           </Field>
-          <Field label="Métier ou domaine (facultatif)" hint="Écris librement ou choisis une suggestion. Affiché sur ton tableau de bord et dans le classement.">
-            <Input list="occupation-suggestions" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ex. étudiant·e, infirmier·e, développeur·se…" />
+          <Field label={t('Métier ou domaine (facultatif)')} hint={t('Écris librement ou choisis une suggestion. Affiché sur ton tableau de bord et dans le classement.')}>
+            <Input list="occupation-suggestions" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder={t('Ex. étudiant·e, infirmier·e, développeur·se…')} />
             <datalist id="occupation-suggestions">{OCCUPATION_SUGGESTIONS.map((o) => <option key={o} value={o} />)}</datalist>
           </Field>
-          <Field label="Sexe (facultatif)" hint="Adapte la partie Santé (onglet Cycle, besoins caloriques).">
+          <Field label={t('Sexe (facultatif)')} hint={t('Adapte la partie Santé (onglet Cycle, besoins caloriques).')}>
             <Select
               value={form.gender}
               onChange={(e) => setForm({ ...form, gender: e.target.value })}
-              options={[{ value: '', label: 'Je préfère ne pas dire' }, { value: 'female', label: 'Femme' }, { value: 'male', label: 'Homme' }]}
+              options={[{ value: '', label: t('Je préfère ne pas dire') }, { value: 'female', label: t('Femme') }, { value: 'male', label: t('Homme') }]}
             />
           </Field>
-          <Field label="Année de naissance" hint="Sert aux calculs de la partie Santé (métabolisme, besoins caloriques).">
-            <Input type="number" min="1920" max={new Date().getFullYear()} value={form.dobYear} onChange={(e) => setForm({ ...form, dobYear: e.target.value })} placeholder="ex. 1998" />
+          <Field label={t('Année de naissance')} hint={t('Sert aux calculs de la partie Santé (métabolisme, besoins caloriques).')}>
+            <Input type="number" min="1920" max={new Date().getFullYear()} value={form.dobYear} onChange={(e) => setForm({ ...form, dobYear: e.target.value })} placeholder={t('ex. 1998')} />
           </Field>
-          <Field label="Taille (cm)" hint="Sert aux calculs de la partie Santé (métabolisme, composition corporelle).">
+          <Field label={t('Taille (cm)')} hint={t('Sert aux calculs de la partie Santé (métabolisme, composition corporelle).')}>
             <Input type="number" min="100" max="250" value={form.heightCm} onChange={(e) => setForm({ ...form, heightCm: e.target.value })} />
           </Field>
         </div>
@@ -260,22 +261,22 @@ export default function SettingsPage() {
               dobYear: form.dobYear ? Number(form.dobYear) : null,
               heightCm: form.heightCm ? Number(form.heightCm) : null,
             });
-            toast('Profil enregistré', 'success');
+            toast(t('Profil enregistré'), 'success');
           }}
         >
-          Enregistrer le profil
+          {t('Enregistrer le profil')}
         </Button>
       </Card>
 
-      <Card title="Sections visibles">
-        <p className="text-sm text-mute mb-3">Masque ce dont tu ne te sers pas : rien n'est supprimé, c'est juste caché.</p>
+      <Card title={t('Sections visibles')}>
+        <p className="text-sm text-mute mb-3">{t('Masque ce dont tu ne te sers pas : rien n’est supprimé, c’est juste caché.')}</p>
         <div className="space-y-4">
           {POLES.map((pole) => {
             const optional = pole.modules.filter((k) => MODULES[k].flag);
             if (!optional.length) return null;
             return (
               <div key={pole.key}>
-                <div className="text-xs text-mute uppercase tracking-wide mb-1.5">{pole.label}</div>
+                <div className="text-xs text-mute uppercase tracking-wide mb-1.5">{t(pole.label)}</div>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   {optional.map((k) => (
                     <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -285,7 +286,7 @@ export default function SettingsPage() {
                         onChange={(e) => updateProfile({ enabledModules: withModule(user, k, e.target.checked) })}
                         className="cursor-pointer"
                       />
-                      {MODULES[k].label}
+                      {t(MODULES[k].label)}
                     </label>
                   ))}
                 </div>
@@ -297,7 +298,7 @@ export default function SettingsPage() {
 
       <FoodsCard />
 
-      <Card title="Synchronisation">
+      <Card title={t('Synchronisation')}>
         <div className="flex items-start gap-3">
           {cloudStatus === 'active' ? (
             <Cloud size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
@@ -413,7 +414,7 @@ export default function SettingsPage() {
 
       <AssistantCard />
 
-      <Card title="Notifications">
+      <Card title={t('Notifications')}>
         <div className="flex items-start gap-3">
           {pushSubscribed ? (
             <Bell size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
@@ -451,7 +452,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Tes données">
+      <Card title={t('Tes données')}>
         <p className="text-sm text-mute mb-4">
           Tes données sont d’abord sur cet appareil, puis synchronisées sur ton compte quand tu es connecté. Télécharge une sauvegarde de temps en temps : elle contient tout (y compris ton programme sportif si tu es connecté) et se restaure en un clic.
         </p>

@@ -11,6 +11,7 @@ import { isDue } from '../../utils/fsrs';
 import { todayKey } from '../../utils/formatters';
 import { openAssistant } from '../../services/assistant';
 import { Card, Button } from '../common/ui';
+import { t } from '../../i18n';
 
 const LEVEL = {
   urgent: { icon: AlertTriangle, color: 'var(--error)' },
@@ -47,8 +48,8 @@ export default function BriefingCard({ habitsDue, habitsDone, checkinDone }) {
 
   return (
     <Card
-      title={<span className="flex items-center gap-2"><Sunrise size={15} /> Ton briefing</span>}
-      action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant('Fais-moi le briefing du jour.')}><span className="flex items-center gap-1.5"><Sparkles size={13} /> Version commentée</span></Button>}
+      title={<span className="flex items-center gap-2"><Sunrise size={15} /> {t('Ton briefing')}</span>}
+      action={<Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant(t('Fais-moi le briefing du jour.'))}><span className="flex items-center gap-1.5"><Sparkles size={13} /> {t('Version commentée')}</span></Button>}
     >
       {items.length ? (
         <ul className="space-y-1">
@@ -66,7 +67,7 @@ export default function BriefingCard({ habitsDue, habitsDone, checkinDone }) {
           })}
         </ul>
       ) : (
-        <p className="text-sm text-mute">Rien d’urgent aujourd’hui. Bonne journée !</p>
+        <p className="text-sm text-mute">{t('Rien d’urgent aujourd’hui. Bonne journée !')}</p>
       )}
     </Card>
   );

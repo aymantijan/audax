@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useUiStore } from '../../store/uiStore';
+import { t } from '../../i18n';
 
 export function Card({ title, action, children, className = '' }) {
   return (
@@ -356,7 +357,7 @@ export function PageLoader() {
     <div className="min-h-[50vh] flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 rounded-full border-2 border-line border-t-accent animate-spin" style={{ borderTopColor: 'var(--accent-primary)' }} />
-        <span className="text-xs text-mute">Chargement…</span>
+        <span className="text-xs text-mute">{t('Chargement…')}</span>
       </div>
     </div>
   );

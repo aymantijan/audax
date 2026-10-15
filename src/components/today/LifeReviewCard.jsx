@@ -10,6 +10,7 @@ import { weekFigures, compareWeeks, weekHeadline, addDays, mondayOf } from '../.
 import { fmtDateShort, fmtMAD, todayKey } from '../../utils/formatters';
 import { openAssistant } from '../../services/assistant';
 import { Card, Button } from '../common/ui';
+import { t } from '../../i18n';
 
 const fmtValue = (row, v) => {
   if (v == null) return '—';
@@ -49,12 +50,12 @@ export default function LifeReviewCard() {
   const isCurrent = monday === mondayOf(today);
   return (
     <Card
-      title={<span className="flex items-center gap-2"><CalendarRange size={15} /> Bilan de la semaine</span>}
+      title={<span className="flex items-center gap-2"><CalendarRange size={15} /> {t('Bilan de la semaine')}</span>}
       action={
         <div className="flex items-center gap-1">
-          <button type="button" aria-label="Semaine précédente" onClick={() => setMonday(addDays(monday, -7))} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer flex items-center justify-center"><ChevronLeft size={16} /></button>
-          <span className="text-xs text-mute min-w-[7.5rem] text-center">{isCurrent ? 'Cette semaine' : `Sem. du ${fmtDateShort(monday)}`}</span>
-          <button type="button" aria-label="Semaine suivante" disabled={isCurrent} onClick={() => setMonday(addDays(monday, 7))} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"><ChevronRight size={16} /></button>
+          <button type="button" aria-label={t('Semaine précédente')} onClick={() => setMonday(addDays(monday, -7))} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer flex items-center justify-center"><ChevronLeft size={16} /></button>
+          <span className="text-xs text-mute min-w-[7.5rem] text-center">{isCurrent ? t('Cette semaine') : t('Sem. du {date}', { date: fmtDateShort(monday) })}</span>
+          <button type="button" aria-label={t('Semaine suivante')} disabled={isCurrent} onClick={() => setMonday(addDays(monday, 7))} className="ui-icon-btn p-1.5 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"><ChevronRight size={16} /></button>
         </div>
       }
     >
@@ -65,23 +66,23 @@ export default function LifeReviewCard() {
             const T = TREND[r.trend];
             return (
               <div key={r.key} className="rounded-lg border border-line bg-surface px-3 py-2.5">
-                <div className="text-xs text-mute">{r.label}</div>
+                <div className="text-xs text-mute">{t(r.label)}</div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="font-data font-bold">{fmtValue(r, r.value)}</span>
-                  <T.icon size={14} style={{ color: T.color }} aria-label={r.trend === 'better' ? 'en progrès' : r.trend === 'worse' ? 'en baisse' : 'stable'} />
+                  <T.icon size={14} style={{ color: T.color }} aria-label={r.trend === 'better' ? t('en progrès') : r.trend === 'worse' ? t('en baisse') : t('stable')} />
                 </div>
-                <div className="text-[0.6875rem] text-mute">avant : {fmtValue(r, r.previous)}</div>
+                <div className="text-[0.6875rem] text-mute">{t('avant : {value}', { value: fmtValue(r, r.previous) })}</div>
               </div>
             );
           })}
         </div>
       )}
       <div className="flex flex-wrap justify-end gap-2 mt-4">
-        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant('Propose-moi 3 ajustements concrets pour la semaine prochaine, à valider : une habitude à alléger ou renforcer, un budget, et la matière ou le sujet prioritaire.')}>
-          <span className="flex items-center gap-1.5"><Sparkles size={13} /> 3 ajustements à valider</span>
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant(t('Propose-moi 3 ajustements concrets pour la semaine prochaine, à valider : une habitude à alléger ou renforcer, un budget, et la matière ou le sujet prioritaire.'))}>
+          <span className="flex items-center gap-1.5"><Sparkles size={13} /> {t('3 ajustements à valider')}</span>
         </Button>
-        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant('Fais le bilan de ma semaine, section par section, et propose-moi 3 priorités pour la semaine prochaine.')}>
-          <span className="flex items-center gap-1.5"><Sparkles size={13} /> Bilan commenté</span>
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => openAssistant(t('Fais le bilan de ma semaine, section par section, et propose-moi 3 priorités pour la semaine prochaine.'))}>
+          <span className="flex items-center gap-1.5"><Sparkles size={13} /> {t('Bilan commenté')}</span>
         </Button>
       </div>
     </Card>

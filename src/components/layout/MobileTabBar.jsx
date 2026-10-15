@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { MOBILE_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
+import { t } from '../../i18n';
 
 // Phone bottom bar: the sections. Aujourd'hui is raised only when it sits in
 // the exact middle (odd number of sections).
@@ -11,7 +12,7 @@ export default function MobileTabBar() {
     <nav
       className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-line flex items-stretch"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      aria-label="Sections"
+      aria-label={t('Sections')}
     >
       {MOBILE_POLES.map((key, i) => {
         const pole = poleByKey(key);
@@ -31,7 +32,7 @@ export default function MobileTabBar() {
             ) : (
               <pole.icon size={20} />
             )}
-            {pole.short}
+            {t(pole.short)}
           </Link>
         );
       })}

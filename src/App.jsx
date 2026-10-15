@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { Fragment, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useHealthStore } from './store/healthStore';
@@ -17,6 +17,7 @@ import PwaUpdatePrompt from './components/layout/PwaUpdatePrompt';
 import Welcome from './pages/Welcome';
 import { lazyWithRetry } from './utils/lazyRetry';
 import { applyDisplay, resolveDisplay } from './utils/display';
+import { useLang } from './i18n';
 import { PageLoader } from './components/common/ui';
 
 // Route-level code splitting: each page (and its heavy deps — recharts, d3)
@@ -58,11 +59,12 @@ function AuthGuard({ children }) {
 
 export default function App() {
   const user = useAuthStore((s) => s.user);
+  const lang = useLang((s) => (s.dict ? s.lang : 'fr')); // a new language remounts the screens (i18n/index.js)
 
   // Theme, text size and contrast (utils/display.js): profile first, then this device.
   useEffect(() => {
     applyDisplay(resolveDisplay(user));
-  }, [user?.theme, user?.textSize, user?.contrast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.theme, user?.textSize, user?.contrast, user?.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-time migration: sex/dobYear/heightCm used to live on healthStore's
   // healthProfile (Health-scoped) — now they live on the global profile
@@ -127,7 +129,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <Fragment key={lang}>
       <PwaUpdatePrompt />
       {/* Top-level fallback: /onboarding and other lazy pages outside MainLayout */}
       <Suspense fallback={<PageLoader />}>
@@ -173,6 +175,6 @@ export default function App() {
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
-    </>
+    </Fragment>
   );
 }
