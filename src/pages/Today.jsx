@@ -25,6 +25,7 @@ import ExamDayCard from '../components/learning/ExamDayCard';
 import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 import YesterdayCard from '../components/today/YesterdayCard';
+import CareTodayCard from '../components/today/CareTodayCard';
 
 import { useCustomCards } from '../components/today/CustomCards';
 import { t, locale } from '../i18n';
@@ -108,6 +109,7 @@ export default function Today() {
         <NextClassBanner />
       </>
     ) },
+    { id: 'care', label: t('Santé du jour'), node: <CareTodayCard /> },
     { id: 'habits', label: t('Habitudes du jour'), node: (
       <>
         <YesterdayCard />

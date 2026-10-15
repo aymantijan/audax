@@ -1,5 +1,15 @@
 // Español (chantier 6b). Clave = el texto francés del código; ver i18n/index.js.
 export default {
+  "Santé du jour": "Salud del día",
+  "{n} prise(s) à noter sur {total}": "{n} toma(s) por anotar de {total}",
+  "Toutes les prises du jour sont notées.": "Todas las tomas del día están anotadas.",
+  "pas pris": "no tomado",
+  "Pris": "Tomado",
+  "Demain": "Mañana",
+  "{name} : bientôt plus de stock, pense à racheter.": "{name}: pronto se acaba, acuérdate de comprar más.",
+  "Rappel de vaccin : {name}, le {date}": "Refuerzo de vacuna: {name}, el {date}",
+  "Fiche d’urgence": "Ficha de emergencia",
+  "Les espaces en haut : Entraînement, Soins (médicaments, mesures, rendez-vous, fiche d’urgence), Nutrition, Corps, Progrès.": "Los espacios de arriba: Entrenamiento, Cuidados (medicamentos, mediciones, citas, ficha de emergencia), Nutrición, Cuerpo, Progreso.",
   "Chargement…": "Cargando…",
   "1 œuvre en cours": "1 obra en curso",
   "12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.": "Mínimo 12 caracteres, con mayúscula, minúscula, número y carácter especial.",
@@ -155,7 +165,6 @@ export default {
   "Les flèches changent de semaine.": "Las flechas cambian de semana.",
   "Les livres que tu lis et ta progression page par page.": "Los libros que lees y tu progreso página a página.",
   "Les niveaux 4 et 5 demandent une preuve (examen, projet, résultat).": "Los niveles 4 y 5 requieren una prueba (examen, proyecto, resultado).",
-  "Les onglets en haut : Entraînement, Nutrition, Corps et récupération, Progrès.": "Las pestañas de arriba: Entrenamiento, Nutrición, Cuerpo y recuperación, Progreso.",
   "Les onglets en haut changent de partie. Une photo de l’emploi du temps peut le remplir pour toi.": "Las pestañas de arriba cambian de sección. Una foto del horario puede rellenarlo por ti.",
   "Les paliers montrent les grades à atteindre.": "Los niveles muestran los rangos por alcanzar.",
   "Lire aujourd’hui": "Leer hoy",

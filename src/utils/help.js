@@ -96,7 +96,7 @@ export const HELP = {
     lines: [
       'Ton sommeil, tes repas, ton sport et ta forme du jour.',
       'Le check-in du jour se remplit en 30 secondes, aussi pour hier.',
-      'Les onglets en haut : Entraînement, Nutrition, Corps et récupération, Progrès.',
+      'Les espaces en haut : Entraînement, Soins (médicaments, mesures, rendez-vous, fiche d’urgence), Nutrition, Corps, Progrès.',
     ],
   },
   finance: {

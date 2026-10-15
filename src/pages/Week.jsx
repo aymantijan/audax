@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarRange, ChevronLeft, ChevronRight, Check, GraduationCap, ClipboardCheck, Wallet, Dumbbell, Target } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, Check, GraduationCap, ClipboardCheck, Wallet, Dumbbell, Target, Stethoscope } from 'lucide-react';
 import { useHabitStore } from '../store/habitStore';
 import { useLearningStore } from '../store/learningStore';
 import { useAccountingStore } from '../store/accountingStore';
@@ -25,8 +25,9 @@ export default function Week() {
   const academic = useLearningStore((s) => s.academic);
   const echeances = useAccountingStore((s) => s.echeances);
   const workouts = useHealthStore((s) => s.workouts);
+  const appointments = useHealthStore((s) => s.appointments);
 
-  const days = useMemo(() => buildWeek({ monday, courses, academic, habits, logs, echeances, workouts }), [monday, courses, academic, habits, logs, echeances, workouts]);
+  const days = useMemo(() => buildWeek({ monday, courses, academic, habits, logs, echeances, workouts, appointments }), [monday, courses, academic, habits, logs, echeances, workouts, appointments]);
   const weekGoals = (objectives || []).filter((o) => o.horizon === 'week' && o.period === periodOf('week', monday));
   const sunday = addDaysKey(monday, 6);
   const range = `${new Date(`${monday}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} – ${new Date(`${sunday}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
@@ -58,7 +59,7 @@ export default function Week() {
       )}
 
       {days.map((d) => {
-        const empty = !d.classes.length && !d.habits.length && !d.exams.length && !d.dues.length && !d.workouts.length;
+        const empty = !d.classes.length && !d.habits.length && !d.exams.length && !d.dues.length && !d.workouts.length && !d.appointments.length;
         const isToday = d.key === today;
         const future = d.key > today;
         return (
@@ -77,6 +78,9 @@ export default function Week() {
                     ))}
                   </ul>
                 )}
+                {d.appointments.map((a) => (
+                  <Link key={a.id} to="/health?tab=appointments" className="flex items-center gap-2 text-sm hover:underline"><Stethoscope size={14} className="text-bad shrink-0" /> <span className="font-data text-xs text-mute w-24 shrink-0">{a.time || ''}</span><span className="truncate">{a.title}{a.place ? ` · ${a.place}` : ''}</span></Link>
+                ))}
                 {d.exams.map(({ course, ev }) => (
                   <div key={ev.id} className="flex items-center gap-2 text-sm"><ClipboardCheck size={14} className="text-warning shrink-0" /> <span className="truncate">{ev.name || 'Évaluation'} · {course.name}</span></div>
                 ))}

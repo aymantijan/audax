@@ -10,6 +10,7 @@ import { dailySlice } from './health/daily';
 import { labsSlice } from './health/labs';
 import { analyticsSlice } from './health/analytics';
 import { correlationsSlice } from './health/correlations';
+import { careSlice } from './health/care';
 
 // Split into slices under ./health/ (F3): each file holds whole sections of
 // the original store, verbatim; they are spread back into one store here.
@@ -90,6 +91,7 @@ export const useHealthStore = create(
       ...labsSlice(set, get),
       ...analyticsSlice(set, get),
       ...correlationsSlice(set, get),
+      ...careSlice(set, get),
     }),
     { name: 'audax-health' }
   )

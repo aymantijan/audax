@@ -23,6 +23,7 @@
 // written by the app), by comparing wall-clock values on both sides.
 import webpush from 'web-push';
 import { classesOn, arriveBy, withDefaults, fmtClock, ATTENDANCE_STATUS } from '../src/utils/attendance.js';
+import { dueCareReminders } from '../src/utils/care.js';
 
 const WINDOW_MS = 5 * 60 * 1000;
 
@@ -42,11 +43,12 @@ function wallClock(timezone, now = new Date()) {
 
 const toMinutes = (hhmm) => { if (!hhmm) return null; const [h, m] = String(hhmm).split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
 
-/** Santé reminders (healthProfile.reminderPrefs) due in the window ending now. */
+/** Santé reminders (healthProfile.reminderPrefs, medications, appointments) due in the window ending now. */
 export function dueHealthReminders(health, now = new Date()) {
-  const prefs = health?.healthProfile?.reminderPrefs;
-  if (!prefs?.timezone) return [];
-  const wall = wallClock(prefs.timezone, now);
+  const prefs = health?.healthProfile?.reminderPrefs || {};
+  const timezone = prefs.timezone || health?.careTimezone; // careTimezone: written with medications (chantier 7)
+  if (!timezone) return [];
+  const wall = wallClock(timezone, now);
   if (!wall) return [];
   const d = new Date(wall.ms);
   const nowMin = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
@@ -55,6 +57,7 @@ export function dueHealthReminders(health, now = new Date()) {
   for (const time of prefs.mealWindows || []) if (inWindow(toMinutes(time))) out.push({ tag: `meal-${time}`, body: `C’est l’heure prévue pour ton repas (${time}).` });
   if (inWindow(toMinutes(prefs.bedtimeTarget))) out.push({ tag: 'bedtime', body: `Heure de coucher visée (${prefs.bedtimeTarget}) — la régularité du sommeil compte autant que sa durée.` });
   if (inWindow(toMinutes(prefs.weighInTime))) out.push({ tag: 'weigh-in', body: `Pesée prévue (${prefs.weighInTime}) : à jeun, même balance.` });
+  out.push(...dueCareReminders(health, wall.date, inWindow));
   return out;
 }
 
@@ -124,7 +127,7 @@ export default async function handler(req, res) {
   const jobs = [];
   for (const row of rows) {
     const due = row.store_name === 'health'
-      ? dueHealthReminders(row.data).map((m) => ({ ...m, title: 'VAUDAX · Santé', url: '/health' }))
+      ? dueHealthReminders(row.data).map((m) => ({ title: 'VAUDAX · Santé', url: '/health', ...m }))
       : dueClassReminders(row.data, row.data?.academic?.settings?.timezone || 'Africa/Casablanca').map((m) => ({ ...m, title: 'VAUDAX · Cours', url: '/today' }));
     for (const msg of due) {
       for (const s of subs.filter((x) => x.user_id === row.user_id)) {

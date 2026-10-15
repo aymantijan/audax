@@ -1,5 +1,15 @@
 // العربية (chantier 6b). Key = the French text of the code; see i18n/index.js.
 export default {
+  "Santé du jour": "صحة اليوم",
+  "{n} prise(s) à noter sur {total}": "{n} جرعة لتسجيلها من أصل {total}",
+  "Toutes les prises du jour sont notées.": "كل جرعات اليوم مسجّلة.",
+  "pas pris": "لم يُؤخذ",
+  "Pris": "أُخذ",
+  "Demain": "غدًا",
+  "{name} : bientôt plus de stock, pense à racheter.": "{name}: سينفد قريبًا، تذكّر شراء المزيد.",
+  "Rappel de vaccin : {name}, le {date}": "جرعة تذكيرية للقاح: {name}، بتاريخ {date}",
+  "Fiche d’urgence": "بطاقة الطوارئ",
+  "Les espaces en haut : Entraînement, Soins (médicaments, mesures, rendez-vous, fiche d’urgence), Nutrition, Corps, Progrès.": "المساحات في الأعلى: التمرين، الرعاية (الأدوية، القياسات، المواعيد، بطاقة الطوارئ)، التغذية، الجسم، التقدّم.",
   "Chargement…": "جارٍ التحميل…",
   "1 œuvre en cours": "عمل واحد قيد الإنجاز",
   "12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.": "12 حرفًا على الأقل، مع حرف كبير وحرف صغير ورقم ورمز خاص.",
@@ -155,7 +165,6 @@ export default {
   "Les flèches changent de semaine.": "الأسهم تغيّر الأسبوع.",
   "Les livres que tu lis et ta progression page par page.": "الكتب التي تقرؤها وتقدّمك صفحة بصفحة.",
   "Les niveaux 4 et 5 demandent une preuve (examen, projet, résultat).": "المستويان 4 و5 يتطلّبان دليلًا (امتحان، مشروع، نتيجة).",
-  "Les onglets en haut : Entraînement, Nutrition, Corps et récupération, Progrès.": "التبويبات في الأعلى: التمرين، التغذية، الجسم والتعافي، التقدّم.",
   "Les onglets en haut changent de partie. Une photo de l’emploi du temps peut le remplir pour toi.": "التبويبات في الأعلى تبدّل الأقسام. صورة لجدول الحصص يمكنها ملؤه عنك.",
   "Les paliers montrent les grades à atteindre.": "المراحل تُظهر الرتب التي يمكن بلوغها.",
   "Lire aujourd’hui": "اقرأ اليوم",

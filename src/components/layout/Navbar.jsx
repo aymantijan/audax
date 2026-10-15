@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, LogOut, Settings, Trophy, Zap, Sparkles } from 'lucide-react';
+import { Moon, Sun, LogOut, Settings, Trophy, Zap, Sparkles, Siren } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { logout as cloudLogout } from '../../services/auth-supabase';
 import { DESKTOP_POLES, poleByKey, poleOfPath } from '../../utils/navigation';
@@ -36,6 +36,9 @@ function ProfileMenu({ user, theme, onToggleTheme, onLogout }) {
             <div className="px-3.5 py-2 text-xs text-mute border-b border-line mb-1 truncate">{user?.name}</div>
             <NavLink to="/settings" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
               <Settings size={16} /> {t('Paramètres')}
+            </NavLink>
+            <NavLink to="/urgence" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>
+              <Siren size={16} /> {t('Fiche d’urgence')}
             </NavLink>
             {user?.uiLevel !== 'simple' && (
               <NavLink to="/leaderboard" role="menuitem" onClick={() => setOpen(false)} className={({ isActive }) => `${item} ${isActive ? 'text-accent' : 'text-ink hover:bg-line/40'}`}>

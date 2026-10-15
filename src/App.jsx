@@ -44,6 +44,7 @@ const PoleHome = lazy(lazyWithRetry(() => import('./pages/PoleHome'), 'PoleHome'
 const Challenges = lazy(lazyWithRetry(() => import('./pages/Challenges'), 'Challenges'));
 const Timeline = lazy(lazyWithRetry(() => import('./pages/Timeline'), 'Timeline'));
 const Week = lazy(lazyWithRetry(() => import('./pages/Week'), 'Week'));
+const Emergency = lazy(lazyWithRetry(() => import('./pages/Emergency'), 'Emergency'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
@@ -166,6 +167,7 @@ export default function App() {
         <Route path="/defis" element={<Challenges />} />
         <Route path="/chronologie" element={<Timeline />} />
         <Route path="/semaine" element={<Week />} />
+        <Route path="/urgence" element={<Emergency />} />
         {/* Section home page (étape 3); Santé and Patrimoine have a single page each */}
         <Route path="/etudes" element={<PoleHome key="etudes" poleKey="etudes" />} />
         <Route path="/patrimoine" element={<Navigate to="/finance" replace />} />

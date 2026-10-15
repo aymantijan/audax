@@ -8,7 +8,7 @@ import { echeanceOccurrences } from './accounting-engine.js';
 export const addDaysKey = (key, n) => { const d = new Date(`${key}T12:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 export function mondayOf(key) { const dow = new Date(`${key}T12:00:00`).getDay(); return addDaysKey(key, dow === 0 ? -6 : 1 - dow); }
 
-export function buildWeek({ monday, courses = [], academic = null, habits = [], logs = [], echeances = [], workouts = [] }) {
+export function buildWeek({ monday, courses = [], academic = null, habits = [], logs = [], echeances = [], workouts = [], appointments = [] }) {
   const days = Array.from({ length: 7 }, (_, i) => addDaysKey(monday, i));
   const sunday = days[6];
   const dues = [];
@@ -25,5 +25,6 @@ export function buildWeek({ monday, courses = [], academic = null, habits = [], 
     exams: courses.flatMap((c) => (c.status === 'dropped' ? [] : (c.evaluations || []).filter((ev) => ev.date === key).map((ev) => ({ course: c, ev })))),
     dues: dues.filter((d) => d.date === key),
     workouts: workouts.filter((w) => w.date === key),
+    appointments: appointments.filter((a) => a.date === key && !a.done).sort((a, b) => (a.time || '').localeCompare(b.time || '')),
   }));
 }

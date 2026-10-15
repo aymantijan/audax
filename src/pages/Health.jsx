@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Sun, Dumbbell, Salad, HeartPulse, TrendingUp, LayoutDashboard, BookOpen, Activity, Moon,
-  Leaf, Zap, Scale, CalendarHeart, Target, Gauge, LineChart,
+  Leaf, Zap, Scale, CalendarHeart, Target, Gauge, LineChart, Pill, Footprints, Siren, CalendarClock,
 } from 'lucide-react';
 import { useHealthStore } from '../store/healthStore';
 import { useAuthStore } from '../store/authStore';
@@ -21,8 +21,13 @@ import ProgramTab from './health/program/ProgramTab';
 import CardioLogging from './health/CardioLogging';
 import GymLogging from './health/GymLogging';
 import SportLogging from './health/SportLogging';
+import Medications from './health/care/Medications';
+import Vitals from './health/care/Vitals';
+import Appointments from './health/care/Appointments';
+import EmergencyCard from './health/care/EmergencyCard';
+import GentleExercises from './health/care/GentleExercises';
 
-// 5 spaces instead of 14 flat tabs. Page keys are unchanged (deep links,
+// 6 spaces instead of 18 flat tabs (Soins: chantier 7). Page keys are unchanged (deep links,
 // goTo() calls and habit prompts keep working); the space is derived from them.
 const SPACES = [
   {
@@ -33,9 +38,19 @@ const SPACES = [
     key: 'training', label: 'Entraînement', desc: 'Programme & séances', icon: Dumbbell,
     pages: [
       { key: 'programs', label: 'Programme', icon: BookOpen, Component: ProgramTab },
+      { key: 'gentle', label: 'Exercices doux', icon: Footprints, Component: GentleExercises },
       { key: 'gym', label: 'Musculation', icon: Dumbbell, Component: GymLogging },
       { key: 'cardio', label: 'Cardio', icon: HeartPulse, Component: CardioLogging },
       { key: 'sport', label: 'Autres sports', icon: Activity, Component: SportLogging },
+    ],
+  },
+  {
+    key: 'care', label: 'Soins', desc: 'Médicaments, mesures, rendez-vous', icon: Pill,
+    pages: [
+      { key: 'meds', label: 'Médicaments', icon: Pill, Component: Medications },
+      { key: 'vitals', label: 'Mesures', icon: Activity, Component: Vitals },
+      { key: 'appointments', label: 'Rendez-vous & documents', icon: CalendarClock, Component: Appointments },
+      { key: 'emergency', label: 'Fiche d’urgence', icon: Siren, Component: EmergencyCard },
     ],
   },
   {
@@ -129,7 +144,7 @@ export default function Health() {
       )}
 
       {/* Level 1 — spaces */}
-      <nav className="grid grid-cols-5 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces santé">
+      <nav className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces santé">
         {spaces.map((sp) => {
           const Icon = sp.icon;
           const active = sp.key === currentSpace.key;

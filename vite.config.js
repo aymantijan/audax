@@ -57,6 +57,11 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long press on the installed icon (chantier 7, S10: the emergency card in one gesture).
+        shortcuts: [
+          { name: 'Fiche d’urgence', short_name: 'Urgence', url: '/urgence', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
+          { name: 'Médicaments du jour', short_name: 'Médicaments', url: '/health?tab=meds', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
+        ],
       },
     }),
   ],

@@ -44,6 +44,9 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
   avec la clé du site `GEMINI_API_KEY` (projet Google SANS facturation). Vercel Hobby : 12 fonctions maximum dans `api/` (9/12 utilisées). Assistant unique `api/assistant.js` (réponse en flux) + coach Santé
   (`api/_lib/coach.js`). Garde commune `api/_lib/ai-guard.js` : utilisateur connecté + 30 questions/jour/personne
   (table `ai_usage`, migration 008 appliquée). Le navigateur construit le résumé des données : `src/utils/assistant-context.js`.
+- Santé du quotidien (chantier 7) : espace « Soins » de Santé (`src/pages/health/care/`), données dans `healthStore`
+  (tranche `store/health/care.js`), règles dans `src/utils/care.js` ; rappels push des prises et rendez-vous dans
+  `api/class-reminders.js` ; fiche d'urgence `/urgence` (menu du profil + raccourci de l'icône installée).
 - Langues (chantier 6b) : `src/i18n/` — `t('Texte français', { var })`, dictionnaires en/es/ar (clé = le texte français),
   réglage « Langue » (profil `language` + `audax-display`), arabe en `dir="rtl"`. Traduits : accueil, inscription, menus,
   Aujourd'hui, haut des Paramètres, aide. Tout nouveau texte de ces écrans passe par t() : `tests/i18n.test.mjs` l'exige.

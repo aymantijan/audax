@@ -1,5 +1,15 @@
 // English (chantier 6b). Key = the French text of the code; see i18n/index.js.
 export default {
+  "Santé du jour": "Today’s health",
+  "{n} prise(s) à noter sur {total}": "{n} dose(s) to log out of {total}",
+  "Toutes les prises du jour sont notées.": "All of today’s doses are logged.",
+  "pas pris": "not taken",
+  "Pris": "Taken",
+  "Demain": "Tomorrow",
+  "{name} : bientôt plus de stock, pense à racheter.": "{name}: running out soon, remember to buy more.",
+  "Rappel de vaccin : {name}, le {date}": "Vaccine booster: {name}, on {date}",
+  "Fiche d’urgence": "Emergency card",
+  "Les espaces en haut : Entraînement, Soins (médicaments, mesures, rendez-vous, fiche d’urgence), Nutrition, Corps, Progrès.": "The spaces at the top: Training, Care (medication, measurements, appointments, emergency card), Nutrition, Body, Progress.",
   "Chargement…": "Loading…",
   "1 œuvre en cours": "1 work in progress",
   "12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial.": "At least 12 characters, with an uppercase letter, a lowercase letter, a number and a special character.",
@@ -155,7 +165,6 @@ export default {
   "Les flèches changent de semaine.": "The arrows change the week.",
   "Les livres que tu lis et ta progression page par page.": "The books you read and your progress page by page.",
   "Les niveaux 4 et 5 demandent une preuve (examen, projet, résultat).": "Levels 4 and 5 need proof (exam, project, result).",
-  "Les onglets en haut : Entraînement, Nutrition, Corps et récupération, Progrès.": "The tabs at the top: Training, Nutrition, Body and recovery, Progress.",
   "Les onglets en haut changent de partie. Une photo de l’emploi du temps peut le remplir pour toi.": "The tabs at the top switch sections. A photo of your timetable can fill it in for you.",
   "Les paliers montrent les grades à atteindre.": "The tiers show the ranks to reach.",
   "Lire aujourd’hui": "Read today",
