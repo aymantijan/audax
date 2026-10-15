@@ -81,8 +81,8 @@ export default function Readings({ embedded = false }) {
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => setEditingCounts(r)} title="Ajuster pages / mots"><Pencil size={13} /></button>
-            <button className="p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => setRemoving(r)} title="Retirer des lectures"><Trash2 size={13} /></button>
+            <button aria-label="Ajuster pages / mots" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => setEditingCounts(r)} title="Ajuster pages / mots"><Pencil size={13} /></button>
+            <button aria-label="Retirer des lectures" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => setRemoving(r)} title="Retirer des lectures"><Trash2 size={13} /></button>
           </div>
         </div>
         <div className="mt-3">

@@ -81,6 +81,6 @@ export const selectorsSlice = (set, get) => ({
       resetAll: () =>
         set({
           journal: [], budgets: [], corrections: [], goals: [], labelLimits: [], legacyImported: false, treasuryAccounts: [], assets: [], echeances: [],
-          echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} }, awardedBadges: [],
+          echeanceAlerts: { enabled: false, lastShown: {} }, budgetAlerts: { enabled: false, lastShown: {} }, awardedBadges: [], financeMonthChecks: [], financeWeekChecks: [],
         }),
 });

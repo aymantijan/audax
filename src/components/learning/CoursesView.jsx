@@ -64,7 +64,7 @@ function CourseCard({ c, settings, selected, onSelect, onDelete, weekMin = 0 }) 
       <div className="flex items-center gap-2 mt-auto">
         <Link to={`/learning/course/${c.id}`} className="px-3 py-1.5 rounded-lg text-xs bg-surface border border-line text-ink hover:border-accent">Ouvrir</Link>
         <span className="text-xs text-mute">{weekMin ? `${fmtMinutes(weekMin)} cette semaine` : 'pas étudié cette semaine'}</span>
-        <button className="ml-auto p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={onDelete} aria-label="Supprimer"><Trash2 size={13} /></button>
+        <button className="ui-icon-btn inline-flex items-center justify-center ml-auto p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={onDelete} aria-label="Supprimer"><Trash2 size={13} /></button>
       </div>
     </div>
   );
@@ -165,7 +165,7 @@ export default function CoursesView() {
                       </td>
                       <td className="py-2.5 px-3 hidden lg:table-cell text-mute text-xs">{c.completedAt ? new Date(c.completedAt).toLocaleDateString('fr-FR') : '—'}</td>
                       <td className="py-2.5 px-3 text-right">
-                        <button className="text-mute hover:text-bad cursor-pointer" onClick={() => setDeleting([c.id])}><Trash2 size={13} className="inline" /></button>
+                        <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => setDeleting([c.id])}><Trash2 size={13} className="inline" /></button>
                       </td>
                     </tr>
                   ))}

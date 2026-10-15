@@ -167,8 +167,8 @@ export default function FoodsCard() {
               <li key={f.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{f.name} <span className="text-mute text-xs">({FOOD_CATEGORIES.find((c) => c.value === f.category)?.label} · {f.kcal}kcal · {f.protein}g P{f.pricePerGram ? ` · ${f.servings?.[0] ? `${(f.pricePerGram * f.servings[0].grams).toFixed(2)}${baseCurrencyShort()}/${f.servings[0].label}` : `${(f.pricePerGram * 100).toFixed(1)}${baseCurrencyShort()}/100g`}` : ''})</span></span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditingFood(f)} aria-label={`Modifier ${f.name}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button onClick={() => deleteWithUndo(null, () => deleteCustomFood(f.id))} aria-label={`Supprimer ${f.name}`} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => setEditingFood(f)} aria-label={`Modifier ${f.name}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteCustomFood(f.id))} aria-label={`Supprimer ${f.name}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}
@@ -220,7 +220,7 @@ export default function FoodsCard() {
             return (
               <li key={name} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span>{name} <span className="text-mute text-xs">{unit ? `${(pricePerGram * unit.grams).toFixed(2)}${baseCurrencyShort()}/${unit.label}` : `${(pricePerGram * 100).toFixed(1)}${baseCurrencyShort()}/100g`}</span></span>
-                <button onClick={() => deleteWithUndo(null, () => deleteFoodPrice(name))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                <button onClick={() => deleteWithUndo(null, () => deleteFoodPrice(name))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
               </li>
             );
           })}
@@ -273,7 +273,7 @@ export default function FoodsCard() {
                   ].filter(Boolean).join(' · ')})
                 </span>
               </span>
-              <button onClick={() => deleteWithUndo(null, () => deleteFoodOverride(name))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+              <button onClick={() => deleteWithUndo(null, () => deleteFoodOverride(name))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
             </li>
           ))}
         </ul>

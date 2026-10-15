@@ -110,7 +110,7 @@ export default function TreasuryPure() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-lg font-bold" style={{ color: g.total >= 0 ? undefined : 'var(--error)' }}>{fmtMAD(g.total)}</span>
-                  <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openNewSub(g.code)} title="Ajouter un compte auxiliaire">
+                  <button aria-label="Ajouter un compte auxiliaire" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => openNewSub(g.code)} title="Ajouter un compte auxiliaire">
                     <Plus size={15} />
                   </button>
                 </div>
@@ -129,13 +129,13 @@ export default function TreasuryPure() {
                           <span className="block text-[0.6875rem] text-mute text-right">≈ {formatMoney(fromBase(balances[a.code]?.balance || 0, a.currency, store.baseCurrency, store.fxRates), a.currency)}</span>
                         )}
                       </span>
-                      <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEditSub(a)} title="Modifier"><Pencil size={13} /></button>
+                      <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => openEditSub(a)} title="Modifier"><Pencil size={13} /></button>
                       {a.archived ? (
-                        <button className="text-mute hover:text-accent cursor-pointer" onClick={() => unarchiveTreasuryAccount(a.id)} title="Réactiver"><ArchiveRestore size={13} /></button>
+                        <button aria-label="Réactiver" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => unarchiveTreasuryAccount(a.id)} title="Réactiver"><ArchiveRestore size={13} /></button>
                       ) : (
-                        <button className="text-mute hover:text-warn cursor-pointer" onClick={() => archiveTreasuryAccount(a.id)} title="Archiver"><Archive size={13} /></button>
+                        <button aria-label="Archiver" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-warn cursor-pointer" onClick={() => archiveTreasuryAccount(a.id)} title="Archiver"><Archive size={13} /></button>
                       )}
-                      <button className="text-mute hover:text-bad cursor-pointer" onClick={() => removeSub(a)} title="Supprimer"><Trash2 size={13} /></button>
+                      <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => removeSub(a)} title="Supprimer"><Trash2 size={13} /></button>
                     </li>
                   ))}
                 </ul>

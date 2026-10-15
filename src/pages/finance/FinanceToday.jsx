@@ -60,7 +60,7 @@ export default function FinanceToday() {
           <div>
             <div className="text-xs text-mute flex items-center gap-1.5">
               Reste à dépenser jusqu'au {new Date(`${t.monthEnd}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-              <button onClick={() => setExplain((v) => !v)} className="text-mute hover:text-ink cursor-pointer" title="Comment c'est calculé ?"><Info size={12} /></button>
+              <button aria-label="Comment c'est calculé ?" onClick={() => setExplain((v) => !v)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer" title="Comment c'est calculé ?"><Info size={12} /></button>
             </div>
             <div className="text-4xl font-bold tabular-nums mt-1" style={{ color }}>{fmtMAD(t.remaining)}</div>
             <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm">

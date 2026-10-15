@@ -99,11 +99,11 @@ export default function PnLCalendar() {
         title="Calendrier P&L"
         action={
           <div className="flex items-center gap-2">
-            <button className="text-mute hover:text-accent cursor-pointer" onClick={() => shiftMonth(-1)}><ChevronLeft size={16} /></button>
+            <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => shiftMonth(-1)}><ChevronLeft size={16} /></button>
             <button className="text-xs text-mute hover:text-accent cursor-pointer min-w-[110px] text-center" onClick={goToday}>
               {firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
             </button>
-            <button className="text-mute hover:text-accent cursor-pointer" onClick={() => shiftMonth(1)}><ChevronRight size={16} /></button>
+            <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => shiftMonth(1)}><ChevronRight size={16} /></button>
           </div>
         }
       >

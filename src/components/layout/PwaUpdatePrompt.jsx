@@ -57,7 +57,7 @@ export default function PwaUpdatePrompt() {
           <span className="flex-1">VAUDAX marche maintenant aussi sans internet.</span>
         </>
       )}
-      <button type="button" aria-label="Fermer" onClick={close} className="text-mute hover:text-ink shrink-0 cursor-pointer">
+      <button type="button" aria-label="Fermer" onClick={close} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink shrink-0 cursor-pointer">
         <X size={14} />
       </button>
     </div>

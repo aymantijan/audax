@@ -123,7 +123,7 @@ export default function SessionBuilder({ phaseId, session = null, onClose }) {
           <meta.icon size={18} style={{ color: meta.color }} className="shrink-0" />
           <h3 className="truncate font-semibold text-ink">{isNew ? 'Nouvelle séance' : session.label}</h3>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-mute hover:text-ink cursor-pointer" aria-label="Fermer"><X size={16} /></button>
+        <button onClick={onClose} className="ui-icon-btn inline-flex items-center justify-center rounded-lg p-1.5 text-mute hover:text-ink cursor-pointer" aria-label="Fermer"><X size={16} /></button>
       </div>
 
       <div className="space-y-5 p-5">

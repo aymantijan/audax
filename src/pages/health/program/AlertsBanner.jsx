@@ -61,7 +61,7 @@ export default function AlertsBanner() {
                 })}
               </span>
             </div>
-            <button onClick={() => handleDismiss(alert.id)} className="text-mute hover:text-ink cursor-pointer flex-shrink-0">
+            <button onClick={() => handleDismiss(alert.id)} className="ui-icon-btn text-mute hover:text-ink cursor-pointer flex-shrink-0">
               <X size={14} />
             </button>
           </div>

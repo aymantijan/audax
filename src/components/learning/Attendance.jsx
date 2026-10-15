@@ -209,7 +209,7 @@ export function ClassRow({ occ, now }) {
           </>
         )}
         {ATTENDANCE_STATUS[state]?.present && now >= occ.endMs - 10 * 60000 && (hasNotes
-          ? <button onClick={() => setCapture(occ)} className="text-good cursor-pointer" title="Notes du cours"><Check size={14} /></button>
+          ? <button aria-label="Notes du cours" onClick={() => setCapture(occ)} className="ui-icon-btn inline-flex items-center justify-center text-good cursor-pointer" title="Notes du cours"><Check size={14} /></button>
           : <Button variant="secondary" className="!py-1 !px-2 text-xs" onClick={() => setCapture(occ)}><span className="flex items-center gap-1"><NotebookPen size={12} /> Retenir</span></Button>)}
         <CorrectionMenu occ={occ} state={state} onArrival={() => setArrival(occ)} />
       </span>

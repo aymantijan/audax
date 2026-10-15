@@ -1,5 +1,5 @@
 import { Fragment, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useHealthStore } from './store/healthStore';
 import { isSupabaseConfigured } from './services/supabase';
@@ -45,10 +45,17 @@ const Challenges = lazy(lazyWithRetry(() => import('./pages/Challenges'), 'Chall
 const Timeline = lazy(lazyWithRetry(() => import('./pages/Timeline'), 'Timeline'));
 const Week = lazy(lazyWithRetry(() => import('./pages/Week'), 'Week'));
 const Emergency = lazy(lazyWithRetry(() => import('./pages/Emergency'), 'Emergency'));
+// Public pages, open without an account (chantier 8).
+const Landing = lazy(lazyWithRetry(() => import('./pages/public/Landing'), 'Landing'));
+const Install = lazy(lazyWithRetry(() => import('./pages/public/Install'), 'Install'));
+const Privacy = lazy(lazyWithRetry(() => import('./pages/public/Privacy'), 'Privacy'));
+const Terms = lazy(lazyWithRetry(() => import('./pages/public/Terms'), 'Terms'));
+const Accessibility = lazy(lazyWithRetry(() => import('./pages/public/Accessibility'), 'Accessibility'));
 
 function AuthGuard({ children }) {
   const user = useAuthStore((s) => s.user);
-  if (!user) return <Navigate to="/welcome" replace />;
+  const { pathname } = useLocation();
+  if (!user) return <Navigate to={pathname === '/' ? '/decouvrir' : '/welcome'} replace />;
   // New registrations (local or cloud, see authStore#register) start with
   // onboarded:false — every real route stays gated behind the wizard until
   // it calls completeOnboarding(), so nobody lands on an empty "Aujourd'hui"
@@ -136,6 +143,11 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
       <Routes>
       <Route path="/welcome" element={user ? <Navigate to="/" replace /> : <Welcome />} />
+      <Route path="/decouvrir" element={<Landing />} />
+      <Route path="/installer" element={<Install />} />
+      <Route path="/confidentialite" element={<Privacy />} />
+      <Route path="/conditions" element={<Terms />} />
+      <Route path="/accessibilite" element={<Accessibility />} />
       <Route
         path="/onboarding"
         element={!user ? <Navigate to="/welcome" replace /> : user.onboarded ? <Navigate to="/today" replace /> : <Onboarding />}

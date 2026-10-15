@@ -94,8 +94,8 @@ export default function FocusSessions() {
                 <span className="font-medium">{s.durationMinutes} min</span>
                 <span className="text-mute text-xs">{new Date(s.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                 {(courseName(s.courseId) || s.notes) && <span className="text-mute text-xs flex-1 truncate">{[courseName(s.courseId), s.notes].filter(Boolean).join(' · ')}</span>}
-                <button className="text-mute hover:text-ink cursor-pointer ml-auto" aria-label="Modifier la session" onClick={() => setEditingSession(s)}><Pencil size={13} /></button>
-                <button className="text-mute hover:text-bad cursor-pointer" aria-label="Supprimer la session" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={13} /></button>
+                <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer ml-auto" aria-label="Modifier la session" onClick={() => setEditingSession(s)}><Pencil size={13} /></button>
+                <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" aria-label="Supprimer la session" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={13} /></button>
               </li>
             ))}
           </ul>

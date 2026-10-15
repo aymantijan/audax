@@ -110,8 +110,8 @@ function UnitCard({ unit, settings, onEditModule, onAddSubject, forecasts }) {
         </div>
         {m && (
           <div className="flex items-center gap-1">
-            <button className="p-1.5 rounded-md text-mute hover:text-accent hover:bg-surface cursor-pointer" title="Ajouter une matière" onClick={() => onAddSubject(m.id)}><Plus size={14} /></button>
-            <button className="p-1.5 rounded-md text-mute hover:text-accent hover:bg-surface cursor-pointer" title="Modifier le module" onClick={() => onEditModule(m)}><Pencil size={13} /></button>
+            <button aria-label="Ajouter une matière" className="ui-icon-btn inline-flex items-center justify-center p-1.5 rounded-md text-mute hover:text-accent hover:bg-surface cursor-pointer" title="Ajouter une matière" onClick={() => onAddSubject(m.id)}><Plus size={14} /></button>
+            <button aria-label="Modifier le module" className="ui-icon-btn inline-flex items-center justify-center p-1.5 rounded-md text-mute hover:text-accent hover:bg-surface cursor-pointer" title="Modifier le module" onClick={() => onEditModule(m)}><Pencil size={13} /></button>
           </div>
         )}
       </div>
@@ -248,8 +248,8 @@ export default function CursusView() {
                   {t.name}
                 </button>
               ))}
-              <button onClick={() => setTermModal({})} className="rounded-lg px-2.5 py-1.5 text-sm border border-dashed border-line text-mute hover:text-accent hover:border-accent cursor-pointer" title="Nouveau semestre"><Plus size={14} /></button>
-              <button onClick={() => setTermModal({ term })} className="p-1.5 text-mute hover:text-accent cursor-pointer" title="Modifier le semestre"><Pencil size={13} /></button>
+              <button aria-label="Nouveau semestre" onClick={() => setTermModal({})} className="ui-icon-btn inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-sm border border-dashed border-line text-mute hover:text-accent hover:border-accent cursor-pointer" title="Nouveau semestre"><Plus size={14} /></button>
+              <button aria-label="Modifier le semestre" onClick={() => setTermModal({ term })} className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" title="Modifier le semestre"><Pencil size={13} /></button>
             </div>
             <div className="text-xs text-mute mt-2">
               {term.year && <>{term.year} · </>}

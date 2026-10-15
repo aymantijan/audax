@@ -6,6 +6,8 @@ import CloudAuthPanel from '../components/auth/CloudAuthPanel';
 import DisplayControls from '../components/common/DisplayControls';
 import { Button, Field, Input, Select } from '../components/common/ui';
 import { t } from '../i18n';
+import { Link } from 'react-router-dom';
+import { PublicFooter } from '../components/layout/PublicPage';
 
 // When Supabase is configured, cloud accounts are the ONLY path — a local-only
 // "just type a name" fallback next to it would let anyone on a shared deployed
@@ -44,6 +46,8 @@ export default function Welcome() {
           <DisplayControls compact />
         </div>
 
+        <p className="text-center text-sm mb-4"><Link to="/decouvrir" className="text-accent hover:underline">{t('Découvrir VAUDAX avant de commencer')}</Link></p>
+
         {isSupabaseConfigured ? (
           <CloudAuthPanel />
         ) : (
@@ -79,6 +83,7 @@ export default function Welcome() {
             </Button>
           </form>
         )}
+        <PublicFooter />
       </div>
     </div>
   );

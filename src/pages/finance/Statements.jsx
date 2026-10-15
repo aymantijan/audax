@@ -193,10 +193,10 @@ export default function Statements() {
                     <span className="font-medium" style={{ color: cr.type === 'plus-value' ? 'var(--success)' : 'var(--error)' }}>
                       {cr.type === 'plus-value' ? '+' : '−'}{fmtMAD(cr.amount)}
                     </span>
-                    <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingCorr(cr); setCorrForm({ ...cr, account: cr.account || '' }); setCorrModal(true); }} title="Modifier">
+                    <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingCorr(cr); setCorrForm({ ...cr, account: cr.account || '' }); setCorrModal(true); }} title="Modifier">
                       <Pencil size={13} />
                     </button>
-                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteCorrection(cr.id)); }} title="Supprimer">
+                    <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteCorrection(cr.id)); }} title="Supprimer">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -234,10 +234,10 @@ export default function Statements() {
                 </span>
                 <span className="text-[0.6875rem] text-mute">{as.valuationSource}</span>
                 <span className="font-medium">{fmtMAD(as.totalCost ?? 0)}</span>
-                <button className="text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingAsset(as); setAssetForm({ ...blankAsset(), ...as, quantity: as.quantity ?? '', unit: as.unit ?? '', unitCost: as.unitCost ?? '', totalCost: as.totalCost ?? '', marketIdentifier: as.marketIdentifier ?? '', currentEstimate: as.currentEstimate ?? '', acquisitionDate: as.acquisitionDate ?? '', valuationSource: as.valuationSource ?? '' }); setAssetModal(true); }} title="Modifier">
+                <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => { setEditingAsset(as); setAssetForm({ ...blankAsset(), ...as, quantity: as.quantity ?? '', unit: as.unit ?? '', unitCost: as.unitCost ?? '', totalCost: as.totalCost ?? '', marketIdentifier: as.marketIdentifier ?? '', currentEstimate: as.currentEstimate ?? '', acquisitionDate: as.acquisitionDate ?? '', valuationSource: as.valuationSource ?? '' }); setAssetModal(true); }} title="Modifier">
                   <Pencil size={13} />
                 </button>
-                <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteAsset(as.id)); }} title="Supprimer">
+                <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteAsset(as.id)); }} title="Supprimer">
                   <Trash2 size={13} />
                 </button>
               </div>

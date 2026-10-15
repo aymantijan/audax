@@ -24,7 +24,7 @@ export function QuantityControl({ h, value, date }) {
         <span className="text-xs tabular-nums" style={{ color }}>{value}/{target} {h.unit}</span>
       ) : (
         <div className="flex items-center gap-1">
-          <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, Math.max(0, value - step))}><Minus size={11} /></button>
+          <button className="ui-icon-btn w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, Math.max(0, value - step))}><Minus size={11} /></button>
           {draft != null ? (
             <form onSubmit={(e) => { e.preventDefault(); setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}>
               <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => { setHabitValue(h.id, date, Number(String(draft).replace(',', '.')) || 0); setDraft(null); }}
@@ -33,7 +33,7 @@ export function QuantityControl({ h, value, date }) {
           ) : (
             <button onClick={() => setDraft(String(value))} className="text-xs tabular-nums px-1 cursor-pointer hover:underline" style={{ color }} title="Saisir la valeur">{value}/{target} {h.unit}</button>
           )}
-          <button className="w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, value + step)}><Plus size={11} /></button>
+          <button className="ui-icon-btn w-6 h-6 rounded border border-line text-mute hover:text-ink cursor-pointer flex items-center justify-center" onClick={() => setHabitValue(h.id, date, value + step)}><Plus size={11} /></button>
         </div>
       )}
       {h.direction === 'atMost' && <span className="text-[0.6875rem] text-mute">{over ? 'limite dépassée' : `max ${target}`}</span>}

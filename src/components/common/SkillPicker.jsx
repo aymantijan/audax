@@ -38,7 +38,7 @@ export default function SkillPicker({ value, onChange, multi = true, placeholder
           {selected.map((id) => (
             <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-accent/10 text-accent border border-accent/40">
               {skillLabel(id)}
-              <button type="button" onClick={() => remove(id)} className="hover:text-bad cursor-pointer">
+              <button type="button" onClick={() => remove(id)} className="ui-icon-btn inline-flex items-center justify-center hover:text-bad cursor-pointer">
                 <X size={11} />
               </button>
             </span>

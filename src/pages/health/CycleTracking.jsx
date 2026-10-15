@@ -425,8 +425,8 @@ export default function CycleTracking() {
                   {c.date}{c.endDate ? ` → ${c.endDate}` : ''} · {FLOW_LABEL[c.flow] || c.flow}{c.symptoms.length ? ` · ${c.symptoms.map(symptomLabel).join(', ')}` : ''}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditing(c)} aria-label={`Modifier ${`cycle du ${c.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCycleLog(c.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => setEditing(c)} aria-label={`Modifier ${`cycle du ${c.date}`}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCycleLog(c.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}

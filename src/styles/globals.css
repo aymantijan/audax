@@ -30,7 +30,7 @@
   --accent-primary: #86621c; /* or, darkened: ≥ 5:1 on vélin and with white text */
   --accent-secondary: #7e4f8e;
   --success: #23704d;
-  --warning: #b36b12;
+  --warning: #965a0e; /* ≥ 4.5:1 on vélin and cards (WCAG AA, chantier 8) */
   --error: #b83a4b;
   --border: #e3d6c3;
   --on-accent: #ffffff;

@@ -294,8 +294,8 @@ export default function NutritionTracker({ pendingPrompt }) {
         <Card title="Plan nutritionnel actif" action={
           <div className="flex items-center gap-2">
             <Badge>{activePlan.targetKcal} kcal/j</Badge>
-            <button title="Régénérer" onClick={() => setWizardOpen(true)} className="text-mute hover:text-accent cursor-pointer"><RefreshCw size={13} /></button>
-            <button title="Supprimer le plan" onClick={() => deleteWithUndo(null, () => deleteNutritionPlan(activePlan.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+            <button aria-label="Régénérer" title="Régénérer" onClick={() => setWizardOpen(true)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer"><RefreshCw size={13} /></button>
+            <button aria-label="Supprimer le plan" title="Supprimer le plan" onClick={() => deleteWithUndo(null, () => deleteNutritionPlan(activePlan.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
           </div>
         }>
           <div className="space-y-2">
@@ -326,7 +326,7 @@ export default function NutritionTracker({ pendingPrompt }) {
                               </button>
                             )}
                             {it.category && (
-                              <button title="Remplacer" onClick={() => setSwapFor((s) => (isSwapping ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="text-mute hover:text-ink cursor-pointer">
+                              <button aria-label="Remplacer" title="Remplacer" onClick={() => setSwapFor((s) => (isSwapping ? null : { mealSlot: m.mealSlot, itemIndex: i }))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer">
                                 <Repeat size={11} />
                               </button>
                             )}
@@ -419,8 +419,8 @@ export default function NutritionTracker({ pendingPrompt }) {
                 <span>{en.name} <span className="text-mute text-xs">({en.amount ?? en.grams}{en.unit && en.unit !== 'g' ? ` ${en.unit}${en.amount > 1 ? 's' : ''}` : 'g'}{en.unit && en.unit !== 'g' ? ` · ${en.grams}g` : ''})</span></span>
                 <span className="flex items-center gap-3">
                   <span className="text-mute text-xs">{en.kcal} kcal · {en.protein}g P {!en.matched && '· non reconnu'}</span>
-                  <button onClick={() => setEditingMeal(en)} aria-label={`Modifier ${en.name}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button onClick={() => deleteWithUndo(null, () => deleteMeal(en.id))} aria-label={`Supprimer ${en.name}`} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => setEditingMeal(en)} aria-label={`Modifier ${en.name}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteMeal(en.id))} aria-label={`Supprimer ${en.name}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}
@@ -444,7 +444,7 @@ export default function NutritionTracker({ pendingPrompt }) {
                 <span>{t.name} <span className="text-mute text-xs">({t.items.length} items)</span></span>
                 <span className="flex items-center gap-3">
                   <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => logMealTemplate(t.id, logDate)}>Ajouter</Button>
-                  <button onClick={() => deleteWithUndo(null, () => deleteMealTemplate(t.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteMealTemplate(t.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}

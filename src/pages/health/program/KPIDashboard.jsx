@@ -175,7 +175,7 @@ function KpiRow({ kpi }) {
 
   return (
     <div className="group flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface/50 px-3 py-2.5">
-      <button onClick={() => store.updateKpi(kpi.id, { is_pinned: !kpi.is_pinned })} className="text-mute hover:text-accent cursor-pointer" title="Épingler">
+      <button aria-label="Épingler" onClick={() => store.updateKpi(kpi.id, { is_pinned: !kpi.is_pinned })} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" title="Épingler">
         <Pin size={13} className={kpi.is_pinned ? 'fill-accent text-accent' : ''} />
       </button>
       <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ function KpiRow({ kpi }) {
           <span className="flex items-center gap-1"><Plus size={12} /> Valeur du jour</span>
         </Button>
       ))}
-      <button onClick={() => store.removeKpi(kpi.id)} className="text-mute opacity-0 transition-opacity hover:text-bad group-hover:opacity-100 cursor-pointer" title="Supprimer">
+      <button aria-label="Supprimer" onClick={() => store.removeKpi(kpi.id)} className="ui-icon-btn inline-flex items-center justify-center text-mute opacity-0 transition-opacity hover:text-bad group-hover:opacity-100 cursor-pointer" title="Supprimer">
         <Trash2 size={13} />
       </button>
     </div>

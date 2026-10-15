@@ -78,8 +78,8 @@ export default function LocationManager() {
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
-                <button onClick={() => startEdit(loc)} className="text-mute hover:text-ink p-1 cursor-pointer"><Pencil size={13} /></button>
-                <button onClick={() => handleDelete(loc.id)} className="text-mute hover:text-bad p-1 cursor-pointer"><Trash2 size={13} /></button>
+                <button onClick={() => startEdit(loc)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink p-1 cursor-pointer"><Pencil size={13} /></button>
+                <button onClick={() => handleDelete(loc.id)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad p-1 cursor-pointer"><Trash2 size={13} /></button>
               </div>
             </div>
           ))}

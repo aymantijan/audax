@@ -267,7 +267,7 @@ export default function GymLogging({ pendingPrompt }) {
                             </button>
                           ))}
                         </div>
-                        <button type="button" onClick={() => removeExerciseFromSession(exIdx)} className="text-mute hover:text-bad cursor-pointer">
+                        <button type="button" onClick={() => removeExerciseFromSession(exIdx)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer">
                           <X size={14} />
                         </button>
                       </div>
@@ -281,7 +281,7 @@ export default function GymLogging({ pendingPrompt }) {
                           <div className="text-[0.6875rem] text-mute text-center"><Term id="rpe" short /> {s.rpe}</div>
                         </div>
                         <Select value={s.form} onChange={(e) => updateSetInExercise(exIdx, setIdx, { form: e.target.value })} options={['Good', 'Fair', 'Poor']} />
-                        <button type="button" onClick={() => removeSetFromExercise(exIdx, setIdx)} className="text-mute hover:text-bad cursor-pointer justify-self-center">
+                        <button type="button" onClick={() => removeSetFromExercise(exIdx, setIdx)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer justify-self-center">
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -458,11 +458,11 @@ function SessionRow({ item, onDelete, onEdit, showDate }) {
           </div>
         </div>
         {onEdit && (
-          <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier">
+          <button onClick={onEdit} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier">
             <Pencil size={14} />
           </button>
         )}
-        <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer">
+        <button onClick={onDelete} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer">
           <Trash2 size={14} />
         </button>
       </div>

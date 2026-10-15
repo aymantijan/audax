@@ -169,8 +169,8 @@ function GoalCard({ g, phases, onEdit, onDelete, onLog, onDeleteValue, showProgr
           {g.title && <div className="mt-0.5 text-xs text-mute">{g.what}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button onClick={onEdit} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
-          <button onClick={onDelete} className="rounded-md p-1.5 text-mute hover:bg-card hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
+          <button onClick={onEdit} className="ui-icon-btn inline-flex items-center justify-center rounded-md p-1.5 text-mute hover:bg-card hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
+          <button onClick={onDelete} className="ui-icon-btn inline-flex items-center justify-center rounded-md p-1.5 text-mute hover:bg-card hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
         </div>
       </div>
 
@@ -297,7 +297,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
         <div className="rounded-2xl border border-accent/40 bg-card p-5">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-semibold text-ink">Modifier l’objectif</h4>
-            <button onClick={() => setEditingId(null)} className="text-mute hover:text-ink cursor-pointer"><X size={16} /></button>
+            <button onClick={() => setEditingId(null)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><X size={16} /></button>
           </div>
           <GoalForm
             lockMetric
@@ -335,7 +335,7 @@ export default function GoalsBoard({ programId = null, phases = [] }) {
                   <Check size={14} className="text-good" />
                   <span className="flex-1 text-ink">{g.label}</span>
                   <span className="text-xs text-mute">{g.achievedAt ? new Date(g.achievedAt).toLocaleDateString('fr-FR') : ''}</span>
-                  <button onClick={() => deleteWithUndo(null, () => deleteGoal(g.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => deleteWithUndo(null, () => deleteGoal(g.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </li>
               ))}
             </ul>

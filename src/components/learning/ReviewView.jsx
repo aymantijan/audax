@@ -177,7 +177,7 @@ function DeckDetail({ deck, onBack, onReview }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-ink truncate">{deck.name}</h2>
-              <button onClick={() => setDeckModal(true)} className="p-1 text-mute hover:text-accent cursor-pointer"><Pencil size={13} /></button>
+              <button onClick={() => setDeckModal(true)} className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer"><Pencil size={13} /></button>
             </div>
             <p className="text-xs text-mute mt-1">
               {course ? <Link to={`/learning/course/${course.id}`} className="hover:text-ink underline">{course.name}</Link> : 'Paquet indépendant'}
@@ -208,9 +208,9 @@ function DeckDetail({ deck, onBack, onReview }) {
                 {chapterName(c.chapterId) && <span className="truncate max-w-[8rem]">{chapterName(c.chapterId)}</span>}
                 <span className="rounded-full px-1.5 py-0.5 border border-line">{STATE_LABEL[c.state]}</span>
                 {c.state !== 'new' && <span>{c.due <= now ? 'à revoir' : `dans ${fmtInterval(c.due - now)}`}</span>}
-                <button className="p-1 hover:text-accent cursor-pointer" title="Modifier" onClick={() => setCardModal({ card: c })}><Pencil size={12} /></button>
-                <button className="p-1 hover:text-accent cursor-pointer" title="Réapprendre depuis zéro" onClick={() => resetCard(c.id)}><RotateCcw size={12} /></button>
-                <button className="p-1 hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCard(c.id))}><Trash2 size={12} /></button>
+                <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 hover:text-accent cursor-pointer" title="Modifier" onClick={() => setCardModal({ card: c })}><Pencil size={12} /></button>
+                <button aria-label="Réapprendre depuis zéro" className="ui-icon-btn inline-flex items-center justify-center p-1 hover:text-accent cursor-pointer" title="Réapprendre depuis zéro" onClick={() => resetCard(c.id)}><RotateCcw size={12} /></button>
+                <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteCard(c.id))}><Trash2 size={12} /></button>
               </div>
             </div>
           ))}

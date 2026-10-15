@@ -13,6 +13,7 @@ import { CURRENCIES } from '../src/utils/currency.js';
 import { HABIT_CATEGORY_LABELS } from '../src/utils/constants.js';
 import { REVIEW_METRICS } from '../src/utils/life-review.js';
 import { HABIT_HINTS } from '../src/utils/module-nudges.js';
+import { PUBLIC_LINKS, PILLARS, FOR_WHOM, PROMISES, INSTALL_STEPS } from '../src/utils/landing-content.js';
 import { translate, fill } from '../src/i18n/index.js';
 import en from '../src/i18n/en.js';
 import es from '../src/i18n/es.js';
@@ -27,6 +28,7 @@ const EXTRA = [
   'Ajoute un caractère spécial (par exemple ! ou #).', 'Vérifie ta boîte e-mail pour confirmer ton compte.',
   'E-mail ou mot de passe incorrect.', 'Si un compte existe avec cet e-mail, un lien de réinitialisation vient d’être envoyé.',
   'j', 'sem.',
+  'iPhone / iPad', 'Android', 'Ordinateur',
 ];
 
 function files(dir) {
@@ -53,6 +55,7 @@ export function allKeys() {
     ...Object.values(HELP).flatMap((h) => [h.title, ...h.lines]), ...TOUR.flatMap((s) => [s.title, s.text]),
     ...TEXT_SIZES.map((s) => s.label), ...CURRENCIES.map((c) => c.label), ...Object.values(HABIT_CATEGORY_LABELS),
     ...REVIEW_METRICS.map((m) => m.label), ...HABIT_HINTS.map((h) => h.text),
+    ...PUBLIC_LINKS.map((l) => l.label), ...PILLARS.flatMap((p) => [p.title, p.text]), ...FOR_WHOM, ...PROMISES.map((p) => p.text), ...Object.values(INSTALL_STEPS).flat(),
   ]) keys.add(x);
   return [...keys].sort();
 }

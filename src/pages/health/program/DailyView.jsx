@@ -74,7 +74,7 @@ export default function DailyView() {
     <div className="rounded-2xl border border-line bg-card">
       {/* Date navigation */}
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <button onClick={() => goDay(-1)} className="rounded-lg p-2 text-mute hover:bg-surface hover:text-ink cursor-pointer" aria-label="Jour précédent"><ChevronLeft size={18} /></button>
+        <button onClick={() => goDay(-1)} className="ui-icon-btn inline-flex items-center justify-center rounded-lg p-2 text-mute hover:bg-surface hover:text-ink cursor-pointer" aria-label="Jour précédent"><ChevronLeft size={18} /></button>
         <button onClick={() => setSelectedDate(localToday())} className="text-center cursor-pointer">
           <div className={`text-sm font-semibold capitalize ${isToday ? 'text-accent' : 'text-ink'}`}>{formatDate(selectedDate)}</div>
           <div className="text-xs text-mute">
@@ -82,7 +82,7 @@ export default function DailyView() {
             {schedule.length > 0 && ` · ${doneCount}/${schedule.length} fait(es)`}
           </div>
         </button>
-        <button onClick={() => goDay(1)} className="rounded-lg p-2 text-mute hover:bg-surface hover:text-ink cursor-pointer" aria-label="Jour suivant"><ChevronRight size={18} /></button>
+        <button onClick={() => goDay(1)} className="ui-icon-btn inline-flex items-center justify-center rounded-lg p-2 text-mute hover:bg-surface hover:text-ink cursor-pointer" aria-label="Jour suivant"><ChevronRight size={18} /></button>
       </div>
 
       <div className="p-4">

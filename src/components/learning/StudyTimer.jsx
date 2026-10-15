@@ -246,10 +246,10 @@ export function StudyTimerDock() {
         <span className="font-mono font-semibold tabular-nums text-sm text-ink">{fmtClock(ms)}</span>
         <span className="text-xs text-mute truncate max-w-[9rem]">{label}</span>
       </Link>
-      <button onClick={timer.pausedAt ? resumeTimer : pauseTimer} className="p-1.5 rounded-full text-mute hover:text-ink hover:bg-surface cursor-pointer" title={timer.pausedAt ? 'Reprendre' : 'Pause'}>
+      <button aria-label={timer.pausedAt ? 'Reprendre' : 'Pause'} onClick={timer.pausedAt ? resumeTimer : pauseTimer} className="ui-icon-btn inline-flex items-center justify-center p-1.5 rounded-full text-mute hover:text-ink hover:bg-surface cursor-pointer" title={timer.pausedAt ? 'Reprendre' : 'Pause'}>
         {timer.pausedAt ? <Play size={14} /> : <Pause size={14} />}
       </button>
-      <button onClick={() => stopTimer({ courseLabel: label })} className="p-1.5 rounded-full text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Terminer et enregistrer"><Square size={14} /></button>
+      <button aria-label="Terminer et enregistrer" onClick={() => stopTimer({ courseLabel: label })} className="ui-icon-btn inline-flex items-center justify-center p-1.5 rounded-full text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Terminer et enregistrer"><Square size={14} /></button>
     </div>
   );
 }

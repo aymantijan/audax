@@ -416,7 +416,7 @@ function TemplateForm({ phaseId, template, onClose }) {
                 <span className="text-[0.6875rem] text-good text-center font-medium">{item.protein || 0}g</span>
                 <span className="text-[0.6875rem] text-warning text-center font-medium">{item.carbs || 0}g</span>
                 <span className="text-[0.6875rem] text-bad text-center font-medium">{item.fat || 0}g</span>
-                <button onClick={() => removeFoodItem(mealIdx, itemIdx)} className="text-mute hover:text-bad cursor-pointer">
+                <button onClick={() => removeFoodItem(mealIdx, itemIdx)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer">
                   <Trash2 size={10} />
                 </button>
               </div>

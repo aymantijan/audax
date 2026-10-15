@@ -282,7 +282,7 @@ export default function Budget() {
                 <Fragment key={v.id}>
                   <tr className="border-b border-line/40">
                     <td className="py-2 pl-1">
-                      <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setExpandedId(expandedId === v.id ? null : v.id)} title="Analyser ce budget">
+                      <button aria-label="Analyser ce budget" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => setExpandedId(expandedId === v.id ? null : v.id)} title="Analyser ce budget">
                         {expandedId === v.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
                     </td>
@@ -308,7 +308,7 @@ export default function Budget() {
                       ) : '—'}
                     </td>
                     <td className="py-2 text-right">
-                      <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBudget(v.id)); }}>
+                      <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBudget(v.id)); }}>
                         <Trash2 size={13} />
                       </button>
                     </td>

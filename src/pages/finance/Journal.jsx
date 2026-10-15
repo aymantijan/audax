@@ -193,7 +193,7 @@ function ExpertForm({ initial, onSubmit, onCancel }) {
             <Input type="number" step="any" min="0" className="text-right" value={l.credit} onChange={(e) => setLine(i, { credit: e.target.value, debit: e.target.value ? '' : l.debit })} />
             <button
               type="button"
-              className="text-mute hover:text-bad cursor-pointer disabled:opacity-30"
+              className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer disabled:opacity-30"
               disabled={form.lines.length <= 2}
               onClick={() => setForm({ ...form, lines: form.lines.filter((_, j) => j !== i) })}
             >
@@ -311,8 +311,8 @@ export default function Journal() {
                     </div>
                   </div>
                   <span className="text-sm font-semibold tabular-nums whitespace-nowrap" style={{ color: d.kind === 'other' ? undefined : meta.color }}>{meta.sign}{fmtMAD(d.amount)}</span>
-                  <button className="p-1 text-mute hover:text-accent cursor-pointer" title="Modifier" onClick={() => openEdit(e)}><Pencil size={13} /></button>
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => setDeleting(e)}><Trash2 size={13} /></button>
+                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer" title="Modifier" onClick={() => openEdit(e)}><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => setDeleting(e)}><Trash2 size={13} /></button>
                 </div>
               );
             })}
@@ -331,7 +331,7 @@ export default function Journal() {
                   <span className="flex-1 truncate">{e.label}<span className="text-xs text-mute">{fxNote(e)}</span></span>
                   <span className="font-medium whitespace-nowrap">{fmtMAD(entryTotal(e))}</span>
                   <button
-                    className="text-mute hover:text-accent cursor-pointer"
+                    className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer"
                     onClick={(ev) => {
                       ev.stopPropagation();
                       openEdit(e);
@@ -340,7 +340,7 @@ export default function Journal() {
                     <Pencil size={13} />
                   </button>
                   <button
-                    className="text-mute hover:text-bad cursor-pointer"
+                    className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"
                     onClick={(ev) => {
                       ev.stopPropagation();
                       setDeleting(e);

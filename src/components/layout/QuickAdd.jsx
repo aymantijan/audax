@@ -20,7 +20,7 @@ export default function QuickAdd() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Noter quelque chose"
-          className="rounded-full flex items-center justify-center shadow-xl cursor-pointer"
+          className="ui-icon-btn rounded-full flex items-center justify-center shadow-xl cursor-pointer"
           style={{ width: 52, height: 52, background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' }}
         >
           <Plus size={22} className="text-on-accent" />

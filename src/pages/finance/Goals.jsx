@@ -36,8 +36,8 @@ function GoalCard({ g, onEdit, onDelete, onContribute, simple }) {
         <div className="flex items-center gap-1.5 shrink-0">
           {g.achieved && <Badge color="var(--success)"><span className="flex items-center gap-1"><Trophy size={11} /> {g.badge}</span></Badge>}
           {!g.achieved && g.onTrack !== null && <Badge color={g.onTrack ? 'var(--success)' : 'var(--warning)'}>{g.onTrack ? 'en bonne voie' : 'en retard'}</Badge>}
-          {!g.achieved && <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => onEdit(g)} title="Modifier"><Pencil size={13} /></button>}
-          <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => onDelete(g)} title="Supprimer"><Trash2 size={13} /></button>
+          {!g.achieved && <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer" onClick={() => onEdit(g)} title="Modifier"><Pencil size={13} /></button>}
+          <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" onClick={() => onDelete(g)} title="Supprimer"><Trash2 size={13} /></button>
         </div>
       </div>
       <ProgressBar value={g.progress ?? 0} color={g.progress >= 100 ? 'var(--success)' : 'var(--accent-primary)'} />

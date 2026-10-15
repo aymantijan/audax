@@ -384,7 +384,7 @@ export function ToastContainer() {
               {t.action.label}
             </button>
           )}
-          <button type="button" aria-label="Fermer" onClick={() => removeToast(t.id)} className="text-mute hover:text-ink shrink-0 cursor-pointer">
+          <button type="button" aria-label="Fermer" onClick={() => removeToast(t.id)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink shrink-0 cursor-pointer">
             <X size={14} />
           </button>
         </div>

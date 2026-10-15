@@ -166,8 +166,10 @@ export async function startCloudSync(userId) {
 
   // Local data from ANOTHER account: never push or merge it into this one —
   // start this account from its defaults (its cloud rows are applied below).
+  // The « Voir un exemple » profile (services/demo.js) counts as foreign too:
+  // example data must never reach a real account.
   const owner = readLS(OWNER_KEY, null);
-  const foreignLocal = owner != null && owner !== userId;
+  const foreignLocal = (owner != null && owner !== userId) || !!useAuthStore.getState().user?.demo;
   if (foreignLocal) {
     // Not 'auth': the sign-up / sign-in flow has just written this account's profile there.
     for (const { name, store } of REGISTRY) if (name !== 'auth' && store.getInitialState) store.setState(store.getInitialState(), true);

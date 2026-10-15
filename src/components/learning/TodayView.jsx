@@ -66,7 +66,7 @@ function WeekCard({ sessions, today, settings }) {
             <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); update({ weeklyStudyTarget: Math.max(0, Number(draft) || 0) }); setEditing(false); }}>
               <input autoFocus type="number" min="0" className="w-14 bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink" value={draft} onChange={(e) => setDraft(e.target.value)} />
               <span className="text-mute">h</span>
-              <button className="text-accent cursor-pointer p-0.5" aria-label="Valider"><Check size={13} /></button>
+              <button className="ui-icon-btn inline-flex items-center justify-center text-accent cursor-pointer p-0.5" aria-label="Valider"><Check size={13} /></button>
             </form>
           ) : (
             <button onClick={() => { setDraft(settings.weeklyStudyTarget); setEditing(true); }} className="text-ink hover:text-accent cursor-pointer flex items-center gap-1">
@@ -285,8 +285,8 @@ export default function TodayView() {
                     {s.notes && <span className="text-xs text-mute truncate block">{s.notes}</span>}
                   </span>
                   <span className="text-sm tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
-                  <button className="p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={12} /></button>
+                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>
+                  <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={12} /></button>
                 </div>
               ))}
             </div>

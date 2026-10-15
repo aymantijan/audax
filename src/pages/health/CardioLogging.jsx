@@ -220,8 +220,8 @@ function Row({ w, onDelete, onEdit, showDate }) {
         <div className="text-sm text-ink">{w.exercise || 'Cardio'}</div>
         <div className="text-xs text-mute">{details}</div>
       </div>
-      <button onClick={onEdit} className="shrink-0 text-mute hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
-      <button onClick={onDelete} className="shrink-0 text-mute hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
+      <button onClick={onEdit} className="ui-icon-btn inline-flex items-center justify-center shrink-0 text-mute hover:text-accent cursor-pointer" title="Modifier" aria-label="Modifier"><Pencil size={14} /></button>
+      <button onClick={onDelete} className="ui-icon-btn inline-flex items-center justify-center shrink-0 text-mute hover:text-bad cursor-pointer" title="Supprimer" aria-label="Supprimer"><Trash2 size={14} /></button>
     </li>
   );
 }

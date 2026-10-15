@@ -70,7 +70,7 @@ export default function QuickCheckin() {
   return (
     <Card
       title="Check-in du jour"
-      action={<button onClick={() => setOpen((o) => !o)} className="text-mute hover:text-ink cursor-pointer">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>}
+      action={<button onClick={() => setOpen((o) => !o)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>}
     >
       {!open ? (
         <button onClick={() => setOpen(true)} className="w-full text-left text-sm text-mute cursor-pointer">

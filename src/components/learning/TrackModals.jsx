@@ -268,7 +268,7 @@ export function ResourcesCard({ course }) {
                     <div className="text-[0.6875rem] text-mute">{resourceLabel(r.type)}{book?.author ? ` · ${book.author}` : ''}</div>
                   </div>
                   {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="p-1 text-mute hover:text-accent" title="Ouvrir"><ExternalLink size={13} /></a>}
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteWithUndo(null, () => deleteResource(course.id, r.id))}><Trash2 size={12} /></button>
+                  <button aria-label="Retirer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Retirer" onClick={() => deleteWithUndo(null, () => deleteResource(course.id, r.id))}><Trash2 size={12} /></button>
                 </div>
                 {prog && (
                   <div className="mt-2 pl-6">
@@ -276,8 +276,8 @@ export function ResourcesCard({ course }) {
                     <div className="flex items-center gap-2 mt-1.5 text-xs text-mute">
                       <span className="tabular-nums">{prog.pagesRead}/{total} p. · {pct}%</span>
                       <div className="ml-auto flex items-center gap-1">
-                        <button className="p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.pagesRead <= 0} onClick={() => removePage(prog.id)}><Minus size={10} /></button>
-                        <button className="p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.status === 'completed'} onClick={() => addPage(prog.id)}><Plus size={10} /></button>
+                        <button className="ui-icon-btn inline-flex items-center justify-center p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.pagesRead <= 0} onClick={() => removePage(prog.id)}><Minus size={10} /></button>
+                        <button className="ui-icon-btn inline-flex items-center justify-center p-1 rounded border border-line hover:text-ink cursor-pointer disabled:opacity-40" disabled={prog.status === 'completed'} onClick={() => addPage(prog.id)}><Plus size={10} /></button>
                         <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); const v = Number(pageDraft[r.id]); if (v >= 0) setPagesRead(prog.id, v); setPageDraft((d) => ({ ...d, [r.id]: '' })); }}>
                           <input type="number" min="0" placeholder="page" value={pageDraft[r.id] ?? ''} onChange={(e) => setPageDraft((d) => ({ ...d, [r.id]: e.target.value }))}
                             className="w-16 bg-surface border border-line rounded px-1.5 py-0.5 text-xs text-ink" />

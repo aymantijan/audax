@@ -118,8 +118,8 @@ export default function Performance() {
               <li key={p.id} className="flex items-center justify-between text-sm bg-surface border border-line rounded-lg px-3 py-2">
                 <span className="flex items-center gap-2"><HeartPulse size={13} className="text-mute" /> {p.date} · FC {p.restingHr ?? '—'} · Vitalité {p.vitality ?? '—'}/10 · Mobilité {p.mobility ?? '—'}/10</span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditing(p)} aria-label={`Modifier ${`performance du ${p.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deletePerformance(p.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => setEditing(p)} aria-label={`Modifier ${`performance du ${p.date}`}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deletePerformance(p.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}

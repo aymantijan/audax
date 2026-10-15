@@ -38,7 +38,7 @@ export default function FreeTimeBlockPicker({ value, onChange }) {
                   <Input type="time" className="!py-1 !text-xs" value={r.start} onChange={(e) => updateRange(d.key, i, { start: e.target.value })} />
                   <span className="text-mute text-xs">→</span>
                   <Input type="time" className="!py-1 !text-xs" value={r.end} onChange={(e) => updateRange(d.key, i, { end: e.target.value })} />
-                  <button onClick={() => removeRange(d.key, i)} className="text-mute hover:text-bad cursor-pointer"><X size={13} /></button>
+                  <button onClick={() => removeRange(d.key, i)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><X size={13} /></button>
                 </div>
               ))}
             </div>

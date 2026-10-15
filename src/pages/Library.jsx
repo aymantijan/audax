@@ -136,10 +136,10 @@ export default function Library() {
                     <div className="text-xs text-mute mt-0.5">{b.author} · {b.year}</div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button className="text-mute hover:text-accent cursor-pointer" onClick={() => setEditing(b)} title="Modifier">
+                    <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => setEditing(b)} title="Modifier">
                       <Pencil size={13} />
                     </button>
-                    <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBook(b.id)); }} title="Supprimer">
+                    <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteBook(b.id)); }} title="Supprimer">
                       <Trash2 size={13} />
                     </button>
                   </div>

@@ -47,6 +47,10 @@ Supabase (auth + table `app_state` : une ligne JSON par utilisateur et par store
 - Santé du quotidien (chantier 7) : espace « Soins » de Santé (`src/pages/health/care/`), données dans `healthStore`
   (tranche `store/health/care.js`), règles dans `src/utils/care.js` ; rappels push des prises et rendez-vous dans
   `api/class-reminders.js` ; fiche d'urgence `/urgence` (menu du profil + raccourci de l'icône installée).
+- Pages publiques (chantier 8) : `/decouvrir` (présentation, « Voir un exemple » = `services/demo.js`, jamais synchronisé),
+  `/installer`, `/confidentialite`, `/conditions`, `/accessibilite` (`src/pages/public/`, textes dans `utils/landing-content.js`).
+  Contact et retours : e-mail du propriétaire (`utils/feedback.js`). Classement sur choix (`user.leaderboardOptIn`, migration 011).
+  Toute nouvelle liste d'un store doit être vidée par son `resetAll` (`tests/reset.test.mjs`).
 - Langues (chantier 6b) : `src/i18n/` — `t('Texte français', { var })`, dictionnaires en/es/ar (clé = le texte français),
   réglage « Langue » (profil `language` + `audax-display`), arabe en `dir="rtl"`. Traduits : accueil, inscription, menus,
   Aujourd'hui, haut des Paramètres, aide. Tout nouveau texte de ces écrans passe par t() : `tests/i18n.test.mjs` l'exige.

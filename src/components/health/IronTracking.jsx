@@ -89,8 +89,8 @@ export default function IronTracking() {
             <li key={b.id} className="flex items-center justify-between text-xs bg-surface border border-line rounded px-2.5 py-1.5">
               <span>{fmtDateShort(b.date)} — {b.ferritinNgMl != null ? `Ferritine ${b.ferritinNgMl}ng/mL` : ''}{b.ferritinNgMl != null && b.hemoglobinGDl != null ? ' · ' : ''}{b.hemoglobinGDl != null ? `Hb ${b.hemoglobinGDl}g/dL` : ''}</span>
               <span className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`analyse du ${b.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBloodTest(b.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={12} /></button>
+                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`analyse du ${b.date}`}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBloodTest(b.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={12} /></button>
                 </span>
             </li>
           ))}

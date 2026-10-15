@@ -94,7 +94,7 @@ export default function DisciplineCard() {
             </span>
           )}
         </div>
-        <button onClick={() => setExpanded(!expanded)} className="text-mute hover:text-ink cursor-pointer">
+        <button onClick={() => setExpanded(!expanded)} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer">
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
       </div>

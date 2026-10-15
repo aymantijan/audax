@@ -70,7 +70,7 @@ function EvaluationsCard({ course, settings }) {
                   <span className="text-mute text-xs">/</span>
                   <input className={`${cellCls} !w-14 !px-1.5 text-center`} type="number" min="1" value={e.outOf ?? settings.scale} onChange={(ev) => ed(e.id, { outOf: parseNum(ev.target.value) })} title="Noté sur" />
                 </div>
-                <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteEvaluation(course.id, e.id))}><Trash2 size={13} /></button>
+                <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteEvaluation(course.id, e.id))}><Trash2 size={13} /></button>
               </div>
             );
           })}
@@ -162,7 +162,7 @@ function SlotsCard({ course }) {
                 {SLOT_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
               <input className={`${cellCls} col-span-1`} value={s.room || ''} placeholder="Salle" onChange={(e) => editSlot(course.id, s.id, { room: e.target.value })} />
-              <button className="justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => deleteWithUndo(null, () => deleteSlot(course.id, s.id))} title="Supprimer"><Trash2 size={13} /></button>
+              <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center justify-self-end p-1.5 text-mute hover:text-bad cursor-pointer" onClick={() => deleteWithUndo(null, () => deleteSlot(course.id, s.id))} title="Supprimer"><Trash2 size={13} /></button>
             </div>
           ))}
         </div>
@@ -227,12 +227,12 @@ function ProgrammeCard({ course }) {
             return (
               <div key={ch.id} className="rounded-lg border border-line">
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <button onClick={() => setOpen((o) => ({ ...o, [ch.id]: !isOpen }))} className="text-mute cursor-pointer">{isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
+                  <button onClick={() => setOpen((o) => ({ ...o, [ch.id]: !isOpen }))} className="ui-icon-btn inline-flex items-center justify-center text-mute cursor-pointer">{isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}</button>
                   <span className="text-sm font-medium flex-1 min-w-0 truncate">{ch.title}</span>
                   <span className="text-xs text-mute whitespace-nowrap">{done}/{items.length} · ×{ch.coefficient}</span>
                   <span className="text-xs font-semibold w-10 text-right tabular-nums" style={{ color: pct === 100 ? 'var(--success)' : undefined }}>{pct}%</span>
-                  <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setChapterModal({ data: ch, isAdd: false })} title="Modifier"><Pencil size={12} /></button>
-                  <button className="p-1 text-mute hover:text-bad cursor-pointer" onClick={() => setConfirm({ label: `Supprimer le chapitre « ${ch.title} » et ses tâches ?`, run: () => deleteWithUndo(null, () => deleteChapter(ch.id)) })} title="Supprimer"><Trash2 size={12} /></button>
+                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setChapterModal({ data: ch, isAdd: false })} title="Modifier"><Pencil size={12} /></button>
+                  <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" onClick={() => setConfirm({ label: `Supprimer le chapitre « ${ch.title} » et ses tâches ?`, run: () => deleteWithUndo(null, () => deleteChapter(ch.id)) })} title="Supprimer"><Trash2 size={12} /></button>
                 </div>
                 {isOpen && (
                   <div className="border-t border-line/50 px-3 py-1.5">
@@ -241,8 +241,8 @@ function ProgrammeCard({ course }) {
                         <input type="checkbox" checked={it.completed} onChange={() => toggleChecklistItem(course.id, ch.id, it.id)} className="cursor-pointer accent-[var(--accent-primary)]" />
                         <span className={`flex-1 min-w-0 ${it.completed ? 'line-through text-mute' : ''}`}>{it.title}</span>
                         <span className="text-[0.6875rem] text-mute">×{it.coefficient}</span>
-                        <button className="p-1 text-mute hover:text-accent cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => setItemModal({ chapterId: ch.id, data: it, isAdd: false })}><Pencil size={11} /></button>
-                        <button className="p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteWithUndo(null, () => deleteItem(ch.id, it.id))}><Trash2 size={11} /></button>
+                        <button className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => setItemModal({ chapterId: ch.id, data: it, isAdd: false })}><Pencil size={11} /></button>
+                        <button className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer opacity-60 group-hover:opacity-100" onClick={() => deleteWithUndo(null, () => deleteItem(ch.id, it.id))}><Trash2 size={11} /></button>
                       </div>
                     ))}
                     <button onClick={() => setItemModal({ chapterId: ch.id, data: {}, isAdd: true })} className="my-1.5 text-xs text-accent cursor-pointer flex items-center gap-1"><Plus size={11} /> Tâche</button>
@@ -373,7 +373,7 @@ export default function CoursePage() {
             </div>
             <div className="flex items-center gap-2 mt-2">
               <h1 className="text-2xl font-bold text-ink leading-tight">{course.name}</h1>
-              <button className="p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setEditOpen(true)} title="Modifier"><Pencil size={14} /></button>
+              <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-accent cursor-pointer" onClick={() => setEditOpen(true)} title="Modifier"><Pencil size={14} /></button>
             </div>
             <p className="text-sm text-mute mt-1">
               {[course.institution, course.professor, acad ? `coef. ${course.coefficient ?? 1}` : null, Number(course.credits) > 0 ? `${course.credits} crédits` : null].filter(Boolean).join(' · ')}

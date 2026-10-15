@@ -82,7 +82,7 @@ export default function ReviewSession({ deckIds = null, title = 'Révision', onC
           <div className="text-sm font-semibold text-ink truncate">{title}</div>
           <div className="text-xs text-mute">{done ? 'Terminé' : `${queue.length} fiche(s) restante(s) · ${stats.done} révisée(s)`}</div>
         </div>
-        <button onClick={finish} className="p-2 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Quitter (Échap)" aria-label="Quitter (Échap)"><X size={18} /></button>
+        <button onClick={finish} className="ui-icon-btn inline-flex items-center justify-center p-2 rounded-lg text-mute hover:text-ink hover:bg-surface cursor-pointer" title="Quitter (Échap)" aria-label="Quitter (Échap)"><X size={18} /></button>
       </div>
       <div className="h-1 bg-surface"><div className="h-full transition-all" style={{ width: `${done ? 100 : progress}%`, background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }} /></div>
 

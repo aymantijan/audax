@@ -101,7 +101,7 @@ export default function Labels() {
                   </span>
                   <div className="flex items-center gap-2">
                     {l.breached && <Badge color="var(--error)">Franchie</Badge>}
-                    <button onClick={() => deleteWithUndo(null, () => deleteLabelLimit(l.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                    <button onClick={() => deleteWithUndo(null, () => deleteLabelLimit(l.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-mute">

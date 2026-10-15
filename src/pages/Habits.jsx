@@ -163,9 +163,9 @@ export default function Habits() {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div className="text-sm font-semibold text-ink flex items-center gap-2"><ListChecks size={15} className="text-accent" /> {isPast ? `Habitudes du ${fmtDate(date)}` : 'Habitudes du jour'}</div>
           <div className="flex items-center gap-1">
-            <button className="p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => shift(-1)} title="Jour précédent"><ChevronLeft size={15} /></button>
-            <input type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-surface border border-line rounded px-2 py-1 text-xs text-ink cursor-pointer" />
-            <button className="p-1.5 text-mute hover:text-ink cursor-pointer disabled:opacity-30" onClick={() => shift(1)} disabled={!isPast} title="Jour suivant"><ChevronRight size={15} /></button>
+            <button aria-label="Jour précédent" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => shift(-1)} title="Jour précédent"><ChevronLeft size={15} /></button>
+            <input type="date" aria-label="Choisir le jour" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-surface border border-line rounded px-2 py-1 text-xs text-ink cursor-pointer" />
+            <button aria-label="Jour suivant" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-ink cursor-pointer disabled:opacity-30" onClick={() => shift(1)} disabled={!isPast} title="Jour suivant"><ChevronRight size={15} /></button>
             {isPast && <button className="text-accent hover:underline cursor-pointer text-xs ml-1" onClick={() => setDate(today)}>Aujourd’hui</button>}
           </div>
         </div>
@@ -214,12 +214,12 @@ export default function Habits() {
                             {target > 0 && <div className="mt-1"><ProgressBar value={Math.min(100, (streak / target) * 100)} height={3} color={streak >= target ? 'var(--success)' : 'var(--warning)'} /><div className="text-[0.6875rem] text-mute text-right mt-0.5">objectif {target} {streakUnit(h)}</div></div>}
                           </div>
                           <div className="flex items-center shrink-0">
-                            {canJoker && <button className="p-1.5 text-mute hover:text-accent2 cursor-pointer" onClick={() => useJoker(h.id, date)} title={`Utiliser un joker (${jokersLeft(h.id, date)} restant(s) ce mois-ci)`}><Snowflake size={13} /></button>}
-                            {isJoker && !log.pause && <button className="p-1.5 text-accent2 hover:text-ink cursor-pointer" onClick={() => removeJoker(h.id, date)} title="Retirer le joker"><Snowflake size={13} /></button>}
-                            <button className={`p-1.5 cursor-pointer ${h.googleEventLink ? 'text-good' : 'text-mute hover:text-accent'}`} onClick={() => setScheduling(h)} title={h.googleEventLink ? 'Modifier dans Google Agenda' : 'Planifier dans Google Agenda'}>
+                            {canJoker && <button aria-label={`Utiliser un joker (${jokersLeft(h.id, date)} restant(s) ce mois-ci)`} className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent2 cursor-pointer" onClick={() => useJoker(h.id, date)} title={`Utiliser un joker (${jokersLeft(h.id, date)} restant(s) ce mois-ci)`}><Snowflake size={13} /></button>}
+                            {isJoker && !log.pause && <button aria-label="Retirer le joker" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-accent2 hover:text-ink cursor-pointer" onClick={() => removeJoker(h.id, date)} title="Retirer le joker"><Snowflake size={13} /></button>}
+                            <button aria-label={h.googleEventLink ? 'Modifier dans Google Agenda' : 'Planifier dans Google Agenda'} className={`p-1.5 cursor-pointer ${h.googleEventLink ? 'text-good' : 'text-mute hover:text-accent'}`} onClick={() => setScheduling(h)} title={h.googleEventLink ? 'Modifier dans Google Agenda' : 'Planifier dans Google Agenda'}>
                               {h.googleEventLink ? <CalendarCheck size={13} /> : <CalendarPlus size={13} />}
                             </button>
-                            <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
+                            <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
                           </div>
                         </div>
                       );
@@ -267,9 +267,9 @@ export default function Habits() {
                     <div className="flex items-center justify-end gap-1" style={{ color: streak ? 'var(--warning)' : undefined }}><Flame size={11} /> {streak} {h.kind === 'quit' ? 'j sans' : streakUnit(h)}</div>
                     <div>{h.kind === 'quit' ? `record ${quitBest(h, today)} j` : r == null ? (h.frequency === 'weekly' ? 'suivi par semaine' : '—') : `${r} % sur 30 j`}</div>
                   </div>
-                  <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => setDetail(h)} title="Historique et records"><CalendarDays size={13} /></button>
-                  <button className="p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
-                  <button className="p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => archiveHabit(h.id)} title="Archiver (garde l’historique)"><Archive size={13} /></button>
+                  <button aria-label="Historique et records" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => setDetail(h)} title="Historique et records"><CalendarDays size={13} /></button>
+                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-accent cursor-pointer" onClick={() => { setEditing(h); setFormOpen(true); }} title="Modifier"><Pencil size={13} /></button>
+                  <button aria-label="Archiver (garde l’historique)" className="ui-icon-btn inline-flex items-center justify-center p-1.5 text-mute hover:text-ink cursor-pointer" onClick={() => archiveHabit(h.id)} title="Archiver (garde l’historique)"><Archive size={13} /></button>
                 </div>
               );
             })}
@@ -285,8 +285,8 @@ export default function Habits() {
                 {archived.map((h) => (
                   <div key={h.id} className="flex items-center gap-2 text-sm text-mute">
                     <span className="flex-1 truncate">{h.name}</span>
-                    <button className="p-1 hover:text-accent cursor-pointer" onClick={() => unarchiveHabit(h.id)} title="Réactiver"><ArchiveRestore size={13} /></button>
-                    <button className="p-1 hover:text-bad cursor-pointer" onClick={() => setDeleting(h)} title="Supprimer"><Trash2 size={13} /></button>
+                    <button aria-label="Réactiver" className="ui-icon-btn inline-flex items-center justify-center p-1 hover:text-accent cursor-pointer" onClick={() => unarchiveHabit(h.id)} title="Réactiver"><ArchiveRestore size={13} /></button>
+                    <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 hover:text-bad cursor-pointer" onClick={() => setDeleting(h)} title="Supprimer"><Trash2 size={13} /></button>
                   </div>
                 ))}
               </div>

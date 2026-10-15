@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Download, Upload, Cloud, CloudOff, Calendar, CalendarOff, Bell, BellOff, Key, Copy, History } from 'lucide-react';
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush, sendTestPush } from '../services/push';
@@ -19,6 +20,7 @@ import DisplayCard from '../components/settings/DisplayCard';
 import { MODULES, POLES, isModuleEnabled, withModule } from '../utils/navigation';
 import { t } from '../i18n';
 import SheetExportButton from '../components/settings/SheetExportButton';
+import { PUBLIC_LINKS } from '../utils/landing-content';
 
 // Backups keep the keys of removed modules (trading, deals, engineering, business,
 // networking, career, content, fundraising, freelance, realestate — 2026-10-09):
@@ -348,8 +350,8 @@ export default function SettingsPage() {
                   <p className="text-xs text-warning mb-2">Copie-la maintenant : elle ne sera plus affichée.</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 min-w-0 truncate text-xs bg-card border border-line rounded px-2 py-1.5">{newApiKey}</code>
-                    <button
-                      className="shrink-0 text-mute hover:text-accent cursor-pointer"
+                    <button aria-label="Copier"
+                      className="ui-icon-btn inline-flex items-center justify-center shrink-0 text-mute hover:text-accent cursor-pointer"
                       title="Copier"
                       onClick={() => { navigator.clipboard.writeText(newApiKey); toast('Copiée', 'success'); }}
                     >
@@ -478,6 +480,13 @@ export default function SettingsPage() {
             </Button>
           </div>
         )}
+      </Card>
+
+      <Card title={t('Confidentialité et documents')}>
+        <p className="text-sm text-mute mb-3">{t('Ce que VAUDAX fait de tes données, tes droits, et les règles du service.')}</p>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          {PUBLIC_LINKS.filter((l) => l.to !== '/decouvrir').map((l) => <Link key={l.to} to={l.to} className="text-accent hover:underline">{t(l.label)}</Link>)}
+        </div>
       </Card>
 
       <TrashCard />

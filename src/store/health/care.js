@@ -9,7 +9,8 @@ import { toast } from '../uiStore';
 const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return null; } };
 const byDate = (a, b) => `${b.date} ${b.time || ''}`.localeCompare(`${a.date} ${a.time || ''}`);
 
-export const careSlice = (set, get) => ({
+// Empty state of this slice — also what « Effacer mes données » puts back (resetAll).
+export const careInitial = () => ({
   medications: [], // [{ id, name, dose, times[], frequency, weekdays[], startDate, endDate, stock, stockDate, perDose, notes, remind, active }]
   medLogs: [], // [{ id, medId, date, time, status: 'taken'|'skipped', at }]
   vitals: [], // [{ id, type, date, time, value?, systolic?, diastolic?, context?, notes }]
@@ -17,6 +18,10 @@ export const careSlice = (set, get) => ({
   healthDocs: [], // [{ id, kind, date, title, notes, photo, nextDate }]
   emergencyCard: { bloodType: '', allergies: '', conditions: '', doctor: '', notes: '', contacts: [{ name: '', relation: '', phone: '' }] },
   careTimezone: null, // the person's time zone, for push reminders
+});
+
+export const careSlice = (set, get) => ({
+  ...careInitial(),
 
   // ─────────── Medications ───────────
   addMedication: (data) => {

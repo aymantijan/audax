@@ -151,7 +151,7 @@ function Stepper({ label, value, onChange, min = 0, max = 999, step = 1, width =
     <div className="flex flex-col gap-1">
       <span className="text-[0.6875rem] font-medium uppercase tracking-wide text-mute">{label}</span>
       <div className="inline-flex items-center rounded-lg border border-line bg-surface">
-        <button type="button" onClick={() => set(n - step)} className="px-1.5 py-1.5 text-mute hover:text-ink cursor-pointer" aria-label={`${label} moins`}><Minus size={12} /></button>
+        <button type="button" onClick={() => set(n - step)} className="ui-icon-btn inline-flex items-center justify-center px-1.5 py-1.5 text-mute hover:text-ink cursor-pointer" aria-label={`${label} moins`}><Minus size={12} /></button>
         <input
           type="number"
           value={value ?? ''}
@@ -161,7 +161,7 @@ function Stepper({ label, value, onChange, min = 0, max = 999, step = 1, width =
           onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
           className={`${width} bg-transparent text-center text-sm font-semibold text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
         />
-        <button type="button" onClick={() => set(n + step)} className="px-1.5 py-1.5 text-mute hover:text-ink cursor-pointer" aria-label={`${label} plus`}><Plus size={12} /></button>
+        <button type="button" onClick={() => set(n + step)} className="ui-icon-btn inline-flex items-center justify-center px-1.5 py-1.5 text-mute hover:text-ink cursor-pointer" aria-label={`${label} plus`}><Plus size={12} /></button>
       </div>
     </div>
   );
@@ -209,7 +209,7 @@ export default function ExerciseRow({ exercise, index, onChange, onRemove, mode 
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface text-xs font-bold text-mute">{index + 1}</span>
         <ExerciseSearch mode={mode} value={exercise.exercise_name} exerciseKey={exercise.exercise_key} onChange={handlePick} />
-        <button type="button" onClick={() => onRemove(index)} className="shrink-0 rounded-lg p-2 text-mute transition-colors hover:bg-bad/10 hover:text-bad cursor-pointer" aria-label="Supprimer">
+        <button type="button" onClick={() => onRemove(index)} className="ui-icon-btn inline-flex items-center justify-center shrink-0 rounded-lg p-2 text-mute transition-colors hover:bg-bad/10 hover:text-bad cursor-pointer" aria-label="Supprimer">
           <Trash2 size={15} />
         </button>
       </div>

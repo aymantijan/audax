@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import MobileTabBar from './MobileTabBar';
 import PoleSubNav from './PoleSubNav';
 import SampleBanner from './SampleBanner';
+import DemoBanner from './DemoBanner';
 import AssistantPanel from '../assistant/AssistantPanel';
 import { syncChallengeScores } from '../../services/challenges';
 import { StudyTimerDock } from '../learning/StudyTimer';
@@ -27,6 +28,7 @@ export default function MainLayout() {
           the floating + button above it (pb-36), and of the + alone on desktop (J2). */}
       <main className="pt-16 pb-36 md:pb-24">
         <PoleSubNav />
+        <DemoBanner />
         <SampleBanner />
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* resetKey: navigating away from a crashed page auto-clears the error */}

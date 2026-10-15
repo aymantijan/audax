@@ -129,8 +129,8 @@ function Row({ w, onDelete, onEdit, showDate }) {
           {w.quality ? ` · qualité ${w.quality}/10` : ''}
         </div>
       </div>
-      <button onClick={onEdit} className="text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier"><Pencil size={14} /></button>
-      <button onClick={onDelete} className="text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer"><Trash2 size={14} /></button>
+      <button onClick={onEdit} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer shrink-0" aria-label="Modifier"><Pencil size={14} /></button>
+      <button onClick={onDelete} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer shrink-0" aria-label="Supprimer"><Trash2 size={14} /></button>
     </li>
   );
 }

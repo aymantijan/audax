@@ -5,6 +5,7 @@ import { pearsonCorrelation, bestSleepWindow, getSleepLoadTarget, estimate1RM } 
 import { useHabitStore } from '../habitStore';
 import { useAccountingStore } from '../accountingStore';
 import { dayMs, r1 } from './helpers';
+import { careInitial } from './care';
 
 export const correlationsSlice = (set, get) => ({
       // ─────────── Custom correlation picker (Analytics: "pick any two") ───────────
@@ -329,6 +330,7 @@ export const correlationsSlice = (set, get) => ({
 
       resetAll: () =>
         set({
+          ...careInitial(), // chantier 7 data (medications, measures, appointments, documents, emergency card)
           workouts: [], nutritionLogs: [], proteinTargetG: 140, mealTemplates: [], customFoods: [], foodPrices: {}, foodOverrides: {}, bodyComp: [], activityDays: [], recoveryLogs: [],
           checkins: [], pendingPrompts: [], awardedBadges: [], coachCache: null, cycleLogs: [], bloodTests: [], goals: [],
           customCycleSymptoms: [], customRecoveryActivities: [], waterTargetMl: 2500, weightUnit: 'kg',

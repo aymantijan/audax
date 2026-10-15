@@ -185,11 +185,11 @@ export default function Echeances() {
                   <span className="font-medium whitespace-nowrap">{fmtMAD(e.amount)}</span>
                   {e.autoPost && e.active && <Badge color="var(--accent-primary)">Auto</Badge>}
                   {!e.active && <Badge color="var(--text-secondary)">Désactivée</Badge>}
-                  <button className="text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
+                  <button aria-label={e.active ? 'Mettre en pause' : 'Réactiver'} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => toggleEcheanceActive(e.id)} title={e.active ? 'Mettre en pause' : 'Réactiver'}>
                     {e.active ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
                   </button>
-                  <button className="text-mute hover:text-accent cursor-pointer" onClick={() => openEdit(e)} title="Modifier"><Pencil size={13} /></button>
-                  <button className="text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteEcheance(e.id)); }} title="Supprimer"><Trash2 size={13} /></button>
+                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer" onClick={() => openEdit(e)} title="Modifier"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" onClick={() => { deleteWithUndo(null, () => deleteEcheance(e.id)); }} title="Supprimer"><Trash2 size={13} /></button>
                 </li>
               );
             })}

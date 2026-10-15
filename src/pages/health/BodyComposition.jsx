@@ -483,8 +483,8 @@ export default function BodyComposition() {
                 </span>
                 <span>{b.weightKg ?? '—'}kg · BF {b.bodyFatPct ?? '—'}%</span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`mesures du ${b.date}`}`} className="text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
-                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBodyComp(b.id))} className="text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
+                  <button onClick={() => setEditing(b)} aria-label={`Modifier ${`mesures du ${b.date}`}`} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer"><Pencil size={13} /></button>
+                  <button aria-label="Supprimer" onClick={() => deleteWithUndo(null, () => deleteBodyComp(b.id))} className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer"><Trash2 size={13} /></button>
                 </span>
               </li>
             ))}

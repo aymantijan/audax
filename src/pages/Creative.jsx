@@ -101,7 +101,7 @@ export default function Creative() {
                         <div className="font-medium">{w.title}</div>
                         <Badge color={MEDIUM_COLOR[w.medium]}>{w.medium}</Badge>
                       </div>
-                      <button className="text-mute hover:text-accent cursor-pointer shrink-0" onClick={() => setEditing(w)}><Pencil size={12} /></button>
+                      <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-accent cursor-pointer shrink-0" onClick={() => setEditing(w)}><Pencil size={12} /></button>
                     </div>
                     <div className="text-xs text-mute mt-1.5">{fmtDateShort(w.startDate)}</div>
                     {status !== 'Terminé' && (
@@ -143,8 +143,8 @@ export default function Creative() {
                   <div className="text-xs text-mute">{s.type}{s.venue ? ` · ${s.venue}` : ''} · {fmtDateShort(s.date)}{s.workId && workName(s.workId) ? ` · ${workName(s.workId)}` : ''}</div>
                 </div>
                 <span className="flex items-center gap-2 shrink-0">
-                  <button className="text-mute hover:text-ink cursor-pointer" aria-label={`Modifier ${s.title}`} onClick={() => setEditingShowcase(s)}><Pencil size={14} /></button>
-                  <button className="text-mute hover:text-bad cursor-pointer" aria-label={`Supprimer ${s.title}`} onClick={() => { deleteWithUndo(null, () => deleteShowcase(s.id)); }}><Trash2 size={14} /></button>
+                  <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-ink cursor-pointer" aria-label={`Modifier ${s.title}`} onClick={() => setEditingShowcase(s)}><Pencil size={14} /></button>
+                  <button className="ui-icon-btn inline-flex items-center justify-center text-mute hover:text-bad cursor-pointer" aria-label={`Supprimer ${s.title}`} onClick={() => { deleteWithUndo(null, () => deleteShowcase(s.id)); }}><Trash2 size={14} /></button>
                 </span>
               </li>
             ))}
