@@ -16,6 +16,10 @@ export const GENRE_GROUPS = [
       'Science & Nature', 'Self-Help & Personal Development', 'Travel', 'True Crime',
     ],
   },
+  {
+    group: 'Finance',
+    items: ['Trading', 'Finance & Investing', 'Personal Finance'],
+  },
 ];
 
 export const GENRES = GENRE_GROUPS.flatMap((g) => g.items);
@@ -34,5 +38,6 @@ export const GENRE_FR = {
   Memoir: 'Mémoires', Philosophy: 'Philosophie', 'Politics & Current Events': 'Politique et actualité',
   'Religion & Spirituality': 'Religion et spiritualité', 'Science & Nature': 'Sciences et nature',
   'Self-Help & Personal Development': 'Développement personnel', Travel: 'Voyage', 'True Crime': 'Faits divers',
+  Finance: 'Finance', Trading: 'Trading', 'Finance & Investing': 'Finance et investissement', 'Personal Finance': 'Éducation financière',
 };
 export const genreLabel = (g) => GENRE_FR[g] || g || '';

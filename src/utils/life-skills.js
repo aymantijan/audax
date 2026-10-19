@@ -69,6 +69,7 @@ export const GENRE_TO_READER_SKILL = {
   'Speculative Fiction': 'fiction-reader-lv1', 'Thriller & Suspense': 'fiction-reader-lv1', "Women's Fiction": 'fiction-reader-lv1',
   Philosophy: 'philosophy-reader-lv1',
   'Business & Economics': 'business-reader-lv1',
+  Trading: 'business-reader-lv1', 'Finance & Investing': 'business-reader-lv1', 'Personal Finance': 'business-reader-lv1',
   'Science & Nature': 'science-reader-lv1', 'Health & Fitness': 'science-reader-lv1',
   History: 'history-reader-lv1', 'Politics & Current Events': 'history-reader-lv1',
   'Religion & Spirituality': 'spirituality-reader-lv1',

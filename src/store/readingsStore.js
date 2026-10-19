@@ -44,7 +44,16 @@ export const useReadingsStore = create(
         // (older seeds set []) get theirs filled in — without clobbering any the
         // user chose manually.
         let backfilled = false;
-        const enriched = get().library.map((b) => {
+        // Finance books moved out of 'Business & Economics' into the Finance
+        // genres: follow the catalog unless the user picked another genre.
+        const catalogGenre = new Map(catalog.map((c) => [key(c), c.genre]));
+        const enriched = get().library.map((book) => {
+          const moved = catalogGenre.get(key(book));
+          let b = book;
+          if (b.genre === 'Business & Economics' && moved && moved !== b.genre) {
+            backfilled = true;
+            b = { ...b, genre: moved, linkedSkills: [...new Set([...(b.linkedSkills || []), ...skillsForBook({ ...b, genre: moved })])] };
+          }
           if (b.linkedSkills && b.linkedSkills.length) return b;
           const skills = skillsForBook(b);
           if (!skills.length) return b;

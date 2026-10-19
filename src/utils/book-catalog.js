@@ -115,8 +115,8 @@ export const BOOK_CATALOG = [
   { title: 'The Snowball: Warren Buffett and the Business of Life', author: 'Alice Schroeder', genre: 'Biography', year: 2008, pages: 976, popularity: 84, description: 'The definitive life of the world\'s greatest investor.' },
   { title: 'Elon Musk', author: 'Ashlee Vance', genre: 'Biography', year: 2015, pages: 400, popularity: 86, description: 'Tesla, SpaceX, and the quest for a fantastic future.' },
   // Business & Economics
-  { title: 'The Intelligent Investor', author: 'Benjamin Graham', genre: 'Business & Economics', year: 1949, pages: 640, popularity: 92, description: 'The definitive book on value investing and margin of safety.' },
-  { title: 'Rich Dad Poor Dad', author: 'Robert Kiyosaki', genre: 'Business & Economics', year: 1997, pages: 336, popularity: 88, description: 'What the rich teach their kids about money that the poor do not.' },
+  { title: 'The Intelligent Investor', author: 'Benjamin Graham', genre: 'Finance & Investing', year: 1949, pages: 640, popularity: 92, description: 'The definitive book on value investing and margin of safety.' },
+  { title: 'Rich Dad Poor Dad', author: 'Robert Kiyosaki', genre: 'Personal Finance', year: 1997, pages: 336, popularity: 88, description: 'What the rich teach their kids about money that the poor do not.' },
   { title: 'Zero to One', author: 'Peter Thiel', genre: 'Business & Economics', year: 2014, pages: 224, popularity: 89, description: 'Notes on startups, monopoly, and building the future.' },
   { title: 'The Lean Startup', author: 'Eric Ries', genre: 'Business & Economics', year: 2011, pages: 336, popularity: 85, description: 'Build-measure-learn: continuous innovation under extreme uncertainty.' },
   { title: 'Good to Great', author: 'Jim Collins', genre: 'Business & Economics', year: 2001, pages: 320, popularity: 84, description: 'Why some companies make the leap and others don\'t.' },

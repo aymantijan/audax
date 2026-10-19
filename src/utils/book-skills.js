@@ -11,6 +11,9 @@ import { GENRE_TO_READER_SKILL } from './life-skills';
 // ── Niveau 1 : skills thématiques par genre (en plus du "reader skill" du genre) ──
 export const GENRE_SKILLS = {
   'Business & Economics': ['financial-statements-lv1', 'macro-theory-lv1', 'financial-discipline-lv1'],
+  'Trading': ['trading-discipline-lv1', 'position-sizing-lv1', 'risk-adjusted-returns-lv1'],
+  'Finance & Investing': ['equity-research-lv1', 'financial-statements-lv1', 'risk-adjusted-returns-lv1'],
+  'Personal Finance': ['financial-discipline-lv1', 'budget-control-lv1'],
   'Philosophy': ['self-awareness-lv1', 'decision-discipline-lv1'],
   'Science & Nature': ['statistical-modeling-lv1', 'note-taking-lv1'],
   'Health & Fitness': ['health-discipline-lv1', 'stress-management-lv1'],
