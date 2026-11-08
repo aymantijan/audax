@@ -197,15 +197,11 @@ export default function Habits() {
                             <button type="button" onClick={() => setDetail(h)} className={`text-left text-sm font-medium cursor-pointer hover:underline ${done ? 'text-mute line-through' : 'text-ink'}`} title="Historique et records">{h.name}</button>
                             <div className="text-xs text-mute flex flex-wrap gap-x-2">
                               <span>{catLabel(h.category)}</span>
-                              {h.duration ? <span>· {h.duration} min</span> : null}
                               {wk && <span className={wk.met ? 'text-good' : ''}>· {wk.done}/{wk.target} cette semaine</span>}
-                              <span>· +{h.xpReward} XP{h.linkedSkill ? ` → ${skillLabel(h.linkedSkill)}` : ''}</span>
-                              {h.mandatory && <span className="text-warning">· prioritaire</span>}
-                              {h.mini && <span className="text-accent">· version mini</span>}
-                              {h.after && depth === 0 && nameOf(h.after) && <span>· après « {nameOf(h.after)} »</span>}
-                              {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {[h.reminderTime, ...(h.extraReminders || [])].filter(Boolean).join(', ')}</span>}
+                              {h.mandatory && <span className="text-warning font-medium">· prioritaire</span>}
+                              {h.reminderTime && !done && <span className={habitReminders?.enabled ? '' : 'line-through'}>· ⏰ {h.reminderTime}</span>}
                               {h.source && <span className="text-accent">· auto ({sourceMeta(h.source)?.section})</span>}
-                              {isJoker && <span style={{ color: 'var(--accent-secondary)' }}>· {log.pause ? 'en pause' : 'joker'} — série protégée</span>}
+                              {isJoker && <span style={{ color: 'var(--accent-secondary)' }}>· {log.pause ? 'en pause' : 'joker'}</span>}
                             </div>
                             {h.kind === 'quantity' && <QuantityControl h={h} value={Number(log?.value) || 0} date={date} />}
                           </div>

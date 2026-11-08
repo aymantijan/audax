@@ -6,10 +6,10 @@ import { t } from '../../i18n';
 
 export function Card({ title, action, children, className = '' }) {
   return (
-    <div className={`bg-card border border-line rounded-xl p-5 ${className}`}>
+    <div className={`bg-card border border-line rounded-2xl p-5 shadow-sm ${className}`}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          {title && <h3 className="text-sm font-semibold tracking-wide text-mute uppercase">{title}</h3>}
+          {title && <h3 className="text-sm font-semibold text-ink">{title}</h3>}
           {action}
         </div>
       )}
@@ -24,9 +24,9 @@ export const isFigure = (v) => typeof v === 'number' || (typeof v === 'string' &
 
 export function Stat({ label, value, sub, color }) {
   return (
-    <div className="bg-card border border-line rounded-xl p-4">
-      <div className="text-xs text-mute mb-1">{label}</div>
-      <div className={`text-2xl font-bold ${isFigure(value) ? 'font-data' : ''}`} style={color ? { color } : undefined}>
+    <div className="bg-card border border-line rounded-2xl p-4 shadow-sm">
+      <div className="text-xs font-medium text-mute mb-1">{label}</div>
+      <div className={`text-2xl font-bold tracking-tight ${isFigure(value) ? 'font-data' : ''}`} style={color ? { color } : undefined}>
         {value}
       </div>
       {sub && <div className="text-xs text-mute mt-1">{sub}</div>}
@@ -36,14 +36,14 @@ export function Stat({ label, value, sub, color }) {
 
 export function Button({ children, variant = 'primary', className = '', ...props }) {
   const styles = {
-    primary: 'bg-accent text-on-accent hover:opacity-90 font-semibold',
-    secondary: 'bg-surface border border-line text-ink hover:border-accent',
-    ghost: 'text-mute hover:text-ink',
-    danger: 'bg-bad/15 text-bad border border-bad/40 hover:bg-bad/25',
+    primary: 'bg-accent text-on-accent hover:opacity-95 font-semibold shadow-sm',
+    secondary: 'bg-surface border border-line text-ink hover:border-accent hover:bg-card font-medium',
+    ghost: 'text-mute hover:text-ink hover:bg-surface/60',
+    danger: 'bg-bad/15 text-bad border border-bad/40 hover:bg-bad/25 font-medium',
   };
   return (
     <button
-      className={`ui-btn px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${styles[variant]} ${className}`}
+      className={`ui-btn px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${styles[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -54,7 +54,7 @@ export function Button({ children, variant = 'primary', className = '', ...props
 export function Field({ label, children, hint }) {
   return (
     <label className="block">
-      <span className="block text-xs text-mute mb-1.5">{label}</span>
+      <span className="block text-xs font-medium text-mute mb-1.5">{label}</span>
       {children}
       {hint && <span className="block text-xs text-mute mt-1">{hint}</span>}
     </label>
@@ -62,7 +62,7 @@ export function Field({ label, children, hint }) {
 }
 
 const inputCls =
-  'w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent';
+  'w-full bg-surface border border-line rounded-xl px-3.5 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent transition-colors';
 
 // A className adds to the base style (layout, width…) instead of replacing it.
 export function Input({ className = '', ...props }) {

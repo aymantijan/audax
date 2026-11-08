@@ -180,8 +180,8 @@ export default function App() {
         <Route path="/chronologie" element={<Timeline />} />
         <Route path="/semaine" element={<Week />} />
         <Route path="/urgence" element={<Emergency />} />
-        {/* Section home page (étape 3); Santé and Patrimoine have a single page each */}
-        <Route path="/etudes" element={<PoleHome key="etudes" poleKey="etudes" />} />
+        {/* Section home redirects directly to its main page */}
+        <Route path="/etudes" element={<Navigate to="/learning" replace />} />
         <Route path="/patrimoine" element={<Navigate to="/finance" replace />} />
         <Route path="/sante" element={<Navigate to="/health" replace />} />
         <Route path="/aujourdhui" element={<Navigate to="/today" replace />} />

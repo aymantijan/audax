@@ -44,7 +44,9 @@ export default function Learning() {
   const activeCount = courses.filter((c) => c.status === 'active').length;
   const fc = useFlashcardStore();
   const reviewCount = buildQueue({ cards: fc.cards, decks: fc.decks, reviewLog: fc.reviewLog, settings: fc.settings }).length;
-  const tabs = ordered.map((t) => ({
+  // Hide the duplicate 'readings' tab from the inner bar (already in PoleSubNav above), unless opened via ?tab=readings
+  const visibleTabs = ordered.filter((t) => t.key !== 'readings' || tab.key === 'readings');
+  const tabs = visibleTabs.map((t) => ({
     ...t,
     count: t.key === 'exams' ? upcomingCount || null : t.key === 'courses' ? activeCount || null : t.key === 'review' ? reviewCount || null : null,
   }));

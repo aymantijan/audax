@@ -143,8 +143,8 @@ export default function Health() {
         </div>
       )}
 
-      {/* Level 1 — spaces */}
-      <nav className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 rounded-2xl border border-line bg-surface p-1.5" aria-label="Espaces santé">
+      {/* Level 1 — spaces (compact horizontal bar) */}
+      <nav className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-line bg-surface p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Espaces santé">
         {spaces.map((sp) => {
           const Icon = sp.icon;
           const active = sp.key === currentSpace.key;
@@ -153,17 +153,12 @@ export default function Health() {
               key={sp.key}
               onClick={() => goSpace(sp)}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center gap-0.5 rounded-xl px-2 py-2.5 text-center transition-colors cursor-pointer sm:flex-row sm:gap-2.5 sm:px-3 sm:text-left ${
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-left transition-colors cursor-pointer ${
                 active ? 'bg-card text-ink shadow-sm ring-1 ring-line' : 'text-mute hover:bg-card/50 hover:text-ink'
               }`}
             >
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-accent/15 text-accent' : 'bg-card/60'}`}>
-                <Icon size={17} />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-semibold sm:text-sm">{sp.label}</span>
-                <span className="hidden truncate text-xs text-mute lg:block">{sp.desc}</span>
-              </span>
+              <Icon size={16} className={active ? 'text-accent shrink-0' : 'shrink-0'} />
+              <span className="text-xs font-semibold sm:text-sm whitespace-nowrap">{sp.label}</span>
             </button>
           );
         })}
@@ -171,7 +166,7 @@ export default function Health() {
 
       {/* Level 2 — pages of the space (hidden when there's only one) */}
       {currentSpace.pages.length > 1 && (
-        <div className="-mt-1 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="-mt-2 flex items-center gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {currentSpace.pages.map((p) => {
             const Icon = p.icon;
             const active = p.key === current.key;
@@ -179,11 +174,11 @@ export default function Health() {
               <button
                 key={p.key}
                 onClick={() => setPage(p.key)}
-                className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
-                  active ? 'border-accent text-accent' : 'border-transparent text-mute hover:text-ink'
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                  active ? 'border-accent bg-accent/10 text-accent' : 'border-line bg-card/50 text-mute hover:text-ink'
                 }`}
               >
-                <Icon size={15} /> {p.label}
+                <Icon size={14} /> {p.label}
               </button>
             );
           })}

@@ -32,7 +32,7 @@ export const MODULES = {
 };
 
 export const POLES = [
-  { key: 'etudes', label: 'Études & savoir', short: 'Études', home: '/etudes', icon: GraduationCap, blurb: 'Apprendre et créer', modules: ['learning', 'readings', 'skills', 'creative'] },
+  { key: 'etudes', label: 'Études & savoir', short: 'Études', home: '/learning', icon: GraduationCap, blurb: 'Apprendre et créer', modules: ['learning', 'readings', 'skills', 'creative'] },
   { key: 'sante', label: 'Santé', short: 'Santé', home: '/health', icon: HeartPulse, blurb: 'Corps et énergie', modules: ['health'] },
   { key: 'today', label: 'Aujourd’hui', short: 'Aujourd’hui', home: '/today', icon: Sun, blurb: 'Le centre de pilotage', modules: ['today', 'week', 'goals', 'habits', 'focus', 'timeline', 'challenges'] },
   { key: 'patrimoine', label: 'Patrimoine', short: 'Patrimoine', home: '/finance', icon: Wallet, blurb: 'Argent et investissements', modules: ['finance'] },

@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Circle, Sunrise, HeartPulse,
@@ -26,17 +26,21 @@ import NudgeCard from '../components/today/NudgeCard';
 import LifeReviewCard from '../components/today/LifeReviewCard';
 import YesterdayCard from '../components/today/YesterdayCard';
 import CareTodayCard from '../components/today/CareTodayCard';
+import { CheckinModal } from '../components/habits/HabitModals';
 
 import { useCustomCards } from '../components/today/CustomCards';
 import { t, locale } from '../i18n';
+
+const SIDE_CARD_IDS = new Set(['checkin', 'echeances', 'health', 'learning', 'focus']);
+const TOP_BANNER_IDS = new Set(['exam', 'nudge', 'week', 'nextClass']);
+
 export default function Today() {
   const user = useAuthStore((s) => s.user);
   const today = todayKey();
   const customCards = useCustomCards(); // the person's own notes and counters (J4)
+  const [checkinOpen, setCheckinOpen] = useState(false);
 
-  // ---- Habits + morning check-in (raw slices only — see the Zustand
-  // useSyncExternalStore infinite-loop note in project memory: never select a
-  // store getter that allocates a fresh array/object inline). ----
+  // ---- Habits + morning check-in ----
   const { habits, logs, energyLogs, toggleHabit } = useHabitStore();
   const dueToday = useMemo(
     () => habits.filter((h) => !h.archived && isHabitShownOn(h, logs, today)),
@@ -83,40 +87,27 @@ export default function Today() {
   // them (Organiser), saved in their profile so every device shows the same page.
   const cards = [
     { id: 'briefing', label: t('Briefing du jour'), node: (
-      <>
-        <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
-      </>
+      <BriefingCard habitsDue={dueToday.length} habitsDone={doneToday.length} checkinDone={!!todayEnergyLog} />
     ) },
-    { id: 'exam', label: t('Mode examen'), node: (
-      <>
-        <ExamDayCard />
-      </>
-    ) },
-    { id: 'nudge', label: t('Suggestions de modules'), node: (
-      <>
-        <NudgeCard />
-      </>
-    ) },
+    { id: 'exam', label: t('Mode examen'), node: <ExamDayCard /> },
+    { id: 'nudge', label: t('Suggestions de modules'), node: <NudgeCard /> },
     { id: 'week', label: t('Bilan de la semaine (dimanche et lundi)'), node: (
       <>
-        {/* Sunday and Monday: time to look back at the week */}
         {[0, 1].includes(new Date(`${today}T12:00:00`).getDay()) && <LifeReviewCard />}
       </>
     ) },
-    { id: 'nextClass', label: t('Prochain cours'), node: (
-      <>
-        {/* ---- Class check-in (attendance habit) ---- */}
-        <NextClassBanner />
-      </>
-    ) },
+    { id: 'nextClass', label: t('Prochain cours'), node: <NextClassBanner /> },
     { id: 'care', label: t('Santé du jour'), node: <CareTodayCard /> },
     { id: 'habits', label: t('Habitudes du jour'), node: (
-      <>
+      <div className="space-y-4">
         <YesterdayCard />
-        {/* ---- Habits: the primary daily checklist ---- */}
         <Card
           title={t('Habitudes du jour')}
-          action={<span className="text-xs text-mute">{doneToday.length}/{dueToday.length}</span>}
+          action={
+            <span className="inline-flex items-center rounded-full bg-surface border border-line px-2.5 py-0.5 text-xs font-semibold font-data text-ink">
+              {doneToday.length}/{dueToday.length}
+            </span>
+          }
         >
           {dueToday.length ? (
             <ul className="space-y-2">
@@ -124,20 +115,34 @@ export default function Today() {
                 const done = logs.some((l) => l.habitId === h.id && l.date === today && l.completed);
                 const streak = habitStreak(h.id, logs, today, h);
                 return (
-                  <li key={h.id} className="flex items-center gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
-                    <button type="button" aria-label={done ? t('Décocher {name}', { name: h.name }) : t('Cocher {name}', { name: h.name })} onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }} className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent">
-                      {done ? <CheckCircle2 size={19} /> : <Circle size={19} className="text-mute" />}
+                  <li
+                    key={h.id}
+                    className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
+                      done ? 'bg-good/5 border-good/30' : 'bg-surface border-line hover:border-accent/50'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      aria-label={done ? t('Décocher {name}', { name: h.name }) : t('Cocher {name}', { name: h.name })}
+                      onClick={(e) => { if (!done) playSeal(e.currentTarget); toggleHabit(h.id, today); }}
+                      className="ui-icon-btn shrink-0 rounded-full flex items-center justify-center cursor-pointer text-accent"
+                    >
+                      {done ? <CheckCircle2 size={20} className="text-good" /> : <Circle size={20} className="text-mute" />}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <div className={`text-sm ${done ? 'line-through text-mute' : ''}`}>{h.name}</div>
-                      <div className="text-xs text-mute">
+                      <div className={`text-sm font-medium ${done ? 'line-through text-mute' : 'text-ink'}`}>{h.name}</div>
+                      <div className="text-xs text-mute truncate">
                         {t(HABIT_CATEGORY_LABELS[h.category] || h.category)}
                         {h.mandatory ? ` · ${t('prioritaire')}` : ''}
-                        {streak > 0 ? ` · ${t('série')} ${streak} ${t(streakUnit(h))}` : ''}
                         {h.kind === 'quantity' ? ` · ${Number(logs.find((l) => l.habitId === h.id && l.date === today)?.value) || 0}/${h.target} ${h.unit || ''}${h.source ? ' (auto)' : ''}` : ''}
                       </div>
                     </div>
-                    {streak >= 3 && <Flame size={14} className="text-warn shrink-0" />}
+                    {streak > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-card border border-line px-2 py-0.5 text-xs font-data text-mute shrink-0">
+                        <Flame size={12} className={streak >= 3 ? 'text-warn' : 'text-mute'} />
+                        {streak} {t(streakUnit(h))}
+                      </span>
+                    )}
                   </li>
                 );
               })}
@@ -151,43 +156,43 @@ export default function Today() {
             </div>
           )}
         </Card>
-      </>
+      </div>
     ) },
     { id: 'checkin', label: t('Check-in du matin'), node: (
-      <>
-        {/* ---- Morning check-in ---- */}
-        <Card title={t('Check-in du matin')}>
-          {todayEnergyLog ? (
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-mute text-xs">{t('Énergie')}</div>
-                <div className="text-lg font-semibold">{todayEnergyLog.energyStartLevel}/10</div>
-              </div>
-              <div>
-                <div className="text-mute text-xs">{t('Sommeil')}</div>
-                <div className="text-lg font-semibold">{todayEnergyLog.sleepData?.sleepQualityScore ?? '—'}/10</div>
-              </div>
-              <div>
-                <div className="text-mute text-xs">{t('Stress')}</div>
-                <div className="text-lg font-semibold">{todayEnergyLog.stressLevel}/10</div>
-              </div>
+      <Card title={t('Check-in du matin')}>
+        {todayEnergyLog ? (
+          <button
+            type="button"
+            onClick={() => setCheckinOpen(true)}
+            className="w-full grid grid-cols-3 gap-3 text-left rounded-xl bg-surface border border-line p-3 hover:border-accent transition-colors cursor-pointer"
+          >
+            <div>
+              <div className="text-mute text-xs">{t('Énergie')}</div>
+              <div className="text-lg font-bold font-data">{todayEnergyLog.energyStartLevel}/10</div>
             </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm text-mute">
-                <Sunrise size={16} /> {t('Pas encore fait aujourd’hui.')}
-              </div>
-              <Link to="/habits">
-                <Button className="!px-3 !py-1.5 text-xs">{t('Faire le check-in')}</Button>
-              </Link>
+            <div>
+              <div className="text-mute text-xs">{t('Sommeil')}</div>
+              <div className="text-lg font-bold font-data">{todayEnergyLog.sleepData?.sleepQualityScore ?? '—'}/10</div>
             </div>
-          )}
-        </Card>
-      </>
+            <div>
+              <div className="text-mute text-xs">{t('Stress')}</div>
+              <div className="text-lg font-bold font-data">{todayEnergyLog.stressLevel}/10</div>
+            </div>
+          </button>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-mute">
+              <Sunrise size={16} className="text-accent shrink-0" /> {t('Pas encore fait aujourd’hui.')}
+            </div>
+            <Button className="!px-3 !py-1.5 text-xs shrink-0" onClick={() => setCheckinOpen(true)}>
+              {t('Faire le check-in')}
+            </Button>
+          </div>
+        )}
+      </Card>
     ) },
     { id: 'echeances', label: t('Échéances'), node: (
       <>
-        {/* ---- Finance: échéances ---- */}
         {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
           <Card title={t('Échéances')}>
             <ul className="space-y-2">
@@ -203,49 +208,55 @@ export default function Today() {
       </>
     ) },
     { id: 'health', label: t('Santé'), node: (
-      <>
-        {/* ---- Health ---- */}
-        <Card
-          title={t('Santé')}
-          action={
-            <Link to="/health" className="text-xs text-accent hover:underline flex items-center gap-1">
-              {t('Ouvrir')} <ChevronRight size={12} />
-            </Link>
-          }
-        >
-          <div className="flex items-center gap-6 text-sm flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <HeartPulse size={15} className={workedOutToday ? 'text-good' : 'text-mute'} />
-              <span className={workedOutToday ? 'text-ink' : 'text-mute'}>{workedOutToday ? t('Séance enregistrée') : t('Pas de séance')}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Receipt size={15} className={loggedMealToday ? 'text-good' : 'text-mute'} />
-              <span className={loggedMealToday ? 'text-ink' : 'text-mute'}>{loggedMealToday ? t('Repas enregistré') : t('Aucun repas enregistré')}</span>
-            </div>
-          </div>
-          {pendingPrompts.length > 0 && (
-            <ul className="mt-3 space-y-2">
-              {pendingPrompts.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-sm">
-                  <span>{t('Enregistrer « {name} » comme activité santé ?', { name: p.habitName })}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Link to="/health">
-                      <Button className="!px-2.5 !py-1 text-xs">{t('Enregistrer')}</Button>
-                    </Link>
-                    <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
-                      {t('Ignorer')}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </>
+      <Card
+        title={t('Santé')}
+        action={
+          <Link to="/health" className="text-xs text-accent hover:underline flex items-center gap-1">
+            {t('Ouvrir')} <ChevronRight size={12} />
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-2 gap-2.5 text-sm">
+          <Link
+            to="/health?tab=gym"
+            className="flex items-center gap-2 rounded-xl bg-surface border border-line px-3 py-2.5 hover:border-accent transition-colors"
+          >
+            <HeartPulse size={16} className={workedOutToday ? 'text-good shrink-0' : 'text-mute shrink-0'} />
+            <span className={`text-xs font-medium truncate ${workedOutToday ? 'text-ink' : 'text-mute'}`}>
+              {workedOutToday ? t('Séance enregistrée') : t('Pas de séance')}
+            </span>
+          </Link>
+          <Link
+            to="/health?tab=nutrition"
+            className="flex items-center gap-2 rounded-xl bg-surface border border-line px-3 py-2.5 hover:border-accent transition-colors"
+          >
+            <Receipt size={16} className={loggedMealToday ? 'text-good shrink-0' : 'text-mute shrink-0'} />
+            <span className={`text-xs font-medium truncate ${loggedMealToday ? 'text-ink' : 'text-mute'}`}>
+              {loggedMealToday ? t('Repas enregistré') : t('Aucun repas enregistré')}
+            </span>
+          </Link>
+        </div>
+        {pendingPrompts.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {pendingPrompts.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 bg-surface border border-line rounded-xl px-3 py-2 text-sm">
+                <span>{t('Enregistrer « {name} » comme activité santé ?', { name: p.habitName })}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Link to="/health">
+                    <Button className="!px-2.5 !py-1 text-xs">{t('Enregistrer')}</Button>
+                  </Link>
+                  <Button variant="secondary" className="!px-2.5 !py-1 text-xs" onClick={() => dismissPrompt(p.id)}>
+                    {t('Ignorer')}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     ) },
     { id: 'focus', label: t('Concentration et création'), node: (
       <>
-        {/* ---- Focus / Creative ---- */}
         {(() => {
           const focusOn = user?.enabledModules?.focus ?? false;
           const creativeOn = user?.enabledModules?.creative ?? false;
@@ -275,14 +286,13 @@ export default function Today() {
     ) },
     { id: 'learning', label: t('Études et lecture'), node: (
       <>
-        {/* ---- Learning & reading ---- */}
         {(focusCourse || activeBookInfo || readingsStore.progress.length > 0) && (
           <Card title={t('Apprentissage & lecture')}>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {focusCourse && (
                 <Link
                   to={`/learning/course/${focusCourse.id}`}
-                  className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5 hover:border-accent transition-colors"
+                  className="flex items-center justify-between gap-3 bg-surface border border-line rounded-xl px-4 py-2.5 hover:border-accent transition-colors"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <BookOpen size={15} className="text-mute shrink-0" />
@@ -292,7 +302,7 @@ export default function Today() {
                 </Link>
               )}
               {activeBookInfo && (
-                <div className="flex items-center justify-between gap-3 bg-surface border border-line rounded-lg px-4 py-2.5">
+                <div className="flex items-center justify-between gap-3 bg-surface border border-line rounded-xl px-4 py-2.5">
                   <div className="flex items-center gap-2 min-w-0">
                     <BookOpen size={15} className="text-mute shrink-0" />
                     <span className="text-sm truncate">{activeBookInfo.title}</span>
@@ -316,26 +326,47 @@ export default function Today() {
     ...customCards,
   ];
 
+  const ordered = arrangeCards(cards, user?.todayLayout);
+  const topCards = ordered.filter((c) => TOP_BANNER_IDS.has(c.id));
+  const mainCards = ordered.filter((c) => !TOP_BANNER_IDS.has(c.id) && !SIDE_CARD_IDS.has(c.id));
+  const sideCards = ordered.filter((c) => SIDE_CARD_IDS.has(c.id));
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{t('Bonjour, {name}', { name: user?.name })}</h1>
-          <p className="text-mute text-sm mt-1">{(() => { const d = new Date(`${today}T12:00:00`).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); })()} — {t('ce qu’il te reste à faire aujourd’hui.')}</p>
+          <p className="text-mute text-sm mt-1">
+            {(() => {
+              const d = new Date(`${today}T12:00:00`).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+              return d.charAt(0).toUpperCase() + d.slice(1);
+            })()} — {t('ce qu’il te reste à faire aujourd’hui.')}
+          </p>
         </div>
         <OrganizeButton cards={cards} />
       </div>
 
-      {arrangeCards(cards, user?.todayLayout).map((c) => <Fragment key={c.id}>{c.node}</Fragment>)}
+      {topCards.map((c) => <Fragment key={c.id}>{c.node}</Fragment>)}
+
+      <div className="grid lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-7 space-y-5">
+          {mainCards.map((c) => <Fragment key={c.id}>{c.node}</Fragment>)}
+        </div>
+        <div className="lg:col-span-5 space-y-5">
+          {sideCards.map((c) => <Fragment key={c.id}>{c.node}</Fragment>)}
+        </div>
+      </div>
+
+      <CheckinModal open={checkinOpen} onClose={() => setCheckinOpen(false)} date={today} />
     </div>
   );
 }
 
 function EcheanceRow({ e, overdue, accountingStore }) {
   return (
-    <li className={`flex items-center justify-between gap-3 rounded-lg px-4 py-2.5 border ${overdue ? 'bg-bad/10 border-bad/30' : 'bg-surface border-line'}`}>
+    <li className={`flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 border ${overdue ? 'bg-bad/10 border-bad/30' : 'bg-surface border-line'}`}>
       <div className="min-w-0">
-        <div className="text-sm truncate">{e.label}</div>
+        <div className="text-sm font-medium truncate">{e.label}</div>
         <div className={`text-xs ${overdue ? 'text-bad' : 'text-mute'}`}>
           {overdue ? `${t('En retard')} — ` : ''}
           {fmtDate(e.occurrenceDate)} · {e.type === 'produit' ? '+' : '-'}{fmtMAD(e.amount)}

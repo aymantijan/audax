@@ -55,8 +55,8 @@ export default function DesignReference() {
 
       <Card title="Typographie">
         <div className="space-y-2">
-          <div className="font-display text-3xl">Titre de page (Cormorant Garamond)</div>
-          <p className="text-sm">Texte d’interface (Alegreya Sans) : lisible en petite taille.</p>
+          <div className="font-display text-3xl">Titre de page (Plus Jakarta Sans)</div>
+          <p className="text-sm">Texte d’interface (Plus Jakarta Sans) : net et lisible en toute taille.</p>
           <p className="font-data text-lg">Chiffres : 08:25 · 1 732 DH · 30 %</p>
         </div>
       </Card>

@@ -1,38 +1,38 @@
 @import "tailwindcss";
 
 /* ---- Theme tokens — VAUDAX identity (THE BIG PLAN, étape 2) ----
-   Dark "porphyre" by default, light "vélin" as an option. One accent (gold);
-   status colours (success / warning / error) stay distinct from it. */
+   Modern, high-contrast slate dark mode by default, crisp day light mode as an option.
+   Status colours (success / warning / error) stay distinct from the primary accent. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg-primary: #170a11;   /* porphyre — page */
-  --bg-secondary: #1f0e17; /* surfaces */
-  --bg-tertiary: #2a1420;  /* cards */
-  --text-primary: #f1e8d7; /* ivoire */
-  --text-secondary: #b3a393;
-  --accent-primary: #d6b25e; /* or */
-  --accent-secondary: #b98bb0; /* améthyste, second accent (charts, highlights) */
-  --success: #7dc4a2;
-  --warning: #e3a857;
-  --error: #d9606f;
-  --border: #45283a;
-  --on-accent: #120810; /* text on gold buttons */
+  --bg-primary: #0f141c;   /* ardoise profond — page */
+  --bg-secondary: #151c28; /* surfaces & barres */
+  --bg-tertiary: #1c2536;  /* cartes bien détachées du fond */
+  --text-primary: #f1f5f9; /* blanc ardoise net */
+  --text-secondary: #94a3b8;
+  --accent-primary: #f59e0b; /* ambre vif */
+  --accent-secondary: #818cf8; /* indigo (graphiques, second accent) */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --border: #2a364d;
+  --on-accent: #0f141c; /* text on accent buttons */
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-primary: #faf6ee;   /* vélin */
-  --bg-secondary: #f3ecdf;
-  --bg-tertiary: #ffffff;
-  --text-primary: #2a1420;
-  --text-secondary: #6e5a60;
-  --accent-primary: #86621c; /* or, darkened: ≥ 5:1 on vélin and with white text */
-  --accent-secondary: #7e4f8e;
-  --success: #23704d;
-  --warning: #965a0e; /* ≥ 4.5:1 on vélin and cards (WCAG AA, chantier 8) */
-  --error: #b83a4b;
-  --border: #e3d6c3;
+  --bg-primary: #f4f6f9;   /* fond clair ardoise très doux */
+  --bg-secondary: #eaeef4; /* surfaces */
+  --bg-tertiary: #ffffff;  /* cartes blanches nettes */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --accent-primary: #b45309; /* ambre foncé : contraste ≥ 5:1 */
+  --accent-secondary: #4f46e5;
+  --success: #047857;
+  --warning: #b45309; /* ≥ 4.5:1 sur fond clair et cartes (WCAG AA) */
+  --error: #be123c;
+  --border: #cbd5e1;
   --on-accent: #ffffff;
 }
 
@@ -81,9 +81,10 @@ body,
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: "Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   /* rem, so the « Taille du texte » setting (html font-size) scales it too */
   font-size: 0.96875rem;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -115,24 +116,21 @@ body {
 /* Strong contrast: secondary text and borders close to the main text. */
 :root[data-contrast="high"],
 :root[data-contrast="high"][data-theme="dark"] {
-  --text-secondary: #e6dccb;
-  --border: #9a7389;
+  --text-secondary: #e2e8f0;
+  --border: #64748b;
 }
 :root[data-contrast="high"][data-theme="light"] {
-  --text-secondary: #33202a;
-  --border: #8f7a66;
+  --text-secondary: #1e293b;
+  --border: #475569;
   --bg-primary: #ffffff;
 }
 
-/* Display face for page titles and big figures, used with restraint. */
+/* Display face for page titles and big figures, clean and modern. */
 h1,
 .font-display {
-  font-family: "Cormorant Garamond", Garamond, "Times New Roman", serif;
+  font-family: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.005em;
-}
-h1 {
-  font-size: 1.12em;
+  letter-spacing: -0.02em;
 }
 .tabular-nums,
 table {
