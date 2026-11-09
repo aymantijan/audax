@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Activity, Dumbbell, Moon, Salad, AlertTriangle, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown, Target, ChevronRight, CalendarDays } from 'lucide-react';
+import { Activity, Dumbbell, AlertTriangle, Bell, BellOff, Sparkles, Send, TrendingUp, ClipboardList, ArrowUp, ArrowDown, Target, ChevronRight, ChevronDown, CalendarDays, Droplets } from 'lucide-react';
 import { useHealthStore } from '../../store/healthStore';
 import { useHabitStore } from '../../store/habitStore';
 import { readinessBand } from '../../utils/health-science';
 import { todayKey } from '../../utils/formatters';
-import { Card, Stat, Button, Input, Badge, ProgressBar, EmptyState } from '../../components/common/ui';
+import { Card, Button, Input, Badge, ProgressBar, EmptyState, playSeal } from '../../components/common/ui';
 import BadgeList from '../../components/common/BadgeList';
 import QuickCheckin from './QuickCheckin';
 import { useProgramStore } from '../../store/programStore';
@@ -15,10 +15,9 @@ import HealthImportCard from '../../components/health/HealthImportCard';
 
 import Term from '../../components/common/Term';
 export default function Dashboard({ goTo }) {
-  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap, nutritionPlans, proteinTargetG, waterLogs, waterTargetMl, getGoalsWithProgress } = useHealthStore();
+  const { getReadiness, getCoachRecommendation, refreshAICoach, askHealthQuestion, getOvertrainingAlerts, getTodayNutrition, getBadges, workouts, logWorkout, logWater, getWeeklyDigest, reminders, setRemindersEnabled, healthProfile, getTrendAlerts, getWeekOverWeekDelta, getActivityHeatmap, nutritionPlans, proteinTargetG, waterLogs, waterTargetMl, getGoalsWithProgress } = useHealthStore();
   const programAvailable = useProgramStore((s) => s.available);
   const activeProgram = useProgramStore((s) => s.activeProgram);
-  // Aujourd'hui is also the Programme's daily cockpit — make sure it's loaded.
   useEffect(() => { if (programAvailable) useProgramStore.getState().initialize(); }, [programAvailable]);
   const energyLogs = useHabitStore((s) => s.energyLogs);
   const today = todayKey();
@@ -27,6 +26,7 @@ export default function Dashboard({ goTo }) {
   const trendAlerts = getTrendAlerts();
   const weekDelta = getWeekOverWeekDelta();
   const heatmap = getActivityHeatmap(90);
+  const [showMore, setShowMore] = useState(false);
 
   const toggleReminders = async () => {
     if (reminders.enabled) return setRemindersEnabled(false);
@@ -43,8 +43,6 @@ export default function Dashboard({ goTo }) {
   const badges = getBadges();
   const todayWorkouts = workouts.filter((w) => w.date === today);
 
-  // The AI is asked only on a tap (S13): opening Santé used to call it on its
-  // own, using up the daily questions — and retried on every visit if it failed.
   const [coachAsking, setCoachAsking] = useState(false);
   const [coachError, setCoachError] = useState(false);
   const askCoach = async () => {
@@ -107,7 +105,7 @@ export default function Dashboard({ goTo }) {
       </div>
 
       {!healthProfile.completedAt && !activeProgram && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3">
           <span className="flex items-center gap-2 text-sm"><ClipboardList size={16} /> Construis ton plan personnalisé (programme + nutrition) — 2 minutes.</span>
           <Button className="shrink-0 !px-3 !py-1.5 text-xs" onClick={() => goTo?.('setup')}>Commencer</Button>
         </div>
@@ -145,47 +143,23 @@ export default function Dashboard({ goTo }) {
 
           <QuickCheckin />
 
-          <div className="flex items-start gap-3 rounded-xl border p-4" style={{ borderColor: toneColor[coach.tone], background: `color-mix(in srgb, ${toneColor[coach.tone]} 8%, transparent)` }}>
-            <Activity size={18} style={{ color: toneColor[coach.tone] }} className="mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <div className="mb-1 flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: toneColor[coach.tone] }}>Coach</div>
-                {coach.source === 'ai' && <span className="flex items-center gap-1 text-[0.6875rem] text-accent"><Sparkles size={10} /> IA</span>}
-              </div>
-              <div className="text-sm">{coach.text}</div>
-              {coach.source !== 'ai' && (
-                <button type="button" onClick={askCoach} disabled={coachAsking} className="mt-2 flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer disabled:opacity-60">
-                  <Sparkles size={12} /> {coachAsking ? 'L’IA réfléchit…' : 'Demander un conseil à l’IA'}
+          <Card
+            title="Nutrition & eau du jour"
+            action={
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => { playSeal(e.currentTarget); logWater(250, today); }}
+                  className="ui-btn inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink hover:border-accent cursor-pointer"
+                >
+                  <Droplets size={12} className="text-accent" /> + 250 ml
                 </button>
-              )}
-              {coachError && <div className="mt-1 text-xs text-mute">L’IA n’est pas disponible pour le moment. Le conseil ci-dessus reste valable.</div>}
-            </div>
-          </div>
-
-          {alerts.length > 0 && (
-            <div className="space-y-2">
-              {alerts.map((a) => (
-                <div key={a.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${a.level === 'danger' ? 'border-bad/50 bg-bad/10 text-bad' : 'border-warn/50 bg-warn/10 text-warn'}`}>
-                  <AlertTriangle size={14} /> {a.message}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {trendAlerts.length > 0 && (
-            <Card title="Alertes de tendance" action={<TrendingUp size={14} className="text-mute" />}>
-              <div className="space-y-2">
-                {trendAlerts.map((a) => (
-                  <div key={a.id} className="text-sm">
-                    <div className={a.level === 'warning' ? 'text-warning' : 'text-ink'}>{a.message}</div>
-                    {a.explanation && <div className="mt-0.5 text-xs text-mute">{a.explanation}</div>}
-                  </div>
-                ))}
+                <button onClick={() => goTo?.('nutrition')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">
+                  Ajouter un repas <ChevronRight size={13} />
+                </button>
               </div>
-            </Card>
-          )}
-
-          <Card title="Nutrition du jour" action={<button onClick={() => goTo?.('nutrition')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">Ajouter un repas <ChevronRight size={13} /></button>}>
+            }
+          >
             {nutritionRows.length ? (
               <div className="space-y-3">
                 {nutritionRows.map((r) => {
@@ -209,6 +183,16 @@ export default function Dashboard({ goTo }) {
               <EmptyState>Pas encore de cibles nutritionnelles — crée ton plan dans Nutrition.</EmptyState>
             )}
           </Card>
+
+          {alerts.length > 0 && (
+            <div className="space-y-2">
+              {alerts.map((a) => (
+                <div key={a.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${a.level === 'danger' ? 'border-bad/50 bg-bad/10 text-bad' : 'border-warn/50 bg-warn/10 text-warn'}`}>
+                  <AlertTriangle size={14} /> {a.message}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Right: how you are ── */}
@@ -238,8 +222,25 @@ export default function Dashboard({ goTo }) {
             </div>
           </Card>
 
-          <Card title="Objectifs les plus proches" action={<button onClick={() => goTo?.('goals')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">Tous <ChevronRight size={13} /></button>}>
-            {nearGoals.length ? (
+          <div className="flex items-start gap-3 rounded-2xl border p-4" style={{ borderColor: toneColor[coach.tone], background: `color-mix(in srgb, ${toneColor[coach.tone]} 8%, transparent)` }}>
+            <Activity size={18} style={{ color: toneColor[coach.tone] }} className="mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <div className="mb-1 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: toneColor[coach.tone] }}>Coach</div>
+                {coach.source === 'ai' && <span className="flex items-center gap-1 text-[0.6875rem] text-accent"><Sparkles size={10} /> IA</span>}
+              </div>
+              <div className="text-sm">{coach.text}</div>
+              {coach.source !== 'ai' && (
+                <button type="button" onClick={askCoach} disabled={coachAsking} className="mt-2 flex items-center gap-1.5 text-xs font-medium text-accent hover:underline cursor-pointer disabled:opacity-60">
+                  <Sparkles size={12} /> {coachAsking ? 'L’IA réfléchit…' : 'Demander un conseil à l’IA'}
+                </button>
+              )}
+              {coachError && <div className="mt-1 text-xs text-mute">L’IA n’est pas disponible pour le moment. Le conseil ci-dessus reste valable.</div>}
+            </div>
+          </div>
+
+          {nearGoals.length > 0 && (
+            <Card title="Objectifs les plus proches" action={<button onClick={() => goTo?.('goals')} className="flex items-center gap-0.5 text-xs text-mute hover:text-accent cursor-pointer">Tous <ChevronRight size={13} /></button>}>
               <ul className="space-y-3">
                 {nearGoals.map((g) => (
                   <li key={g.id}>
@@ -252,53 +253,80 @@ export default function Dashboard({ goTo }) {
                   </li>
                 ))}
               </ul>
-            ) : (
-              <EmptyState>Aucun objectif en cours.</EmptyState>
-            )}
-          </Card>
+            </Card>
+          )}
 
           {activeProgram && <DisciplineCard />}
         </div>
       </div>
 
-      <Card title="Cette semaine" action={<Badge>7 derniers jours</Badge>}>
-        <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
-          <div><div className="mb-1 text-xs text-mute">Jours renseignés</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
-          <div>
-            <div className="mb-1 text-xs text-mute">Séances</div>
-            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
-          </div>
-          <div>
-            <div className="mb-1 text-xs text-mute">Sommeil moy.</div>
-            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
-          </div>
-          <div>
-            <div className="mb-1 text-xs text-mute">Énergie moy.</div>
-            <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
-          </div>
-        </div>
-      </Card>
+      {/* Collapsible secondary section: weekly stats, AI chat, 90-day heatmap, badges, file import */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          className="w-full flex items-center justify-between rounded-2xl border border-line bg-card px-5 py-3.5 text-sm font-medium text-mute hover:text-ink hover:border-accent transition-colors cursor-pointer"
+        >
+          <span>Bilan de la semaine, question au coach IA, régularité 90 jours, badges & import</span>
+          <ChevronDown size={16} className={`transition-transform ${showMore ? 'rotate-180' : ''}`} />
+        </button>
 
-      <Card title="Demander au coach santé IA">
-        <form onSubmit={submitQuestion} className="mb-3 flex gap-2">
-          <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ex. Pourquoi mon énergie est-elle basse cette semaine ?" className="flex-1" />
-          <Button type="submit" disabled={asking}>
-            <span className="flex items-center gap-2">{asking ? 'Réflexion…' : <><Send size={13} /> Demander</>}</span>
-          </Button>
-        </form>
-        {answer && <div className="rounded-lg border border-line bg-surface p-3 text-sm">{answer}</div>}
-        {askError && <div className="text-sm text-bad">{askError}</div>}
-        {!answer && !askError && !asking && <div className="text-xs text-mute">Pose une question sur tes propres données santé — nécessite que le coach IA soit configuré.</div>}
-      </Card>
+        {showMore && (
+          <div className="mt-5 space-y-6">
+            {trendAlerts.length > 0 && (
+              <Card title="Alertes de tendance" action={<TrendingUp size={14} className="text-mute" />}>
+                <div className="space-y-2">
+                  {trendAlerts.map((a) => (
+                    <div key={a.id} className="text-sm">
+                      <div className={a.level === 'warning' ? 'text-warning' : 'text-ink'}>{a.message}</div>
+                      {a.explanation && <div className="mt-0.5 text-xs text-mute">{a.explanation}</div>}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
-      {heatmap.some((h) => h.count > 0) && (
-        <Card title="Régularité — 90 derniers jours">
-          <ActivityHeatmap data={heatmap} />
-        </Card>
-      )}
+            <Card title="Cette semaine" action={<Badge>7 derniers jours</Badge>}>
+              <div className="grid grid-cols-2 gap-3 text-center md:grid-cols-4">
+                <div><div className="mb-1 text-xs text-mute">Jours renseignés</div><div className="text-lg font-semibold">{digest.daysLogged}/7</div></div>
+                <div>
+                  <div className="mb-1 text-xs text-mute">Séances</div>
+                  <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.totalWorkouts} <DeltaChip value={weekDelta.workouts.delta} /></div>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-mute">Sommeil moy.</div>
+                  <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgSleepQuality ?? '—'}/10 <DeltaChip value={weekDelta.avgSleepQuality.delta} /></div>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-mute">Énergie moy.</div>
+                  <div className="flex items-center justify-center gap-1.5 text-lg font-semibold">{digest.avgEnergy ?? '—'}/10 <DeltaChip value={weekDelta.avgEnergy.delta} /></div>
+                </div>
+              </div>
+            </Card>
 
-      <BadgeList badges={badges} />
-      <HealthImportCard />
+            <Card title="Demander au coach santé IA">
+              <form onSubmit={submitQuestion} className="mb-3 flex gap-2">
+                <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ex. Pourquoi mon énergie est-elle basse cette semaine ?" className="flex-1" />
+                <Button type="submit" disabled={asking}>
+                  <span className="flex items-center gap-2">{asking ? 'Réflexion…' : <><Send size={13} /> Demander</>}</span>
+                </Button>
+              </form>
+              {answer && <div className="rounded-xl border border-line bg-surface p-3 text-sm">{answer}</div>}
+              {askError && <div className="text-sm text-bad">{askError}</div>}
+              {!answer && !askError && !asking && <div className="text-xs text-mute">Pose une question sur tes propres données santé — nécessite que le coach IA soit configuré.</div>}
+            </Card>
+
+            {heatmap.some((h) => h.count > 0) && (
+              <Card title="Régularité — 90 derniers jours">
+                <ActivityHeatmap data={heatmap} />
+              </Card>
+            )}
+
+            <BadgeList badges={badges} />
+            <HealthImportCard />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -314,8 +342,6 @@ function DeltaChip({ value }) {
   );
 }
 
-// GitHub-style contribution heatmap over the trailing N days — cheap custom
-// grid (no chart lib needed), colored by log-density that day.
 function ActivityHeatmap({ data }) {
   const weeks = [];
   for (let i = 0; i < data.length; i += 7) weeks.push(data.slice(i, i + 7));

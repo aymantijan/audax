@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Sun, Flame, Clock, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check, Brain,
+  Sun, Flame, Clock, CalendarClock, ListChecks, Play, Plus, Trash2, Sparkles, History, Target, Pencil, Check, Brain, ChevronDown,
 } from 'lucide-react';
 import { useFlashcardStore, buildQueue } from '../../store/flashcardStore';
 import ReviewSession from './ReviewSession';
@@ -86,7 +86,7 @@ function WeekCard({ sessions, today, settings }) {
           return (
             <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={`${d.date} · ${fmtMinutes(d.minutes)}`}>
               <div className="w-full rounded-md" style={{ height: h, background: d.minutes ? (isToday ? 'var(--accent-primary)' : tint('var(--accent-primary)', 55)) : 'var(--border)' }} />
-              <span className={`text-[0.6875rem] ${isToday ? 'text-accent font-semibold' : 'text-mute'}`}>{DAY_LETTER[new Date(d.date + 'T12:00:00').getDay()]}</span>
+              <span className={`text-[0.6875rem] ${isToday ? 'text-accent font-semibold' : 'text-mute'}>{DAY_LETTER[new Date(d.date + 'T12:00:00').getDay()]}</span>
             </div>
           );
         })}
@@ -95,11 +95,11 @@ function WeekCard({ sessions, today, settings }) {
   );
 }
 
-function PriorityCard({ p, index, settings, onStart, running }) {
+function PriorityCard({ p, index, onStart, running }) {
   const c = p.course;
   const color = courseColor(c.id);
   return (
-    <div className="rounded-xl border border-line bg-card p-4 flex flex-col gap-2 min-w-0" style={{ borderTop: `3px solid ${color}` }}>
+    <div className="rounded-2xl border border-line bg-card p-4 flex flex-col gap-2 min-w-0 shadow-sm" style={{ borderTop: `3px solid ${color}` }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[0.6875rem] uppercase tracking-wide text-mute">Priorité {index + 1}</div>
@@ -133,6 +133,7 @@ export default function TodayView() {
   const today = todayKey();
   const [manualOpen, setManualOpen] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const fc = useFlashcardStore();
   const reviewQueue = useMemo(() => buildQueue({ cards: fc.cards, decks: fc.decks, reviewLog: fc.reviewLog, settings: fc.settings }), [fc.cards, fc.decks, fc.reviewLog, fc.settings]);
 
@@ -147,7 +148,6 @@ export default function TodayView() {
     () => upcomingEvaluations(courses, today).filter((x) => !x.past && normGrade(x.ev, settings) == null && daysUntil(x.ev.date, today) <= 21).slice(0, 5),
     [courses, today] // eslint-disable-line react-hooks/exhaustive-deps
   );
-  // Next checklist steps: follow the priority order, then the rest.
   const tasks = useMemo(() => {
     const order = [...priorities.map((p) => p.course), ...courses.filter((c) => c.status === 'active')];
     const seen = new Set();
@@ -177,14 +177,15 @@ export default function TodayView() {
         {deadlines[0] && <span>· prochaine évaluation {countdownLabel(daysUntil(deadlines[0].ev.date, today))}</span>}
       </div>
 
+      {/* 1. Timer + Weekly Study Time */}
       <div className="grid lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3"><StudyTimerCard /></div>
         <div className="lg:col-span-2"><WeekCard sessions={sessions} today={today} settings={settings} /></div>
       </div>
 
-      {/* Flashcards due */}
+      {/* 2. Flashcards due */}
       {fc.cards.length > 0 && (
-        <div className="rounded-xl border px-4 py-3 flex items-center gap-3 flex-wrap"
+        <div className="rounded-2xl border px-4 py-3 flex items-center gap-3 flex-wrap"
           style={{ borderColor: tint('var(--accent-secondary)', reviewQueue.length ? 45 : 20), background: tint('var(--accent-secondary)', reviewQueue.length ? 10 : 4) }}>
           <Brain size={18} style={{ color: 'var(--accent-secondary)' }} className="shrink-0" />
           <div className="flex-1 min-w-0">
@@ -195,13 +196,13 @@ export default function TodayView() {
         </div>
       )}
 
-      {/* Priorities */}
+      {/* 3. Top 3 study priorities of the day */}
       <div>
         <SectionHeader icon={Sparkles} title="À étudier en priorité"
-          subtitle="Calculé à partir des examens proches, des notes à rattraper et du temps déjà passé cette semaine (au prorata des coefficients)." />
+          subtitle="Calculé automatiquement selon tes examens proches, tes notes et tes heures de la semaine." />
         {priorities.length ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {priorities.map((p, i) => <PriorityCard key={p.course.id} p={p} index={i} settings={settings} onStart={start} running={!!activeTimer} />)}
+            {priorities.map((p, i) => <PriorityCard key={p.course.id} p={p} index={i} onStart={start} running={!!activeTimer} />)}
           </div>
         ) : (
           <Card>
@@ -213,14 +214,11 @@ export default function TodayView() {
       </div>
 
       <ExamDayCard />
-      <WeeklyReviewCard />
-      <TodayRevisionCard />
 
+      {/* Today's classes + Urgent deadlines */}
       <div className="grid lg:grid-cols-2 gap-5">
-        {/* Today's classes + check-in */}
         <ClassesTodayCard />
 
-        {/* Deadlines */}
         <Card>
           <SectionHeader icon={CalendarClock} title="Échéances (3 semaines)" action={<Link to="/learning?tab=exams" className="text-xs text-accent hover:underline">Toutes</Link>} />
           {deadlines.length ? (
@@ -230,7 +228,7 @@ export default function TodayView() {
                 const req = requiredGrade(course, course.targetGrade ?? settings.passMark, settings);
                 const urg = d <= 3 ? 'var(--error)' : d <= 10 ? 'var(--warning)' : 'var(--accent-primary)';
                 return (
-                  <Link key={ev.id} to={`/learning/course/${course.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-surface transition-colors">
+                  <Link key={ev.id} to={`/learning/course/${course.id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface transition-colors">
                     <span className="text-xs font-semibold w-16 shrink-0" style={{ color: urg }}>{countdownLabel(d)}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm text-ink truncate">{course.name}</span>
@@ -249,51 +247,68 @@ export default function TodayView() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-5">
-        {/* Next steps */}
-        <Card>
-          <SectionHeader icon={ListChecks} title="Prochaines étapes du programme" subtitle="Cocher une étape fait monter ta régularité." />
-          {tasks.length ? (
-            <div className="space-y-1">
-              {tasks.map((t) => (
-                <label key={t.item.id} className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-surface cursor-pointer">
-                  <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={false}
-                    onChange={() => toggleChecklistItem(t.course.id, t.chapter.id, t.item.id)} />
-                  <span className="min-w-0">
-                    <span className="block text-sm text-ink">{t.item.title}</span>
-                    <span className="text-xs text-mute"><span style={{ color: courseColor(t.course.id) }}>●</span> {t.course.name} · {t.chapter.title}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-mute py-2">Ajoute des chapitres et étapes dans tes matières pour les retrouver ici.</p>
-          )}
-        </Card>
+      {/* Collapsible secondary section: programme checklist, today's logged sessions, weekly review */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          className="w-full flex items-center justify-between rounded-2xl border border-line bg-card px-5 py-3.5 text-sm font-medium text-mute hover:text-ink hover:border-accent transition-colors cursor-pointer"
+        >
+          <span>Étapes du programme ({tasks.length}), sessions enregistrées ({todaySessions.length}) & plan de révision</span>
+          <ChevronDown size={16} className={`transition-transform ${showMore ? 'rotate-180' : ''}`} />
+        </button>
 
-        {/* Today's sessions */}
-        <Card>
-          <SectionHeader icon={History} title="Sessions du jour"
-            action={<Button variant="secondary" className="!py-1.5 text-xs" onClick={() => setManualOpen(true)}><span className="flex items-center gap-1"><Plus size={12} /> Ajouter</span></Button>} />
-          {todaySessions.length ? (
-            <div className="divide-y divide-line/60">
-              {todaySessions.map((s) => (
-                <div key={s.id} className="flex items-center gap-3 py-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.courseId ? courseColor(s.courseId) : 'var(--text-secondary)' }} />
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm text-ink truncate">{courseName(s.courseId)}</span>
-                    {s.notes && <span className="text-xs text-mute truncate block">{s.notes}</span>}
-                  </span>
-                  <span className="text-sm tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
-                  <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>
-                  <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={12} /></button>
-                </div>
-              ))}
+        {showMore && (
+          <div className="mt-5 space-y-5">
+            <WeeklyReviewCard />
+            <TodayRevisionCard />
+
+            <div className="grid lg:grid-cols-2 gap-5">
+              <Card>
+                <SectionHeader icon={ListChecks} title="Prochaines étapes du programme" subtitle="Cocher une étape fait monter ta régularité." />
+                {tasks.length ? (
+                  <div className="space-y-1">
+                    {tasks.map((t) => (
+                      <label key={t.item.id} className="flex items-start gap-3 rounded-lg px-2 py-2 hover:bg-surface cursor-pointer">
+                        <input type="checkbox" className="mt-0.5 accent-[var(--accent-primary)]" checked={false}
+                          onChange={() => toggleChecklistItem(t.course.id, t.chapter.id, t.item.id)} />
+                        <span className="min-w-0">
+                          <span className="block text-sm text-ink">{t.item.title}</span>
+                          <span className="text-xs text-mute"><span style={{ color: courseColor(t.course.id) }}>●</span> {t.course.name} · {t.chapter.title}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-mute py-2">Ajoute des chapitres et étapes dans tes matières pour les retrouver ici.</p>
+                )}
+              </Card>
+
+              <Card>
+                <SectionHeader icon={History} title="Sessions du jour"
+                  action={<Button variant="secondary" className="!py-1.5 text-xs" onClick={() => setManualOpen(true)}><span className="flex items-center gap-1"><Plus size={12} /> Ajouter</span></Button>} />
+                {todaySessions.length ? (
+                  <div className="divide-y divide-line/60">
+                    {todaySessions.map((s) => (
+                      <div key={s.id} className="flex items-center gap-3 py-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.courseId ? courseColor(s.courseId) : 'var(--text-secondary)' }} />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm text-ink truncate">{courseName(s.courseId)}</span>
+                          {s.notes && <span className="text-xs text-mute truncate block">{s.notes}</span>}
+                        </span>
+                        <span className="text-sm tabular-nums text-ink">{fmtMinutes(s.durationMinutes)}</span>
+                        <button aria-label="Modifier" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-ink cursor-pointer" title="Modifier" onClick={() => setEditingSession(s)}><Pencil size={12} /></button>
+                        <button aria-label="Supprimer" className="ui-icon-btn inline-flex items-center justify-center p-1 text-mute hover:text-bad cursor-pointer" title="Supprimer" onClick={() => deleteWithUndo(null, () => deleteSession(s.id))}><Trash2 size={12} /></button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-mute py-2">Aucune session aujourd'hui. Lance le chrono ou ajoute une session faite sans chrono.</p>
+                )}
+              </Card>
             </div>
-          ) : (
-            <p className="text-sm text-mute py-2">Aucune session aujourd'hui. Lance le chrono ou ajoute une session faite sans chrono.</p>
-          )}
-        </Card>
+          </div>
+        )}
       </div>
 
       <ManualSessionModal open={manualOpen} onClose={() => setManualOpen(false)} />
@@ -306,7 +321,6 @@ export default function TodayView() {
         fields={[
           { name: 'date', label: 'Jour', type: 'date', max: todayKey() },
           { name: 'durationMinutes', label: 'Durée (min)', type: 'number', min: 1 },
-          
           { name: 'notes', label: 'Note', type: 'textarea' },
         ]}
         onSave={(v) => { const r = editSession(editingSession.id, { date: v.date, durationMinutes: v.durationMinutes, notes: v.notes || '' }); if (!r.ok) toast(r.error, 'error'); }}

@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, Circle, Sunrise, HeartPulse,
+  CheckCircle2, Circle, HeartPulse,
   BookOpen, Flame, Sparkles, Receipt, ChevronRight, Timer, Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -27,6 +27,7 @@ import LifeReviewCard from '../components/today/LifeReviewCard';
 import YesterdayCard from '../components/today/YesterdayCard';
 import CareTodayCard from '../components/today/CareTodayCard';
 import { CheckinModal } from '../components/habits/HabitModals';
+import { QuickCheckinPresets, QuickWaterBar, TodayMoneyQuickCard } from '../components/today/TodayQuickActions';
 
 import { useCustomCards } from '../components/today/CustomCards';
 import { t, locale } from '../i18n';
@@ -180,32 +181,23 @@ export default function Today() {
             </div>
           </button>
         ) : (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm text-mute">
-              <Sunrise size={16} className="text-accent shrink-0" /> {t('Pas encore fait aujourd’hui.')}
-            </div>
-            <Button className="!px-3 !py-1.5 text-xs shrink-0" onClick={() => setCheckinOpen(true)}>
-              {t('Faire le check-in')}
-            </Button>
-          </div>
+          <QuickCheckinPresets today={today} onOpenFull={() => setCheckinOpen(true)} />
         )}
       </Card>
     ) },
     { id: 'echeances', label: t('Échéances'), node: (
-      <>
+      <TodayMoneyQuickCard>
         {(overdueEcheances.length > 0 || upcomingEcheances.length > 0) && (
-          <Card title={t('Échéances')}>
-            <ul className="space-y-2">
-              {overdueEcheances.map((e) => (
-                <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} overdue accountingStore={accountingStore} />
-              ))}
-              {upcomingEcheances.map((e) => (
-                <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} accountingStore={accountingStore} />
-              ))}
-            </ul>
-          </Card>
+          <ul className="space-y-2 mt-2">
+            {overdueEcheances.map((e) => (
+              <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} overdue accountingStore={accountingStore} />
+            ))}
+            {upcomingEcheances.map((e) => (
+              <EcheanceRow key={`${e.id}-${e.occurrenceDate}`} e={e} accountingStore={accountingStore} />
+            ))}
+          </ul>
         )}
-      </>
+      </TodayMoneyQuickCard>
     ) },
     { id: 'health', label: t('Santé'), node: (
       <Card
@@ -236,6 +228,7 @@ export default function Today() {
             </span>
           </Link>
         </div>
+        <QuickWaterBar today={today} />
         {pendingPrompts.length > 0 && (
           <ul className="mt-3 space-y-2">
             {pendingPrompts.map((p) => (

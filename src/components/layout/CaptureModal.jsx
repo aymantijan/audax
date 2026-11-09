@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Loader2, Sparkles, Wallet, Dumbbell, CalendarDays, Check, Pencil, X } from 'lucide-react';
+import { Camera, Loader2, Sparkles, Wallet, Dumbbell, CalendarDays, Check, Pencil, X, Droplets, Scale, Moon } from 'lucide-react';
 import { Button, Field, Input, Modal } from '../common/ui';
 import AccountSelect from '../common/AccountSelect';
 import { useAccountingStore } from '../../store/accountingStore';
@@ -15,8 +15,8 @@ const EXAMPLES = ['payé 120 courses', 'couru 5 km en 28 min', 'poids 72,4', 'do
 
 const errorText = (err) => EXTRACT_ERRORS[err?.code] || ASSISTANT_ERRORS[err?.code] || ASSISTANT_ERRORS.failed;
 
-// The + button's window: one sentence (or a photo of a receipt) → a draft card
-// → Enregistrer / Modifier / Annuler. Nothing is saved before "Enregistrer".
+// The + button's window: live instant recognition while typing + 1-tap quick
+// actions for the most frequent daily entries.
 export default function CaptureModal({ open, onClose, onQuickEntry }) {
   const navigate = useNavigate();
   const baseCurrency = useAccountingStore((s) => s.baseCurrency);
@@ -41,7 +41,37 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
     setAccounts(d && (d.kind === 'expense' || d.kind === 'income') ? moneyAccounts(d) : { category: null, cash: null });
   };
 
-  const understand = async () => {
+  // Live local parsing as the user types — no need to click "OK" first!
+  const onType = (val) => {
+    setText(val);
+    setNote('');
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setDraft(null);
+      return;
+    }
+    const local = parseCapture(trimmed, captureContext());
+    if (local) {
+      show(local);
+    } else if (draft) {
+      setDraft(null);
+    }
+  };
+
+  const save = () => {
+    const ctx = captureContext();
+    const d = normalizeDraft(draft, ctx);
+    if (!d) { setNote('Vérifie les valeurs : un montant, une durée ou une quantité manque ou n’est pas plausible.'); setEditing(true); return; }
+    const res = saveDraft(d, accounts);
+    if (!res.ok) { setNote(res.error || 'Enregistrement impossible.'); return; }
+    onClose();
+  };
+
+  const understandOrSave = async () => {
+    if (draft && !editing) {
+      save();
+      return;
+    }
     const t = text.trim();
     if (!t || busy) return;
     const ctx = captureContext();
@@ -51,7 +81,7 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
     try {
       const d = normalizeDraft(await extractCapture(t, ctx), ctx);
       if (d) show(d);
-      else setNote('Je n’ai pas compris. Essaie par exemple « payé 120 courses » ou « couru 5 km en 28 min », ou utilise un raccourci ci-dessous.');
+      else setNote('Je n’ai pas compris. Essaie par exemple « payé 120 courses » ou « couru 5 km en 28 min », ou utilise un bouton rapide ci-dessous.');
     } catch (err) {
       setNote(`Je n’ai pas reconnu cette phrase tout seul, et l’IA n’a pas pu répondre : ${errorText(err)}`);
     } finally {
@@ -72,12 +102,13 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
     }
   };
 
-  const save = () => {
-    const ctx = captureContext();
-    const d = normalizeDraft(draft, ctx);
-    if (!d) { setNote('Vérifie les valeurs : un montant, une durée ou une quantité manque ou n’est pas plausible.'); setEditing(true); return; }
-    const res = saveDraft(d, accounts);
-    if (!res.ok) { setNote(res.error || 'Enregistrement impossible.'); return; }
+  const prefill = (prefix) => {
+    onType(prefix);
+    inputRef.current?.focus();
+  };
+
+  const instantWater = (ml) => {
+    saveDraft({ kind: 'water', ml, date: todayKey() });
     onClose();
   };
 
@@ -85,29 +116,35 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
   const money = (a, c) => formatMoney(a, c || baseCurrency);
   const K = draft ? CAPTURE_KINDS[draft.kind] : null;
   const shortcuts = [
-    { label: 'Dépense détaillée', icon: Wallet, go: () => { onClose(); onQuickEntry(); } },
-    { label: 'Séance détaillée', icon: Dumbbell, go: () => { onClose(); navigate('/health?quickadd=workout'); } },
+    { label: 'Dépense rapide', icon: Wallet, go: () => { onClose(); onQuickEntry(); } },
+    { label: '+ 250 ml d’eau', icon: Droplets, go: () => instantWater(250) },
+    { label: '+ 500 ml d’eau', icon: Droplets, go: () => instantWater(500) },
+    { label: 'Séance de sport', icon: Dumbbell, go: () => { onClose(); navigate('/health?quickadd=workout'); } },
+    { label: 'Noter mon poids', icon: Scale, go: () => prefill('poids ') },
+    { label: 'Sommeil (heures)', icon: Moon, go: () => prefill('dormi ') },
     { label: 'Emploi du temps (photo)', icon: CalendarDays, go: () => { onClose(); navigate('/learning?tab=timetable'); } },
   ];
 
   return (
-    <Modal open={open} onClose={onClose} title="Noter quelque chose">
+    <Modal open={open} onClose={onClose} title="Noter en un geste">
       <div className="space-y-4">
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); understand(); }}>
-          <input ref={inputRef} value={text} onChange={(e) => { setText(e.target.value); if (draft) setDraft(null); }} placeholder={`ex. ${example}`} aria-label="Ce que tu veux noter" maxLength={500}
-            className="flex-1 min-w-0 bg-surface border border-line rounded-lg px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); understandOrSave(); }}>
+          <input ref={inputRef} value={text} onChange={(e) => onType(e.target.value)} placeholder={`ex. ${example}`} aria-label="Ce que tu veux noter" maxLength={500}
+            className="flex-1 min-w-0 bg-surface border border-line rounded-xl px-3.5 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:border-accent" />
           <input ref={photoRef} type="file" accept="image/*,application/pdf" capture="environment" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) readPhoto(f); }} />
           <button type="button" onClick={() => photoRef.current?.click()} disabled={!!busy} aria-label="Photo d’un reçu" title="Photo d’un reçu"
-            className="ui-btn shrink-0 flex items-center justify-center rounded-lg border border-line px-3 text-mute hover:text-ink hover:border-accent cursor-pointer disabled:opacity-50">
+            className="ui-btn shrink-0 flex items-center justify-center rounded-xl border border-line px-3 text-mute hover:text-ink hover:border-accent cursor-pointer disabled:opacity-50">
             {busy === 'photo' ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
           </button>
-          <Button type="submit" disabled={!text.trim() || !!busy}>{busy === 'ai' ? <Loader2 size={15} className="animate-spin" /> : 'OK'}</Button>
+          <Button type="submit" disabled={!text.trim() || !!busy}>
+            {busy === 'ai' ? <Loader2 size={15} className="animate-spin" /> : draft ? 'Enregistrer' : 'OK'}
+          </Button>
         </form>
         {busy === 'ai' && <p className="text-xs text-mute flex items-center gap-1.5"><Sparkles size={12} /> Je demande à l’IA…</p>}
 
         {draft && K && (
-          <div className="rounded-xl border border-accent/60 bg-surface p-3 space-y-3">
+          <div className="rounded-xl border border-accent/60 bg-surface p-3.5 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-xs uppercase tracking-wide text-mute">{K.label} → {K.where}</div>
@@ -140,7 +177,7 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
             )}
 
             <div className="flex flex-wrap gap-2 justify-end">
-              <Button variant="secondary" onClick={() => setDraft(null)}><span className="flex items-center gap-1.5"><X size={14} /> Annuler</span></Button>
+              <Button variant="secondary" onClick={() => { setDraft(null); setText(''); }}><span className="flex items-center gap-1.5"><X size={14} /> Annuler</span></Button>
               {!editing && <Button variant="secondary" onClick={() => setEditing(true)}><span className="flex items-center gap-1.5"><Pencil size={14} /> Modifier</span></Button>}
               <Button onClick={save}><span className="flex items-center gap-1.5"><Check size={14} /> Enregistrer</span></Button>
             </div>
@@ -151,12 +188,13 @@ export default function CaptureModal({ open, onClose, onQuickEntry }) {
 
         {!draft && (
           <div>
-            <div className="text-xs text-mute mb-1.5">Ou directement</div>
-            <div className="flex flex-wrap gap-2">
+            <div className="text-xs font-medium text-mute mb-2">Actions en 1 clic</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {shortcuts.map((s) => (
                 <button key={s.label} type="button" onClick={s.go}
-                  className="ui-btn flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-mute hover:text-ink hover:border-accent cursor-pointer">
-                  <s.icon size={13} className="text-accent" /> {s.label}
+                  className="ui-btn flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-medium text-ink hover:border-accent hover:bg-card transition-colors cursor-pointer text-left">
+                  <s.icon size={15} className="text-accent shrink-0" />
+                  <span className="truncate">{s.label}</span>
                 </button>
               ))}
             </div>
